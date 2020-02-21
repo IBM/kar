@@ -1,0 +1,17 @@
+prefix: 'kar'
+
+zk:
+  imageRegistry: 'docker.io'
+  imageName: 'zookeeper'
+  imageTag: '3.4'
+  port: 2181
+  serverPort: 2888
+  leaderElectionPort: 3888
+  enableProbes: false
+
+kafka:
+  imageRegistry: 'docker.io'
+  imageName: 'wurstmeister/kafka'
+  imageTag: '2.12-2.3.1'
+  port: 9092
+  enableProbes: false
