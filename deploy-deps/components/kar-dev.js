@@ -5,10 +5,10 @@ let solsa = require('solsa')
 module.exports = function kafka (values) {
   let zkName = `${values.prefix}-zookeeper`
   let zk = new solsa.apps.v1.StatefulSet({
-    metadata: { name: zkName, labels: { app: 'kar-runtime' } },
+    metadata: { name: zkName, labels: { app: 'kar-runtime', 'name': zkName } },
     spec: {
       serviceName: zkName,
-      selector: { matchLabels: { 'solsa.ibm.com/pod': `${values.prefix}-zk` } },
+      selector: { matchLabels: { name: zkName } },
       replicas: 1,
       template: {
         spec: {
@@ -35,11 +35,12 @@ module.exports = function kafka (values) {
   let zksvc = zk.getService()
   zksvc.spec.clusterIP = 'None'
 
+  let kName = `${values.prefix}-kafka`
   let kafka = new solsa.apps.v1.StatefulSet({
-    metadata: { name: `${values.prefix}-kafka`, labels: { app: 'kar-runtime' } },
+    metadata: { name: kName, labels: { app: 'kar-runtime', name: kName } },
     spec: {
-      serviceName: `${values.prefix}-kafka`,
-      selector: { matchLabels: { 'solsa.ibm.com/pod': `${values.prefix}-kafka` } },
+      serviceName: kName,
+      selector: { matchLabels: { name: kName } },
       replicas: 1,
       template: {
         spec: {
@@ -74,10 +75,11 @@ module.exports = function kafka (values) {
   let kafkasvc = kafka.getService()
   kafkasvc.spec.clusterIP = 'None'
 
+  let kcName = `${values.prefix}-kafka-console`
   let kafkaConsole = new solsa.apps.v1.Deployment({
-    metadata: { name: `${values.prefix}-kafka-console`, labels: { app: 'kar-runtime' } },
+    metadata: { name: kcName, labels: { app: 'kar-runtime', name: kcName } },
     spec: {
-      selector: { matchLabels: { 'solsa.ibm.com/pod': `${values.prefix}-kafka-console` } },
+      selector: { matchLabels: { name: kcName } },
       replicas: 1,
       template: {
         spec: {
