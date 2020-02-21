@@ -43,6 +43,7 @@ module.exports = function kafka (values) {
       replicas: 1,
       template: {
         spec: {
+          // TODO: add init container to wait for zookeeper to be up
           containers: [
             {
               name: 'kafka',
@@ -54,10 +55,10 @@ module.exports = function kafka (values) {
                 { name: 'HOSTNAME_COMMAND', value: 'hostname -f' },
                 { name: 'KAFKA_ADVERTISED_PORT', value: `${values.kafka.port}` },
                 { name: 'KAFKA_PORT', value: `${values.kafka.port}` },
-                { name: 'KAFKA_LISTENER_SECURITY_PROTOCOL_MAP', value: 'EXTERNAL:PLAINTEXT' },
-                { name: 'KAFKA_LISTENERS', value: `EXTERNAL://:${values.kafka.port}` },
-                { name: 'KAFKA_ADVERTISED_LISTENERS', value: `EXTERNAL://_{HOSTNAME_COMMAND}:${values.kafka.port}` },
-                { name: 'KAFKA_INTER_BROKER_LISTENER_NAME', value: 'EXTERNAL' },
+                { name: 'KAFKA_LISTENER_SECURITY_PROTOCOL_MAP', value: 'INCLUSTER:PLAINTEXT' },
+                { name: 'KAFKA_LISTENERS', value: `INCLUSTER://:${values.kafka.port}` },
+                { name: 'KAFKA_ADVERTISED_LISTENERS', value: `INCLUSTER://_{HOSTNAME_COMMAND}:${values.kafka.port}` },
+                { name: 'KAFKA_INTER_BROKER_LISTENER_NAME', value: 'INCLUSTER' },
                 { name: 'KAFKA_ZOOKEEPER_CONNECT', value: `${zkName}-0.${zkName}:${values.zk.port}` }
               ]
             }
@@ -73,10 +74,25 @@ module.exports = function kafka (values) {
   let kafkasvc = kafka.getService()
   kafkasvc.spec.clusterIP = 'None'
 
-  let bundle = new solsa.Bundle({ zk, zksvc, kafka, kafkasvc })
-  if (values.kafka.createIngress) {
-    bundle.solutions.kafkaIng = kafkasvc.getIngress()
-  }
+  let kafkaConsole = new solsa.apps.v1.Deployment({
+    metadata: { name: `${values.prefix}-kafka-console`, labels: { app: 'kar-runtime' } },
+    spec: {
+      selector: { matchLabels: { 'solsa.ibm.com/pod': `${values.prefix}-kafka-console` } },
+      replicas: 1,
+      template: {
+        spec: {
+          containers: [
+            {
+              name: 'kafka-console',
+              image: `${values.kafka.imageRegistry}/${values.kafka.imageName}:${values.kafka.imageTag}`,
+              command: ['/bin/bash', '-c', 'tail -f /dev/null']
+            }
+          ]
+        }
+      }
+    }
+  })
+  kafkaConsole.propogateLabels()
 
-  return bundle
+  return new solsa.Bundle({ zk, zksvc, kafka, kafkasvc, kafkaConsole })
 }
