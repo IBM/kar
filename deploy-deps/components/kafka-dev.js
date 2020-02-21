@@ -73,5 +73,10 @@ module.exports = function kafka (values) {
   let kafkasvc = kafka.getService()
   kafkasvc.spec.clusterIP = 'None'
 
-  return new solsa.Bundle({ zk, zksvc, kafka, kafkasvc })
+  let bundle = new solsa.Bundle({ zk, zksvc, kafka, kafkasvc })
+  if (values.kafka.createIngress) {
+    bundle.solutions.kafkaIng = kafkasvc.getIngress()
+  }
+
+  return bundle
 }
