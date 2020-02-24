@@ -5,8 +5,9 @@ Helm Chart to deploy a dev-mode KAR runtime services onto a cluster.
 Execute the command: `helm install kar kar`
 
 Components deployed:
-1. non-HA Kafka cluster
-2. Kafka console pod (to enable debug via kafka-cli tools).
+1. non-HA Redis cluster
+2. non-HA Kafka cluster
+3. Kafka console pod (to enable debug via kafka's cli tools).
 
 ### Debugging Kafka via the kar-kafka-console
 

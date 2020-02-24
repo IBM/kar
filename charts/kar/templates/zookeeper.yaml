@@ -43,8 +43,8 @@ spec:
         name: {{ include "kar.name" . }}-zookeeper
     spec:
       containers:
-      - image: {{ .Values.zk.imageRegistry }}/{{ .Values.zk.imageName }}:{{ .Values.zk.imageTag }}
-        name: zk
+      - name: zk
+        image: {{ .Values.zk.imageRegistry }}/{{ .Values.zk.imageName }}:{{ .Values.zk.imageTag }}
         ports:
         - name: zookeeper
           containerPort: {{ .Values.zk.port }}

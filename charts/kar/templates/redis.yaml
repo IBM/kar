@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kar.name" . }}-redis
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: {{ include "kar.name" . }}-redis
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+      {{- include "kar.selectorLabels" . | nindent 6 }}
+      name: {{ include "kar.name" . }}-redis
+  ports:
+  - name: redis
+    port: {{ .Values.redis.port }}
+    targetPort: {{ .Values.redis.port }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "kar.name" . }}-redis
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: {{ include "kar.name" . }}-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "kar.selectorLabels" . | nindent 6 }}
+      name: {{ include "kar.name" . }}-redis
+  serviceName: {{ include "kar.name" . }}-redis
+  template:
+    metadata:
+      labels:
+        {{- include "kar.selectorLabels" . | nindent 8 }}
+        name: {{ include "kar.name" . }}-redis
+    spec:
+      containers:
+      - name: redis
+        image: {{ .Values.redis.imageRegistry }}/{{ .Values.redis.imageName }}:{{ .Values.redis.imageTag }}
+        command:
+          - /usr/local/bin/docker-entrypoint.sh
+          - --requirepass
+          - $REDIS_PASSWORD
+        ports:
+        - name: redis
+          containerPort: {{ .Values.redis.port }}
+        env:
+        - name: REDIS_PASSWORD
+          value: {{ .Values.redis.password }}
