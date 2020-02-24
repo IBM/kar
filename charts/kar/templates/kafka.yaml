@@ -36,6 +36,10 @@ spec:
         {{- include "kar.selectorLabels" . | nindent 8 }}
         name: {{ include "kar.name" . }}-kafka
     spec:
+      initContainers:
+      - name: wait-for-zookeeper
+        image: busybox
+        command: ["sh", "-c", 'result=1; until [ $result -eq 0 ]; do OK=$(echo ruok | nc -w 1 {{ include "kar.name" . }}-zookeeper-0.{{ include "kar.name" . }}-zookeeper {{ .Values.zk.port }}); if [ "$OK" == "imok" ]; then result=0; echo "zookeeper returned imok!"; else echo waiting for zookeeper to be ready; sleep 1; fi; done; echo "Success: zookeeper is up"']
       containers:
       - name: kafka
         image: {{ .Values.kafka.imageRegistry }}/{{ .Values.kafka.imageName }}:{{ .Values.kafka.imageTag }}
