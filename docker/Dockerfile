@@ -13,5 +13,4 @@ FROM alpine:3.11
 
 RUN mkdir -p /kar
 COPY --from=builder /go/bin/kar /kar
-COPY --from=builder /go/bin/sasl-client /kar
 
