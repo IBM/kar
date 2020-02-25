@@ -47,10 +47,10 @@ var (
 	karPort = flag.Int("kar", 0, "The HTTP port for KAR to listen on") // defaults to 0 for dynamic selection
 
 	// kafka
-	kafkaBrokers  = flag.String("brokers", os.Getenv("KAR_KAFKA_BROKERS"), "The Kafka brokers to connect to, as a comma separated list")
+	kafkaBrokers  = flag.String("brokers", os.Getenv("KAFKA_BROKERS"), "The Kafka brokers to connect to, as a comma separated list")
 	kafkaTLS      = flag.Bool("tls", false, "Use TLS to communicate with Kafka")
-	kafkaUser     = flag.String("user", "token", "The SASL username")
-	kafkaPassword = flag.String("password", "", "The SASL password")
+	kafkaUser     = flag.String("user", os.Getenv("KAFKA_USER"), "The SASL username")
+	kafkaPassword = flag.String("password", os.Getenv("KAFKA_PASSWORD"), "The SASL password")
 	kafkaVersion  = flag.String("version", "2.2.0", "Kafka cluster version")
 
 	kafkaProducer          sarama.SyncProducer
@@ -327,7 +327,9 @@ func main() {
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", *servicePort)
-	logger.Printf("%s, %s", port1, port2)
+	if *verbose {
+		logger.Printf("%s, %s", port1, port2)
+	}
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Env = append(os.Environ(), port1, port2)
@@ -349,15 +351,21 @@ func main() {
 
 	if err := cmd.Wait(); err != nil {
 		if v, ok := err.(*exec.ExitError); ok {
-			logger.Printf("service exited with status code %d", v.ExitCode())
+			if *verbose {
+				logger.Printf("service exited with status code %d", v.ExitCode())
+			}
 		} else {
 			logger.Fatalf("error waiting for service: %v", err)
 		}
 	} else {
-		logger.Printf("service exited normally")
+		if *verbose {
+			logger.Printf("service exited normally")
+		}
 	}
 
-	logger.Printf("exiting...")
+	if *verbose {
+		logger.Printf("exiting...")
+	}
 
 	close(quit)
 	wg.Wait()
