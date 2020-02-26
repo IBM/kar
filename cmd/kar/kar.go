@@ -447,42 +447,49 @@ func main() {
 		logger.Printf("%s, %s", port1, port2)
 	}
 
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Env = append(os.Environ(), port1, port2)
-	cmd.Stdin = os.Stdin
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		logger.Fatalf("failed to capture stdout from service: %v", err)
-	}
-	go dump(stdout)
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		logger.Fatalf("failed to capture stderr from service: %v", err)
-	}
-	go dump(stderr)
+	if len(args) > 0 {
+		if *verbose {
+			logger.Printf("launching service...")
+		}
 
-	if err := cmd.Start(); err != nil {
-		logger.Fatalf("failed to start service: %v", err)
-	}
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Env = append(os.Environ(), port1, port2)
+		cmd.Stdin = os.Stdin
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			logger.Fatalf("failed to capture stdout from service: %v", err)
+		}
+		go dump(stdout)
+		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			logger.Fatalf("failed to capture stderr from service: %v", err)
+		}
+		go dump(stderr)
 
-	if err := cmd.Wait(); err != nil {
-		if v, ok := err.(*exec.ExitError); ok {
-			if *verbose {
-				logger.Printf("service exited with status code %d", v.ExitCode())
+		if err := cmd.Start(); err != nil {
+			logger.Fatalf("failed to start service: %v", err)
+		}
+
+		if err := cmd.Wait(); err != nil {
+			if v, ok := err.(*exec.ExitError); ok {
+				if *verbose {
+					logger.Printf("service exited with status code %d", v.ExitCode())
+				}
+			} else {
+				logger.Fatalf("error waiting for service: %v", err)
 			}
 		} else {
-			logger.Fatalf("error waiting for service: %v", err)
+			if *verbose {
+				logger.Printf("service exited normally")
+			}
 		}
-	} else {
+
 		if *verbose {
-			logger.Printf("service exited normally")
+			logger.Printf("exiting...")
 		}
+
+		close(quit)
 	}
 
-	if *verbose {
-		logger.Printf("exiting...")
-	}
-
-	close(quit)
 	wg.Wait()
 }
