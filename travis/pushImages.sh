@@ -6,12 +6,9 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../"
 
 IMAGE_TAG=$1
-
-if [[ ! -z ${DOCKER_PASSWORD} ]]; then
-  docker login -u iamapikey -p "${DOCKER_APIKEY}" us.icr.io
-fi
-
 cd $ROOTDIR
+
+docker login -u iamapikey -p "${DOCKER_APIKEY}" us.icr.io
 
 make dockerPush
 
