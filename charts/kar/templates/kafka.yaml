@@ -72,7 +72,6 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: {{ include "kar.name" . }}-kafka-console
 spec:
-spec:
   replicas: 1
   selector:
     matchLabels:

@@ -1,0 +1,18 @@
+kar:
+  imageRegistry: 'us.icr.io'
+  imageName: 'kar-dev/kar'
+  imageTag: 'nightly'
+  runtimeConfigName: kar-runtime-config
+
+client:
+  imageRegistry: 'us.icr.io'
+  imageName: 'kar-dev/sample-incr'
+  imageTag: 'nightly'
+  port: 3001
+
+server:
+  imageRegistry: 'us.icr.io'
+  imageName: 'kar-dev/sample-incr'
+  imageTag: 'nightly'
+  port: 3001
+
