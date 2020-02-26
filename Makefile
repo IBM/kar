@@ -13,7 +13,7 @@ docker:
 	docker build -f samples/incr/Dockerfile -t $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) samples/incr
 
 dockerPush: docker
-	docker push $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG) .
-	docker push $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) .
+	docker push $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG)
+	docker push $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG)
 
 .PHONY: docker
