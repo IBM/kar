@@ -5,3 +5,16 @@ go:
 
 script:
   - ./travis/build.sh
+
+deploy:
+  - provider: script
+    script: "./travis/pushImages.sh ${TRAVIS_TAG}"
+    on:
+      tags: true
+      all_branches: true
+      repo: solsa/kar
+  - provider: script
+    script: "./travis/pushImages.sh nightly"
+    on:
+      branch: master
+      repo: solsa/kar
