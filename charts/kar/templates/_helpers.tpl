@@ -51,3 +51,17 @@ app.kubernetes.io/name: {{ include "kar.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
+{{/* host name for server.0 in zookeeper cluster */}}
+{{- define "kar.zookeeper_host_zero" -}}
+{{ include "kar.name" . }}-zookeeper-0.{{ include "kar.name" . }}-zookeeper.{{ $.Release.Namespace }}.svc
+{{- end -}}
+
+{{/* host name for server.0 in kafka cluster */}}
+{{- define "kar.kafka_host_zero" -}}
+{{ include "kar.name" . }}-kafka-0.{{ include "kar.name" . }}-kafka.{{ $.Release.Namespace }}.svc
+{{- end -}}
+
+{{/* host name for server.0 in redis cluster */}}
+{{- define "kar.redis_host" -}}
+{{ include "kar.name" . }}-redis.{{ $.Release.Namespace }}.svc
+{{- end -}}
