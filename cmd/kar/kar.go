@@ -14,10 +14,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/Shopify/sarama"
+	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 )
@@ -44,18 +46,26 @@ var (
 	servicePort = flag.Int("port", 3000, "The HTTP port for the service")
 	serviceURL  string
 
-	karPort = flag.Int("kar", 0, "The HTTP port for KAR to listen on") // defaults to 0 for dynamic selection
+	karPort = flag.Int("listen", 0, "The HTTP port for KAR to listen on") // defaults to 0 for dynamic selection
 
 	// kafka
-	kafkaBrokers  = flag.String("brokers", os.Getenv("KAFKA_BROKERS"), "The Kafka brokers to connect to, as a comma separated list")
-	kafkaTLS      = flag.Bool("tls", false, "Use TLS to communicate with Kafka")
-	kafkaUser     = flag.String("user", os.Getenv("KAFKA_USER"), "The SASL username")
-	kafkaPassword = flag.String("password", os.Getenv("KAFKA_PASSWORD"), "The SASL password")
-	kafkaVersion  = flag.String("version", "2.2.0", "Kafka cluster version")
+	kafkaBrokers  = flag.String("kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
+	kafkaTLS      = flag.Bool("kafka_tls", false, "Use TLS to communicate with Kafka")
+	kafkaUser     = flag.String("kafka_user", "", "The SASL username if any")
+	kafkaPassword = flag.String("kafka_password", "", "The SASL password if any")
+	kafkaVersion  = flag.String("kafka_version", "", "Kafka cluster version")
 
 	kafkaProducer          sarama.SyncProducer
 	kafkaPartitionConsumer sarama.PartitionConsumer
 	kafkaTopic             string
+
+	// redis
+	redisAddress  = flag.String("redis_address", "", "The address of the Redis server to connect to")
+	redisTLS      = flag.Bool("redis_tls", false, "Use TLS to communicate with Redis")
+	redisPassword = flag.String("redis_password", "", "The password of the Redis server if any")
+
+	redisConnection redis.Conn
+	redisLock       sync.Mutex
 
 	// logging
 	verbose = flag.Bool("verbose", false, "Enable verbose logging to the console")
@@ -200,12 +210,64 @@ func subscriber() {
 	}
 }
 
+func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	key := fmt.Sprintf("%s-%s", *appName, ps.ByName("key"))
+
+	buf := bytes.Buffer{}
+	buf.ReadFrom(r.Body)
+
+	redisLock.Lock()
+	reply, err := redisConnection.Do("SET", key, buf.String())
+	redisLock.Unlock()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to set key %s: %v", key, err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprintln(w, reply)
+	}
+}
+
+func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	key := fmt.Sprintf("%s-%s", *appName, ps.ByName("key"))
+
+	buf := bytes.Buffer{}
+	buf.ReadFrom(r.Body)
+
+	redisLock.Lock()
+	reply, err := redisConnection.Do("GET", key)
+	redisLock.Unlock()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to get key %s: %v", key, err), http.StatusInternalServerError)
+	} else if reply != nil {
+		fmt.Fprintln(w, string(reply.([]byte)))
+	} else {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	}
+}
+
+func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	key := fmt.Sprintf("%s-%s", *appName, ps.ByName("key"))
+
+	redisLock.Lock()
+	reply, err := redisConnection.Do("DEL", key)
+	redisLock.Unlock()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete key %s: %v", key, err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprintln(w, strconv.FormatInt(reply.(int64), 10))
+	}
+}
+
 func server(listener net.Listener) {
 	defer wg.Done()
 
 	router := httprouter.New()
+
 	router.POST("/kar/post/:service/*path", post)
 	router.POST("/kar/call/:service/*path", call)
+
+	router.POST("/kar/set/:key", setKey)
+	router.GET("/kar/get/:key", getKey)
+	router.GET("/kar/del/:key", delKey)
 
 	srv := &http.Server{Handler: router}
 
@@ -240,19 +302,58 @@ func main() {
 		logger.Fatalf("service name is required")
 	}
 
-	kafkaTopic = fmt.Sprintf("kar-%s-%s", *appName, *serviceName)
+	if !*kafkaTLS {
+		*kafkaTLS, _ = strconv.ParseBool(os.Getenv("KAFKA_TLS"))
+	}
+
+	if *kafkaBrokers == "" {
+		*kafkaBrokers = os.Getenv("KAFKA_BROKERS")
+		if *kafkaBrokers == "" {
+			logger.Fatalf("at least one Kafka broker is required")
+		}
+	}
+
+	if *kafkaUser == "" {
+		*kafkaUser = os.Getenv("KAFKA_USER")
+		if *kafkaUser == "" {
+			*kafkaUser = "token"
+		}
+	}
+
+	if *kafkaPassword == "" {
+		*kafkaPassword = os.Getenv("KAFKA_PASSWORD")
+	}
+
+	if *kafkaVersion == "" {
+		*kafkaVersion = os.Getenv("KAFKA_VERSION")
+		if *kafkaVersion == "" {
+			*kafkaVersion = "2.2.0"
+		}
+	}
+
+	if !*redisTLS {
+		*redisTLS, _ = strconv.ParseBool(os.Getenv("REDIS_TLS"))
+	}
+
+	if *redisAddress == "" {
+		*redisAddress = os.Getenv("REDIS_ADDRESS")
+		if *redisAddress == "" {
+			logger.Fatalf("Redis address is required")
+		}
+	}
+
+	if *redisPassword == "" {
+		*redisPassword = os.Getenv("REDIS_PASSWORD")
+	}
 
 	version, err := sarama.ParseKafkaVersion(*kafkaVersion)
-
 	if err != nil {
 		logger.Fatalf("invalid Kafka version: %v", err)
 	}
 
-	if *kafkaBrokers == "" {
-		logger.Fatalf("at least one broker is required")
-	}
-
 	brokers := strings.Split(*kafkaBrokers, ",")
+
+	kafkaTopic = fmt.Sprintf("kar-%s-%s", *appName, *serviceName)
 
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", *servicePort)
 
@@ -311,6 +412,21 @@ func main() {
 		logger.Fatalf("failed to create Kafka partition consumer: %v", err)
 	}
 	defer kafkaPartitionConsumer.Close()
+
+	redisOptions := []redis.DialOption{}
+	if *redisTLS {
+		redisOptions = append(redisOptions, redis.DialUseTLS(true))
+		redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true)) // TODO
+	}
+	if *redisPassword != "" {
+		redisOptions = append(redisOptions, redis.DialPassword(*redisPassword))
+	}
+
+	redisConnection, err = redis.Dial("tcp", *redisAddress, redisOptions...)
+	if err != nil {
+		logger.Fatalf("failed to connect to Redis: %v", err)
+	}
+	defer redisConnection.Close()
 
 	wg.Add(1)
 	go subscriber()
