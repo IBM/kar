@@ -14,8 +14,8 @@ export REDIS_PASSWORD=... # optional, password of redis server
 export REDIS_TLS=... # optional, set to true to enable TLS
 
 # run server
-kar -app myApp -service myService -launch node server.js &
+kar -app myApp -service myService node server.js &
 
 # run client
-kar -app myApp -service myClient -launch node client.js
+kar -app myApp -service myClient node client.js
 ```
