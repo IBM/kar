@@ -3,8 +3,8 @@
 set -ex
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../"
+ROOTDIR="$SCRIPTDIR/../../"
 cd $ROOTDIR
 
-make build
+make install
 

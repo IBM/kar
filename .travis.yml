@@ -6,17 +6,17 @@ go:
   - 1.13
 
 script:
-  - ./travis/build.sh
+  - ./build/ci/build.sh
 
 deploy:
   - provider: script
-    script: "./travis/pushImages.sh ${TRAVIS_TAG}"
+    script: "./build/ci/pushImages.sh ${TRAVIS_TAG}"
     on:
       tags: true
       all_branches: true
       repo: solsa/kar
   - provider: script
-    script: "./travis/pushImages.sh nightly"
+    script: "./build/ci/pushImages.sh nightly"
     on:
       branch: master
       repo: solsa/kar
