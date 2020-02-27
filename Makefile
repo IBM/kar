@@ -8,7 +8,10 @@ all: install
 install:
 	go install ./...
 
-docker:
+kar:
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build cmd/kar/kar.go
+
+docker: kar
 	docker build -f build/Dockerfile -t $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG) .
 	docker build -f examples/incr/Dockerfile -t $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) examples/incr
 

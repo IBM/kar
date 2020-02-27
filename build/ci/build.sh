@@ -7,4 +7,3 @@ ROOTDIR="$SCRIPTDIR/../../"
 cd $ROOTDIR
 
 make install
-
