@@ -39,10 +39,7 @@ spec:
       containers:
       - name: redis
         image: {{ .Values.redis.imageRegistry }}/{{ .Values.redis.imageName }}:{{ .Values.redis.imageTag }}
-        command:
-          - /usr/local/bin/docker-entrypoint.sh
-          - --requirepass
-          - $REDIS_PASSWORD
+        command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass $REDIS_PASSWORD"]
         ports:
         - name: redis
           containerPort: {{ .Values.redis.port }}

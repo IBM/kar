@@ -15,12 +15,12 @@ spec:
         name: incr-server
     spec:
       containers:
-      {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myService" "Port" .Values.server.port) | nindent 6 }}
+      {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myService" "ServicePort" "3500" "ListenPort" "3501") | nindent 6 }}
       - name: server
         image: {{ .Values.server.imageRegistry }}/{{ .Values.server.imageName }}:{{ .Values.server.imageTag }}
         env:
         - name: MAIN
           value: server.js
         - name: KAR_APP_PORT
-          value: {{ .Values.server.port | quote }}
+          value: "3500"
  
