@@ -23,4 +23,6 @@ spec:
           value: server.js
         - name: KAR_APP_PORT
           value: "3500"
+        - name: KAR_PORT
+          value: "3501"
  

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incr-client
+  labels:
+    name: incr-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: incr-client
+  template:
+    metadata:
+      labels:
+        name: incr-client
+    spec:
+      containers:
+      {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myClient" "ServicePort" "3500" "ListenPort" "3501") | nindent 6 }}
+      - name: client
+        image: {{ .Values.client.imageRegistry }}/{{ .Values.client.imageName }}:{{ .Values.client.imageTag }}
+        env:
+        - name: MAIN
+          value: client.js
+        - name: KAR_APP_PORT
+          value: "3500"
+        - name: KAR_PORT
+          value: "3501"
