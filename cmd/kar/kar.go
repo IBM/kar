@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -22,22 +21,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	"github.ibm.com/solsa/kar.git/pkg/safelog"
 )
-
-// Logger is a wrapper around the default logger with a constant prefix
-type Logger struct {
-	Prefix string
-}
-
-// Printf outputs a formatted log message
-func (l Logger) Printf(format string, v ...interface{}) {
-	log.Printf(l.Prefix+format, v...)
-}
-
-// Fatalf outputs a formatted log message and call os.Exit(1)
-func (l Logger) Fatalf(format string, v ...interface{}) {
-	log.Fatalf(l.Prefix+format, v...)
-}
 
 var (
 	appName = flag.String("app", "", "The name of the application")
@@ -69,7 +54,7 @@ var (
 
 	// logging
 	verbose = flag.Bool("verbose", false, "Enable verbose logging to the console")
-	logger  = Logger{"[KAR] "}
+	logger  = safelog.Logger{"[KAR] "}
 
 	// pending requests: map uuids to channel (string -> channel string)
 	requests = sync.Map{}
@@ -285,7 +270,7 @@ func server(listener net.Listener) {
 
 func dump(in io.Reader) {
 	scanner := bufio.NewScanner(in)
-	logger := Logger{"[APP] "}
+	logger := safelog.Logger{"[APP] "}
 	for scanner.Scan() {
 		logger.Printf("%s", scanner.Text())
 	}
