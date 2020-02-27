@@ -1,19 +1,13 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: incr-client
   labels:
     name: incr-client
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      name: incr-client
   template:
-    metadata:
-      labels:
-        name: incr-client
     spec:
+      restartPolicy: OnFailure
       containers:
       {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myClient" "ServicePort" "3500" "ListenPort" "3501") | nindent 6 }}
       - name: client
