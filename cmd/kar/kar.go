@@ -374,7 +374,7 @@ func main() {
 		logger.Fatalf("failed to list Kafka topics: %v", err)
 	}
 	if _, ok := topics[kafkaTopic]; !ok {
-		err = kafkaClusterAdmin.CreateTopic(kafkaTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+		err = kafkaClusterAdmin.CreateTopic(kafkaTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 		if err != nil {
 			logger.Fatalf("failed to create Kafka topic: %v", err.Error())
 		}
