@@ -2,6 +2,7 @@
 - name: kar-sidecar
   image: {{ .Values.kar.imageRegistry }}/{{ .Values.kar.imageName }}:{{ .Values.kar.imageTag }}
   command: ["/kar/kar", "-app", "$KAR_MANAGED_APP_NAME", "-service", "$KAR_MANAGED_SERVICE_NAME", "/usr/bin/tail", "-f", "/dev/null"]
+  imagePullPolicy: Always
   env:
   - name: KAFKA_BROKERS
     valueFrom:
