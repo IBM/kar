@@ -9,6 +9,10 @@ Components deployed:
 2. non-HA Kafka cluster
 3. Kafka console pod (to enable debug via kafka's cli tools).
 
+### Deploying the incr example
+
+`helm install incr incr`
+
 ### Debugging Kafka via the kar-kafka-console
 
 1. Connect to the pod: `kubectl exec -it kar-kafka-console-6b984657f-nr48z /bin/bash`
