@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webhook-to-be-mutated
+  labels:
+    app: webhook-to-be-mutated
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: busybox
+      image: busybox
+      command: ["sh", "-c", "/bin/tail -f /dev/null"]
