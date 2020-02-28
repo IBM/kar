@@ -53,8 +53,8 @@ var (
 	redisLock       sync.Mutex
 
 	// logging
-	verbose = flag.Bool("verbose", false, "Enable verbose logging to the console")
-	logger  = safelog.Logger{"[KAR] "}
+	verbosity = flag.Int("v", 0, "Logging verbosity")
+	logger    = safelog.Logger{Prefix: "[KAR] "}
 
 	// pending requests: map uuids to channel (string -> channel string)
 	requests = sync.Map{}
@@ -67,7 +67,7 @@ var (
 func send(service string, message map[string]string) error {
 	msg, err := json.Marshal(message)
 	if err != nil {
-		logger.Printf("failed to marshal message %v: %v", message, err)
+		logger.Error("failed to marshal message %v: %v", message, err)
 		return err
 	}
 
@@ -79,12 +79,10 @@ func send(service string, message map[string]string) error {
 		Value: sarama.ByteEncoder(msg),
 	})
 	if err != nil {
-		logger.Printf("failed to send message to topic %s: %v", topic, err)
+		logger.Error("failed to send message to topic %s: %v", topic, err)
 	}
 
-	if *verbose {
-		logger.Printf("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
-	}
+	logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
 	return nil
 }
 
@@ -144,7 +142,7 @@ func reply(m map[string]string, buf bytes.Buffer) {
 		"id":      m["id"],
 		"payload": buf.String()})
 	if err != nil {
-		logger.Printf("failed to reply to request %s from service %s: %v", m["id"], m["origin"], err)
+		logger.Error("failed to reply to request %s from service %s: %v", m["id"], m["origin"], err)
 	}
 }
 
@@ -158,27 +156,25 @@ func subscriber() {
 			return
 
 		case msg := <-channel:
-			if *verbose {
-				logger.Printf("received message on topic %s, at partition %d, offset %d, with value %s", kafkaTopic, 0, msg.Offset, msg.Value)
-			}
+			logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", kafkaTopic, 0, msg.Offset, msg.Value)
 			var m map[string]string
 			err := json.Unmarshal(msg.Value, &m)
 			if err != nil {
-				logger.Printf("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
+				logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
 				continue
 			}
 			switch m["kind"] {
 			case "post":
 				_, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"])) // TODO Accept header
 				if err != nil {
-					logger.Printf("failed to post to %s%s: %v", serviceURL, m["path"], err)
+					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
 				}
 
 			case "call":
 				res, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"]))
 				buf := bytes.Buffer{}
 				if err != nil {
-					logger.Printf("failed to post to %s%s: %v", serviceURL, m["path"], err)
+					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
 				} else {
 					buf.ReadFrom(res.Body)
 				}
@@ -189,7 +185,7 @@ func subscriber() {
 				ch.(chan string) <- m["payload"]
 
 			default:
-				logger.Printf("failed to process message with kind %s, from topic %s, at partition %d, offset %d", m["kind"], msg.Topic, msg.Partition, msg.Offset)
+				logger.Error("failed to process message with kind %s, from topic %s, at partition %d, offset %d", m["kind"], msg.Topic, msg.Partition, msg.Offset)
 			}
 		}
 	}
@@ -258,19 +254,19 @@ func server(listener net.Listener) {
 
 	go func() {
 		if err := srv.Serve(listener); err != http.ErrServerClosed {
-			logger.Fatalf("HTTP server failed: %v", err)
+			logger.Fatal("HTTP server failed: %v", err)
 		}
 	}()
 
 	_, _ = <-quit
 	if err := srv.Shutdown(context.Background()); err != nil {
-		logger.Fatalf("failed to shutdown HTTP server: %v", err)
+		logger.Fatal("failed to shutdown HTTP server: %v", err)
 	}
 }
 
-func dump(in io.Reader) {
+func dump(prefix string, in io.Reader) {
 	scanner := bufio.NewScanner(in)
-	logger := safelog.Logger{"[APP] "}
+	logger := safelog.Logger{Prefix: "[APP] " + prefix}
 	for scanner.Scan() {
 		logger.Printf("%s", scanner.Text())
 	}
@@ -278,13 +274,16 @@ func dump(in io.Reader) {
 
 func main() {
 	flag.Parse()
+	logger.Level = safelog.Severity(*verbosity)
+
+	logger.Warning("starting...")
 
 	if *appName == "" {
-		logger.Fatalf("app name is required")
+		logger.Fatal("app name is required")
 	}
 
 	if *serviceName == "" {
-		logger.Fatalf("service name is required")
+		logger.Fatal("service name is required")
 	}
 
 	if !*kafkaTLS {
@@ -294,7 +293,7 @@ func main() {
 	if *kafkaBrokers == "" {
 		*kafkaBrokers = os.Getenv("KAFKA_BROKERS")
 		if *kafkaBrokers == "" {
-			logger.Fatalf("at least one Kafka broker is required")
+			logger.Fatal("at least one Kafka broker is required")
 		}
 	}
 
@@ -323,7 +322,7 @@ func main() {
 	if *redisAddress == "" {
 		*redisAddress = os.Getenv("REDIS_ADDRESS")
 		if *redisAddress == "" {
-			logger.Fatalf("Redis address is required")
+			logger.Fatal("Redis address is required")
 		}
 	}
 
@@ -333,7 +332,7 @@ func main() {
 
 	version, err := sarama.ParseKafkaVersion(*kafkaVersion)
 	if err != nil {
-		logger.Fatalf("invalid Kafka version: %v", err)
+		logger.Fatal("invalid Kafka version: %v", err)
 	}
 
 	brokers := strings.Split(*kafkaBrokers, ",")
@@ -366,35 +365,35 @@ func main() {
 	kafkaClusterAdmin, err := sarama.NewClusterAdmin(brokers, conf)
 	defer kafkaClusterAdmin.Close()
 	if err != nil {
-		logger.Fatalf("failed to create Kafka cluster admin: %v", err)
+		logger.Fatal("failed to create Kafka cluster admin: %v", err)
 	}
 
 	topics, err := kafkaClusterAdmin.ListTopics()
 	if err != nil {
-		logger.Fatalf("failed to list Kafka topics: %v", err)
+		logger.Fatal("failed to list Kafka topics: %v", err)
 	}
 	if _, ok := topics[kafkaTopic]; !ok {
 		err = kafkaClusterAdmin.CreateTopic(kafkaTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 		if err != nil {
-			logger.Fatalf("failed to create Kafka topic: %v", err.Error())
+			logger.Fatal("failed to create Kafka topic: %v", err.Error())
 		}
 	}
 
 	kafkaProducer, err = sarama.NewSyncProducer(brokers, conf)
 	if err != nil {
-		logger.Fatalf("failed to create Kafka producer: %v", err)
+		logger.Fatal("failed to create Kafka producer: %v", err)
 	}
 	defer kafkaProducer.Close()
 
 	kafkaConsumer, err := sarama.NewConsumer(brokers, conf)
 	if err != nil {
-		logger.Fatalf("failed to create Kafka consumer: %v", err)
+		logger.Fatal("failed to create Kafka consumer: %v", err)
 	}
 	defer kafkaConsumer.Close()
 
 	kafkaPartitionConsumer, err = kafkaConsumer.ConsumePartition(kafkaTopic, 0, sarama.OffsetNewest) // TODO consumer group
 	if err != nil {
-		logger.Fatalf("failed to create Kafka partition consumer: %v", err)
+		logger.Fatal("failed to create Kafka partition consumer: %v", err)
 	}
 	defer kafkaPartitionConsumer.Close()
 
@@ -409,7 +408,7 @@ func main() {
 
 	redisConnection, err = redis.Dial("tcp", *redisAddress, redisOptions...)
 	if err != nil {
-		logger.Fatalf("failed to connect to Redis: %v", err)
+		logger.Fatal("failed to connect to Redis: %v", err)
 	}
 	defer redisConnection.Close()
 
@@ -418,7 +417,7 @@ func main() {
 
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", *karPort))
 	if err != nil {
-		logger.Fatalf("Listener failed: %v", err)
+		logger.Fatal("Listener failed: %v", err)
 	}
 
 	wg.Add(1)
@@ -428,53 +427,43 @@ func main() {
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", *servicePort)
-	if *verbose {
-		logger.Printf("%s, %s", port1, port2)
-	}
+	logger.Info("%s, %s", port1, port2)
 
 	if len(args) > 0 {
-		if *verbose {
-			logger.Printf("launching service...")
-		}
+		logger.Info("launching service...")
 
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Env = append(os.Environ(), port1, port2)
 		cmd.Stdin = os.Stdin
 		stdout, err := cmd.StdoutPipe()
 		if err != nil {
-			logger.Fatalf("failed to capture stdout from service: %v", err)
+			logger.Error("failed to capture stdout from service: %v", err)
 		}
-		go dump(stdout)
+		go dump("[STDOUT] ", stdout)
 		stderr, err := cmd.StderrPipe()
 		if err != nil {
-			logger.Fatalf("failed to capture stderr from service: %v", err)
+			logger.Error("failed to capture stderr from service: %v", err)
 		}
-		go dump(stderr)
+		go dump("[STDERR] ", stderr)
 
 		if err := cmd.Start(); err != nil {
-			logger.Fatalf("failed to start service: %v", err)
+			logger.Error("failed to start service: %v", err)
 		}
 
 		if err := cmd.Wait(); err != nil {
 			if v, ok := err.(*exec.ExitError); ok {
-				if *verbose {
-					logger.Printf("service exited with status code %d", v.ExitCode())
-				}
+				logger.Info("service exited with status code %d", v.ExitCode())
 			} else {
-				logger.Fatalf("error waiting for service: %v", err)
+				logger.Fatal("error waiting for service: %v", err)
 			}
 		} else {
-			if *verbose {
-				logger.Printf("service exited normally")
-			}
-		}
-
-		if *verbose {
-			logger.Printf("exiting...")
+			logger.Info("service exited normally")
 		}
 
 		close(quit)
 	}
 
 	wg.Wait()
+
+	logger.Warning("exiting...")
 }
