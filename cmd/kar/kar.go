@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -21,7 +22,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/pkg/safelog"
+	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
@@ -54,7 +55,6 @@ var (
 
 	// logging
 	verbosity = flag.Int("v", 0, "Logging verbosity")
-	logger    = safelog.Logger{Prefix: "[KAR] "}
 
 	// pending requests: map uuids to channel (string -> channel string)
 	requests = sync.Map{}
@@ -266,15 +266,14 @@ func server(listener net.Listener) {
 
 func dump(prefix string, in io.Reader) {
 	scanner := bufio.NewScanner(in)
-	logger := safelog.Logger{Prefix: "[APP] " + prefix}
 	for scanner.Scan() {
-		logger.Printf("%s", scanner.Text())
+		log.Printf(prefix+"%s", scanner.Text())
 	}
 }
 
 func main() {
 	flag.Parse()
-	logger.Level = safelog.Severity(*verbosity)
+	logger.SetVerbosity(logger.Severity(*verbosity))
 
 	logger.Warning("starting...")
 
