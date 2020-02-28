@@ -11,4 +11,4 @@ app.post('/incr', (req, res) => {
 
 app.use(postprocessor)
 
-app.listen(process.env.KAR_APP_PORT)
+app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

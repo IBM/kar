@@ -9,7 +9,7 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-      {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myClient" "ServicePort" "3500" "ListenPort" "3501") | nindent 6 }}
+      {{ include "kar.sidecar" (dict "Values" .Values "App" "myApp" "Service" "myClient" "ServicePort" "3500" "RuntimePort" "3501") | nindent 6 }}
       - name: client
         image: {{ .Values.client.imageRegistry }}/{{ .Values.client.imageName }}:{{ .Values.client.imageTag }}
         env:

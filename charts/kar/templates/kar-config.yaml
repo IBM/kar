@@ -7,9 +7,8 @@ metadata:
     name: {{ include "kar.name" . }}-runtime-config
 data:
   kafka_brokers: {{ include "kar.kafka_host_zero" . }}:{{ .Values.kafka.port }}
-  kafka_user: ""
+  kafka_username: ""
   kafka_password: ""
-  redis_address: {{ include "kar.redis_host" . }}:{{ .Values.redis.port }}
   redis_host: {{ include "kar.redis_host" . }}
   redis_port: {{ .Values.redis.port | quote }}
   redis_password: {{ .Values.redis.password }}

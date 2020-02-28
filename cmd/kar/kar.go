@@ -262,13 +262,13 @@ func main() {
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
-		conf.Net.SASL.User = config.KafkaUser
+		conf.Net.SASL.User = config.KafkaUsername
 		conf.Net.SASL.Password = config.KafkaPassword
 		conf.Net.SASL.Handshake = true
 		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 	}
 
-	if config.KafkaTLS {
+	if config.KafkaEnableTLS {
 		conf.Net.TLS.Enable = true
 		conf.Net.TLS.Config = &tls.Config{
 			InsecureSkipVerify: true, // TODO
@@ -311,7 +311,7 @@ func main() {
 	defer kafkaPartitionConsumer.Close()
 
 	redisOptions := []redis.DialOption{}
-	if config.RedisTLS {
+	if config.RedisEnableTLS {
 		redisOptions = append(redisOptions, redis.DialUseTLS(true))
 		redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true)) // TODO
 	}
@@ -319,7 +319,7 @@ func main() {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
 	}
 
-	redisConnection, err = redis.Dial("tcp", config.RedisAddress, redisOptions...)
+	redisConnection, err = redis.Dial("tcp", fmt.Sprintf("%s:%d", config.RedisHost, config.RedisPort), redisOptions...)
 	if err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
 	}
@@ -328,7 +328,7 @@ func main() {
 	wg.Add(1)
 	go subscriber()
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.RuntimePort))
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
 	if err != nil {
 		logger.Fatal("Listener failed: %v", err)
 	}

@@ -19,15 +19,16 @@ var (
 
 	RuntimePort int
 
-	KafkaBrokers  []string
-	KafkaTLS      bool
-	KafkaUser     string
-	KafkaPassword string
-	KafkaVersion  sarama.KafkaVersion
+	KafkaBrokers   []string
+	KafkaEnableTLS bool
+	KafkaUsername  string
+	KafkaPassword  string
+	KafkaVersion   sarama.KafkaVersion
 
-	RedisAddress  string
-	RedisTLS      bool
-	RedisPassword string
+	RedisHost      string
+	RedisPort      int
+	RedisEnableTLS bool
+	RedisPassword  string
 )
 
 func init() {
@@ -38,15 +39,16 @@ func init() {
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
-	flag.IntVar(&ServicePort, "port", 3000, "The HTTP port for the service")
-	flag.IntVar(&RuntimePort, "listen", 0, "The HTTP port for KAR to listen on") // defaults to 0 for dynamic selection
+	flag.IntVar(&ServicePort, "send", 3000, "The service port")
+	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
-	flag.BoolVar(&KafkaTLS, "kafka_tls", false, "Use TLS to communicate with Kafka")
-	flag.StringVar(&KafkaUser, "kafka_user", "", "The SASL username if any")
+	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
+	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
 	flag.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
 	flag.StringVar(&kafkaVersion, "kafka_version", "", "Kafka cluster version")
-	flag.StringVar(&RedisAddress, "redis_address", "", "The address of the Redis server to connect to")
-	flag.BoolVar(&RedisTLS, "redis_tls", false, "Use TLS to communicate with Redis")
+	flag.StringVar(&RedisHost, "redis_host", "", "The Redis host")
+	flag.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
+	flag.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	flag.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
 	flag.IntVar(&verbosity, "v", 0, "Logging verbosity")
 
@@ -62,9 +64,9 @@ func init() {
 		logger.Fatal("service name is required")
 	}
 
-	if !KafkaTLS && os.Getenv("KAFKA_TLS") != "" {
-		if KafkaTLS, err = strconv.ParseBool(os.Getenv("KAFKA_TLS")); err != nil {
-			logger.Fatal("error parsing environment variable KAFKA_TLS")
+	if !KafkaEnableTLS && os.Getenv("KAFKA_ENABLE_TLS") != "" {
+		if KafkaEnableTLS, err = strconv.ParseBool(os.Getenv("KAFKA_ENABLE_TLS")); err != nil {
+			logger.Fatal("error parsing environment variable KAFKA_ENABLE_TLS")
 		}
 	}
 
@@ -76,9 +78,9 @@ func init() {
 
 	KafkaBrokers = strings.Split(kafkaBrokers, ",")
 
-	if KafkaUser == "" {
-		if KafkaUser = os.Getenv("KAFKA_USER"); KafkaUser == "" {
-			KafkaUser = "token"
+	if KafkaUsername == "" {
+		if KafkaUsername = os.Getenv("KAFKA_USERNAME"); KafkaUsername == "" {
+			KafkaUsername = "token"
 		}
 	}
 
@@ -96,15 +98,25 @@ func init() {
 		logger.Fatal("invalid Kafka version: %v", err)
 	}
 
-	if !RedisTLS && os.Getenv("REDIS_TLS") != "" {
-		if RedisTLS, err = strconv.ParseBool(os.Getenv("REDIS_TLS")); err != nil {
-			logger.Fatal("error parsing environment variable REDIS_TLS")
+	if !RedisEnableTLS && os.Getenv("REDIS_ENABLE_TLS") != "" {
+		if RedisEnableTLS, err = strconv.ParseBool(os.Getenv("REDIS_ENABLE_TLS")); err != nil {
+			logger.Fatal("error parsing environment variable REDIS_ENABLE_TLS")
 		}
 	}
 
-	if RedisAddress == "" {
-		if RedisAddress = os.Getenv("REDIS_ADDRESS"); RedisAddress == "" {
-			logger.Fatal("address of Redis is required")
+	if RedisHost == "" {
+		if RedisHost = os.Getenv("REDIS_HOST"); RedisHost == "" {
+			logger.Fatal("Redis host is required")
+		}
+	}
+
+	if RedisPort == 0 {
+		if os.Getenv("REDIS_PORT") != "" {
+			if RedisPort, err = strconv.Atoi(os.Getenv("REDIS_PORT")); err != nil {
+				logger.Fatal("error parsing environment variable REDIS_PORT")
+			}
+		} else {
+			RedisPort = 6379
 		}
 	}
 

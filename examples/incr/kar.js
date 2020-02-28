@@ -2,7 +2,7 @@ const fetch = require('node-fetch')
 const parser = require('body-parser')
 const morgan = require('morgan')
 
-const url = `http://localhost:${process.env.KAR_PORT || 8080}/kar/`
+const url = `http://localhost:${process.env.KAR_PORT || 3500}/kar/`
 
 // http post, json stringify request body, json parse response body
 const post = (api, body) => fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }).then(parse)
