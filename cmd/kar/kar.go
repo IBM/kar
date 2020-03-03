@@ -34,16 +34,19 @@ var (
 	wg   = sync.WaitGroup{}
 )
 
+func text(r io.Reader) string {
+	buf, _ := ioutil.ReadAll(r)
+	return string(buf)
+}
+
 func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
-
-	buf, _ := ioutil.ReadAll(r.Body)
 
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "post",
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      string(buf)})
+		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
 	} else {
@@ -59,8 +62,6 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	requests.Store(id, ch)
 	defer requests.Delete(id)
 
-	buf, _ := ioutil.ReadAll(r.Body)
-
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "call",
 		"path":         ps.ByName("path"),
@@ -68,7 +69,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"accept":       r.Header.Get("Accept"),
 		"origin":       config.ServiceName,
 		"id":           id,
-		"payload":      string(buf)})
+		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
 		return
@@ -110,13 +111,12 @@ func subscriber(channel <-chan map[string]string) {
 
 			case "call":
 				res, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"]))
-				buf := []byte{}
 				if err != nil {
 					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
+					respond(m, "")
 				} else {
-					buf, err = ioutil.ReadAll(res.Body)
+					respond(m, text(res.Body))
 				}
-				respond(m, string(buf))
 
 			case "reply":
 				if ch, ok := requests.Load(m["id"]); ok {
@@ -131,8 +131,7 @@ func subscriber(channel <-chan map[string]string) {
 }
 
 func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	buf, _ := ioutil.ReadAll(r.Body)
-	if err := store.Set(ps.ByName("key"), string(buf)); err != nil {
+	if err := store.Set(ps.ByName("key"), text(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprintln(w, "OK")
