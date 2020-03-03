@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Shopify/sarama"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -37,7 +36,7 @@ var (
 	KafkaPassword string
 
 	// KafkaVersion is the expected Kafka version
-	KafkaVersion sarama.KafkaVersion
+	KafkaVersion string
 
 	// RedisHost is the host of the Redis instance
 	RedisHost string
@@ -53,7 +52,7 @@ var (
 )
 
 func init() {
-	var kafkaBrokers, kafkaVersion string
+	var kafkaBrokers string
 	var verbosity int
 	var err error
 
@@ -65,7 +64,7 @@ func init() {
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
 	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
 	flag.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
-	flag.StringVar(&kafkaVersion, "kafka_version", "", "Kafka cluster version")
+	flag.StringVar(&KafkaVersion, "kafka_version", "", "Kafka cluster version")
 	flag.StringVar(&RedisHost, "redis_host", "", "The Redis host")
 	flag.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
 	flag.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
@@ -108,14 +107,10 @@ func init() {
 		KafkaPassword = os.Getenv("KAFKA_PASSWORD")
 	}
 
-	if kafkaVersion == "" {
-		if kafkaVersion = os.Getenv("KAFKA_VERSION"); kafkaVersion == "" {
-			kafkaVersion = "2.2.0"
+	if KafkaVersion == "" {
+		if KafkaVersion = os.Getenv("KAFKA_VERSION"); KafkaVersion == "" {
+			KafkaVersion = "2.2.0"
 		}
-	}
-
-	if KafkaVersion, err = sarama.ParseKafkaVersion(kafkaVersion); err != nil {
-		logger.Fatal("invalid Kafka version: %v", err)
 	}
 
 	if !RedisEnableTLS && os.Getenv("REDIS_ENABLE_TLS") != "" {

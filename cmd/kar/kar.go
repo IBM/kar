@@ -14,15 +14,14 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.com/gomodule/redigo/redis"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -32,9 +31,6 @@ var (
 
 	kafkaProducer          sarama.SyncProducer
 	kafkaPartitionConsumer sarama.PartitionConsumer
-
-	redisConnection redis.Conn
-	redisLock       sync.Mutex
 
 	// pending requests: map uuids to channel (string -> channel string)
 	requests = sync.Map{}
@@ -116,7 +112,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func reply(m map[string]string, buf bytes.Buffer) {
+func respond(m map[string]string, buf bytes.Buffer) {
 	err := send(m["origin"], map[string]string{
 		"kind":    "reply",
 		"id":      m["id"],
@@ -158,7 +154,7 @@ func subscriber() {
 				} else {
 					buf.ReadFrom(res.Body)
 				}
-				reply(m, buf)
+				respond(m, buf)
 
 			case "reply":
 				if ch, ok := requests.Load(m["id"]); ok {
@@ -173,49 +169,32 @@ func subscriber() {
 }
 
 func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	key := fmt.Sprintf("%s-%s", config.AppName, ps.ByName("key"))
-
 	buf := bytes.Buffer{}
 	buf.ReadFrom(r.Body)
 
-	redisLock.Lock()
-	reply, err := redisConnection.Do("SET", key, buf.String())
-	redisLock.Unlock()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to set key %s: %v", key, err), http.StatusInternalServerError)
+	if err := store.Set(ps.ByName("key"), buf.String()); err != nil {
+		http.Error(w, fmt.Sprintf("failed to set key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, reply)
+		fmt.Fprintln(w, "OK")
 	}
 }
 
 func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	key := fmt.Sprintf("%s-%s", config.AppName, ps.ByName("key"))
-
-	buf := bytes.Buffer{}
-	buf.ReadFrom(r.Body)
-
-	redisLock.Lock()
-	reply, err := redisConnection.Do("GET", key)
-	redisLock.Unlock()
+	reply, err := store.Get(ps.ByName("key"))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get key %s: %v", key, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to get key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
 	} else if reply != nil {
-		fmt.Fprintf(w, "%s", reply)
+		fmt.Fprintf(w, "%s", *reply)
 	} else {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	}
 }
 
 func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	key := fmt.Sprintf("%s-%s", config.AppName, ps.ByName("key"))
-
-	redisLock.Lock()
-	reply, err := redisConnection.Do("DEL", key)
-	redisLock.Unlock()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete key %s: %v", key, err), http.StatusInternalServerError)
+	if err := store.Del(ps.ByName("key")); err != nil {
+		http.Error(w, fmt.Sprintf("failed to delete key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintf(w, "%d", reply)
+		fmt.Fprintln(w, "OK")
 	}
 }
 
@@ -256,7 +235,13 @@ func main() {
 	logger.Warning("starting...")
 
 	conf := sarama.NewConfig()
-	conf.Version = config.KafkaVersion
+
+	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
+		logger.Fatal("invalid Kafka version: %v", err)
+	} else {
+		conf.Version = version
+	}
+
 	conf.ClientID = "kar" // TODO
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
@@ -311,20 +296,8 @@ func main() {
 	}
 	defer kafkaPartitionConsumer.Close()
 
-	redisOptions := []redis.DialOption{}
-	if config.RedisEnableTLS {
-		redisOptions = append(redisOptions, redis.DialUseTLS(true))
-		redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true)) // TODO
-	}
-	if config.RedisPassword != "" {
-		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
-	}
-
-	redisConnection, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
-	if err != nil {
-		logger.Fatal("failed to connect to Redis: %v", err)
-	}
-	defer redisConnection.Close()
+	store.Dial()
+	defer store.Close()
 
 	wg.Add(1)
 	go subscriber()
