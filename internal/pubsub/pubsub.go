@@ -16,6 +16,10 @@ var (
 	partition sarama.PartitionConsumer
 )
 
+func mangle(app, service string) string {
+	return fmt.Sprintf("kar-%s-%s", app, service)
+}
+
 // Send sends a message to a service
 func Send(service string, message map[string]string) error {
 	msg, err := json.Marshal(message)
@@ -24,7 +28,7 @@ func Send(service string, message map[string]string) error {
 		return err
 	}
 
-	topic := fmt.Sprintf("kar-%s-%s", config.AppName, service)
+	topic := mangle(config.AppName, service)
 
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		// TODO Key?
@@ -92,7 +96,7 @@ func Dial() <-chan map[string]string {
 	}
 	defer clusterAdmin.Close()
 
-	topic := fmt.Sprintf("kar-%s-%s", config.AppName, config.ServiceName)
+	topic := mangle(config.AppName, config.ServiceName)
 
 	topics, err := clusterAdmin.ListTopics()
 	if err != nil {
