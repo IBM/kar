@@ -2,11 +2,11 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -37,14 +37,13 @@ var (
 func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
-	buf := bytes.Buffer{}
-	buf.ReadFrom(r.Body)
+	buf, _ := ioutil.ReadAll(r.Body)
 
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "post",
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      buf.String()})
+		"payload":      string(buf)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
 	} else {
@@ -60,8 +59,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	requests.Store(id, ch)
 	defer requests.Delete(id)
 
-	buf := bytes.Buffer{}
-	buf.ReadFrom(r.Body)
+	buf, _ := ioutil.ReadAll(r.Body)
 
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "call",
@@ -70,7 +68,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"accept":       r.Header.Get("Accept"),
 		"origin":       config.ServiceName,
 		"id":           id,
-		"payload":      buf.String()})
+		"payload":      string(buf)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
 		return
@@ -84,11 +82,11 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func respond(m map[string]string, buf bytes.Buffer) {
+func respond(m map[string]string, payload string) {
 	err := pubsub.Send(m["origin"], map[string]string{
 		"kind":    "reply",
 		"id":      m["id"],
-		"payload": buf.String()})
+		"payload": payload})
 	if err != nil {
 		logger.Error("failed to reply to request %s from service %s: %v", m["id"], m["origin"], err)
 	}
@@ -112,13 +110,13 @@ func subscriber(channel <-chan map[string]string) {
 
 			case "call":
 				res, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"]))
-				buf := bytes.Buffer{}
+				buf := []byte{}
 				if err != nil {
 					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
 				} else {
-					buf.ReadFrom(res.Body)
+					buf, err = ioutil.ReadAll(res.Body)
 				}
-				respond(m, buf)
+				respond(m, string(buf))
 
 			case "reply":
 				if ch, ok := requests.Load(m["id"]); ok {
@@ -133,10 +131,8 @@ func subscriber(channel <-chan map[string]string) {
 }
 
 func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	buf := bytes.Buffer{}
-	buf.ReadFrom(r.Body)
-
-	if err := store.Set(ps.ByName("key"), buf.String()); err != nil {
+	buf, _ := ioutil.ReadAll(r.Body)
+	if err := store.Set(ps.ByName("key"), string(buf)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprintln(w, "OK")
