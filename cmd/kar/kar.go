@@ -26,7 +26,7 @@ import (
 var (
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
 
-	// pending requests: map uuids to channel (string -> channel string)
+	// pending requests: map uuids to channels (string -> channel string)
 	requests = sync.Map{}
 
 	// termination
@@ -132,26 +132,25 @@ func subscriber(channel <-chan map[string]string) {
 
 func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Set(ps.ByName("key"), text(r.Body)); err != nil {
-		http.Error(w, fmt.Sprintf("failed to set key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprintln(w, "OK")
 	}
 }
 
 func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := store.Get(ps.ByName("key"))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
-	} else if reply != nil {
-		fmt.Fprintf(w, "%s", *reply)
-	} else {
+	if reply, err := store.Get(ps.ByName("key")); err != nil {
+		http.Error(w, fmt.Sprintf("failed to get key: %v", err), http.StatusInternalServerError)
+	} else if reply == nil {
 		http.Error(w, "Not Found", http.StatusNotFound)
+	} else {
+		fmt.Fprint(w, *reply)
 	}
 }
 
 func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Del(ps.ByName("key")); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete key %s: %v", ps.ByName("key"), err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprintln(w, "OK")
 	}
