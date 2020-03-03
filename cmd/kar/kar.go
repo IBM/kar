@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -95,23 +94,15 @@ func respond(m map[string]string, buf bytes.Buffer) {
 	}
 }
 
-func subscriber() {
+func subscriber(channel <-chan map[string]string) {
 	defer wg.Done()
 
-	channel := pubsub.Messages()
 	for {
 		select {
 		case _, _ = <-quit:
 			return
 
-		case msg := <-channel:
-			logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
-			var m map[string]string
-			err := json.Unmarshal(msg.Value, &m)
-			if err != nil {
-				logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
-				continue
-			}
+		case m := <-channel:
 			switch m["kind"] {
 			case "post":
 				_, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"])) // TODO Accept header
@@ -135,7 +126,7 @@ func subscriber() {
 				}
 
 			default:
-				logger.Error("failed to process message with kind %s, from topic %s, at partition %d, offset %d", m["kind"], msg.Topic, msg.Partition, msg.Offset)
+				logger.Error("failed to process message with kind %s", m["kind"])
 			}
 		}
 	}
@@ -207,14 +198,14 @@ func dump(prefix string, in io.Reader) {
 func main() {
 	logger.Warning("starting...")
 
-	pubsub.Dial()
+	channel := pubsub.Dial()
 	defer pubsub.Close()
 
 	store.Dial()
 	defer store.Close()
 
 	wg.Add(1)
-	go subscriber()
+	go subscriber(channel)
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
 	if err != nil {

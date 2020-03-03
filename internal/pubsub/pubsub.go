@@ -39,13 +39,26 @@ func Send(service string, message map[string]string) error {
 	return nil
 }
 
-// Messages returns a read channel
-func Messages() <-chan *sarama.ConsumerMessage {
-	return partition.Messages()
+func receive(in <-chan *sarama.ConsumerMessage, out chan<- map[string]string) {
+	for {
+		msg, ok := <-in
+		if !ok {
+			close(out)
+			return
+		}
+		logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+		var m map[string]string
+		err := json.Unmarshal(msg.Value, &m)
+		if err != nil {
+			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
+			continue
+		}
+		out <- m
+	}
 }
 
-// Dial establishes a connection to Kafka
-func Dial() {
+// Dial establishes a connection to Kafka and returns a read channel from incoming messages
+func Dial() <-chan map[string]string {
 	conf := sarama.NewConfig()
 
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
@@ -106,6 +119,10 @@ func Dial() {
 	if err != nil {
 		logger.Fatal("failed to create Kafka partition consumer: %v", err)
 	}
+
+	out := make(chan map[string]string)
+	go receive(partition.Messages(), out)
+	return out
 }
 
 // Close closes the connection to Kafka
