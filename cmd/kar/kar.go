@@ -161,8 +161,9 @@ func subscriber() {
 				reply(m, buf)
 
 			case "reply":
-				ch, _ := requests.Load(m["id"])
-				ch.(chan string) <- m["payload"]
+				if ch, ok := requests.Load(m["id"]); ok {
+					ch.(chan string) <- m["payload"]
+				}
 
 			default:
 				logger.Error("failed to process message with kind %s, from topic %s, at partition %d, offset %d", m["kind"], msg.Topic, msg.Partition, msg.Offset)
@@ -199,7 +200,7 @@ func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get key %s: %v", key, err), http.StatusInternalServerError)
 	} else if reply != nil {
-		fmt.Fprintln(w, string(reply.([]byte)))
+		fmt.Fprintf(w, "%s", reply)
 	} else {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	}
@@ -214,7 +215,7 @@ func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete key %s: %v", key, err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, strconv.FormatInt(reply.(int64), 10))
+		fmt.Fprintf(w, "%d", reply)
 	}
 }
 
@@ -319,7 +320,7 @@ func main() {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
 	}
 
-	redisConnection, err = redis.Dial("tcp", fmt.Sprintf("%s:%d", config.RedisHost, config.RedisPort), redisOptions...)
+	redisConnection, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
 	if err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
 	}

@@ -12,28 +12,48 @@ import (
 )
 
 var (
+	// AppName is the name of the application
 	AppName string
 
+	// ServiceName is the name of the service
 	ServiceName string
+
+	// ServicePort is the HTTP port the service will be listening on
 	ServicePort int
 
+	// RuntimePort is the HTTP port the runtime will be listening on
 	RuntimePort int
 
-	KafkaBrokers   []string
-	KafkaEnableTLS bool
-	KafkaUsername  string
-	KafkaPassword  string
-	KafkaVersion   sarama.KafkaVersion
+	// KafkaBrokers is an array of Kafka brokers
+	KafkaBrokers []string
 
-	RedisHost      string
-	RedisPort      int
+	// KafkaEnableTLS is set if the Kafka connection requires TLS
+	KafkaEnableTLS bool
+
+	// KafkaUsername is the username for SASL authentication (optional)
+	KafkaUsername string
+
+	// KafkaPassword is the password for SASL authentication (optional)
+	KafkaPassword string
+
+	// KafkaVersion is the expected Kafka version
+	KafkaVersion sarama.KafkaVersion
+
+	// RedisHost is the host of the Redis instance
+	RedisHost string
+
+	// RedisPort is the port of the Redis instance
+	RedisPort int
+
+	// RedisEnableTLS is set if the Redis connection requires TLS
 	RedisEnableTLS bool
-	RedisPassword  string
+
+	// RedisPassword the the password of the Redis instance (optional)
+	RedisPassword string
 )
 
 func init() {
-	var kafkaBrokers string
-	var kafkaVersion string
+	var kafkaBrokers, kafkaVersion string
 	var verbosity int
 	var err error
 
