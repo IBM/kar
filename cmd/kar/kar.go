@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -17,20 +16,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
-	kafkaTopic = fmt.Sprintf("kar-%s-%s", config.AppName, config.ServiceName)
-
-	kafkaProducer          sarama.SyncProducer
-	kafkaPartitionConsumer sarama.PartitionConsumer
 
 	// pending requests: map uuids to channel (string -> channel string)
 	requests = sync.Map{}
@@ -40,35 +35,13 @@ var (
 	wg   = sync.WaitGroup{}
 )
 
-func send(service string, message map[string]string) error {
-	msg, err := json.Marshal(message)
-	if err != nil {
-		logger.Error("failed to marshal message %v: %v", message, err)
-		return err
-	}
-
-	topic := fmt.Sprintf("kar-%s-%s", config.AppName, service)
-
-	partition, offset, err := kafkaProducer.SendMessage(&sarama.ProducerMessage{
-		// TODO Key?
-		Topic: topic,
-		Value: sarama.ByteEncoder(msg),
-	})
-	if err != nil {
-		logger.Error("failed to send message to topic %s: %v", topic, err)
-	}
-
-	logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
-	return nil
-}
-
 func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
 	buf := bytes.Buffer{}
 	buf.ReadFrom(r.Body)
 
-	err := send(service, map[string]string{
+	err := pubsub.Send(service, map[string]string{
 		"kind":         "post",
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
@@ -91,7 +64,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buf := bytes.Buffer{}
 	buf.ReadFrom(r.Body)
 
-	err := send(service, map[string]string{
+	err := pubsub.Send(service, map[string]string{
 		"kind":         "call",
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
@@ -113,7 +86,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func respond(m map[string]string, buf bytes.Buffer) {
-	err := send(m["origin"], map[string]string{
+	err := pubsub.Send(m["origin"], map[string]string{
 		"kind":    "reply",
 		"id":      m["id"],
 		"payload": buf.String()})
@@ -125,14 +98,14 @@ func respond(m map[string]string, buf bytes.Buffer) {
 func subscriber() {
 	defer wg.Done()
 
-	channel := kafkaPartitionConsumer.Messages()
+	channel := pubsub.Messages()
 	for {
 		select {
 		case _, _ = <-quit:
 			return
 
 		case msg := <-channel:
-			logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", kafkaTopic, 0, msg.Offset, msg.Value)
+			logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
 			var m map[string]string
 			err := json.Unmarshal(msg.Value, &m)
 			if err != nil {
@@ -234,67 +207,8 @@ func dump(prefix string, in io.Reader) {
 func main() {
 	logger.Warning("starting...")
 
-	conf := sarama.NewConfig()
-
-	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
-		logger.Fatal("invalid Kafka version: %v", err)
-	} else {
-		conf.Version = version
-	}
-
-	conf.ClientID = "kar" // TODO
-	conf.Producer.Return.Successes = true
-	conf.Producer.RequiredAcks = sarama.WaitForAll
-
-	if config.KafkaPassword != "" {
-		conf.Net.SASL.Enable = true
-		conf.Net.SASL.User = config.KafkaUsername
-		conf.Net.SASL.Password = config.KafkaPassword
-		conf.Net.SASL.Handshake = true
-		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
-	}
-
-	if config.KafkaEnableTLS {
-		conf.Net.TLS.Enable = true
-		conf.Net.TLS.Config = &tls.Config{
-			InsecureSkipVerify: true, // TODO
-		}
-	}
-
-	kafkaClusterAdmin, err := sarama.NewClusterAdmin(config.KafkaBrokers, conf)
-	defer kafkaClusterAdmin.Close()
-	if err != nil {
-		logger.Fatal("failed to create Kafka cluster admin: %v", err)
-	}
-
-	topics, err := kafkaClusterAdmin.ListTopics()
-	if err != nil {
-		logger.Fatal("failed to list Kafka topics: %v", err)
-	}
-	if _, ok := topics[kafkaTopic]; !ok {
-		err = kafkaClusterAdmin.CreateTopic(kafkaTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
-		if err != nil {
-			logger.Fatal("failed to create Kafka topic: %v", err.Error())
-		}
-	}
-
-	kafkaProducer, err = sarama.NewSyncProducer(config.KafkaBrokers, conf)
-	if err != nil {
-		logger.Fatal("failed to create Kafka producer: %v", err)
-	}
-	defer kafkaProducer.Close()
-
-	kafkaConsumer, err := sarama.NewConsumer(config.KafkaBrokers, conf)
-	if err != nil {
-		logger.Fatal("failed to create Kafka consumer: %v", err)
-	}
-	defer kafkaConsumer.Close()
-
-	kafkaPartitionConsumer, err = kafkaConsumer.ConsumePartition(kafkaTopic, 0, sarama.OffsetNewest) // TODO consumer group
-	if err != nil {
-		logger.Fatal("failed to create Kafka partition consumer: %v", err)
-	}
-	defer kafkaPartitionConsumer.Close()
+	pubsub.Dial()
+	defer pubsub.Close()
 
 	store.Dial()
 	defer store.Close()
