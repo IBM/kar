@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -25,7 +26,7 @@ var (
 	// service url
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
 
-	// pending requests: map uuids to channels (string -> channel string)
+	// pending requests: map uuids to channels
 	requests = sync.Map{}
 
 	// termination
@@ -55,12 +56,17 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+type reply struct {
+	statusCode int
+	payload    string
+}
+
 // call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
 	id := uuid.New().URN()
-	ch := make(chan string)
+	ch := make(chan reply)
 	requests.Store(id, ch)
 	defer requests.Delete(id)
 
@@ -78,19 +84,21 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	select {
-	case v := <-ch:
-		fmt.Fprint(w, v)
+	case msg := <-ch:
+		w.WriteHeader(msg.statusCode)
+		fmt.Fprint(w, msg.payload)
 	case _, _ = <-quit:
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 	}
 }
 
 // callback sends the result of a call back to the caller
-func callback(msg map[string]string, payload string) {
+func callback(msg map[string]string, statusCode int, payload string) {
 	err := pubsub.Send(msg["caller"], map[string]string{
-		"kind":    "callback",
-		"id":      msg["id"],
-		"payload": payload})
+		"kind":       "callback",
+		"id":         msg["id"],
+		"statusCode": strconv.Itoa(statusCode),
+		"payload":    payload})
 	if err != nil {
 		logger.Error("failed to answer request %s from service %s: %v", msg["id"], msg["caller"], err)
 	}
@@ -101,23 +109,27 @@ func dispatch(msg map[string]string) {
 	defer wg.Done()
 	switch msg["kind"] {
 	case "send":
-		_, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"])) // TODO Accept header
+		res, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"])) // TODO Accept header
 		if err != nil {
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
+		} else {
+			res.Body.Close()
 		}
 
 	case "call":
 		res, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"]))
 		if err != nil {
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
-			callback(msg, "") // TODO
+			callback(msg, http.StatusBadGateway, "Bad Gateway")
 		} else {
-			callback(msg, text(res.Body))
+			callback(msg, res.StatusCode, text(res.Body))
+			res.Body.Close()
 		}
 
 	case "callback":
 		if ch, ok := requests.Load(msg["id"]); ok {
-			ch.(chan string) <- msg["payload"]
+			statusCode, _ := strconv.Atoi(msg["statusCode"])
+			ch.(chan reply) <- reply{statusCode: statusCode, payload: msg["payload"]}
 		} else {
 			logger.Error("unexpected callback with id %s", msg["id"])
 		}
