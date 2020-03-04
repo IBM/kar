@@ -32,7 +32,16 @@ var (
 	// termination
 	quit = make(chan struct{})
 	wg   = sync.WaitGroup{}
+
+	// http client
+	client http.Client
 )
+
+func init() {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConnsPerHost = 256
+	client = http.Client{Transport: transport}
+}
 
 // text converts a request or response body to a string
 func text(r io.Reader) string {
@@ -115,7 +124,7 @@ func post(msg map[string]string) (*http.Response, error) {
 	}
 	req.Header.Set("Content-Type", msg["content-type"])
 	req.Header.Set("Accept", msg["accept"])
-	return http.DefaultClient.Do(req)
+	return client.Do(req)
 }
 
 // dispatch handles one incoming message
@@ -127,6 +136,7 @@ func dispatch(msg map[string]string) {
 		if err != nil {
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
 		} else {
+			io.Copy(ioutil.Discard, res.Body)
 			res.Body.Close()
 		}
 

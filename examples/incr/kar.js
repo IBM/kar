@@ -1,11 +1,14 @@
 const fetch = require('node-fetch')
+const http = require('http')
 const parser = require('body-parser')
 const morgan = require('morgan')
+
+const agent = new http.Agent({ keepAlive: true })
 
 const url = `http://localhost:${process.env.KAR_PORT || 3500}/kar/`
 
 // http post, json stringify request body, json parse response body
-const post = (api, body) => fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }).then(parse)
+const post = (api, body) => fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, agent }).then(parse)
 
 const parse = res => res.text().then(text => {
   if (!res.ok) throw new Error(text)
