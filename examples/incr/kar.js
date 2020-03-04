@@ -8,12 +8,16 @@ const url = `http://localhost:${process.env.KAR_PORT || 3500}/kar/`
 const post = (api, body) => fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } }).then(parse)
 
 const parse = res => res.text().then(text => {
-  if (res.ok) return text.length > 0 ? JSON.parse(text) : undefined
-  throw new Error(text)
+  if (!res.ok) throw new Error(text)
+  try {
+    return text.length > 0 ? JSON.parse(text) : undefined
+  } catch (err) {
+    return text
+  }
 })
 
 // invoke method on a service
-const async = (service, path, params) => post(`post/${service}/${path}`, params)
+const async = (service, path, params) => post(`send/${service}/${path}`, params)
 const sync = (service, path, params) => post(`call/${service}/${path}`, params)
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
