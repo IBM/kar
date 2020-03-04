@@ -15,8 +15,12 @@ import (
 const (
 	appNameAnnotation     string = "kar.ibm.com/app"
 	serviceNameAnnotation string = "kar.ibm.com/service"
-	sidecarName           string = "kar"
-	sidecarImage          string = "us.icr.io/kar-dev/kar:nightly"
+	sendPortAnnotation    string = "kar.ibm.com/sendPort"
+	recvPortAnnotation    string = "kar.ibm.com/recvPort"
+	verboseAnnotation     string = "kar.ibm.com/verbose"
+
+	sidecarName  string = "kar"
+	sidecarImage string = "us.icr.io/kar-dev/kar:nightly"
 )
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
@@ -25,6 +29,24 @@ func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
 			Message: err.Error(),
 		},
 	}
+}
+
+func constructCommand(appName string, pod corev1.Pod) []string {
+	annotations := pod.GetObjectMeta().GetAnnotations()
+	cmd := []string{"/kar/kar", "-app", appName}
+	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
+		cmd = append(cmd, "-service", serviceName)
+	}
+	if sendPort, ok := annotations[sendPortAnnotation]; ok {
+		cmd = append(cmd, "-send", sendPort)
+	}
+	if recvPort, ok := annotations[recvPortAnnotation]; ok {
+		cmd = append(cmd, "-send", recvPort)
+	}
+	if verbose, ok := annotations[verboseAnnotation]; ok {
+		cmd = append(cmd, "-verbose", verbose)
+	}
+	return cmd
 }
 
 func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
@@ -49,7 +71,11 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	if appName, ok := annotations[appNameAnnotation]; ok {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
 
-		sidecar := corev1.Container{Name: sidecarName, Image: sidecarImage}
+		sidecar := corev1.Container{
+			Name:    sidecarName,
+			Image:   sidecarImage,
+			Command: constructCommand(appName, pod),
+		}
 		patch := []patchOperation{{
 			Op:    "add",
 			Path:  "/spec/containers/-",
@@ -57,7 +83,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		}}
 		patchBytes, err := json.Marshal(patch)
 		if err != nil {
-			logger.Error("WTF %v", err)
+			logger.Error(err.Error())
 			return toV1AdmissionResponse(err)
 		}
 
