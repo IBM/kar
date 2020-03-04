@@ -1,6 +1,7 @@
 package sidecar
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -12,12 +13,10 @@ import (
 )
 
 const (
-	podsInitContainerPatch string = `[
-					 {"op":"add","path":"/spec/initContainers","value":[{"image":"webhook-added-image","name":"webhook-added-init-container","resources":{}}]}
-	]`
-
 	appNameAnnotation     string = "kar.ibm.com/app"
 	serviceNameAnnotation string = "kar.ibm.com/service"
+	sidecarName           string = "kar"
+	sidecarImage          string = "us.icr.io/kar-dev/kar:nightly"
 )
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
@@ -39,7 +38,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	pod := corev1.Pod{}
 	deserializer := codecs.UniversalDeserializer()
 	if _, _, err := deserializer.Decode(raw, nil, &pod); err != nil {
-		logger.Error("%v", err)
+		logger.Error(err.Error())
 		return toV1AdmissionResponse(err)
 	}
 
@@ -49,7 +48,20 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	if appName, ok := annotations[appNameAnnotation]; ok {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
-		reviewResponse.Patch = []byte(podsInitContainerPatch)
+
+		sidecar := corev1.Container{Name: sidecarName, Image: sidecarImage}
+		patch := []patchOperation{{
+			Op:    "add",
+			Path:  "/spec/containers/-",
+			Value: sidecar,
+		}}
+		patchBytes, err := json.Marshal(patch)
+		if err != nil {
+			logger.Error("WTF %v", err)
+			return toV1AdmissionResponse(err)
+		}
+
+		reviewResponse.Patch = patchBytes
 		pt := v1.PatchTypeJSONPatch
 		reviewResponse.PatchType = &pt
 	} else {
