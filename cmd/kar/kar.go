@@ -52,7 +52,7 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, "OK")
+		fmt.Fprint(w, "OK")
 	}
 }
 
@@ -173,7 +173,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Set(ps.ByName("key"), text(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, "OK")
+		fmt.Fprint(w, "OK")
 	}
 }
 
@@ -193,7 +193,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Del(ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprintln(w, "OK")
+		fmt.Fprint(w, "OK")
 	}
 }
 
