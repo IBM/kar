@@ -86,50 +86,57 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 // callback sends the result of a call back to the caller
-func callback(m map[string]string, payload string) {
-	err := pubsub.Send(m["caller"], map[string]string{
+func callback(msg map[string]string, payload string) {
+	err := pubsub.Send(msg["caller"], map[string]string{
 		"kind":    "callback",
-		"id":      m["id"],
+		"id":      msg["id"],
 		"payload": payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from service %s: %v", m["id"], m["caller"], err)
+		logger.Error("failed to answer request %s from service %s: %v", msg["id"], msg["caller"], err)
 	}
 }
 
-// subscriber handles incoming messages from pubsub
+// dispatch handles one incoming message
+func dispatch(msg map[string]string) {
+	defer wg.Done()
+	switch msg["kind"] {
+	case "send":
+		_, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"])) // TODO Accept header
+		if err != nil {
+			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
+		}
+
+	case "call":
+		res, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"]))
+		if err != nil {
+			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
+			callback(msg, "") // TODO
+		} else {
+			callback(msg, text(res.Body))
+		}
+
+	case "callback":
+		if ch, ok := requests.Load(msg["id"]); ok {
+			ch.(chan string) <- msg["payload"]
+		} else {
+			logger.Error("unexpected callback with id %s", msg["id"])
+		}
+
+	default:
+		logger.Error("failed to process message with kind %s", msg["kind"])
+	}
+}
+
+// subscriber dispatches incoming messages to goroutines
 func subscriber(channel <-chan map[string]string) {
 	defer wg.Done()
-
 	for {
 		select {
 		case _, _ = <-quit:
 			return
-
-		case m := <-channel:
-			switch m["kind"] {
-			case "send":
-				_, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"])) // TODO Accept header
-				if err != nil {
-					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
-				}
-
-			case "call":
-				res, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"]))
-				if err != nil {
-					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
-					callback(m, "") // TODO
-				} else {
-					callback(m, text(res.Body))
-				}
-
-			case "callback":
-				if ch, ok := requests.Load(m["id"]); ok {
-					ch.(chan string) <- m["payload"]
-				}
-
-			default:
-				logger.Error("failed to process message with kind %s", m["kind"])
-			}
+		case msg := <-channel:
+			wg.Add(1)
+			go dispatch(msg)
 		}
 	}
 }
@@ -166,16 +173,12 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // server implements the HTTP server
 func server(listener net.Listener) {
 	defer wg.Done()
-
 	router := httprouter.New()
-
 	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
-
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
-
 	srv := http.Server{Handler: router}
 
 	go func() {
