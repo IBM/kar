@@ -57,8 +57,9 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 type reply struct {
-	statusCode int
-	payload    string
+	statusCode  int
+	contentType string
+	payload     string
 }
 
 // call route handler
@@ -85,6 +86,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	select {
 	case msg := <-ch:
+		w.Header().Add("Content-Type", msg.contentType)
 		w.WriteHeader(msg.statusCode)
 		fmt.Fprint(w, msg.payload)
 	case _, _ = <-quit:
@@ -93,15 +95,27 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 // callback sends the result of a call back to the caller
-func callback(msg map[string]string, statusCode int, payload string) {
+func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(msg["caller"], map[string]string{
-		"kind":       "callback",
-		"id":         msg["id"],
-		"statusCode": strconv.Itoa(statusCode),
-		"payload":    payload})
+		"kind":         "callback",
+		"id":           msg["id"],
+		"statusCode":   strconv.Itoa(statusCode),
+		"content-type": contentType,
+		"payload":      payload})
 	if err != nil {
 		logger.Error("failed to answer request %s from service %s: %v", msg["id"], msg["caller"], err)
 	}
+}
+
+// post posts a message to the service
+func post(msg map[string]string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", serviceURL+msg["path"], strings.NewReader(msg["payload"]))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", msg["content-type"])
+	req.Header.Set("Accept", msg["accept"])
+	return http.DefaultClient.Do(req)
 }
 
 // dispatch handles one incoming message
@@ -109,7 +123,7 @@ func dispatch(msg map[string]string) {
 	defer wg.Done()
 	switch msg["kind"] {
 	case "send":
-		res, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"])) // TODO Accept header
+		res, err := post(msg)
 		if err != nil {
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
 		} else {
@@ -117,19 +131,20 @@ func dispatch(msg map[string]string) {
 		}
 
 	case "call":
-		res, err := http.Post(serviceURL+msg["path"], msg["content-type"], strings.NewReader(msg["payload"]))
+		res, err := post(msg)
 		if err != nil {
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
-			callback(msg, http.StatusBadGateway, "Bad Gateway")
+			callback(msg, http.StatusBadGateway, "text/plain", "Bad Gateway")
 		} else {
-			callback(msg, res.StatusCode, text(res.Body))
+			payload := text(res.Body)
 			res.Body.Close()
+			callback(msg, res.StatusCode, res.Header.Get("Content-Type"), payload)
 		}
 
 	case "callback":
 		if ch, ok := requests.Load(msg["id"]); ok {
 			statusCode, _ := strconv.Atoi(msg["statusCode"])
-			ch.(chan reply) <- reply{statusCode: statusCode, payload: msg["payload"]}
+			ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}
 		} else {
 			logger.Error("unexpected callback with id %s", msg["id"])
 		}
