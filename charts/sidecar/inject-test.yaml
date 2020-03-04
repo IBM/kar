@@ -1,9 +1,21 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: webhook-to-be-mutated
-  labels:
-    app: webhook-to-be-mutated
+  name: should-be-mutated
+  annotations:
+    kar.ibm.com/app: myApp
+    kar.ibm.com/service: A
+spec:
+  restartPolicy: OnFailure
+  containers:
+    - name: busybox
+      image: busybox
+      command: ["sh", "-c", "/bin/tail -f /dev/null"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: should-not-be-mutated
 spec:
   restartPolicy: OnFailure
   containers:

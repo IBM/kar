@@ -15,6 +15,9 @@ const (
 	podsInitContainerPatch string = `[
 					 {"op":"add","path":"/spec/initContainers","value":[{"image":"webhook-added-image","name":"webhook-added-init-container","resources":{}}]}
 	]`
+
+	appNameAnnotation     string = "kar.ibm.com/app"
+	serviceNameAnnotation string = "kar.ibm.com/service"
 )
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
@@ -28,7 +31,7 @@ func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
 func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	podResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	if ar.Request.Resource != podResource {
-		logger.Error("expect resource to be %s", podResource)
+		logger.Error("expected resource to be %s", podResource)
 		return nil
 	}
 
@@ -39,14 +42,20 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		logger.Error("%v", err)
 		return toV1AdmissionResponse(err)
 	}
-	logger.Info("Inspecting pod %v", pod.Name)
+
 	reviewResponse := v1.AdmissionResponse{}
 	reviewResponse.Allowed = true
-	if pod.Name == "webhook-to-be-mutated" {
+
+	annotations := pod.GetObjectMeta().GetAnnotations()
+	if appName, ok := annotations[appNameAnnotation]; ok {
+		logger.Info("Pod %v has appName %v", pod.Name, appName)
 		reviewResponse.Patch = []byte(podsInitContainerPatch)
 		pt := v1.PatchTypeJSONPatch
 		reviewResponse.PatchType = &pt
+	} else {
+		logger.Info("Pod %v lacks 'kar.ibm.com/app' annotation; no sidecar injected", pod.Name)
 	}
+
 	return &reviewResponse
 }
 
