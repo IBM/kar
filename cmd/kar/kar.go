@@ -24,6 +24,7 @@ import (
 )
 
 var (
+	// service url
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
 
 	// pending requests: map uuids to channels (string -> channel string)
@@ -34,16 +35,18 @@ var (
 	wg   = sync.WaitGroup{}
 )
 
+// text converts a request or response body to a string
 func text(r io.Reader) string {
 	buf, _ := ioutil.ReadAll(r)
 	return string(buf)
 }
 
-func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// send route handler
+func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
 	err := pubsub.Send(service, map[string]string{
-		"kind":         "post",
+		"kind":         "send",
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"payload":      text(r.Body)})
@@ -54,6 +57,7 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
@@ -67,7 +71,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
-		"origin":       config.ServiceName,
+		"caller":       config.ServiceName,
 		"id":           id,
 		"payload":      text(r.Body)})
 	if err != nil {
@@ -83,16 +87,18 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func respond(m map[string]string, payload string) {
-	err := pubsub.Send(m["origin"], map[string]string{
-		"kind":    "reply",
+// callback sends the result of a call back to the caller
+func callback(m map[string]string, payload string) {
+	err := pubsub.Send(m["caller"], map[string]string{
+		"kind":    "callback",
 		"id":      m["id"],
 		"payload": payload})
 	if err != nil {
-		logger.Error("failed to reply to request %s from service %s: %v", m["id"], m["origin"], err)
+		logger.Error("failed to answer request %s from service %s: %v", m["id"], m["caller"], err)
 	}
 }
 
+// subscriber handles incoming messages from pubsub
 func subscriber(channel <-chan map[string]string) {
 	defer wg.Done()
 
@@ -103,7 +109,7 @@ func subscriber(channel <-chan map[string]string) {
 
 		case m := <-channel:
 			switch m["kind"] {
-			case "post":
+			case "send":
 				_, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"])) // TODO Accept header
 				if err != nil {
 					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
@@ -113,12 +119,12 @@ func subscriber(channel <-chan map[string]string) {
 				res, err := http.Post(serviceURL+m["path"], m["content-type"], strings.NewReader(m["payload"]))
 				if err != nil {
 					logger.Error("failed to post to %s%s: %v", serviceURL, m["path"], err)
-					respond(m, "")
+					callback(m, "") // TODO
 				} else {
-					respond(m, text(res.Body))
+					callback(m, text(res.Body))
 				}
 
-			case "reply":
+			case "callback":
 				if ch, ok := requests.Load(m["id"]); ok {
 					ch.(chan string) <- m["payload"]
 				}
@@ -130,7 +136,8 @@ func subscriber(channel <-chan map[string]string) {
 	}
 }
 
-func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// set route handler
+func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Set(ps.ByName("key"), text(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
@@ -138,7 +145,8 @@ func setKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// get route handler
+func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Get(ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("failed to get key: %v", err), http.StatusInternalServerError)
 	} else if reply == nil {
@@ -148,7 +156,8 @@ func getKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// del route handler
+func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err := store.Del(ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
 	} else {
@@ -156,17 +165,18 @@ func delKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// server implements the HTTP server
 func server(listener net.Listener) {
 	defer wg.Done()
 
 	router := httprouter.New()
 
-	router.POST("/kar/post/:service/*path", post)
+	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
 
-	router.POST("/kar/set/:key", setKey)
-	router.GET("/kar/get/:key", getKey)
-	router.GET("/kar/del/:key", delKey)
+	router.POST("/kar/set/:key", set)
+	router.GET("/kar/get/:key", get)
+	router.GET("/kar/del/:key", del)
 
 	srv := &http.Server{Handler: router}
 
@@ -176,16 +186,18 @@ func server(listener net.Listener) {
 		}
 	}()
 
-	_, _ = <-quit
+	_, _ = <-quit // wait
+
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logger.Fatal("failed to shutdown HTTP server: %v", err)
 	}
 }
 
+// dump adds a time stamp and a prefix to each line of a log
 func dump(prefix string, in io.Reader) {
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
-		log.Printf(prefix+"%s", scanner.Text())
+		log.Print(prefix, scanner.Text())
 	}
 }
 

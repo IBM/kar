@@ -16,6 +16,7 @@ var (
 	partition sarama.PartitionConsumer
 )
 
+// mangle app and service names into topic name
 func mangle(app, service string) string {
 	return fmt.Sprintf("kar-%s-%s", app, service)
 }
@@ -43,6 +44,7 @@ func Send(service string, message map[string]string) error {
 	return nil
 }
 
+// receive unmarshals incoming messages from Kafka
 func receive(in <-chan *sarama.ConsumerMessage, out chan<- map[string]string) {
 	for {
 		msg, ok := <-in
