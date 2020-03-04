@@ -11,13 +11,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/launcher"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
@@ -228,36 +228,7 @@ func main() {
 	args := flag.Args()
 
 	if len(args) > 0 {
-		logger.Info("launching service...")
-
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Env = append(os.Environ(), port1, port2)
-		cmd.Stdin = os.Stdin
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			logger.Error("failed to capture stdout from service: %v", err)
-		}
-		go dump("[STDOUT] ", stdout)
-		stderr, err := cmd.StderrPipe()
-		if err != nil {
-			logger.Error("failed to capture stderr from service: %v", err)
-		}
-		go dump("[STDERR] ", stderr)
-
-		if err := cmd.Start(); err != nil {
-			logger.Error("failed to start service: %v", err)
-		}
-
-		if err := cmd.Wait(); err != nil {
-			if v, ok := err.(*exec.ExitError); ok {
-				logger.Info("service exited with status code %d", v.ExitCode())
-			} else {
-				logger.Fatal("error waiting for service: %v", err)
-			}
-		} else {
-			logger.Info("service exited normally")
-		}
-
+		launcher.Run(args, append(os.Environ(), port1, port2))
 		close(quit)
 	}
 
