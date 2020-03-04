@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -190,14 +188,6 @@ func server(listener net.Listener) {
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logger.Fatal("failed to shutdown HTTP server: %v", err)
-	}
-}
-
-// dump adds a time stamp and a prefix to each line of a log
-func dump(prefix string, in io.Reader) {
-	scanner := bufio.NewScanner(in)
-	for scanner.Scan() {
-		log.Print(prefix, scanner.Text())
 	}
 }
 
