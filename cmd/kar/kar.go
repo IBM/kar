@@ -176,7 +176,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
 
-	srv := &http.Server{Handler: router}
+	srv := http.Server{Handler: router}
 
 	go func() {
 		if err := srv.Serve(listener); err != http.ErrServerClosed {

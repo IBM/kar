@@ -11,11 +11,8 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
-var wg = sync.WaitGroup{}
-
 // dump adds a time stamp and a prefix to each line of a log
 func dump(prefix string, in io.Reader) {
-	defer wg.Done()
 	scanner := bufio.NewScanner(in)
 	for scanner.Scan() {
 		log.Print(prefix, scanner.Text())
@@ -40,10 +37,17 @@ func Run(args, env []string) {
 		logger.Fatal("failed to start service: %v", err)
 	}
 
+	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go dump("[STDOUT] ", stdout)
+	go func() {
+		defer wg.Done()
+		dump("[STDOUT] ", stdout)
+	}()
 	wg.Add(1)
-	go dump("[STDERR] ", stderr)
+	go func() {
+		defer wg.Done()
+		dump("[STDERR] ", stderr)
+	}()
 	wg.Wait()
 
 	if err := cmd.Wait(); err != nil {
