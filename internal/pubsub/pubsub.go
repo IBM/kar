@@ -38,9 +38,9 @@ func Send(service string, message map[string]string) error {
 	})
 	if err != nil {
 		logger.Error("failed to send message to topic %s: %v", topic, err)
+	} else {
+		logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
 	}
-
-	logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
 	return nil
 }
 
