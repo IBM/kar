@@ -27,10 +27,6 @@ spec:
         env:
         - name: MAIN
           value: server.js
-        - name: KAR_APP_PORT
-          value: "3500"
-        - name: KAR_PORT
-          value: "3501"
 ---
 apiVersion: batch/v1
 kind: Job
@@ -55,7 +51,3 @@ spec:
         env:
         - name: MAIN
           value: client.js
-        - name: KAR_APP_PORT
-          value: "3500"
-        - name: KAR_PORT
-          value: "3501"

@@ -74,15 +74,31 @@ func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionRe
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	if appName, ok := annotations[appNameAnnotation]; ok {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
+		containers := pod.Spec.Containers
+
+		for _, container := range containers {
+			if container.Name == sidecarName {
+				logger.Info("Pod %v already has a container named %v; short-circuiting injection", pod.Name, sidecarName)
+				return &reviewResponse
+			}
+		}
+
+		cmdLine, appEnv := processAnnotations(pod)
+
+		if len(appEnv) > 0 {
+			for index, container := range containers {
+				containers[index].Env = append(container.Env, appEnv...)
+			}
+		}
 
 		sidecar := []corev1.Container{{
 			Name:    sidecarName,
 			Image:   fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
 			Command: []string{"/kar/kar"},
-			Args:    constructArgs(pod),
+			Args:    cmdLine,
 			Env:     constructEnvironment(pod, config),
 		}}
-		containers := append(sidecar, pod.Spec.Containers...)
+		containers = append(sidecar, containers...)
 		patch := []patchOperation{{
 			Op:    "replace",
 			Path:  "/spec/containers",
@@ -104,23 +120,26 @@ func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionRe
 	return &reviewResponse
 }
 
-func constructArgs(pod corev1.Pod) []string {
+func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
 	cmd := []string{"-app", appName}
+	appEnv := []corev1.EnvVar{}
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 		cmd = append(cmd, "-service", serviceName)
 	}
 	if sendPort, ok := annotations[sendPortAnnotation]; ok {
 		cmd = append(cmd, "-send", sendPort)
+		appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: sendPort})
 	}
 	if recvPort, ok := annotations[recvPortAnnotation]; ok {
 		cmd = append(cmd, "-recv", recvPort)
+		appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: recvPort})
 	}
 	if verbose, ok := annotations[verboseAnnotation]; ok {
 		cmd = append(cmd, "-v", verbose)
 	}
-	return cmd
+	return cmd, appEnv
 }
 
 func constructEnvironment(pod corev1.Pod, config Config) []corev1.EnvVar {
