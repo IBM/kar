@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
@@ -124,7 +125,13 @@ func post(msg map[string]string) (*http.Response, error) {
 	}
 	req.Header.Set("Content-Type", msg["content-type"])
 	req.Header.Set("Accept", msg["accept"])
-	return client.Do(req)
+	b := backoff.NewExponentialBackOff()
+	var res *http.Response
+	err = backoff.Retry(func() error {
+		res, err = client.Do(req)
+		return err
+	}, b)
+	return res, err
 }
 
 // dispatch handles one incoming message
