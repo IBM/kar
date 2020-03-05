@@ -13,43 +13,47 @@ import (
 )
 
 const (
-	appNameAnnotation     string = "kar.ibm.com/app"
-	serviceNameAnnotation string = "kar.ibm.com/service"
-	sendPortAnnotation    string = "kar.ibm.com/sendPort"
-	recvPortAnnotation    string = "kar.ibm.com/recvPort"
-	verboseAnnotation     string = "kar.ibm.com/verbose"
+	appNameAnnotation     = "kar.ibm.com/app"
+	serviceNameAnnotation = "kar.ibm.com/service"
+	sendPortAnnotation    = "kar.ibm.com/sendPort"
+	recvPortAnnotation    = "kar.ibm.com/recvPort"
+	verboseAnnotation     = "kar.ibm.com/verbose"
 
-	sidecarName  string = "kar"
-	sidecarImage string = "us.icr.io/kar-dev/kar:nightly"
+	sidecarName            = "kar"
+	sidecarImage           = "us.icr.io/kar-dev/kar:nightly"
+	sidecarImagePullPolicy = corev1.PullAlways
 )
 
-func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
-	return &v1.AdmissionResponse{
-		Result: &metav1.Status{
-			Message: err.Error(),
-		},
+// HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
+// If the processing is successful, it returns an AdmissionReview instance and http.StatusOK.
+// If the processing is unsuccessful, it returns an http error code and error.
+func HandleAdmissionRequest(body []byte, config Config) (runtime.Object, int, error) {
+	deserializer := codecs.UniversalDeserializer()
+	obj, gvk, err := deserializer.Decode(body, nil, nil)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("Request could not be decoded: %w", err)
 	}
+
+	var responseObj runtime.Object
+	switch *gvk {
+	case v1.SchemeGroupVersion.WithKind("AdmissionReview"):
+		requestedAdmissionReview, ok := obj.(*v1.AdmissionReview)
+		if !ok {
+			return nil, http.StatusBadRequest, fmt.Errorf("Expected v1.AdmissionReview but got: %T", obj)
+		}
+		responseAdmissionReview := &v1.AdmissionReview{}
+		responseAdmissionReview.SetGroupVersionKind(*gvk)
+		responseAdmissionReview.Response = possiblyInjectSidecar(*requestedAdmissionReview, config)
+		responseAdmissionReview.Response.UID = requestedAdmissionReview.Request.UID
+		responseObj = responseAdmissionReview
+	default:
+		return nil, http.StatusBadRequest, fmt.Errorf("Unsupported group version kind: %v", gvk)
+	}
+
+	return responseObj, http.StatusOK, nil
 }
 
-func constructCommand(appName string, pod corev1.Pod) []string {
-	annotations := pod.GetObjectMeta().GetAnnotations()
-	cmd := []string{"/kar/kar", "-app", appName}
-	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
-		cmd = append(cmd, "-service", serviceName)
-	}
-	if sendPort, ok := annotations[sendPortAnnotation]; ok {
-		cmd = append(cmd, "-send", sendPort)
-	}
-	if recvPort, ok := annotations[recvPortAnnotation]; ok {
-		cmd = append(cmd, "-send", recvPort)
-	}
-	if verbose, ok := annotations[verboseAnnotation]; ok {
-		cmd = append(cmd, "-verbose", verbose)
-	}
-	return cmd
-}
-
-func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
+func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionResponse {
 	podResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	if ar.Request.Resource != podResource {
 		logger.Error("expected resource to be %s", podResource)
@@ -72,9 +76,12 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
 
 		sidecar := corev1.Container{
-			Name:    sidecarName,
-			Image:   sidecarImage,
-			Command: constructCommand(appName, pod),
+			Name:            sidecarName,
+			Image:           sidecarImage,
+			ImagePullPolicy: sidecarImagePullPolicy,
+			Command:         []string{"/kar/kar"},
+			Args:            constructArgs(pod),
+			Env:             constructEnvironment(pod, config),
 		}
 		patch := []patchOperation{{
 			Op:    "add",
@@ -97,31 +104,41 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	return &reviewResponse
 }
 
-// HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
-// If the processing is successful, it returns an AdmissionReview instance and http.StatusOK.
-// If the processing is unsuccessful, it returns an http error code and error.
-func HandleAdmissionRequest(body []byte) (runtime.Object, int, error) {
-	deserializer := codecs.UniversalDeserializer()
-	obj, gvk, err := deserializer.Decode(body, nil, nil)
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("Request could not be decoded: %w", err)
+func constructArgs(pod corev1.Pod) []string {
+	annotations := pod.GetObjectMeta().GetAnnotations()
+	appName := annotations[appNameAnnotation]
+	cmd := []string{"-app", appName}
+	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
+		cmd = append(cmd, "-service", serviceName)
 	}
-
-	var responseObj runtime.Object
-	switch *gvk {
-	case v1.SchemeGroupVersion.WithKind("AdmissionReview"):
-		requestedAdmissionReview, ok := obj.(*v1.AdmissionReview)
-		if !ok {
-			return nil, http.StatusBadRequest, fmt.Errorf("Expected v1.AdmissionReview but got: %T", obj)
-		}
-		responseAdmissionReview := &v1.AdmissionReview{}
-		responseAdmissionReview.SetGroupVersionKind(*gvk)
-		responseAdmissionReview.Response = possiblyInjectSidecar(*requestedAdmissionReview)
-		responseAdmissionReview.Response.UID = requestedAdmissionReview.Request.UID
-		responseObj = responseAdmissionReview
-	default:
-		return nil, http.StatusBadRequest, fmt.Errorf("Unsupported group version kind: %v", gvk)
+	if sendPort, ok := annotations[sendPortAnnotation]; ok {
+		cmd = append(cmd, "-send", sendPort)
 	}
+	if recvPort, ok := annotations[recvPortAnnotation]; ok {
+		cmd = append(cmd, "-recv", recvPort)
+	}
+	if verbose, ok := annotations[verboseAnnotation]; ok {
+		cmd = append(cmd, "-verbose", verbose)
+	}
+	return cmd
+}
 
-	return responseObj, http.StatusOK, nil
+func constructEnvironment(pod corev1.Pod, config Config) []corev1.EnvVar {
+	env := []corev1.EnvVar{
+		{Name: "REDIS_HOST", Value: config.RedisHost},
+		{Name: "REDIS_PORT", Value: config.RedisPort},
+		{Name: "REDIS_PASSWORD", Value: config.RedisPassword},
+		{Name: "KAFKA_BROKERS", Value: config.KafkaBrokers},
+		{Name: "KAFKA_PASSWORD", Value: config.KafkaPassword},
+		{Name: "KAFKA_USERNAME", Value: config.KafkaUsername},
+	}
+	return env
+}
+
+func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
+	return &v1.AdmissionResponse{
+		Result: &metav1.Status{
+			Message: err.Error(),
+		},
+	}
 }

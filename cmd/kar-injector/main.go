@@ -13,9 +13,12 @@ import (
 )
 
 var (
-	certFile string
-	keyFile  string
-	port     int
+	certFile     string
+	keyFile      string
+	port         int
+	configVolume string
+
+	sidecarConfig sidecar.Config
 )
 
 func init() {
@@ -24,11 +27,14 @@ func init() {
 	flag.StringVar(&certFile, "tls-cert-file", "injector-tls.crt", "x509 Certificate for TLS")
 	flag.StringVar(&keyFile, "tls-private-key-file", "injector-tls.key", "x509 private key matching --tls-cert-file")
 	flag.IntVar(&port, "port", 8443, "port to listen on")
-	flag.IntVar(&verbosity, "v", int(logger.INFO), "Logging verbosity")
+	flag.IntVar(&verbosity, "verbose", int(logger.INFO), "Logging verbosity")
+	flag.StringVar(&configVolume, "config-volume", "/var/run/config/kar", "Volume containing KAR runtime config")
 
 	flag.Parse()
 
 	logger.SetVerbosity(logger.Severity(verbosity))
+	sidecarConfig = sidecar.LoadConfig(configVolume)
+	logger.Error("%v", sidecarConfig)
 }
 
 func serve(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +54,7 @@ func serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseObj, statusCode, err := sidecar.HandleAdmissionRequest(body)
+	responseObj, statusCode, err := sidecar.HandleAdmissionRequest(body, sidecarConfig)
 	if err != nil {
 		msg := fmt.Sprintf("Error while processing request: %v", err)
 		logger.Error(msg)
