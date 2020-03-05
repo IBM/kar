@@ -16,7 +16,7 @@ deploy:
       all_branches: true
       repo: solsa/kar
   - provider: script
-    script: "./build/ci/pushImages.sh nightly"
+    script: "./build/ci/pushImages.sh latest"
     on:
       branch: master
       repo: solsa/kar

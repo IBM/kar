@@ -1,16 +1,16 @@
 kar:
   imageRegistry: 'us.icr.io'
   imageName: 'kar-dev/kar'
-  imageTag: 'nightly'
+  imageTag: 'latest'
   runtimeConfigName: kar-runtime-config
 
 client:
   imageRegistry: 'us.icr.io'
   imageName: 'kar-dev/sample-incr'
-  imageTag: 'nightly'
+  imageTag: 'latest'
 
 server:
   imageRegistry: 'us.icr.io'
   imageName: 'kar-dev/sample-incr'
-  imageTag: 'nightly'
+  imageTag: 'latest'
 

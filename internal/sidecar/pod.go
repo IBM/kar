@@ -20,7 +20,7 @@ const (
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
 	sidecarName            = "kar"
-	sidecarImage           = "us.icr.io/kar-dev/kar:nightly"
+	sidecarImage           = "us.icr.io/kar-dev/kar:latest"
 	sidecarImagePullPolicy = corev1.PullAlways
 )
 
