@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incr-server
+  labels:
+    name: incr-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: incr-server
+  template:
+    metadata:
+      labels:
+        name: incr-server
+      annotations:
+        kar.ibm.com/app: incr
+        kar.ibm.com/service: server
+        kar.ibm.com/sendPort: "3500"
+        kar.ibm.com/recvPort: "3501"
+    spec:
+      containers:
+      - name: server
+        image: us.icr.io/kar-dev/sample-incr:nightly
+        imagePullPolicy: Always
+        env:
+        - name: MAIN
+          value: server.js
+        - name: KAR_APP_PORT
+          value: "3500"
+        - name: KAR_PORT
+          value: "3501"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: incr-client
+  labels:
+    name: incr-client
+spec:
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: incr
+        kar.ibm.com/service: client
+        kar.ibm.com/sendPort: "3500"
+        kar.ibm.com/recvPort: "3501"
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: client
+        image: us.icr.io/kar-dev/sample-incr:nightly
+        imagePullPolicy: Always
+        env:
+        - name: MAIN
+          value: client.js
+        - name: KAR_APP_PORT
+          value: "3500"
+        - name: KAR_PORT
+          value: "3501"
