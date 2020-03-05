@@ -19,9 +19,9 @@ const (
 	recvPortAnnotation    = "kar.ibm.com/recvPort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
-	sidecarName            = "kar"
-	sidecarImage           = "us.icr.io/kar-dev/kar:latest"
-	sidecarImagePullPolicy = corev1.PullAlways
+	sidecarName     = "kar"
+	sidecarImage    = "us.icr.io/kar-dev/kar"
+	sidecarImageTag = "latest"
 )
 
 // HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
@@ -75,18 +75,18 @@ func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionRe
 	if appName, ok := annotations[appNameAnnotation]; ok {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
 
-		sidecar := corev1.Container{
-			Name:            sidecarName,
-			Image:           sidecarImage,
-			ImagePullPolicy: sidecarImagePullPolicy,
-			Command:         []string{"/kar/kar"},
-			Args:            constructArgs(pod),
-			Env:             constructEnvironment(pod, config),
-		}
+		sidecar := []corev1.Container{{
+			Name:    sidecarName,
+			Image:   fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
+			Command: []string{"/kar/kar"},
+			Args:    constructArgs(pod),
+			Env:     constructEnvironment(pod, config),
+		}}
+		containers := append(sidecar, pod.Spec.Containers...)
 		patch := []patchOperation{{
-			Op:    "add",
-			Path:  "/spec/containers/-",
-			Value: sidecar,
+			Op:    "replace",
+			Path:  "/spec/containers",
+			Value: containers,
 		}}
 		patchBytes, err := json.Marshal(patch)
 		if err != nil {
@@ -118,7 +118,7 @@ func constructArgs(pod corev1.Pod) []string {
 		cmd = append(cmd, "-recv", recvPort)
 	}
 	if verbose, ok := annotations[verboseAnnotation]; ok {
-		cmd = append(cmd, "-verbose", verbose)
+		cmd = append(cmd, "-v", verbose)
 	}
 	return cmd
 }

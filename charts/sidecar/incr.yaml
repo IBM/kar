@@ -14,10 +14,11 @@ spec:
       labels:
         name: incr-server
       annotations:
-        kar.ibm.com/app: incr
-        kar.ibm.com/service: server
+        kar.ibm.com/app: myApp
+        kar.ibm.com/service: myService
         kar.ibm.com/sendPort: "3500"
         kar.ibm.com/recvPort: "3501"
+        kar.ibm.com/verbose: "4"
     spec:
       containers:
       - name: server
@@ -41,8 +42,8 @@ spec:
   template:
     metadata:
       annotations:
-        kar.ibm.com/app: incr
-        kar.ibm.com/service: client
+        kar.ibm.com/app: myApp
+        kar.ibm.com/service: myClient
         kar.ibm.com/sendPort: "3500"
         kar.ibm.com/recvPort: "3501"
     spec:

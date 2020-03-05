@@ -27,7 +27,6 @@ func LoadConfig(configVolume string) Config {
 		KafkaUsername: loadString(configVolume, "kafka_username", true),
 		KafkaPassword: loadString(configVolume, "kafka_password", true),
 	}
-	logger.Error("%v", config)
 
 	return config
 }
@@ -41,7 +40,6 @@ func loadString(path string, file string, required bool) string {
 		}
 	} else {
 		value = string(bytes)
-		logger.Error("%v", value)
 	}
 	return value
 }
