@@ -1,6 +1,7 @@
 package pubsub
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -11,9 +12,8 @@ import (
 )
 
 var (
-	producer  sarama.SyncProducer
-	consumer  sarama.Consumer
-	partition sarama.PartitionConsumer
+	producer sarama.SyncProducer
+	consumer sarama.ConsumerGroup
 )
 
 // mangle app and service names into topic name
@@ -44,23 +44,32 @@ func Send(service string, message map[string]string) error {
 	return nil
 }
 
-// receive unmarshals incoming messages from Kafka
-func receive(in <-chan *sarama.ConsumerMessage, out chan<- map[string]string) {
-	for {
-		msg, ok := <-in
-		if !ok {
-			close(out)
-			return
-		}
+type handler struct {
+	out chan map[string]string
+}
+
+func (consumer *handler) Setup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
+	return nil
+}
+
+func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	for msg := range claim.Messages() {
 		logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+		session.MarkMessage(msg, "")
 		var m map[string]string
 		err := json.Unmarshal(msg.Value, &m)
 		if err != nil {
 			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			continue
 		}
-		out <- m
+		consumer.out <- m
 	}
+	close(consumer.out)
+	return nil
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
@@ -76,6 +85,7 @@ func Dial() <-chan map[string]string {
 	conf.ClientID = "kar" // TODO
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
@@ -105,7 +115,7 @@ func Dial() <-chan map[string]string {
 		logger.Fatal("failed to list Kafka topics: %v", err)
 	}
 	if _, ok := topics[topic]; !ok {
-		err = clusterAdmin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
+		err = clusterAdmin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false) // TODO
 		if err != nil {
 			logger.Fatal("failed to create Kafka topic: %v", err.Error())
 		}
@@ -116,24 +126,18 @@ func Dial() <-chan map[string]string {
 		logger.Fatal("failed to create Kafka producer: %v", err)
 	}
 
-	consumer, err = sarama.NewConsumer(config.KafkaBrokers, conf)
+	consumer, err = sarama.NewConsumerGroup(config.KafkaBrokers, topic, conf)
 	if err != nil {
-		logger.Fatal("failed to create Kafka consumer: %v", err)
-	}
-
-	partition, err = consumer.ConsumePartition(topic, 0, sarama.OffsetNewest) // TODO consumer group
-	if err != nil {
-		logger.Fatal("failed to create Kafka partition consumer: %v", err)
+		logger.Fatal("failed to create Kafka consumer group: %v", err)
 	}
 
 	out := make(chan map[string]string)
-	go receive(partition.Messages(), out)
+	go consumer.Consume(context.Background(), []string{topic}, &handler{out: out})
 	return out
 }
 
 // Close closes the connection to Kafka
 func Close() {
 	producer.Close()
-	partition.Close()
 	consumer.Close()
 }
