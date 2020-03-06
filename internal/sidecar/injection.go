@@ -20,7 +20,7 @@ const (
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
 	sidecarName     = "kar"
-	sidecarImage    = "us.icr.io/groved/kar" // FIXME -- USING DAVE"S IMAGE!!!
+	sidecarImage    = "us.icr.io/kar-dev/kar"
 	sidecarImageTag = "latest"
 
 	karRTConfigSecret = "kar.ibm.com.runtime-config"
