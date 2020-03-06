@@ -73,10 +73,12 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	r := map[string][]int32{}
 	groups, _ := admin.DescribeConsumerGroups([]string{topic})
 	members := groups[0].Members
-	for _, member := range members {
+	for id, member := range members {
 		a, _ := member.GetMemberAssignment()
 		m, _ := member.GetMemberMetadata()
 		service := string(m.UserData)
+		logger.Info("member: %v %v %v", id, a.UserData, m.UserData)
+
 		r[service] = append(r[service], a.Topics[topic]...)
 	}
 	me, _ := members[session.MemberID()].GetMemberAssignment()
@@ -134,6 +136,7 @@ func Dial() <-chan map[string]string {
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
 	conf.Consumer.Group.Member.UserData = []byte(config.ServiceName)
+	logger.Info("ServiceName %s, UserData %v", config.ServiceName, conf.Consumer.Group.Member.UserData)
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
