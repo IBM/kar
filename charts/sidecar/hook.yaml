@@ -17,14 +17,13 @@ spec:
       containers:
       - name: injector
         image: us.icr.io/groved/kar-injector:latest
-        imagePullPolicy: Always
-        command: ["/kar/kar-injector", "--tls-cert-file", "/var/run/secrets/tls/tls.crt", "--tls-private-key-file", "/var/run/secrets/tls/tls.key", "--port", "8443"]
+        command: ["/kar/kar-injector", "--tls-cert-file", "/var/run/secrets/kar.ibm.com/tls/tls.crt", "--tls-private-key-file", "/var/run/secrets/kar.ibm.com/tls/tls.key", "--port", "8443"]
         ports:
         - containerPort: 8443
           name: webhook-api
         volumeMounts:
         - name: tls-certs
-          mountPath: /var/run/secrets/tls
+          mountPath: /var/run/secrets/kar.ibm.com/tls
           readOnly: true
       volumes:
       - name: tls-certs

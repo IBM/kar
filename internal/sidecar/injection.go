@@ -20,10 +20,11 @@ const (
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
 	sidecarName     = "kar"
-	sidecarImage    = "us.icr.io/kar-dev/kar"
+	sidecarImage    = "us.icr.io/groved/kar" // FIXME -- USING DAVE"S IMAGE!!!
 	sidecarImageTag = "latest"
 
-	karConfigMap = "kar-runtime-config"
+	karRTConfigSecret = "kar.ibm.com.runtime-config"
+	karRTConfigMount  = "/var/run/secrets/kar.ibm.com"
 )
 
 // HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
@@ -98,7 +99,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
 			Command:      []string{"/kar/kar"},
 			Args:         cmdLine,
-			VolumeMounts: []corev1.VolumeMount{{Name: "kar-runtime-config", MountPath: "/var/run/config/kar", ReadOnly: true}},
+			VolumeMounts: []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)
 		updateContainersPatch := patchOperation{
@@ -108,8 +109,8 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		}
 
 		configVolume := corev1.Volume{
-			Name:         "kar-runtime-config",
-			VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "kar-runtime-config"}}},
+			Name:         "kar-ibm-com-config",
+			VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: karRTConfigSecret}},
 		}
 		var addVolumePatch patchOperation
 		if pod.Spec.Volumes == nil {
@@ -147,7 +148,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
-	cmd := []string{"-config_dir", "/var/run/config/kar", "-app", appName}
+	cmd := []string{"-config_dir", karRTConfigMount, "-app", appName}
 	appEnv := []corev1.EnvVar{}
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 		cmd = append(cmd, "-service", serviceName)

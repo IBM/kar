@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kar.ibm.com.runtime-config
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar.ibm.com.runtime-config
+data:
+  kafka_brokers: {{ print ( include "kar.kafka_host_zero" . ) ":" .Values.kafka.port | b64enc }}
+{{- if ne .Values.kafka.password "" }}
+  kafka_password: {{ .Values.kafka.password | b64enc }}
+{{- end }}
+{{- if ne .Values.kafka.username "" }}
+  kafka_username: {{ .Values.kafka.username | b64enc }}
+{{- end }}
+{{- if ne .Values.kafka.version "" }}
+  kafka_version: {{ .Values.kafka.version | b64enc }}
+{{- end }}
+  redis_host: {{ include "kar.redis_host" . | b64enc }}
+  redis_port: {{ print (int64 .Values.redis.port) | b64enc }}
+{{- if ne .Values.redis.password "" }}
+  redis_password: {{ .Values.redis.password | b64enc }}
+{{- end }}

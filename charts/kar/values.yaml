@@ -10,7 +10,10 @@ kafka:
   imageRegistry: 'docker.io'
   imageName: 'wurstmeister/kafka'
   imageTag: '2.12-2.3.1'
+  version: '2.3.1'
   port: 9092
+  username: ''
+  password: ''
 
 redis:
   imageRegistry: 'docker.io'
