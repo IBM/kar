@@ -1,16 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "kar.name" . }}-kafka
+  name: kar-kafka
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ include "kar.name" . }}-kafka
+    name: kar-kafka
 spec:
   type: ClusterIP
   clusterIP: None
   selector:
       {{- include "kar.selectorLabels" . | nindent 6 }}
-      name: {{ include "kar.name" . }}-kafka
+      name: kar-kafka
   ports:
   - name: kafka
     port: {{ .Values.kafka.port }}
@@ -19,22 +19,22 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "kar.name" . }}-kafka
+  name: kar-kafka
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ include "kar.name" . }}-kafka
+    name: kar-kafka
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "kar.selectorLabels" . | nindent 6 }}
-      name: {{ include "kar.name" . }}-kafka
-  serviceName: {{ include "kar.name" . }}-kafka
+      name: kar-kafka
+  serviceName: kar-kafka
   template:
     metadata:
       labels:
         {{- include "kar.selectorLabels" . | nindent 8 }}
-        name: {{ include "kar.name" . }}-kafka
+        name: kar-kafka
     spec:
       initContainers:
       - name: wait-for-zookeeper
@@ -67,21 +67,21 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "kar.name" . }}-kafka-console
+  name: kar-kafka-console
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ include "kar.name" . }}-kafka-console
+    name: kar-kafka-console
 spec:
   replicas: 1
   selector:
     matchLabels:
       {{- include "kar.selectorLabels" . | nindent 6 }}
-      name: {{ include "kar.name" . }}-kafka-console
+      name: kar-kafka-console
   template:
     metadata:
       labels:
         {{- include "kar.selectorLabels" . | nindent 8 }}
-        name: {{ include "kar.name" . }}-kafka-console
+        name: kar-kafka-console
     spec:
       containers:
       - name: console

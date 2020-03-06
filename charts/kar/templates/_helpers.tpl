@@ -1,28 +1,4 @@
 {{/* vim: set filetype=mustache: */}}
-{{/*
-Expand the name of the chart.
-*/}}
-{{- define "kar.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
-Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-If release name contains chart name it will be used as a full name.
-*/}}
-{{- define "kar.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
-{{- if contains $name .Release.Name -}}
-{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
-{{- else -}}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-{{- end -}}
-{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
@@ -47,21 +23,21 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 Selector labels
 */}}
 {{- define "kar.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "kar.name" . }}
+app.kubernetes.io/name: kar
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/* host name for server.0 in zookeeper cluster */}}
 {{- define "kar.zookeeper_host_zero" -}}
-{{ include "kar.name" . }}-zookeeper-0.{{ include "kar.name" . }}-zookeeper.{{ $.Release.Namespace }}.svc
+kar-zookeeper-0.kar-zookeeper.{{ $.Release.Namespace }}.svc
 {{- end -}}
 
 {{/* host name for server.0 in kafka cluster */}}
 {{- define "kar.kafka_host_zero" -}}
-{{ include "kar.name" . }}-kafka-0.{{ include "kar.name" . }}-kafka.{{ $.Release.Namespace }}.svc
+kar-kafka-0.kar-kafka.{{ $.Release.Namespace }}.svc
 {{- end -}}
 
 {{/* host name for server.0 in redis cluster */}}
 {{- define "kar.redis_host" -}}
-{{ include "kar.name" . }}-redis.{{ $.Release.Namespace }}.svc
+kar-redis.{{ $.Release.Namespace }}.svc
 {{- end -}}
