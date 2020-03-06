@@ -4,22 +4,41 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"fmt"
+	"errors"
+	"sync"
 
 	"github.com/Shopify/sarama"
+	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
+// encode user data
+func encode(s string) []byte {
+	return append(append([]byte{0, 0, 0, 1, byte(len(s) / 256), byte(len(s) % 256)}, s...), 0, 0, 0, 0, 0, 0, 0, 0)
+}
+
+// decode user data
+func decode(b []byte) string {
+	return string(b[6 : len(b)-8])
+}
+
 var (
+	admin    sarama.ClusterAdmin
 	producer sarama.SyncProducer
 	consumer sarama.ConsumerGroup
-)
+	topic    = "kar-" + config.AppName
 
-// mangle app and service names into topic name
-func mangle(app, service string) string {
-	return fmt.Sprintf("kar-%s-%s", app, service)
-}
+	// output channel
+	out = make(chan map[string]string) // TODO multiple channels?
+
+	// routes
+	routes map[string][]int32 // map services to partitions
+	mu     = sync.RWMutex{}   // synchronize changes to routes
+
+	ctx, cancel = context.WithCancel(context.Background())
+	wg          = sync.WaitGroup{}
+)
 
 // Send sends a message to a service
 func Send(service string, message map[string]string) error {
@@ -29,12 +48,25 @@ func Send(service string, message map[string]string) error {
 		return err
 	}
 
-	topic := mangle(config.AppName, service)
+	// wait for route
+	var p []int32
+	err = backoff.Retry(func() error {
+		var ok bool
+		mu.RLock()
+		defer mu.RUnlock()
+		if p, ok = routes[service]; ok {
+			return nil
+		}
+		return errors.New("")
+	}, backoff.NewExponentialBackOff()) // TODO fix timeout
+	if err != nil {
+		logger.Error("failed to route message to service %s: %v", service, err)
+	}
 
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
-		// TODO Key?
-		Topic: topic,
-		Value: sarama.ByteEncoder(msg),
+		Topic:     topic,
+		Partition: p[0], // TODO partition selection
+		Value:     sarama.ByteEncoder(msg),
 	})
 	if err != nil {
 		logger.Error("failed to send message to topic %s: %v", topic, err)
@@ -44,11 +76,22 @@ func Send(service string, message map[string]string) error {
 	return nil
 }
 
-type handler struct {
-	out chan map[string]string
-}
+type handler struct{}
 
-func (consumer *handler) Setup(sarama.ConsumerGroupSession) error {
+func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
+	r := map[string][]int32{}
+	groups, _ := admin.DescribeConsumerGroups([]string{topic})
+	members := groups[0].Members
+	for _, member := range members {
+		a, _ := member.GetMemberAssignment()
+		m, _ := member.GetMemberMetadata()
+		service := decode(m.UserData)
+		r[service] = append(r[service], a.Topics[topic]...)
+	}
+	logger.Info("new routes: %v", r)
+	mu.Lock()
+	defer mu.Unlock()
+	routes = r
 	return nil
 }
 
@@ -66,10 +109,21 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			continue
 		}
-		consumer.out <- m
+		out <- m
 	}
-	close(consumer.out)
 	return nil
+}
+
+func consume() {
+	defer wg.Done()
+	for {
+		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
+			logger.Fatal("consumer error: %v", err)
+		}
+		if ctx.Err() != nil {
+			return
+		}
+	}
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
@@ -82,10 +136,12 @@ func Dial() <-chan map[string]string {
 		conf.Version = version
 	}
 
-	conf.ClientID = "kar" // TODO
+	conf.ClientID = "kar"
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
+	conf.Consumer.Group.Member.UserData = encode(config.ServiceName)
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
@@ -98,26 +154,28 @@ func Dial() <-chan map[string]string {
 	if config.KafkaEnableTLS {
 		conf.Net.TLS.Enable = true
 		conf.Net.TLS.Config = &tls.Config{
-			InsecureSkipVerify: true, // TODO
+			InsecureSkipVerify: true, // TODO certificates
 		}
 	}
 
-	clusterAdmin, err := sarama.NewClusterAdmin(config.KafkaBrokers, conf)
+	var err error
+
+	admin, err = sarama.NewClusterAdmin(config.KafkaBrokers, conf)
 	if err != nil {
 		logger.Fatal("failed to create Kafka cluster admin: %v", err)
 	}
-	defer clusterAdmin.Close()
 
-	topic := mangle(config.AppName, config.ServiceName)
-
-	topics, err := clusterAdmin.ListTopics()
+	topics, err := admin.ListTopics()
 	if err != nil {
 		logger.Fatal("failed to list Kafka topics: %v", err)
 	}
 	if _, ok := topics[topic]; !ok {
-		err = clusterAdmin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false) // TODO
+		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 10, ReplicationFactor: 3}, false) // TODO fix NumPartitions
 		if err != nil {
-			logger.Fatal("failed to create Kafka topic: %v", err.Error())
+			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 10, ReplicationFactor: 1}, false)
+		}
+		if err != nil {
+			logger.Fatal("failed to create Kafka topic: %v", err)
 		}
 	}
 
@@ -131,13 +189,18 @@ func Dial() <-chan map[string]string {
 		logger.Fatal("failed to create Kafka consumer group: %v", err)
 	}
 
-	out := make(chan map[string]string)
-	go consumer.Consume(context.Background(), []string{topic}, &handler{out: out})
+	wg.Add(1)
+	go consume()
+
 	return out
 }
 
 // Close closes the connection to Kafka
 func Close() {
 	producer.Close()
+	cancel()
+	wg.Wait()
 	consumer.Close()
+	admin.Close()
+	close(out)
 }
