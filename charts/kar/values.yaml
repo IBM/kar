@@ -9,8 +9,8 @@ zk:
 kafka:
   imageRegistry: 'docker.io'
   imageName: 'wurstmeister/kafka'
-  imageTag: '2.12-2.3.1'
-  version: '2.3.1'
+  imageTag: '2.12-2.4.0'
+  version: '2.4.0'
   port: 9092
   username: ''
   password: ''
