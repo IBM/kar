@@ -2,6 +2,7 @@ package sidecar
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -12,6 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var (
+	sidecarImageRegistry string
+	sidecarImage         string
+	sidecarImageTag      string
+)
+
 const (
 	appNameAnnotation     = "kar.ibm.com/app"
 	serviceNameAnnotation = "kar.ibm.com/service"
@@ -19,13 +26,16 @@ const (
 	recvPortAnnotation    = "kar.ibm.com/recvPort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
-	sidecarName     = "kar"
-	sidecarImage    = "us.icr.io/kar-dev/kar"
-	sidecarImageTag = "latest"
-
+	sidecarName       = "kar"
 	karRTConfigSecret = "kar.ibm.com.runtime-config"
 	karRTConfigMount  = "/var/run/secrets/kar.ibm.com"
 )
+
+func init() {
+	flag.StringVar(&sidecarImageRegistry, "sidecar_image_registry", "us.icr.io", "docker image registry to use for kar sidecar")
+	flag.StringVar(&sidecarImage, "sidecar_image", "kar-dev/kar", "docker image to use for kar sidecar")
+	flag.StringVar(&sidecarImageTag, "sidecar_image_tag", "latest", "docker image tag to use for kar sidecar")
+}
 
 // HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
 // If the processing is successful, it returns an AdmissionReview instance and http.StatusOK.
@@ -96,7 +106,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 
 		sidecar := []corev1.Container{{
 			Name:         sidecarName,
-			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
+			Image:        fmt.Sprintf("%s/%s:%s", sidecarImageRegistry, sidecarImage, sidecarImageTag),
 			Command:      []string{"/kar/kar"},
 			Args:         cmdLine,
 			VolumeMounts: []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
