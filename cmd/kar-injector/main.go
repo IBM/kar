@@ -13,22 +13,17 @@ import (
 )
 
 var (
-	certFile string
-	keyFile  string
-	port     int
+	certFile  string
+	keyFile   string
+	port      int
+	verbosity int
 )
 
 func init() {
-	var verbosity int
-
 	flag.StringVar(&certFile, "tls-cert-file", "injector-tls.crt", "x509 Certificate for TLS")
 	flag.StringVar(&keyFile, "tls-private-key-file", "injector-tls.key", "x509 private key matching --tls-cert-file")
 	flag.IntVar(&port, "port", 8443, "port to listen on")
 	flag.IntVar(&verbosity, "v", int(logger.INFO), "Logging verbosity")
-
-	flag.Parse()
-
-	logger.SetVerbosity(logger.Severity(verbosity))
 }
 
 func serve(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +66,9 @@ func serve(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	flag.Parse()
+	logger.SetVerbosity(logger.Severity(verbosity))
+
 	http.HandleFunc("/inject-sidecar", serve)
 
 	sCert, err := tls.LoadX509KeyPair(certFile, keyFile)
