@@ -22,12 +22,14 @@ const (
 	sidecarName     = "kar"
 	sidecarImage    = "us.icr.io/kar-dev/kar"
 	sidecarImageTag = "latest"
+
+	karConfigMap = "kar-runtime-config"
 )
 
 // HandleAdmissionRequest decodes and processes the body of an AdmissionRequest.
 // If the processing is successful, it returns an AdmissionReview instance and http.StatusOK.
 // If the processing is unsuccessful, it returns an http error code and error.
-func HandleAdmissionRequest(body []byte, config Config) (runtime.Object, int, error) {
+func HandleAdmissionRequest(body []byte) (runtime.Object, int, error) {
 	deserializer := codecs.UniversalDeserializer()
 	obj, gvk, err := deserializer.Decode(body, nil, nil)
 	if err != nil {
@@ -43,7 +45,7 @@ func HandleAdmissionRequest(body []byte, config Config) (runtime.Object, int, er
 		}
 		responseAdmissionReview := &v1.AdmissionReview{}
 		responseAdmissionReview.SetGroupVersionKind(*gvk)
-		responseAdmissionReview.Response = possiblyInjectSidecar(*requestedAdmissionReview, config)
+		responseAdmissionReview.Response = possiblyInjectSidecar(*requestedAdmissionReview)
 		responseAdmissionReview.Response.UID = requestedAdmissionReview.Request.UID
 		responseObj = responseAdmissionReview
 	default:
@@ -53,7 +55,7 @@ func HandleAdmissionRequest(body []byte, config Config) (runtime.Object, int, er
 	return responseObj, http.StatusOK, nil
 }
 
-func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionResponse {
+func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	podResource := metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 	if ar.Request.Resource != podResource {
 		logger.Error("expected resource to be %s", podResource)
@@ -92,19 +94,41 @@ func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionRe
 		}
 
 		sidecar := []corev1.Container{{
-			Name:    sidecarName,
-			Image:   fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
-			Command: []string{"/kar/kar"},
-			Args:    cmdLine,
-			Env:     constructEnvironment(pod, config),
+			Name:         sidecarName,
+			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
+			Command:      []string{"/kar/kar"},
+			Args:         cmdLine,
+			VolumeMounts: []corev1.VolumeMount{{Name: "kar-runtime-config", MountPath: "/var/run/config/kar", ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)
-		patch := []patchOperation{{
+		updateContainersPatch := patchOperation{
 			Op:    "replace",
 			Path:  "/spec/containers",
 			Value: containers,
-		}}
-		patchBytes, err := json.Marshal(patch)
+		}
+
+		configVolume := corev1.Volume{
+			Name:         "kar-runtime-config",
+			VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "kar-runtime-config"}}},
+		}
+		var addVolumePatch patchOperation
+		if pod.Spec.Volumes == nil {
+			addVolumePatch = patchOperation{
+				Op:    "replace",
+				Path:  "/spec/volumes",
+				Value: []corev1.Volume{configVolume},
+			}
+		} else {
+			addVolumePatch = patchOperation{
+				Op:    "add",
+				Path:  "/spec/volumes/-",
+				Value: configVolume,
+			}
+		}
+
+		patches := []patchOperation{updateContainersPatch, addVolumePatch}
+
+		patchBytes, err := json.Marshal(patches)
 		if err != nil {
 			logger.Error(err.Error())
 			return toV1AdmissionResponse(err)
@@ -123,7 +147,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview, config Config) *v1.AdmissionRe
 func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
-	cmd := []string{"-app", appName}
+	cmd := []string{"-config_dir", "/var/run/config/kar", "-app", appName}
 	appEnv := []corev1.EnvVar{}
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 		cmd = append(cmd, "-service", serviceName)
@@ -140,18 +164,6 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 		cmd = append(cmd, "-v", verbose)
 	}
 	return cmd, appEnv
-}
-
-func constructEnvironment(pod corev1.Pod, config Config) []corev1.EnvVar {
-	env := []corev1.EnvVar{
-		{Name: "REDIS_HOST", Value: config.RedisHost},
-		{Name: "REDIS_PORT", Value: config.RedisPort},
-		{Name: "REDIS_PASSWORD", Value: config.RedisPassword},
-		{Name: "KAFKA_BROKERS", Value: config.KafkaBrokers},
-		{Name: "KAFKA_PASSWORD", Value: config.KafkaPassword},
-		{Name: "KAFKA_USERNAME", Value: config.KafkaUsername},
-	}
-	return env
 }
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {

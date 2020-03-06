@@ -26,17 +26,10 @@ spec:
         - name: tls-certs
           mountPath: /var/run/secrets/tls
           readOnly: true
-        - name: kar-config
-          mountPath: /var/run/config/kar
-          readOnly: true
       volumes:
       - name: tls-certs
         secret:
           secretName: kar-injector-tls
-      - name: kar-config
-        configMap:
-          # FIXME: get actual name using var from chart
-          name: kar-runtime-config
 ---
 apiVersion: v1
 kind: Service

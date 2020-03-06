@@ -3,7 +3,9 @@ package config
 
 import (
 	"flag"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -54,6 +56,7 @@ var (
 func init() {
 	var kafkaBrokers string
 	var verbosity int
+	var configDir string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
@@ -69,7 +72,8 @@ func init() {
 	flag.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
 	flag.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	flag.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
-	flag.IntVar(&verbosity, "v", 0, "Logging verbosity")
+	flag.IntVar(&verbosity, "v", int(logger.ERROR), "Logging verbosity")
+	flag.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
 	flag.Parse()
 
@@ -91,7 +95,9 @@ func init() {
 
 	if kafkaBrokers == "" {
 		if kafkaBrokers = os.Getenv("KAFKA_BROKERS"); kafkaBrokers == "" {
-			logger.Fatal("at least one Kafka broker is required")
+			if kafkaBrokers = loadStringFromConfig(configDir, "kafka_brokers"); kafkaBrokers == "" {
+				logger.Fatal("at least one Kafka broker is required")
+			}
 		}
 	}
 
@@ -99,17 +105,23 @@ func init() {
 
 	if KafkaUsername == "" {
 		if KafkaUsername = os.Getenv("KAFKA_USERNAME"); KafkaUsername == "" {
-			KafkaUsername = "token"
+			if KafkaUsername = loadStringFromConfig(configDir, "kafka_username"); KafkaUsername == "" {
+				KafkaUsername = "token"
+			}
 		}
 	}
 
 	if KafkaPassword == "" {
-		KafkaPassword = os.Getenv("KAFKA_PASSWORD")
+		if KafkaPassword = os.Getenv("KAFKA_PASSWORD"); KafkaPassword == "" {
+			KafkaPassword = loadStringFromConfig(configDir, "kafka_password")
+		}
 	}
 
 	if KafkaVersion == "" {
 		if KafkaVersion = os.Getenv("KAFKA_VERSION"); KafkaVersion == "" {
-			KafkaVersion = "2.2.0"
+			if KafkaVersion = loadStringFromConfig(configDir, "kafka_version"); KafkaVersion == "" {
+				KafkaVersion = "2.2.0"
+			}
 		}
 	}
 
@@ -121,7 +133,9 @@ func init() {
 
 	if RedisHost == "" {
 		if RedisHost = os.Getenv("REDIS_HOST"); RedisHost == "" {
-			logger.Fatal("Redis host is required")
+			if RedisHost = loadStringFromConfig(configDir, "redis_host"); RedisHost == "" {
+				logger.Fatal("Redis host is required")
+			}
 		}
 	}
 
@@ -131,11 +145,29 @@ func init() {
 				logger.Fatal("error parsing environment variable REDIS_PORT")
 			}
 		} else {
-			RedisPort = 6379
+			if rp := loadStringFromConfig(configDir, "redis_port"); rp != "" {
+				if RedisPort, err = strconv.Atoi(rp); err != nil {
+					logger.Fatal("error parsing config value for redis_port: %v", rp)
+				}
+			} else {
+				RedisPort = 6379
+			}
 		}
 	}
 
 	if RedisPassword == "" {
-		RedisPassword = os.Getenv("REDIS_PASSWORD")
+		if RedisPassword = os.Getenv("REDIS_PASSWORD"); RedisPassword == "" {
+			RedisPassword = loadStringFromConfig(configDir, "redis_password")
+		}
 	}
+}
+
+func loadStringFromConfig(path string, file string) string {
+	value := ""
+	if path != "" {
+		if bytes, err := ioutil.ReadFile(filepath.Join(path, file)); err == nil {
+			value = string(bytes)
+		}
+	}
+	return value
 }
