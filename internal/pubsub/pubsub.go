@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"math/rand"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -12,16 +13,6 @@ import (
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
-
-// encode user data
-func encode(s string) []byte {
-	return append(append([]byte{0, 0, 0, 1, byte(len(s) / 256), byte(len(s) % 256)}, s...), 0, 0, 0, 0, 0, 0, 0, 0)
-}
-
-// decode user data
-func decode(b []byte) string {
-	return string(b[6 : len(b)-8])
-}
 
 var (
 	admin    sarama.ClusterAdmin
@@ -65,7 +56,7 @@ func Send(service string, message map[string]string) error {
 
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
-		Partition: p[0], // TODO partition selection
+		Partition: p[rand.Int31n(int32(len(p)))],
 		Value:     sarama.ByteEncoder(msg),
 	})
 	if err != nil {
@@ -85,10 +76,11 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for _, member := range members {
 		a, _ := member.GetMemberAssignment()
 		m, _ := member.GetMemberMetadata()
-		service := decode(m.UserData)
+		service := string(m.UserData)
 		r[service] = append(r[service], a.Topics[topic]...)
 	}
-	logger.Info("new routes: %v", r)
+	me, _ := members[session.MemberID()].GetMemberAssignment()
+	logger.Info("new partitions: %v and routes: %v", me.Topics[topic], r)
 	mu.Lock()
 	defer mu.Unlock()
 	routes = r
@@ -140,8 +132,8 @@ func Dial() <-chan map[string]string {
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
-	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
-	conf.Consumer.Group.Member.UserData = encode(config.ServiceName)
+	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	conf.Consumer.Group.Member.UserData = []byte(config.ServiceName)
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
