@@ -247,6 +247,11 @@ func server(listener net.Listener) {
 func main() {
 	logger.Warning("starting...")
 
+	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
+	if err != nil {
+		logger.Fatal("Listener failed: %v", err)
+	}
+
 	channel := pubsub.Dial(id)
 	defer pubsub.Close()
 
@@ -255,11 +260,6 @@ func main() {
 
 	wg.Add(1)
 	go subscriber(channel)
-
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
-	if err != nil {
-		logger.Fatal("Listener failed: %v", err)
-	}
 
 	wg.Add(1)
 	go server(listener)
