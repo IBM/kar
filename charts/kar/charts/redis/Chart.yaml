@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kar-redis
+description: Redis for KAR
+type: application
+version: 0.1.2
+appVersion: 0.1.0

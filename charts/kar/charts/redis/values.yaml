@@ -1,0 +1,11 @@
+redis:
+  imageRegistry: 'docker.io'
+  imageName: 'redis'
+  imageTag: '5.0'
+  port: 6379
+  password: passw0rd
+
+exports:
+  redisHostName: 'kar-redis'
+  redisPort: 6379
+  redisPassword: passw0rd

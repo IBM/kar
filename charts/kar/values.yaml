@@ -1,23 +1,9 @@
-zk:
-  imageRegistry: 'docker.io'
-  imageName: 'zookeeper'
-  imageTag: '3.4'
-  port: 2181
-  serverPort: 2888
-  leaderElectionPort: 3888
-
 kafka:
-  imageRegistry: 'docker.io'
-  imageName: 'wurstmeister/kafka'
-  imageTag: '2.12-2.4.0'
   version: '2.4.0'
   port: 9092
   username: ''
   password: ''
 
 redis:
-  imageRegistry: 'docker.io'
-  imageName: 'redis'
-  imageTag: '5.0'
   port: 6379
   password: passw0rd

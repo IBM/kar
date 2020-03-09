@@ -1,0 +1,23 @@
+zk:
+  imageRegistry: 'docker.io'
+  imageName: 'zookeeper'
+  imageTag: '3.4'
+  port: 2181
+  serverPort: 2888
+  leaderElectionPort: 3888
+
+kafka:
+  imageRegistry: 'docker.io'
+  imageName: 'wurstmeister/kafka'
+  imageTag: '2.12-2.4.0'
+  version: '2.4.0'
+  port: 9092
+  username: ''
+  password: ''
+
+exports:
+  kafkaBootstrapName: 'kar-kafka-0.kar-kafka'
+  kafkaBootstrapPort: 9092
+  kafkaVersion: '2.4.0'
+  kafkaUsername: ''
+  kafkaPassword: ''
