@@ -14,10 +14,3 @@ kafka:
   port: 9092
   username: ''
   password: ''
-
-exports:
-  kafkaBootstrapName: 'kar-kafka-0.kar-kafka'
-  kafkaBootstrapPort: 9092
-  kafkaVersion: '2.4.0'
-  kafkaUsername: ''
-  kafkaPassword: ''

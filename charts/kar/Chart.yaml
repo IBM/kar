@@ -4,3 +4,14 @@ description: Kubernetes Application Runtime (KAR)
 type: application
 version: 0.1.2
 appVersion: 0.1.0
+dependencies:
+- name: kar-kafka
+  condition: kafka.internal
+  import-values:
+    - child: kafka
+      parent: kafka
+- name: kar-redis
+  condition: redis.internal
+  import-values:
+    - child: redis
+      parent: redis

@@ -6,18 +6,21 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar.ibm.com.runtime-config
 data:
+{{- if .Values.kafka.internal }}
   kafka_brokers: {{ print ( include "kar.kafka_host_zero" . ) ":" .Values.kafka.port | b64enc }}
-{{- if ne .Values.kafka.password "" }}
-  kafka_password: {{ .Values.kafka.password | b64enc }}
-{{- end }}
-{{- if ne .Values.kafka.username "" }}
-  kafka_username: {{ .Values.kafka.username | b64enc }}
-{{- end }}
-{{- if ne .Values.kafka.version "" }}
   kafka_version: {{ .Values.kafka.version | b64enc }}
-{{- end }}
+{{ else }}
+  kafka_brokers: {{ .Values.kafka.externalConfig.brokers | b64enc }}
+  kafka_password: {{ .Values.kafka.externalConfig.password | b64enc }}
+  kafka_username: {{ .Values.kafka.externalConfig.username | b64enc }}
+  kafka_version: {{ .Values.kafka.externalConfig.version | b64enc }}
+{{ end -}}
+{{- if .Values.redis.internal }}
   redis_host: {{ include "kar.redis_host" . | b64enc }}
   redis_port: {{ print (int64 .Values.redis.port) | b64enc }}
-{{- if ne .Values.redis.password "" }}
   redis_password: {{ .Values.redis.password | b64enc }}
-{{- end }}
+{{ else }}
+  redis_host: {{ .Values.redis.externalConfig.host | b64enc }}
+  redis_port: {{ print (int64 .Values.redis.externalConfig.port) | b64enc }}
+  redis_password: {{ .Values.redis.externalConfig.password | b64enc }}
+{{ end -}}

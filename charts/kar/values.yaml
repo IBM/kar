@@ -1,9 +1,14 @@
 kafka:
-  version: '2.4.0'
-  port: 9092
-  username: ''
-  password: ''
+  internal: true
+  externalConfig:
+    brokers: 'mustOverrideIfInternalIsFalse'
+    password: 'mustOverrideIfInternalIsFalse'
+    username: 'mustOverrideIfInternalIsFalse'
+    version: 'mustOverrideIfInternalIsFalse'
 
 redis:
-  port: 6379
-  password: passw0rd
+  internal: true
+  externalConfig:
+    host: 'mustOverrideIfInternalIsFalse'
+    port: 'mustOverrideIfInternalIsFalse'
+    password: 'mustOverrideIfInternalIsFalse'
