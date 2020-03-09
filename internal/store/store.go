@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 	"sync"
@@ -12,12 +11,16 @@ import (
 )
 
 var (
-	conn redis.Conn
+	conn redis.Conn // for now using a single connection with a lock
 	lock sync.Mutex
 )
 
+// Separator character
+const Separator = "\\"
+
+// prefix all keys with "kar\appName\"
 func mangle(key string) string {
-	return fmt.Sprintf("%s-%s", config.AppName, key)
+	return "kar" + Separator + config.AppName + Separator + key
 }
 
 // Set sets the value associated with a key
