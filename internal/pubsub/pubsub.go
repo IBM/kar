@@ -25,6 +25,7 @@ var (
 	out = make(chan map[string]string) // TODO multiple channels?
 
 	// routes
+	me     string
 	routes map[string][]int32 // map services to partitions
 	mu     = sync.RWMutex{}   // synchronize changes to routes
 
@@ -98,14 +99,20 @@ func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
 		logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
-		session.MarkMessage(msg, "")
 		var m map[string]string
 		err := json.Unmarshal(msg.Value, &m)
 		if err != nil {
 			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			continue
 		}
-		out <- m
+		if strings.Contains(me, m["service"]) {
+			out <- m
+			session.MarkMessage(msg, "") // TODO
+		} else {
+			logger.Info("forwarding message for %s", m["service"])
+			Send(m["service"], m)
+			session.MarkMessage(msg, "") // TODO
+		}
 	}
 	return nil
 }
@@ -137,7 +144,8 @@ func Dial(id string) <-chan map[string]string {
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	conf.Consumer.Group.Member.UserData = []byte(config.ServiceName + "," + id)
+	me = config.ServiceName + "," + id
+	conf.Consumer.Group.Member.UserData = []byte(me)
 	logger.Info("ServiceName %s, UserData %v", config.ServiceName, conf.Consumer.Group.Member.UserData)
 
 	if config.KafkaPassword != "" {
