@@ -12,6 +12,9 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
+// Separator character for store keys and topic names
+const Separator = "_" // must not be a legal DNS name character
+
 var (
 	// AppName is the name of the application
 	AppName string

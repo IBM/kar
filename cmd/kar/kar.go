@@ -193,7 +193,7 @@ func subscriber(channel <-chan map[string]string) {
 
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if err := store.Set("state"+store.Separator+ps.ByName("key"), text(r.Body)); err != nil {
+	if err := store.Set("state"+config.Separator+ps.ByName("key"), text(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, "OK")
@@ -202,7 +202,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // get route handler
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Get("state" + store.Separator + ps.ByName("key")); err != nil {
+	if reply, err := store.Get("state" + config.Separator + ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("failed to get key: %v", err), http.StatusInternalServerError)
 	} else if reply == nil {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -213,7 +213,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // del route handler
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if err := store.Del("state" + store.Separator + ps.ByName("key")); err != nil {
+	if err := store.Del("state" + config.Separator + ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, "OK")

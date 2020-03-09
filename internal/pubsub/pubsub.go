@@ -15,11 +15,21 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
+// Receiver type
+type Receiver int
+
+// Types of receivers
+const (
+	SERVICE  Receiver = iota // any sidecar exposing the specified service
+	INSTANCE                 // a specific sidecar
+	ACTOR                    // a specific actor
+)
+
 var (
 	admin    sarama.ClusterAdmin
 	producer sarama.SyncProducer
 	consumer sarama.ConsumerGroup
-	topic    = "kar-" + config.AppName
+	topic    = "kar" + config.Separator + config.AppName
 
 	// output channel
 	out = make(chan map[string]string) // TODO multiple channels?

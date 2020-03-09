@@ -15,12 +15,9 @@ var (
 	lock sync.Mutex
 )
 
-// Separator character
-const Separator = "\\"
-
 // prefix all keys with "kar\appName\"
 func mangle(key string) string {
-	return "kar" + Separator + config.AppName + Separator + key
+	return "kar" + config.Separator + config.AppName + config.Separator + key
 }
 
 // Set sets the value associated with a key
