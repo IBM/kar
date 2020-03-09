@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -54,6 +55,9 @@ var (
 
 	// RedisPassword the the password of the Redis instance (optional)
 	RedisPassword string
+
+	// UUID is the unique id of this sidecar instance
+	UUID = uuid.New().String()
 )
 
 func init() {

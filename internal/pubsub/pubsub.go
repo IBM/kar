@@ -37,13 +37,13 @@ var (
 func Send(message map[string]string) error {
 	msg, err := json.Marshal(message)
 	if err != nil {
-		logger.Error("failed to marshal message %v: %v", message, err)
+		logger.Debug("failed to marshal message with value %v: %v", message, err)
 		return err
 	}
 
 	var p []int32
 	switch message["protocol"] {
-	case "service": // wait for a route to the specified service name
+	case "service": // wait for route to specified service name
 		err = backoff.Retry(func() error {
 			var ok bool
 			mu.RLock()
@@ -51,19 +51,20 @@ func Send(message map[string]string) error {
 			if p, ok = routes[message["to"]]; ok {
 				return nil
 			}
-			return errors.New("no route to " + message["to"])
+			logger.Debug("no route to service %s", message["to"]) // not an error if transient
+			return errors.New("no route to service " + message["to"])
 		}, backoff.NewExponentialBackOff()) // TODO fix timeout
-	case "instance": // route to specified sidecard uuid if available or fail
+	case "sidecar": // route to specified sidecard uuid if available or fail
 		var ok bool
 		mu.RLock()
 		defer mu.RUnlock()
 		if p, ok = routes[message["to"]]; !ok {
-			err = errors.New("no route to " + message["to"])
+			err = errors.New("no route to sidecar " + message["to"]) // no retry
 		}
 	}
 	if err != nil {
-		logger.Error("failed to send message to topic %s: %v", topic, err)
-		return nil
+		logger.Debug("failed to send message to %s %s: %v", message["protocol"], message["to"], err)
+		return err
 	}
 
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
@@ -72,10 +73,12 @@ func Send(message map[string]string) error {
 		Value:     sarama.ByteEncoder(msg),
 	})
 	if err != nil {
-		logger.Error("failed to send message to topic %s: %v", topic, err)
-	} else {
-		logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
+		logger.Debug("failed to send message to %s %s: %v", message["protocol"], message["to"], err)
+		return err
 	}
+
+	logger.Debug("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
+
 	return nil
 }
 
@@ -85,17 +88,17 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	r := map[string][]int32{}
 	groups, _ := admin.DescribeConsumerGroups([]string{topic})
 	members := groups[0].Members
-	for id, member := range members {
+	for _, member := range members {
 		a, _ := member.GetMemberAssignment()
 		m, _ := member.GetMemberMetadata()
 		services := strings.Split(string(m.UserData), ",")
-		logger.Info("member: %v %v %v", id, a.UserData, m.UserData)
 		for _, service := range services {
 			r[service] = append(r[service], a.Topics[topic]...)
 		}
 	}
 	me, _ := members[session.MemberID()].GetMemberAssignment()
-	logger.Info("new partitions: %v and routes: %v", me.Topics[topic], r)
+	logger.Info("partitions: %v", me.Topics[topic])
+	logger.Info("routes: %v", r)
 	mu.Lock()
 	defer mu.Unlock()
 	routes = r
@@ -108,19 +111,25 @@ func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
 
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		logger.Info("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+		session.MarkMessage(msg, "received") // TODO
+		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
 		var m map[string]string
 		err := json.Unmarshal(msg.Value, &m)
 		if err != nil {
-			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
+			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
 			continue
 		}
-		session.MarkMessage(msg, "") // TODO
 		if strings.Contains(me, m["to"]) {
 			out <- m
 		} else {
-			logger.Info("forwarding message to %s", m["to"])
-			Send(m)
+			logger.Info("forwarding message to %s %s", m["protocol"], m["to"])
+			if err := Send(m); err != nil {
+				if m["protocol"] == "service" {
+					logger.Error("failed to forward message to service %s: %v", m["to"], err) // error
+				} else {
+					logger.Debug("failed to forward message to sidecar %s: %v", m["to"], err) // not an error
+				}
+			}
 		}
 	}
 	return nil
@@ -133,13 +142,13 @@ func consume() {
 			logger.Fatal("consumer error: %v", err)
 		}
 		if ctx.Err() != nil {
-			return
+			return // cancelled
 		}
 	}
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
-func Dial(id string) <-chan map[string]string {
+func Dial() <-chan map[string]string {
 	conf := sarama.NewConfig()
 
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
@@ -153,9 +162,8 @@ func Dial(id string) <-chan map[string]string {
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	me = config.ServiceName + "," + id
+	me = config.ServiceName + "," + config.UUID
 	conf.Consumer.Group.Member.UserData = []byte(me)
-	logger.Info("ServiceName %s, UserData %v", config.ServiceName, conf.Consumer.Group.Member.UserData)
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true

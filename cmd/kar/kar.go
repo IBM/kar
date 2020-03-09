@@ -27,9 +27,6 @@ var (
 	// service url
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
 
-	// sidecar unique id
-	id = uuid.New().String()
-
 	// pending requests: map uuids to channels
 	requests = sync.Map{}
 
@@ -93,8 +90,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
-		"from":         id,      // this sidecar
-		"session":      session, // this request
+		"from":         config.UUID, // this sidecar
+		"session":      session,     // this request
 		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
@@ -114,7 +111,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // callback sends the result of a call back to the caller
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(map[string]string{
-		"protocol":     "instance",  // to a specific
+		"protocol":     "sidecar",   // to a specific
 		"to":           msg["from"], // sidecar instance
 		"command":      "callback",
 		"session":      msg["session"], // request id
@@ -255,7 +252,7 @@ func main() {
 		logger.Fatal("Listener failed: %v", err)
 	}
 
-	channel := pubsub.Dial(id)
+	channel := pubsub.Dial()
 	defer pubsub.Close()
 
 	store.Dial()
