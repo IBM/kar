@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/Shopify/sarama v1.26.1
 	github.com/cenkalti/backoff/v4 v4.0.0
-	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/gomodule/redigo v1.7.0
 	github.com/google/uuid v1.1.1
 	github.com/julienschmidt/httprouter v1.3.0
 	k8s.io/api v0.16.7
