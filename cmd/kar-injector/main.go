@@ -20,8 +20,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&certFile, "tls-cert-file", "injector-tls.crt", "x509 Certificate for TLS")
-	flag.StringVar(&keyFile, "tls-private-key-file", "injector-tls.key", "x509 private key matching --tls-cert-file")
+	flag.StringVar(&certFile, "tls_cert_file", "injector-tls.crt", "x509 Certificate for TLS")
+	flag.StringVar(&keyFile, "tls_private_key_file", "injector-tls.key", "x509 private key matching -tls_cert_file")
 	flag.IntVar(&port, "port", 8443, "port to listen on")
 	flag.IntVar(&verbosity, "v", int(logger.INFO), "Logging verbosity")
 }
