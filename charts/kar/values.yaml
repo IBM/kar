@@ -12,3 +12,12 @@ redis:
     host: 'mustOverrideIfInternalIsFalse'
     port: 'mustOverrideIfInternalIsFalse'
     password: 'mustOverrideIfInternalIsFalse'
+
+kar:
+  injector:
+    replicaCount: 1
+    imageRegistry: 'us.icr.io'
+    imageName: 'kar-dev/kar-injector'
+    imageTag: 'latest'
+    sidecarImageName: 'kar-dev/kar'
+    sidecarImageTag: 'latest'
