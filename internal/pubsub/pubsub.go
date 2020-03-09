@@ -69,6 +69,37 @@ func Send(service string, message map[string]string) error {
 	return nil
 }
 
+// TrySend sends a message to a service if a route is known
+func TrySend(service string, message map[string]string) error {
+	msg, err := json.Marshal(message)
+	if err != nil {
+		logger.Error("failed to marshal message %v: %v", message, err)
+		return err
+	}
+
+	// wait for route
+	var p []int32
+	var ok bool
+	mu.RLock()
+	defer mu.RUnlock()
+	if p, ok = routes[service]; !ok {
+		logger.Error("failed to route message to service %s, aborting: %v", service, err)
+		return errors.New("no route")
+	}
+
+	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
+		Topic:     topic,
+		Partition: p[rand.Int31n(int32(len(p)))],
+		Value:     sarama.ByteEncoder(msg),
+	})
+	if err != nil {
+		logger.Error("failed to send message to topic %s: %v", topic, err)
+	} else {
+		logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
+	}
+	return nil
+}
+
 type handler struct{}
 
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
@@ -108,10 +139,14 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		if strings.Contains(me, m["service"]) {
 			out <- m
 			session.MarkMessage(msg, "") // TODO
+		} else if _, ok := m["session"]; ok {
+			logger.Info("forwarding message for %s, %s", m["service"], m["session"])
+			TrySend(m["service"], m)     // drop message if route no longer exists
+			session.MarkMessage(msg, "") // TODO
 		} else {
 			logger.Info("forwarding message for %s", m["service"])
-			Send(m["service"], m)
-			session.MarkMessage(msg, "") // TODO
+			session.MarkMessage(msg, "")          // TODO
+			go func() { Send(m["service"], m) }() // keep trying
 		}
 	}
 	return nil
