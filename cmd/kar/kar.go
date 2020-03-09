@@ -57,9 +57,10 @@ func text(r io.Reader) string {
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
-	err := pubsub.Send(service, map[string]string{
-		"kind":         "send",
-		"service":      service,
+	err := pubsub.Send(map[string]string{
+		"protocol":     "service", // to any sidecar instance
+		"to":           service,   // offering this service
+		"command":      "send",    // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"payload":      text(r.Body)})
@@ -85,14 +86,15 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	requests.Store(session, ch)
 	defer requests.Delete(session)
 
-	err := pubsub.Send(service, map[string]string{
-		"kind":         "call",
-		"service":      service,
+	err := pubsub.Send(map[string]string{
+		"protocol":     "service", // to any sidecar instance
+		"to":           service,   // offering this service
+		"command":      "call",    // post expecting a callback with the result
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
-		"caller":       id,
-		"session":      session,
+		"from":         id,      // this sidecar
+		"session":      session, // this request
 		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
@@ -111,15 +113,16 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // callback sends the result of a call back to the caller
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
-	err := pubsub.Send(msg["caller"], map[string]string{
-		"kind":         "callback",
-		"service":      msg["caller"],
-		"session":      msg["session"],
+	err := pubsub.Send(map[string]string{
+		"protocol":     "instance",  // to a specific
+		"to":           msg["from"], // sidecar instance
+		"command":      "callback",
+		"session":      msg["session"], // request id
 		"statusCode":   strconv.Itoa(statusCode),
 		"content-type": contentType,
 		"payload":      payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from service %s: %v", msg["session"], msg["caller"], err)
+		logger.Error("failed to answer request %s from service %s: %v", msg["session"], msg["from"], err)
 	}
 }
 
@@ -143,7 +146,7 @@ func post(msg map[string]string) (*http.Response, error) {
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) {
 	defer wg.Done()
-	switch msg["kind"] {
+	switch msg["command"] {
 	case "send":
 		res, err := post(msg)
 		if err != nil {
@@ -173,7 +176,7 @@ func dispatch(msg map[string]string) {
 		}
 
 	default:
-		logger.Error("failed to process message with kind %s", msg["kind"])
+		logger.Error("failed to process message with command %s", msg["command"])
 	}
 }
 

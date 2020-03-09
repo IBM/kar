@@ -15,16 +15,6 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
-// Receiver type
-type Receiver int
-
-// Types of receivers
-const (
-	SERVICE  Receiver = iota // any sidecar exposing the specified service
-	INSTANCE                 // a specific sidecar
-	ACTOR                    // a specific actor
-)
-
 var (
 	admin    sarama.ClusterAdmin
 	producer sarama.SyncProducer
@@ -43,58 +33,37 @@ var (
 	wg          = sync.WaitGroup{}
 )
 
-// Send sends a message to a service
-func Send(service string, message map[string]string) error {
+// Send sends message to receiver
+func Send(message map[string]string) error {
 	msg, err := json.Marshal(message)
 	if err != nil {
 		logger.Error("failed to marshal message %v: %v", message, err)
 		return err
 	}
 
-	// wait for route
 	var p []int32
-	err = backoff.Retry(func() error {
+	switch message["protocol"] {
+	case "service": // wait for a route to the specified service name
+		err = backoff.Retry(func() error {
+			var ok bool
+			mu.RLock()
+			defer mu.RUnlock()
+			if p, ok = routes[message["to"]]; ok {
+				return nil
+			}
+			return errors.New("no route to " + message["to"])
+		}, backoff.NewExponentialBackOff()) // TODO fix timeout
+	case "instance": // route to specified sidecard uuid if available or fail
 		var ok bool
 		mu.RLock()
 		defer mu.RUnlock()
-		if p, ok = routes[service]; ok {
-			return nil
+		if p, ok = routes[message["to"]]; !ok {
+			err = errors.New("no route to " + message["to"])
 		}
-		return errors.New("")
-	}, backoff.NewExponentialBackOff()) // TODO fix timeout
-	if err != nil {
-		logger.Error("failed to route message to service %s: %v", service, err)
 	}
-
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
-		Topic:     topic,
-		Partition: p[rand.Int31n(int32(len(p)))],
-		Value:     sarama.ByteEncoder(msg),
-	})
 	if err != nil {
 		logger.Error("failed to send message to topic %s: %v", topic, err)
-	} else {
-		logger.Info("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
-	}
-	return nil
-}
-
-// TrySend sends a message to a service if a route is known
-func TrySend(service string, message map[string]string) error {
-	msg, err := json.Marshal(message)
-	if err != nil {
-		logger.Error("failed to marshal message %v: %v", message, err)
-		return err
-	}
-
-	// wait for route
-	var p []int32
-	var ok bool
-	mu.RLock()
-	defer mu.RUnlock()
-	if p, ok = routes[service]; !ok {
-		logger.Error("failed to route message to service %s, aborting: %v", service, err)
-		return errors.New("no route")
+		return nil
 	}
 
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
@@ -146,17 +115,12 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			logger.Error("ignoring invalid message from topic %s, at partition %d, offset %d: %v", msg.Topic, msg.Partition, msg.Offset, err)
 			continue
 		}
-		if strings.Contains(me, m["service"]) {
+		session.MarkMessage(msg, "") // TODO
+		if strings.Contains(me, m["to"]) {
 			out <- m
-			session.MarkMessage(msg, "") // TODO
-		} else if _, ok := m["session"]; ok {
-			logger.Info("forwarding message for %s, %s", m["service"], m["session"])
-			TrySend(m["service"], m)     // drop message if route no longer exists
-			session.MarkMessage(msg, "") // TODO
 		} else {
-			logger.Info("forwarding message for %s", m["service"])
-			session.MarkMessage(msg, "")          // TODO
-			go func() { Send(m["service"], m) }() // keep trying
+			logger.Info("forwarding message to %s", m["to"])
+			Send(m)
 		}
 	}
 	return nil
