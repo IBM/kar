@@ -27,6 +27,9 @@ var (
 	// service url
 	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
 
+	// sidecar unique id
+	id = uuid.New().String()
+
 	// pending requests: map uuids to channels
 	requests = sync.Map{}
 
@@ -56,6 +59,7 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "send",
+		"service":      service,
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"payload":      text(r.Body)})
@@ -76,18 +80,19 @@ type reply struct {
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
 
-	id := uuid.New().URN()
+	session := uuid.New().String()
 	ch := make(chan reply)
-	requests.Store(id, ch)
-	defer requests.Delete(id)
+	requests.Store(session, ch)
+	defer requests.Delete(session)
 
 	err := pubsub.Send(service, map[string]string{
 		"kind":         "call",
+		"service":      service,
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
-		"caller":       config.ServiceName,
-		"id":           id,
+		"caller":       id,
+		"session":      session,
 		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
@@ -108,12 +113,13 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(msg["caller"], map[string]string{
 		"kind":         "callback",
-		"id":           msg["id"],
+		"service":      msg["caller"],
+		"session":      msg["session"],
 		"statusCode":   strconv.Itoa(statusCode),
 		"content-type": contentType,
 		"payload":      payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from service %s: %v", msg["id"], msg["caller"], err)
+		logger.Error("failed to answer request %s from service %s: %v", msg["session"], msg["caller"], err)
 	}
 }
 
@@ -159,11 +165,11 @@ func dispatch(msg map[string]string) {
 		}
 
 	case "callback":
-		if ch, ok := requests.Load(msg["id"]); ok {
+		if ch, ok := requests.Load(msg["session"]); ok {
 			statusCode, _ := strconv.Atoi(msg["statusCode"])
 			ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}
 		} else {
-			logger.Error("unexpected callback with id %s", msg["id"])
+			logger.Error("unexpected callback with session %s", msg["session"])
 		}
 
 	default:
@@ -241,7 +247,7 @@ func server(listener net.Listener) {
 func main() {
 	logger.Warning("starting...")
 
-	channel := pubsub.Dial()
+	channel := pubsub.Dial(id)
 	defer pubsub.Close()
 
 	store.Dial()

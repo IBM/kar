@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/rand"
+	"strings"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -76,10 +77,11 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for id, member := range members {
 		a, _ := member.GetMemberAssignment()
 		m, _ := member.GetMemberMetadata()
-		service := string(m.UserData)
+		services := strings.Split(string(m.UserData), ",")
 		logger.Info("member: %v %v %v", id, a.UserData, m.UserData)
-
-		r[service] = append(r[service], a.Topics[topic]...)
+		for _, service := range services {
+			r[service] = append(r[service], a.Topics[topic]...)
+		}
 	}
 	me, _ := members[session.MemberID()].GetMemberAssignment()
 	logger.Info("new partitions: %v and routes: %v", me.Topics[topic], r)
@@ -121,7 +123,7 @@ func consume() {
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
-func Dial() <-chan map[string]string {
+func Dial(id string) <-chan map[string]string {
 	conf := sarama.NewConfig()
 
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
@@ -135,7 +137,7 @@ func Dial() <-chan map[string]string {
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	conf.Consumer.Group.Member.UserData = []byte(config.ServiceName)
+	conf.Consumer.Group.Member.UserData = []byte(config.ServiceName + "," + id)
 	logger.Info("ServiceName %s, UserData %v", config.ServiceName, conf.Consumer.Group.Member.UserData)
 
 	if config.KafkaPassword != "" {
