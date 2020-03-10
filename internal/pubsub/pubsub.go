@@ -25,7 +25,7 @@ var (
 	out = make(chan map[string]string) // TODO multiple channels?
 
 	// routes
-	me     string
+	me     = config.ServiceName + "," + config.UUID
 	routes map[string][]int32 // map services to partitions
 	mu     = sync.RWMutex{}   // synchronize changes to routes
 
@@ -86,18 +86,31 @@ type handler struct{}
 
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	r := map[string][]int32{}
-	groups, _ := admin.DescribeConsumerGroups([]string{topic})
+	groups, err := admin.DescribeConsumerGroups([]string{topic})
+	if err != nil {
+		logger.Debug("failed to describe consumer group: %v", err)
+		return err
+	}
 	members := groups[0].Members
-	for _, member := range members {
-		a, _ := member.GetMemberAssignment()
-		m, _ := member.GetMemberMetadata()
+	for id, member := range members {
+		a, err := member.GetMemberAssignment()
+		if err != nil {
+			logger.Debug("failed to parse member assignment: %v", err)
+			return err
+		}
+		m, err := member.GetMemberMetadata()
+		if err != nil {
+			logger.Debug("failed to parse member metadata: %v", err)
+			return err
+		}
 		services := strings.Split(string(m.UserData), ",")
 		for _, service := range services {
 			r[service] = append(r[service], a.Topics[topic]...)
 		}
+		if id == session.MemberID() {
+			logger.Info("partitions: %v", a.Topics[topic])
+		}
 	}
-	me, _ := members[session.MemberID()].GetMemberAssignment()
-	logger.Info("partitions: %v", me.Topics[topic])
 	logger.Info("routes: %v", r)
 	mu.Lock()
 	defer mu.Unlock()
@@ -162,7 +175,6 @@ func Dial() <-chan map[string]string {
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	me = config.ServiceName + "," + config.UUID
 	conf.Consumer.Group.Member.UserData = []byte(me)
 
 	if config.KafkaPassword != "" {
@@ -219,10 +231,10 @@ func Dial() <-chan map[string]string {
 
 // Close closes the connection to Kafka
 func Close() {
-	producer.Close()
 	cancel()
 	wg.Wait()
 	consumer.Close()
+	producer.Close()
 	admin.Close()
 	close(out)
 }
