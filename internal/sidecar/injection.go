@@ -137,18 +137,19 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 				Value: configVolume,
 			}
 		}
+
 		imagePull := corev1.LocalObjectReference{Name: karImagePullSecret}
 		var pullSecretPatch patchOperation
 		if pod.Spec.ImagePullSecrets == nil {
 			pullSecretPatch = patchOperation{
 				Op:    "add",
-				Path:  "/spec/imagepullSecrets",
+				Path:  "/spec/imagePullSecrets",
 				Value: []corev1.LocalObjectReference{imagePull},
 			}
 		} else {
 			pullSecretPatch = patchOperation{
 				Op:    "add",
-				Path:  "/spec/imagepullSecrets/-",
+				Path:  "/spec/imagePullSecrets/-",
 				Value: imagePull,
 			}
 		}
