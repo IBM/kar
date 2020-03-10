@@ -31,13 +31,13 @@ helm install kar charts/kar -n kar-system
 
 ## Enable namespaces for KAR-based applications.
 
+**NOTE: We strongly recommend against enabling the `kar-system` namespace
+  or any Kubernetes system namespace for KAR applications. Enabling
+  KAR sidecar injection for these namespaces can cause instability.**
+
 For every namespace in which you want to deploy KAR-based
 applications, you will need to perform the following operations. In
 the sample commands below, we will enable the `kar-apps` namespace.
-
-**NOTE: We strongly recommend not enabling the `kar-system` namespace
-  or any Kubernetes system namespace for KAR applications. Enabling
-  KAR sidecar injection for these namespaces can cause instability.**
 
 1. Create the namespace if it doesn't already exist.
 ```shell
