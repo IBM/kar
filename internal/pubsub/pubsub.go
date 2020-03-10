@@ -25,7 +25,7 @@ var (
 	out = make(chan map[string]string) // TODO multiple channels?
 
 	// routes
-	me     = config.ServiceName + "," + config.UUID
+	me     = config.ServiceName + "," + config.ID
 	routes map[string][]int32 // map services to partitions
 	mu     = sync.RWMutex{}   // synchronize changes to routes
 

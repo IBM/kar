@@ -90,8 +90,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
-		"from":         config.UUID, // this sidecar
-		"session":      session,     // this request
+		"from":         config.ID, // this sidecar
+		"session":      session,   // this request
 		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)

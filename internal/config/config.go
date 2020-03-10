@@ -56,8 +56,8 @@ var (
 	// RedisPassword the the password of the Redis instance (optional)
 	RedisPassword string
 
-	// UUID is the unique id of this sidecar instance
-	UUID = uuid.New().String()
+	// ID is the unique id of this sidecar instance
+	ID = uuid.New().String()
 )
 
 func init() {
