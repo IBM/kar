@@ -26,9 +26,10 @@ const (
 	recvPortAnnotation    = "kar.ibm.com/recvPort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
-	sidecarName       = "kar"
-	karRTConfigSecret = "kar.ibm.com.runtime-config"
-	karRTConfigMount  = "/var/run/secrets/kar.ibm.com"
+	sidecarName        = "kar"
+	karImagePullSecret = "kar.ibm.com.image-pull"
+	karRTConfigSecret  = "kar.ibm.com.runtime-config"
+	karRTConfigMount   = "/var/run/secrets/kar.ibm.com"
 )
 
 func init() {
@@ -136,8 +137,23 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 				Value: configVolume,
 			}
 		}
+		imagePull := corev1.LocalObjectReference{Name: karImagePullSecret}
+		var pullSecretPatch patchOperation
+		if pod.Spec.ImagePullSecrets == nil {
+			pullSecretPatch = patchOperation{
+				Op:    "add",
+				Path:  "/spec/imagepullSecrets",
+				Value: []corev1.LocalObjectReference{imagePull},
+			}
+		} else {
+			pullSecretPatch = patchOperation{
+				Op:    "add",
+				Path:  "/spec/imagepullSecrets/-",
+				Value: imagePull,
+			}
+		}
 
-		patches := []patchOperation{updateContainersPatch, addVolumePatch}
+		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch}
 
 		patchBytes, err := json.Marshal(patches)
 		if err != nil {

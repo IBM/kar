@@ -6,10 +6,10 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: kar-injector-tls-2
+  name: kar.ibm.com.injector-tls
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: kar-injector-tls-2
+    name: kar.ibm.com.injector-tls
 data:
   tls.crt: {{ b64enc $cert.Cert }}
   tls.key: {{ b64enc $cert.Key }}

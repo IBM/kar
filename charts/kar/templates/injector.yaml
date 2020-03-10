@@ -17,6 +17,8 @@ spec:
         {{- include "kar.labels" . | nindent 8 }}
         name: kar-injector
     spec:
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
       containers:
       - name: injector
         image: {{ printf "%s/%s:%s" .Values.kar.injector.imageRegistry .Values.kar.injector.imageName .Values.kar.injector.imageTag }}
@@ -31,7 +33,7 @@ spec:
       volumes:
       - name: tls-certs
         secret:
-          secretName: kar-injector-tls-2
+          secretName: kar.ibm.com.injector-tls
 ---
 apiVersion: v1
 kind: Service
