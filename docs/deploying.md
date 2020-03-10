@@ -1,5 +1,15 @@
 # Deploying KAR on Kubernetes
 
+## Pre-requisites
+
+1. You need a Kubernetes 1.16 (or newer) cluster.
+
+2. You will need the `kubectl` cli installed locally.
+
+3. You will need the `helm` (Helm 3) cli installed locally.
+
+4. You will need a local git clone of this repository.
+
 ## Prepare the `kar-system` namespace
 
 Before deploying KAR for the first time on a cluster, you will need to

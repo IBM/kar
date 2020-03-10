@@ -1,17 +1,21 @@
-Helm Chart to deploy a dev-mode KAR runtime services onto a cluster.
+A Helm Chart to deploy a dev-mode KAR runtime onto a cluster.
 
-### Deploying the KAR runtime
+For detailed instructions, see [deploying.md](../docs/deploying.md).
 
-Execute the command: `helm install kar kar`
+### Components deployed
 
-Components deployed:
-1. non-HA Redis cluster
-2. non-HA Kafka cluster
-3. Kafka console pod (to enable debug via kafka's cli tools).
+1. Core KAR
+   a. Sidecar injection machinery (MutatingWebHook)
+   b. Secrets containing runtime configuration
+2. Supporting Componenets
+   a. Redis
+   b. Kafka (and Zookeeper)
+   c. Kafka console pod (to enable debug via Kafka's cli tools).
 
-### Deploying the incr example
-
-`helm install incr incr`
+KAR can also be configured to use external Kafka and/or Redis instances
+by overriding the default settings from `values.yaml`.  For example, to use
+and external Kafka set `kafka.internal` to `false` and provide all of the
+values in the `kafka.externalConfig` structure.
 
 ### Debugging Kafka via the kar-kafka-console
 
