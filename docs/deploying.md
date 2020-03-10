@@ -38,34 +38,3 @@ From the top-level of a git clone of the KAR repo.
 ```shell
 helm install kar charts/kar -n kar-system
 ```
-
-## Enable namespaces for KAR-based applications.
-
-**NOTE: We strongly recommend against enabling the `kar-system` namespace
-  or any Kubernetes system namespace for KAR applications. Enabling
-  KAR sidecar injection for these namespaces can cause instability.**
-
-For every namespace in which you want to deploy KAR-based
-applications, you will need to perform the following operations. In
-the sample commands below, we will enable the `kar-apps` namespace.
-
-1. Create the namespace if it doesn't already exist.
-```shell
-kubectl create ns kar-apps
-```
-
-2. Copy the `kar.ibm.com.image-pull` secret from `kar-system` to the new namespace.
-```shell
-kubectl get secret kar.ibm.com.image-pull -n kar-system -o yaml | sed 's/kar-system/kar-apps/g' | kubectl -n kar-apps create -f -
-```
-
-3. Copy the `kar.ibm.com.image-pull` secret from `kar-system` to the new namespace.
-```shell
-kubectl get secret kar.ibm.com.runtime-config -n kar-system -o yaml | sed 's/kar-system/kar-apps/g' | kubectl -n kar-apps create -f -
-```
-
-4. Label the namespace to enable the KAR sidecar injector.
-```shell
-kubectl label namespace kar-apps kar.ibm.com/enabled=true
-```
-
