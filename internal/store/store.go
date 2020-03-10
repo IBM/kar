@@ -11,6 +11,9 @@ import (
 )
 
 var (
+	// ErrNil indicates that a reply value is nil
+	ErrNil = redis.ErrNil
+
 	conn redis.Conn // for now using a single connection with a lock
 	lock sync.Mutex
 )
@@ -21,31 +24,31 @@ func mangle(key string) string {
 }
 
 // Set sets the value associated with a key
-func Set(key, value string) error {
+func Set(key, value string) (string, error) {
 	lock.Lock()
 	defer lock.Unlock()
-	_, err := conn.Do("SET", mangle(key), value)
-	return err
+	return redis.String(conn.Do("SET", mangle(key), value))
+}
+
+// SetNX sets the value associated with a key if it does not exist yet
+func SetNX(key, value string) (int, error) {
+	lock.Lock()
+	defer lock.Unlock()
+	return redis.Int(conn.Do("SETNX", mangle(key), value))
 }
 
 // Get returns the value associated with the key
-func Get(key string) (*string, error) {
+func Get(key string) (string, error) {
 	lock.Lock()
 	defer lock.Unlock()
-	reply, err := conn.Do("GET", mangle(key))
-	if reply == nil || err != nil {
-		return nil, err
-	}
-	value := string(reply.([]byte))
-	return &value, nil
+	return redis.String(conn.Do("GET", mangle(key)))
 }
 
 // Del deletes the value associated with a key
-func Del(key string) error {
+func Del(key string) (int, error) {
 	lock.Lock()
 	defer lock.Unlock()
-	_, err := conn.Do("DEL", mangle(key))
-	return err
+	return redis.Int(conn.Do("DEL", mangle(key)))
 }
 
 // Dial establishes a connection to the store
