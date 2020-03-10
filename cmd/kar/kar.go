@@ -103,7 +103,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Add("Content-Type", msg.contentType)
 		w.WriteHeader(msg.statusCode)
 		fmt.Fprint(w, msg.payload)
-	case _, _ = <-quit:
+	case <-quit:
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 	}
 }
@@ -182,7 +182,7 @@ func subscriber(channel <-chan map[string]string) {
 	defer wg.Done()
 	for {
 		select {
-		case _, _ = <-quit:
+		case <-quit:
 			return
 		case msg := <-channel:
 			wg.Add(1)
@@ -237,7 +237,7 @@ func server(listener net.Listener) {
 		}
 	}()
 
-	_, _ = <-quit // wait
+	<-quit // wait
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logger.Fatal("failed to shutdown HTTP server: %v", err)
