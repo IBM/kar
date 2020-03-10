@@ -49,7 +49,12 @@ kubectl create ns kar-apps
 kubectl get secret kar.ibm.com.image-pull -n kar-system -o yaml | sed 's/kar-system/kar-apps/g' | kubectl -n kar-apps create -f -
 ```
 
-3. Label the namespace to enable the KAR sidecar injector.
+3. Copy the `kar.ibm.com.image-pull` secret from `kar-system` to the new namespace.
+```shell
+kubectl get secret kar.ibm.com.runtime-config -n kar-system -o yaml | sed 's/kar-system/kar-apps/g' | kubectl -n kar-apps create -f -
+```
+
+4. Label the namespace to enable the KAR sidecar injector.
 ```shell
 kubectl label namespace kar-apps kar.ibm.com/enabled=true
 ```
