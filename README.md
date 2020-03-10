@@ -18,6 +18,7 @@ labeling the namespace to enable KAR sidecar injection.  These steps
 are automated by
 [create-app-namespace.sh](scripts/create-app-namespace.sh)
 
+For example, to create and KAR-enable the `kar-apps` namespace execute:
 ```shell
 ./scripts/create-app-namespace.sh kar-apps
 ```
