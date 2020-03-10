@@ -1,0 +1,42 @@
+{{- $ca := genCA "/C=US/ST=NY/L=Yorktown/O=KAR CA" 1000 }}
+{{- $cn := printf "kar-injector" }}
+{{- $n1 := printf "kar-injector.%s" .Release.Namespace }}
+{{- $n2 := printf "kar-injector.%s.svc" .Release.Namespace }}
+{{- $cert := genSignedCert $cn nil (list $n1 $n2) 1000 $ca }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kar-injector-tls-2
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar-injector-tls-2
+data:
+  tls.crt: {{ b64enc $cert.Cert }}
+  tls.key: {{ b64enc $cert.Key }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: kar-injector-webhook
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar-injector-webhook
+webhooks:
+  - name: {{ $n2 }}
+    namespaceSelector:
+      matchLabels:
+        kar.ibm.com/enabled: "true"
+    clientConfig:
+      service:
+        name: kar-injector
+        namespace: {{ .Release.Namespace }}
+        path: "/inject-sidecar"
+      caBundle: {{ b64enc $ca.Cert }}
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
+    timeoutSeconds: 5
