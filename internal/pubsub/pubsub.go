@@ -66,10 +66,10 @@ func routeToSidecar(sidecar string) (int32, error) {
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }
 
-// routeToActor maps an actor to a stable sidecar to a partition
+// routeToSession maps a session of a service to a stable sidecar to a partition
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(service string, actor string) (partition int32, err error) {
-	key := "actor" + config.Separator + service + config.Separator + actor
+func routeToSession(service string, session string) (partition int32, err error) {
+	key := "session" + config.Separator + service + config.Separator + session
 	var sidecar string
 	for { // keep trying
 		sidecar, err = store.Get(key) // retrieve already assigned sidecar if any
@@ -120,10 +120,10 @@ func Send(message map[string]string) error {
 			logger.Debug("failed to route to sidecar %s: %v", message["to"], err)
 			return err
 		}
-	case "actor": // route to actor
-		partition, err = routeToActor(message["to"], message["actor"])
+	case "session": // route to session
+		partition, err = routeToSession(message["to"], message["session"])
 		if err != nil {
-			logger.Debug("failed to route to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
+			logger.Debug("failed to route to session %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 			return err
 		}
 	}
@@ -209,8 +209,8 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 				logger.Info("forwarding message to service %s", message["to"])
 			case "sidecar": // route to sidecar
 				logger.Info("forwarding message to sidecar %s", message["to"])
-			case "actor": // route to actor
-				logger.Info("forwarding message to actor %s%s%s", message["to"], config.Separator, message["actor"])
+			case "session": // route to session
+				logger.Info("forwarding message to session %s%s%s", message["to"], config.Separator, message["session"])
 			}
 			if err := Send(message); err != nil {
 				switch message["protocol"] {
@@ -218,8 +218,8 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 					logger.Error("failed to forward message to service %s: %v", message["to"], err)
 				case "sidecar": // route to sidecar
 					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
-				case "actor": // route to actor
-					logger.Error("failed to forward message to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
+				case "session": // route to acsessiontor
+					logger.Error("failed to forward message to session %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 				}
 			}
 		}

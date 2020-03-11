@@ -55,7 +55,7 @@ func text(r io.Reader) string {
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
-	actor := ps.ByName("actor")
+	session := ps.ByName("session")
 
 	message := map[string]string{
 		"protocol":     "service", // to any sidecar
@@ -64,9 +64,9 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"payload":      text(r.Body)}
-	if actor != "" {
-		message["protocol"] = "actor"
-		message["actor"] = actor
+	if session != "" {
+		message["protocol"] = "session"
+		message["session"] = session
 	}
 
 	err := pubsub.Send(message)
@@ -86,12 +86,12 @@ type reply struct {
 // call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
-	actor := ps.ByName("actor")
+	session := ps.ByName("session")
 
-	session := uuid.New().String()
+	request := uuid.New().String()
 	ch := make(chan reply)
-	requests.Store(session, ch)
-	defer requests.Delete(session)
+	requests.Store(request, ch)
+	defer requests.Delete(request)
 
 	message := map[string]string{
 		"protocol":     "service", // to any sidecar
@@ -101,11 +101,11 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
 		"from":         config.ID, // this sidecar
-		"session":      session,   // this request
+		"request":      request,   // this request
 		"payload":      text(r.Body)}
-	if actor != "" {
-		message["protocol"] = "actor"
-		message["actor"] = actor
+	if session != "" {
+		message["protocol"] = "session"
+		message["session"] = session
 	}
 
 	err := pubsub.Send(message)
@@ -130,12 +130,12 @@ func callback(msg map[string]string, statusCode int, contentType string, payload
 		"protocol":     "sidecar",   // to a specific
 		"to":           msg["from"], // sidecar
 		"command":      "callback",
-		"session":      msg["session"], // request id
+		"request":      msg["request"],
 		"statusCode":   strconv.Itoa(statusCode),
 		"content-type": contentType,
 		"payload":      payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from service %s: %v", msg["session"], msg["from"], err)
+		logger.Error("failed to answer request %s from service %s: %v", msg["request"], msg["from"], err)
 	}
 }
 
@@ -181,14 +181,14 @@ func dispatch(msg map[string]string) {
 		}
 
 	case "callback":
-		if ch, ok := requests.Load(msg["session"]); ok {
+		if ch, ok := requests.Load(msg["request"]); ok {
 			statusCode, _ := strconv.Atoi(msg["statusCode"])
 			select {
 			case <-ctx.Done():
 			case ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}:
 			}
 		} else {
-			logger.Error("unexpected callback with session %s", msg["session"])
+			logger.Error("unexpected request in callback %s", msg["request"])
 		}
 
 	default:
@@ -245,8 +245,8 @@ func server(listener net.Listener) {
 	router := httprouter.New()
 	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
-	router.POST("/kar/actor/send/:service/:actor/*path", send)
-	router.POST("/kar/actor/call/:service/:actor/*path", call)
+	router.POST("/kar/session/:session/send/:service/*path", send)
+	router.POST("/kar/session/:session/call/:service/*path", call)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
