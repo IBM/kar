@@ -61,9 +61,7 @@ var (
 )
 
 func init() {
-	var kafkaBrokers string
-	var verbosity int
-	var configDir string
+	var kafkaBrokers, verbosity, configDir string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
@@ -79,12 +77,12 @@ func init() {
 	flag.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
 	flag.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	flag.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
-	flag.IntVar(&verbosity, "v", int(logger.ERROR), "Logging verbosity")
+	flag.StringVar(&verbosity, "v", "error", "Logging verbosity")
 	flag.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
 	flag.Parse()
 
-	logger.SetVerbosity(logger.Severity(verbosity))
+	logger.SetVerbosity(verbosity)
 
 	if AppName == "" {
 		logger.Fatal("app name is required")

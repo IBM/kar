@@ -1,7 +1,7 @@
 // Package logger supports leveled logging on top of the standard log package.
 //
 // Example:
-//     logger.SetVerbosity(logger.WARNING)
+//     logger.SetVerbosity("warning")
 //     logger.Error("invalid value: %v", value)
 //
 package logger
@@ -9,25 +9,43 @@ package logger
 import (
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 )
 
-// Severity of log message.
-type Severity int
-
-// Log levels.
 const (
-	FATAL Severity = iota
-	ERROR
-	WARNING
-	INFO
-	DEBUG
+	fatalLog = iota
+	errorLog
+	warningLog
+	infoLog
+	debugLog
 )
 
-var verbosity = FATAL
+var severity = []string{
+	fatalLog:   "FATAL",
+	errorLog:   "ERROR",
+	warningLog: "WARNING",
+	infoLog:    "INFO",
+	debugLog:   "DEBUG",
+}
+
+var verbosity = errorLog
 
 // SetVerbosity sets the verbosity of the log.
-func SetVerbosity(v Severity) {
-	verbosity = v
+func SetVerbosity(s string) error {
+	s = strings.ToUpper(s)
+	for i, name := range severity {
+		if s == name {
+			verbosity = i
+			return nil
+		}
+	}
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		return err
+	}
+	verbosity = i
+	return nil
 }
 
 // Debug outputs a formatted log message.
@@ -35,7 +53,7 @@ func Debug(format string, args ...interface{}) {
 	if false {
 		_ = fmt.Sprintf(format, args...)
 	}
-	if verbosity >= DEBUG {
+	if verbosity >= debugLog {
 		log.Printf("[DEBUG] "+format, args...)
 	}
 }
@@ -45,7 +63,7 @@ func Info(format string, args ...interface{}) {
 	if false {
 		_ = fmt.Sprintf(format, args...)
 	}
-	if verbosity >= INFO {
+	if verbosity >= infoLog {
 		log.Printf("[INFO] "+format, args...)
 	}
 }
@@ -55,7 +73,7 @@ func Warning(format string, args ...interface{}) {
 	if false {
 		_ = fmt.Sprintf(format, args...)
 	}
-	if verbosity >= WARNING {
+	if verbosity >= warningLog {
 		log.Printf("[WARNING] "+format, args...)
 	}
 }
@@ -65,7 +83,7 @@ func Error(format string, args ...interface{}) {
 	if false {
 		_ = fmt.Sprintf(format, args...)
 	}
-	if verbosity >= ERROR {
+	if verbosity >= errorLog {
 		log.Printf("[ERROR] "+format, args...)
 	}
 }
