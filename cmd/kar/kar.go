@@ -9,9 +9,11 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
@@ -31,8 +33,8 @@ var (
 	requests = sync.Map{}
 
 	// termination
-	quit = make(chan struct{})
-	wg   = sync.WaitGroup{}
+	ctx, cancel = context.WithCancel(context.Background())
+	wg          = sync.WaitGroup{}
 
 	// http client
 	client http.Client
@@ -117,7 +119,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Add("Content-Type", msg.contentType)
 		w.WriteHeader(msg.statusCode)
 		fmt.Fprint(w, msg.payload)
-	case <-quit:
+	case <-ctx.Done():
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 	}
 }
@@ -181,7 +183,10 @@ func dispatch(msg map[string]string) {
 	case "callback":
 		if ch, ok := requests.Load(msg["session"]); ok {
 			statusCode, _ := strconv.Atoi(msg["statusCode"])
-			ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}
+			select {
+			case <-ctx.Done():
+			case ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}:
+			}
 		} else {
 			logger.Error("unexpected callback with session %s", msg["session"])
 		}
@@ -196,7 +201,7 @@ func subscriber(channel <-chan map[string]string) {
 	defer wg.Done()
 	for {
 		select {
-		case <-quit:
+		case <-ctx.Done():
 			return
 		case msg := <-channel:
 			wg.Add(1)
@@ -253,7 +258,7 @@ func server(listener net.Listener) {
 		}
 	}()
 
-	<-quit // wait
+	<-ctx.Done() // wait
 
 	if err := srv.Shutdown(context.Background()); err != nil {
 		logger.Fatal("failed to shutdown HTTP server: %v", err)
@@ -263,12 +268,19 @@ func server(listener net.Listener) {
 func main() {
 	logger.Warning("starting...")
 
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-signals
+		cancel()
+	}()
+
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
 	if err != nil {
 		logger.Fatal("Listener failed: %v", err)
 	}
 
-	channel := pubsub.Dial()
+	channel := pubsub.Dial(ctx)
 	defer pubsub.Close()
 
 	store.Dial()
@@ -282,13 +294,13 @@ func main() {
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", config.ServicePort)
-	logger.Info("%s, %s", port1, port2)
+	logger.Info("%s %s", port1, port2)
 
 	args := flag.Args()
 
 	if len(args) > 0 {
-		launcher.Run(args, append(os.Environ(), port1, port2))
-		close(quit)
+		launcher.Run(ctx, args, append(os.Environ(), port1, port2))
+		cancel()
 	}
 
 	wg.Wait()

@@ -32,8 +32,8 @@ var (
 	mu       = sync.RWMutex{}    // synchronize changes to routes
 
 	// termination
-	ctx, cancel = context.WithCancel(context.Background())
-	wg          = sync.WaitGroup{}
+	ctx context.Context
+	wg  = sync.WaitGroup{}
 )
 
 // routeToService maps a service to a partition (keep trying)
@@ -50,7 +50,7 @@ func routeToService(service string) (partition int32, sidecar string, err error)
 		partition, err = routeToSidecar(sidecar)              // map sidecar to partition
 		mu.RUnlock()
 		return err
-	}, backoff.NewExponentialBackOff()) // TODO fix timeout
+	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO fix timeout
 	return
 }
 
@@ -199,15 +199,18 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			continue
 		}
 		if strings.Contains(me, message["to"]) { // message reached destination
-			out <- message
+			select {
+			case <-ctx.Done():
+			case out <- message:
+			}
 		} else { // message reached wrong sidecar
 			switch message["protocol"] {
 			case "service": // route to service
-				logger.Info("forwarding message to service %s: %v", message["to"], err)
+				logger.Info("forwarding message to service %s", message["to"])
 			case "sidecar": // route to sidecar
-				logger.Info("forwarding message to sidecar %s: %v", message["to"], err)
+				logger.Info("forwarding message to sidecar %s", message["to"])
 			case "actor": // route to actor
-				logger.Info("forwarding message to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
+				logger.Info("forwarding message to actor %s%s%s", message["to"], config.Separator, message["actor"])
 			}
 			if err := Send(message); err != nil {
 				switch message["protocol"] {
@@ -226,7 +229,6 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 
 // consume orchestrate the consumer group sessions
 func consume() {
-	defer wg.Done()
 	for { // for each session
 		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
 			logger.Fatal("consumer error: %v", err)
@@ -238,8 +240,14 @@ func consume() {
 	}
 }
 
+// setContext sets the global context
+func setContext(c context.Context) {
+	ctx = c
+}
+
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
-func Dial() <-chan map[string]string {
+func Dial(ctx context.Context) <-chan map[string]string {
+	setContext(ctx)
 	conf := sarama.NewConfig()
 
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
@@ -302,14 +310,16 @@ func Dial() <-chan map[string]string {
 	}
 
 	wg.Add(1)
-	go consume()
+	go func() {
+		defer wg.Done()
+		consume()
+	}()
 
 	return out
 }
 
 // Close closes the connection to Kafka
 func Close() {
-	cancel()
 	wg.Wait()
 	consumer.Close()
 	producer.Close()

@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"log"
 	"os"
@@ -20,9 +21,9 @@ func dump(prefix string, in io.Reader) {
 }
 
 // Run command with given arguments and environment
-func Run(args, env []string) {
+func Run(ctx context.Context, args, env []string) {
 	logger.Info("launching service...")
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = env
 	cmd.Stdin = os.Stdin
 	stdout, err := cmd.StdoutPipe()
@@ -52,7 +53,11 @@ func Run(args, env []string) {
 
 	if err := cmd.Wait(); err != nil {
 		if v, ok := err.(*exec.ExitError); ok {
-			logger.Info("service exited with status code %d", v.ExitCode())
+			if v.ExitCode() == -1 {
+				logger.Info("service was interrupted")
+			} else {
+				logger.Info("service exited with status code %d", v.ExitCode())
+			}
 		} else {
 			logger.Fatal("error waiting for service: %v", err)
 		}
