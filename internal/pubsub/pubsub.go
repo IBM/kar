@@ -33,7 +33,6 @@ var (
 
 	// termination
 	ctx context.Context
-	wg  = sync.WaitGroup{}
 )
 
 // routeToService maps a service to a partition (keep trying)
@@ -303,20 +302,14 @@ func Dial(ctx context.Context) <-chan map[string]string {
 		logger.Fatal("failed to create Kafka consumer group: %v", err)
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		consume()
-	}()
+	go consume()
 
 	return out
 }
 
 // Close closes the connection to Kafka
 func Close() {
-	wg.Wait()
-	consumer.Close()
+	consumer.Close() // stop accepting incoming messages first
 	producer.Close()
 	admin.Close()
-	close(out)
 }
