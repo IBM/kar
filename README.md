@@ -6,7 +6,7 @@
 
 Please follow the instructions in [deploying.md](docs/deploying.md).
 
-### Create a namespace in which to run KAR-based applications.
+### Enable a namespace to run KAR-based applications.
 
 **NOTE: We strongly recommend against enabling the `kar-system` namespace
   or any Kubernetes system namespace for KAR applications. Enabling
@@ -16,11 +16,16 @@ Enabling a namespace for deploying KAR-based applications requires
 copying configuration secrets from the `kar-system` namespace and
 labeling the namespace to enable KAR sidecar injection.  These steps
 are automated by
-[create-app-namespace.sh](scripts/create-app-namespace.sh)
+[kar-enable-namespace.sh](scripts/kar-enable-namespace.sh)
 
 For example, to create and KAR-enable the `kar-apps` namespace execute:
 ```shell
-./scripts/create-app-namespace.sh kar-apps
+./scripts/kar-enable-namespace.sh kar-apps
+```
+
+Or to KAR-enable an existing namespace, such as the `default`namespace:
+```shell
+./scripts/kar-enable-namespace.sh default
 ```
 
 Now you are ready to run KAR applications!
