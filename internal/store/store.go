@@ -25,34 +25,39 @@ func mangle(key string) string {
 }
 
 // Set sets the value associated with a key
-func Set(key, value string) (string, error) {
+func Set(key, value string) (reply string, err error) {
 	lock.Lock()
-	defer lock.Unlock()
-	return redis.String(conn.Do("SET", mangle(key), value))
+	reply, err = redis.String(conn.Do("SET", mangle(key), value))
+	lock.Unlock()
+	return
 }
 
 // CompareAndSet sets the value associated with a key if its current value is equal to the expected value
-func CompareAndSet(key, expected, value string) (int, error) {
+func CompareAndSet(key, expected, value string) (reply int, err error) {
 	lock.Lock()
-	defer lock.Unlock()
 	if expected == "" {
-		return redis.Int(conn.Do("SETNX", mangle(key), value))
+		reply, err = redis.Int(conn.Do("SETNX", mangle(key), value))
+	} else {
+		reply, err = redis.Int(conn.Do("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
 	}
-	return redis.Int(conn.Do("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
+	lock.Unlock()
+	return
 }
 
 // Get returns the value associated with the key
-func Get(key string) (string, error) {
+func Get(key string) (reply string, err error) {
 	lock.Lock()
-	defer lock.Unlock()
-	return redis.String(conn.Do("GET", mangle(key)))
+	reply, err = redis.String(conn.Do("GET", mangle(key)))
+	lock.Unlock()
+	return
 }
 
 // Del deletes the value associated with a key
-func Del(key string) (int, error) {
+func Del(key string) (reply int, err error) {
 	lock.Lock()
-	defer lock.Unlock()
-	return redis.Int(conn.Do("DEL", mangle(key)))
+	reply, err = redis.Int(conn.Do("DEL", mangle(key)))
+	lock.Unlock()
+	return
 }
 
 // Dial establishes a connection to the store
