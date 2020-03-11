@@ -34,7 +34,6 @@ var (
 
 	// termination
 	ctx, cancel = context.WithCancel(context.Background())
-	wg          = sync.WaitGroup{}
 
 	// http client
 	client http.Client
@@ -80,7 +79,6 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	request := uuid.New().String()
 	ch := make(chan reply)
 	requests.Store(request, ch)
-	defer requests.Delete(request)
 
 	err := pubsub.Send(map[string]string{
 		"protocol":     "service",
@@ -95,6 +93,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		requests.Delete(request)
 		return
 	}
 
@@ -106,6 +105,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case <-ctx.Done():
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 	}
+	requests.Delete(request)
 }
 
 // callback sends the result of a call back to the caller
@@ -142,7 +142,6 @@ func post(msg map[string]string) (*http.Response, error) {
 
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) {
-	defer wg.Done()
 	switch msg["command"] {
 	case "send":
 		res, err := post(msg)
@@ -182,14 +181,12 @@ func dispatch(msg map[string]string) {
 
 // subscriber dispatches incoming messages to goroutines
 func subscriber(channel <-chan map[string]string) {
-	defer wg.Done()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case msg := <-channel:
-			wg.Add(1)
-			go dispatch(msg)
+			dispatch(msg)
 		}
 	}
 }
@@ -225,7 +222,6 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // server implements the HTTP server
 func server(listener net.Listener) {
-	defer wg.Done()
 	router := httprouter.New()
 	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
@@ -270,11 +266,19 @@ func main() {
 	store.Dial()
 	defer store.Close()
 
-	wg.Add(1)
-	go subscriber(channel)
+	wg := sync.WaitGroup{}
 
 	wg.Add(1)
-	go server(listener)
+	go func() {
+		defer wg.Done()
+		subscriber(channel)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		server(listener)
+	}()
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", config.ServicePort)
