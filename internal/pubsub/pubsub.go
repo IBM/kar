@@ -197,7 +197,7 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		}
 		if strings.Contains(me, message["to"]) { // message reached destination
 			select {
-			case <-ctx.Done():
+			case <-session.Context().Done():
 			case out <- message:
 			}
 		} else { // message reached wrong sidecar
