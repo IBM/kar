@@ -42,7 +42,7 @@ var (
 func init() {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConnsPerHost = 256
-	client = http.Client{Transport: transport}
+	client = http.Client{Transport: transport} // TODO adjust timeout
 }
 
 // text converts a request or response body to a string
@@ -131,12 +131,11 @@ func post(msg map[string]string) (*http.Response, error) {
 	}
 	req.Header.Set("Content-Type", msg["content-type"])
 	req.Header.Set("Accept", msg["accept"])
-	b := backoff.NewExponentialBackOff()
 	var res *http.Response
 	err = backoff.Retry(func() error {
 		res, err = client.Do(req)
 		return err
-	}, b)
+	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
 	return res, err
 }
 
@@ -179,15 +178,10 @@ func dispatch(msg map[string]string) {
 	}
 }
 
-// subscriber dispatches incoming messages to goroutines
+// subscriber handles incoming messages
 func subscriber(channel <-chan map[string]string) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case msg := <-channel:
-			dispatch(msg)
-		}
+	for msg := range channel {
+		dispatch(msg)
 	}
 }
 

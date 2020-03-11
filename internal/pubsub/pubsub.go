@@ -49,7 +49,7 @@ func routeToService(service string) (partition int32, sidecar string, err error)
 		partition, err = routeToSidecar(sidecar)              // map sidecar to partition
 		mu.RUnlock()
 		return err
-	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO fix timeout
+	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
 	return
 }
 
@@ -227,6 +227,7 @@ func consume() {
 			logger.Fatal("consumer error: %v", err)
 		}
 		if ctx.Err() != nil {
+			close(out)
 			return // consumer was cancelled
 		}
 		// next session
