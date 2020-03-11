@@ -14,11 +14,12 @@ var (
 	// ErrNil indicates that a reply value is nil
 	ErrNil = redis.ErrNil
 
-	conn redis.Conn // for now using a single connection with a lock
-	lock sync.Mutex
+	// connection
+	conn redis.Conn // for now use a single connection
+	lock sync.Mutex // connection lock
 )
 
-// prefix all keys with "kar\appName\"
+// mangle add common prefix to all keys
 func mangle(key string) string {
 	return "kar" + config.Separator + config.AppName + config.Separator + key
 }
@@ -30,11 +31,14 @@ func Set(key, value string) (string, error) {
 	return redis.String(conn.Do("SET", mangle(key), value))
 }
 
-// SetNX sets the value associated with a key if it does not exist yet
-func SetNX(key, value string) (int, error) {
+// CompareAndSet sets the value associated with a key if its current value is equal to the expected value
+func CompareAndSet(key, expected, value string) (int, error) {
 	lock.Lock()
 	defer lock.Unlock()
-	return redis.Int(conn.Do("SETNX", mangle(key), value))
+	if expected == "" {
+		return redis.Int(conn.Do("SETNX", mangle(key), value))
+	}
+	return redis.Int(conn.Do("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
 }
 
 // Get returns the value associated with the key

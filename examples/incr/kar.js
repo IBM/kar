@@ -22,6 +22,8 @@ const parse = res => res.text().then(text => {
 // invoke method on a service
 const async = (service, path, params) => post(`send/${service}/${path}`, params)
 const sync = (service, path, params) => post(`call/${service}/${path}`, params)
+const actorAsync = (service, actor, path, params) => post(`actor/send/${service}/${actor}/${path}`, params)
+const actorSync = (service, actor, path, params) => post(`actor/call/${service}/${actor}/${path}`, params)
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
@@ -58,4 +60,4 @@ const postprocessor = [
     })
     .catch(next)]
 
-module.exports = { post, async, sync, logger, preprocessor, postprocessor }
+module.exports = { post, async, sync, logger, preprocessor, postprocessor, actor: { async: actorAsync, sync: actorSync } }

@@ -12,6 +12,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -25,13 +26,78 @@ var (
 	out = make(chan map[string]string) // TODO multiple channels?
 
 	// routes
-	me     = config.ServiceName + "," + config.ID
-	routes map[string][]int32 // map services to partitions
-	mu     = sync.RWMutex{}   // synchronize changes to routes
+	me       = config.ID + config.Separator + config.ServiceName
+	replicas map[string][]string // map services to sidecars
+	routes   map[string][]int32  // map sidecards to partitions
+	mu       = sync.RWMutex{}    // synchronize changes to routes
 
+	// termination
 	ctx, cancel = context.WithCancel(context.Background())
 	wg          = sync.WaitGroup{}
 )
+
+// routeToService maps a service to a partition (keep trying)
+func routeToService(service string) (partition int32, sidecar string, err error) {
+	err = backoff.Retry(func() error { // keep trying
+		mu.RLock()
+		sidecars := replicas[service]
+		if len(sidecars) == 0 { // no sidecar matching this service
+			mu.RUnlock()
+			logger.Debug("no sidecar for service %s", service)
+			return errors.New("no sidecar for service " + service)
+		}
+		sidecar = sidecars[rand.Int31n(int32(len(sidecars)))] // select random sidecar from list
+		partition, err = routeToSidecar(sidecar)              // map sidecar to partition
+		mu.RUnlock()
+		return err
+	}, backoff.NewExponentialBackOff()) // TODO fix timeout
+	return
+}
+
+// routeToSidecar maps a sidecar to a partition (no retries)
+func routeToSidecar(sidecar string) (int32, error) {
+	mu.RLock()
+	partitions := routes[sidecar]
+	mu.RUnlock()
+	if len(partitions) == 0 { // no partition matching this sidecar
+		logger.Debug("no partition for sidecar %s", sidecar)
+		return -1, errors.New("no partition for sidecar " + sidecar)
+	}
+	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
+}
+
+// routeToActor maps an actor to a stable sidecar to a partition
+// only switching to a new sidecar if the existing sidecar has died
+func routeToActor(service string, actor string) (partition int32, err error) {
+	key := "actor" + config.Separator + service + config.Separator + actor
+	var sidecar string
+	for { // keep trying
+		sidecar, err = store.Get(key) // retrieve already assigned sidecar if any
+		if err != nil && err != store.ErrNil {
+			return // redis error
+		}
+		if sidecar != "" { // no assigned sidecar yet
+			_, _, err = routeToService(service) // make sure routes have been initialized
+			if err != nil {
+				return // no matching service, abort
+			}
+			partition, err = routeToSidecar(sidecar) // find partition for sidecar
+			if err == nil {
+				return // found sidecar and partition
+			}
+		}
+		expected := sidecar                       // prepare to update assigned sidecar
+		_, sidecar, err = routeToService(service) // wait for matching service
+		if err != nil {
+			return // no matching service, abort
+		}
+		_, err = store.CompareAndSet(key, expected, sidecar) // try saving sidecar
+		if err != nil {
+			return // redis error
+		}
+		// loop around
+	}
+}
 
 // Send sends message to receiver
 func Send(message map[string]string) error {
@@ -40,59 +106,54 @@ func Send(message map[string]string) error {
 		logger.Debug("failed to marshal message with value %v: %v", message, err)
 		return err
 	}
-
-	var p []int32
+	var partition int32
 	switch message["protocol"] {
-	case "service": // wait for route to specified service name
-		err = backoff.Retry(func() error {
-			var ok bool
-			mu.RLock()
-			defer mu.RUnlock()
-			if p, ok = routes[message["to"]]; ok {
-				return nil
-			}
-			logger.Debug("no route to service %s", message["to"]) // not an error if transient
-			return errors.New("no route to service " + message["to"])
-		}, backoff.NewExponentialBackOff()) // TODO fix timeout
-	case "sidecar": // route to specified sidecard uuid if available or fail
-		var ok bool
-		mu.RLock()
-		defer mu.RUnlock()
-		if p, ok = routes[message["to"]]; !ok {
-			err = errors.New("no route to sidecar " + message["to"]) // no retry
+	case "service": // route to service
+		partition, _, err = routeToService(message["to"])
+		if err != nil {
+			logger.Debug("failed to route to service %s: %v", message["to"], err)
+			return err
+		}
+	case "sidecar": // route to sidecar
+		partition, err = routeToSidecar(message["to"])
+		if err != nil {
+			logger.Debug("failed to route to sidecar %s: %v", message["to"], err)
+			return err
+		}
+	case "actor": // route to actor
+		partition, err = routeToActor(message["to"], message["actor"])
+		if err != nil {
+			logger.Debug("failed to route to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
+			return err
 		}
 	}
-	if err != nil {
-		logger.Debug("failed to send message to %s %s: %v", message["protocol"], message["to"], err)
-		return err
-	}
-
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
+	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
-		Partition: p[rand.Int31n(int32(len(p)))],
+		Partition: partition,
 		Value:     sarama.ByteEncoder(msg),
 	})
 	if err != nil {
-		logger.Debug("failed to send message to %s %s: %v", message["protocol"], message["to"], err)
+		logger.Debug("failed to send message to partition %d: %v", partition, err)
 		return err
 	}
-
 	logger.Debug("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
-
 	return nil
 }
 
+// handler of consumer group session
 type handler struct{}
 
+// Setup consumer group session
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
-	r := map[string][]int32{}
+	rp := map[string][]string{} // temp replicas
+	rt := map[string][]int32{}  // temp routes
 	groups, err := admin.DescribeConsumerGroups([]string{topic})
 	if err != nil {
 		logger.Debug("failed to describe consumer group: %v", err)
 		return err
 	}
 	members := groups[0].Members
-	for id, member := range members {
+	for memberID, member := range members {
 		a, err := member.GetMemberAssignment()
 		if err != nil {
 			logger.Debug("failed to parse member assignment: %v", err)
@@ -103,44 +164,59 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 			logger.Debug("failed to parse member metadata: %v", err)
 			return err
 		}
-		services := strings.Split(string(m.UserData), ",")
-		for _, service := range services {
-			r[service] = append(r[service], a.Topics[topic]...)
-		}
-		if id == session.MemberID() {
+		data := strings.Split(string(m.UserData), config.Separator)
+		sidecar := data[0]
+		service := data[1]
+		rp[service] = append(rp[service], sidecar)
+		rt[sidecar] = append(rt[sidecar], a.Topics[topic]...)
+		if memberID == session.MemberID() {
 			logger.Info("partitions: %v", a.Topics[topic])
 		}
 	}
-	logger.Info("routes: %v", r)
+	logger.Info("replicas: %v", rp)
+	logger.Info("routes: %v", rt)
 	mu.Lock()
-	defer mu.Unlock()
-	routes = r
+	replicas = rp
+	routes = rt
+	mu.Unlock()
 	return nil
 }
 
+// Cleanup consumer group session
 func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
+// ConsumeClaim processes messages of consumer claim
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
 		session.MarkMessage(msg, "received") // TODO
 		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
-		var m map[string]string
-		err := json.Unmarshal(msg.Value, &m)
+		var message map[string]string
+		err := json.Unmarshal(msg.Value, &message)
 		if err != nil {
 			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
 			continue
 		}
-		if strings.Contains(me, m["to"]) {
-			out <- m
-		} else {
-			logger.Info("forwarding message to %s %s", m["protocol"], m["to"])
-			if err := Send(m); err != nil {
-				if m["protocol"] == "service" {
-					logger.Error("failed to forward message to service %s: %v", m["to"], err) // error
-				} else {
-					logger.Debug("failed to forward message to sidecar %s: %v", m["to"], err) // not an error
+		if strings.Contains(me, message["to"]) { // message reached destination
+			out <- message
+		} else { // message reached wrong sidecar
+			switch message["protocol"] {
+			case "service": // route to service
+				logger.Info("forwarding message to service %s: %v", message["to"], err)
+			case "sidecar": // route to sidecar
+				logger.Info("forwarding message to sidecar %s: %v", message["to"], err)
+			case "actor": // route to actor
+				logger.Info("forwarding message to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
+			}
+			if err := Send(message); err != nil {
+				switch message["protocol"] {
+				case "service": // route to service
+					logger.Error("failed to forward message to service %s: %v", message["to"], err)
+				case "sidecar": // route to sidecar
+					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
+				case "actor": // route to actor
+					logger.Error("failed to forward message to actor %s%s%s: %v", message["to"], config.Separator, message["actor"], err)
 				}
 			}
 		}
@@ -148,15 +224,17 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 	return nil
 }
 
+// consume orchestrate the consumer group sessions
 func consume() {
 	defer wg.Done()
-	for {
+	for { // for each session
 		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
 			logger.Fatal("consumer error: %v", err)
 		}
 		if ctx.Err() != nil {
-			return // cancelled
+			return // consumer was cancelled
 		}
+		// next session
 	}
 }
 

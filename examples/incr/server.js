@@ -6,6 +6,7 @@ const app = express()
 app.use(logger, preprocessor)
 
 app.post('/incr', (req, res) => {
+  console.log('incr', req.body)
   res.json(req.body + 1)
 })
 

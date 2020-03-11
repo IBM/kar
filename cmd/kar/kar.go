@@ -53,16 +53,23 @@ func text(r io.Reader) string {
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
+	actor := ps.ByName("actor")
 
-	err := pubsub.Send(map[string]string{
-		"protocol":     "service", // to any sidecar instance
+	message := map[string]string{
+		"protocol":     "service", // to any sidecar
 		"to":           service,   // offering this service
 		"command":      "send",    // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      text(r.Body)})
+		"payload":      text(r.Body)}
+	if actor != "" {
+		message["protocol"] = "actor"
+		message["actor"] = actor
+	}
+
+	err := pubsub.Send(message)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, "OK")
 	}
@@ -77,14 +84,15 @@ type reply struct {
 // call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	service := ps.ByName("service")
+	actor := ps.ByName("actor")
 
 	session := uuid.New().String()
 	ch := make(chan reply)
 	requests.Store(session, ch)
 	defer requests.Delete(session)
 
-	err := pubsub.Send(map[string]string{
-		"protocol":     "service", // to any sidecar instance
+	message := map[string]string{
+		"protocol":     "service", // to any sidecar
 		"to":           service,   // offering this service
 		"command":      "call",    // post expecting a callback with the result
 		"path":         ps.ByName("path"),
@@ -92,9 +100,15 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"accept":       r.Header.Get("Accept"),
 		"from":         config.ID, // this sidecar
 		"session":      session,   // this request
-		"payload":      text(r.Body)})
+		"payload":      text(r.Body)}
+	if actor != "" {
+		message["protocol"] = "actor"
+		message["actor"] = actor
+	}
+
+	err := pubsub.Send(message)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to send message to service %s: %v", service, err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -112,7 +126,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(map[string]string{
 		"protocol":     "sidecar",   // to a specific
-		"to":           msg["from"], // sidecar instance
+		"to":           msg["from"], // sidecar
 		"command":      "callback",
 		"session":      msg["session"], // request id
 		"statusCode":   strconv.Itoa(statusCode),
@@ -226,6 +240,8 @@ func server(listener net.Listener) {
 	router := httprouter.New()
 	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
+	router.POST("/kar/actor/send/:service/:actor/*path", send)
+	router.POST("/kar/actor/call/:service/:actor/*path", call)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
