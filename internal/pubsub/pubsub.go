@@ -109,21 +109,19 @@ func Send(message map[string]string) error {
 	var partition int32
 	switch message["protocol"] {
 	case "service": // route to service
-		partition, _, err = routeToService(message["to"])
+		if message["session"] != "" {
+			partition, err = routeToSession(message["to"], message["session"])
+		} else {
+			partition, _, err = routeToService(message["to"])
+		}
 		if err != nil {
-			logger.Debug("failed to route to service %s: %v", message["to"], err)
+			logger.Debug("failed to route to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 			return err
 		}
 	case "sidecar": // route to sidecar
 		partition, err = routeToSidecar(message["to"])
 		if err != nil {
 			logger.Debug("failed to route to sidecar %s: %v", message["to"], err)
-			return err
-		}
-	case "session": // route to session
-		partition, err = routeToSession(message["to"], message["session"])
-		if err != nil {
-			logger.Debug("failed to route to session %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 			return err
 		}
 	}
@@ -206,20 +204,16 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		} else { // message reached wrong sidecar
 			switch message["protocol"] {
 			case "service": // route to service
-				logger.Info("forwarding message to service %s", message["to"])
+				logger.Info("forwarding message to service %s%s%s", message["to"], config.Separator, message["session"])
 			case "sidecar": // route to sidecar
 				logger.Info("forwarding message to sidecar %s", message["to"])
-			case "session": // route to session
-				logger.Info("forwarding message to session %s%s%s", message["to"], config.Separator, message["session"])
 			}
 			if err := Send(message); err != nil {
 				switch message["protocol"] {
 				case "service": // route to service
-					logger.Error("failed to forward message to service %s: %v", message["to"], err)
+					logger.Error("failed to forward message to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 				case "sidecar": // route to sidecar
 					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
-				case "session": // route to acsessiontor
-					logger.Error("failed to forward message to session %s%s%s: %v", message["to"], config.Separator, message["session"], err)
 				}
 			}
 		}

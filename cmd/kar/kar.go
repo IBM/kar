@@ -54,22 +54,14 @@ func text(r io.Reader) string {
 
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	service := ps.ByName("service")
-	session := ps.ByName("session")
-
-	message := map[string]string{
-		"protocol":     "service", // to any sidecar
-		"to":           service,   // offering this service
-		"command":      "send",    // post with no callback expected
+	err := pubsub.Send(map[string]string{
+		"protocol":     "service",
+		"to":           ps.ByName("service"),
+		"session":      ps.ByName("session"),
+		"command":      "send", // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      text(r.Body)}
-	if session != "" {
-		message["protocol"] = "session"
-		message["session"] = session
-	}
-
-	err := pubsub.Send(message)
+		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 	} else {
@@ -85,30 +77,22 @@ type reply struct {
 
 // call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	service := ps.ByName("service")
-	session := ps.ByName("session")
-
 	request := uuid.New().String()
 	ch := make(chan reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 
-	message := map[string]string{
-		"protocol":     "service", // to any sidecar
-		"to":           service,   // offering this service
-		"command":      "call",    // post expecting a callback with the result
+	err := pubsub.Send(map[string]string{
+		"protocol":     "service",
+		"to":           ps.ByName("service"),
+		"session":      ps.ByName("session"),
+		"command":      "call", // post expecting a callback with the result
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
 		"from":         config.ID, // this sidecar
 		"request":      request,   // this request
-		"payload":      text(r.Body)}
-	if session != "" {
-		message["protocol"] = "session"
-		message["session"] = session
-	}
-
-	err := pubsub.Send(message)
+		"payload":      text(r.Body)})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		return
@@ -127,8 +111,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // callback sends the result of a call back to the caller
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(map[string]string{
-		"protocol":     "sidecar",   // to a specific
-		"to":           msg["from"], // sidecar
+		"protocol":     "sidecar",
+		"to":           msg["from"],
 		"command":      "callback",
 		"request":      msg["request"],
 		"statusCode":   strconv.Itoa(statusCode),
