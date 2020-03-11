@@ -68,7 +68,7 @@ func init() {
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
-	flag.IntVar(&ServicePort, "send", 3000, "The service port")
+	flag.IntVar(&ServicePort, "send", 8080, "The service port")
 	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
