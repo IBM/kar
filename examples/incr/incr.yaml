@@ -16,9 +16,7 @@ spec:
       annotations:
         kar.ibm.com/app: myApp
         kar.ibm.com/service: myService
-        kar.ibm.com/sendPort: "3500"
-        kar.ibm.com/recvPort: "3501"
-        kar.ibm.com/verbose: "4"
+        kar.ibm.com/verbose: "info"
     spec:
       containers:
       - name: server
@@ -40,9 +38,7 @@ spec:
       annotations:
         kar.ibm.com/app: myApp
         kar.ibm.com/service: myClient
-        kar.ibm.com/sendPort: "3500"
-        kar.ibm.com/recvPort: "3501"
-        kar.ibm.com/verbose: "4"
+        kar.ibm.com/verbose: "info"
     spec:
       restartPolicy: OnFailure
       containers:

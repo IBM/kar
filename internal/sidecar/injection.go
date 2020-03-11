@@ -26,6 +26,9 @@ const (
 	recvPortAnnotation    = "kar.ibm.com/recvPort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 
+	defaultSendPort = "8080"
+	defaultRecvPort = "3500"
+
 	sidecarName        = "kar"
 	karImagePullSecret = "kar.ibm.com.image-pull"
 	karRTConfigSecret  = "kar.ibm.com.runtime-config"
@@ -177,20 +180,29 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 	appName := annotations[appNameAnnotation]
 	cmd := []string{"-config_dir", karRTConfigMount, "-app", appName}
 	appEnv := []corev1.EnvVar{}
+
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 		cmd = append(cmd, "-service", serviceName)
 	}
-	if sendPort, ok := annotations[sendPortAnnotation]; ok {
-		cmd = append(cmd, "-send", sendPort)
-		appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: sendPort})
+
+	var sendPort = defaultSendPort
+	if sp, ok := annotations[sendPortAnnotation]; ok {
+		sendPort = sp
 	}
-	if recvPort, ok := annotations[recvPortAnnotation]; ok {
-		cmd = append(cmd, "-recv", recvPort)
-		appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: recvPort})
+	cmd = append(cmd, "-send", sendPort)
+	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: sendPort})
+
+	var recvPort = defaultRecvPort
+	if rp, ok := annotations[recvPortAnnotation]; ok {
+		recvPort = rp
 	}
+	cmd = append(cmd, "-recv", recvPort)
+	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: recvPort})
+
 	if verbose, ok := annotations[verboseAnnotation]; ok {
 		cmd = append(cmd, "-v", verbose)
 	}
+
 	return cmd, appEnv
 }
 
