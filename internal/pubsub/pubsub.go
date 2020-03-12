@@ -23,7 +23,7 @@ var (
 	topic    = "kar" + config.Separator + config.AppName
 
 	// output channel
-	out = make(chan map[string]string) // TODO multiple channels?
+	out = make(chan Message) // TODO multiple channels?
 
 	// routes
 	me       = config.ID + config.Separator + config.ServiceName
@@ -33,7 +33,33 @@ var (
 
 	// termination
 	ctx context.Context
+
+	latest = map[int32]int64{}
 )
+
+// Message is the type of messages
+type Message struct {
+	Value     map[string]string
+	Valid     bool
+	partition int32
+	offset    int64
+	session   sarama.ConsumerGroupSession
+}
+
+// Mark marks the message as consumed
+func (msg *Message) Mark() {
+	latest[msg.partition] = msg.offset
+	// the following might be a noop if it happens after repartitioning
+	msg.session.MarkOffset(topic, msg.partition, msg.offset+1, "")
+}
+
+// Confirm confirms that message has not been processed yet
+func (msg *Message) Confirm() bool {
+	if last, ok := latest[msg.partition]; ok {
+		return msg.offset > last
+	}
+	return true
+}
 
 // routeToService maps a service to a partition (keep trying)
 func routeToService(service string) (partition int32, sidecar string, err error) {
@@ -187,7 +213,6 @@ func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
 // ConsumeClaim processes messages of consumer claim
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		session.MarkMessage(msg, "received") // TODO
 		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
 		var message map[string]string
 		err := json.Unmarshal(msg.Value, &message)
@@ -195,26 +220,10 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
 			continue
 		}
-		if strings.Contains(me, message["to"]) { // message reached destination
-			select {
-			case <-session.Context().Done():
-			case out <- message:
-			}
-		} else { // message reached wrong sidecar
-			switch message["protocol"] {
-			case "service": // route to service
-				logger.Info("forwarding message to service %s%s%s", message["to"], config.Separator, message["session"])
-			case "sidecar": // route to sidecar
-				logger.Info("forwarding message to sidecar %s", message["to"])
-			}
-			if err := Send(message); err != nil {
-				switch message["protocol"] {
-				case "service": // route to service
-					logger.Error("failed to forward message to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
-				case "sidecar": // route to sidecar
-					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
-				}
-			}
+		valid := strings.Contains(me, message["to"])
+		select {
+		case <-session.Context().Done():
+		case out <- Message{Value: message, Valid: valid, partition: msg.Partition, offset: msg.Offset, session: session}:
 		}
 	}
 	return nil
@@ -240,7 +249,7 @@ func setContext(c context.Context) {
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
-func Dial(ctx context.Context) <-chan map[string]string {
+func Dial(ctx context.Context) <-chan Message {
 	setContext(ctx)
 	conf := sarama.NewConfig()
 

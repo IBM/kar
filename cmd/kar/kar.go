@@ -179,9 +179,31 @@ func dispatch(msg map[string]string) {
 }
 
 // subscriber handles incoming messages
-func subscriber(channel <-chan map[string]string) {
+func subscriber(channel <-chan pubsub.Message) {
 	for msg := range channel {
-		dispatch(msg)
+		if !msg.Confirm() {
+			continue
+		}
+		message := msg.Value
+		if msg.Valid {
+			dispatch(message)
+		} else { // message reached wrong sidecar
+			switch message["protocol"] {
+			case "service": // route to service
+				logger.Info("forwarding message to service %s%s%s", message["to"], config.Separator, message["session"])
+			case "sidecar": // route to sidecar
+				logger.Info("forwarding message to sidecar %s", message["to"])
+			}
+			if err := pubsub.Send(message); err != nil {
+				switch message["protocol"] {
+				case "service": // route to service
+					logger.Error("failed to forward message to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
+				case "sidecar": // route to sidecar
+					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
+				}
+			}
+		}
+		msg.Mark()
 	}
 }
 
