@@ -13,7 +13,7 @@ docker login -u iamapikey -p "${DOCKER_APIKEY}" us.icr.io
 
 SHORT_COMMIT=`git rev-parse --short HEAD`
 
-if [ ${BRANCH} == "master" && ${IMAGE_TAG} == "latest" ]; then
+if [ ${BRANCH} == "master" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push commit hash tagged images
     DOCKER_NAMESPACE=kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make dockerPush
 
