@@ -25,6 +25,6 @@ else
         DOCKER_NAMESPACE=kar-prod DOCKER_IMAGE_TAG=${IMAGE_TAG} make dockerPush
     else
         # A push to some branch; push commit-taged image to kar-stage
-        DOCKER_NAMESPACE=kar-stage DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make dockerPush
+        DOCKER_NAMESPACE=kar-stage DOCKER_IMAGE_TAG=${BRANCH}-${SHORT_COMMIT} make dockerPush
     fi
 fi
