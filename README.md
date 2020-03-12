@@ -23,7 +23,7 @@ For example, to create and KAR-enable the `kar-apps` namespace execute:
 ./scripts/kar-enable-namespace.sh kar-apps
 ```
 
-Or to KAR-enable an existing namespace, such as the `default`namespace:
+Or to KAR-enable an existing namespace, for example the `default`namespace:
 ```shell
 ./scripts/kar-enable-namespace.sh default
 ```
