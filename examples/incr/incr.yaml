@@ -16,12 +16,11 @@ spec:
       annotations:
         kar.ibm.com/app: myApp
         kar.ibm.com/service: myService
-        kar.ibm.com/verbose: "info"
+        kar.ibm.com/verbose: info
     spec:
       containers:
       - name: server
         image: us.icr.io/kar-dev/sample-incr:latest
-        imagePullPolicy: Always
         env:
         - name: MAIN
           value: server.js
@@ -38,13 +37,12 @@ spec:
       annotations:
         kar.ibm.com/app: myApp
         kar.ibm.com/service: myClient
-        kar.ibm.com/verbose: "info"
+        kar.ibm.com/verbose: info
     spec:
       restartPolicy: OnFailure
       containers:
       - name: client
         image: us.icr.io/kar-dev/sample-incr:latest
-        imagePullPolicy: Always
         env:
         - name: MAIN
           value: client.js
