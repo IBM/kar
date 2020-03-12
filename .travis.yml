@@ -10,13 +10,13 @@ script:
 
 deploy:
   - provider: script
-    script: "./build/ci/pushImages.sh ${TRAVIS_TAG}"
+    script: "./build/ci/pushImages.sh ${TRAVIS_BRANCH} ${TRAVIS_TAG}"
     on:
       tags: true
       all_branches: true
       repo: solsa/kar
   - provider: script
-    script: "./build/ci/pushImages.sh latest"
+    script: "./build/ci/pushImages.sh master latest"
     on:
       branch: master
       repo: solsa/kar
