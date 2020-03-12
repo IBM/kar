@@ -1,9 +1,13 @@
 language: go
 services:
   - docker
+sudo: required
 
 go:
   - 1.13
+
+before_install:
+  - ./build/ci/setup.sh && ./build/ci/start-kind.sh
 
 script:
   - ./build/ci/build.sh
