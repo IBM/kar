@@ -1,14 +1,10 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   name: incr-server
   labels:
     name: incr-server
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      name: incr-server
   template:
     metadata:
       labels:
@@ -18,6 +14,7 @@ spec:
         kar.ibm.com/service: myService
         kar.ibm.com/verbose: info
     spec:
+      restartPolicy: OnFailure
       containers:
       - name: server
         image: us.icr.io/groved/sample-incr:latest
