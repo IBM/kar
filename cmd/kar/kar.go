@@ -236,6 +236,12 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// kill route handler
+func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Fprint(w, "OK")
+	cancel()
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) {
 	router := httprouter.New()
@@ -246,6 +252,7 @@ func server(listener net.Listener) {
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
+	router.GET("/kar/kill", kill)
 	srv := http.Server{Handler: router}
 
 	go func() {
