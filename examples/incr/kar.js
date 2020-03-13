@@ -1,5 +1,5 @@
 const rawFetch = require('node-fetch')
-const fetch = require('fetch-retry')(rawFetch, { retries: 10 })
+const fetch = require('fetch-retry')(rawFetch, { retries: 10, retryOn: [503] })
 const http = require('http')
 const parser = require('body-parser')
 const morgan = require('morgan')
