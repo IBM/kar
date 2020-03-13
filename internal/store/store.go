@@ -56,6 +56,30 @@ func LRem(key string, count int, value string) (reply int, err error) {
 	return
 }
 
+// ZAdd adds elements to a sorted set
+func ZAdd(key string, score int64, value string) (reply int, err error) {
+	lock.Lock()
+	reply, err = redis.Int(conn.Do("ZADD", mangle(key), score, value))
+	lock.Unlock()
+	return
+}
+
+// ZRange returns elements from a sorted set
+func ZRange(key string, start, stop int) (reply []string, err error) {
+	lock.Lock()
+	reply, err = redis.Strings(conn.Do("ZRANGE", mangle(key), start, stop))
+	lock.Unlock()
+	return
+}
+
+// ZRemRangeByScore removes elements from a sorted set
+func ZRemRangeByScore(key string, min, max int64) (reply int, err error) {
+	lock.Lock()
+	reply, err = redis.Int(conn.Do("ZREMRANGEBYSCORE", mangle(key), min, max))
+	lock.Unlock()
+	return
+}
+
 // CompareAndSet sets the value associated with a key if its current value is equal to the expected value
 func CompareAndSet(key, expected, value string) (reply int, err error) {
 	lock.Lock()

@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/rand"
-	"strings"
+	"strconv"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -16,7 +16,14 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
+type userData struct {
+	Sidecar string                       // id of this sidecar
+	Service string                       // name of this service
+	Live    map[int32]map[int64]struct{} // live offsets
+}
+
 var (
+	conf     = sarama.NewConfig()
 	admin    sarama.ClusterAdmin
 	producer sarama.SyncProducer
 	consumer sarama.ConsumerGroup
@@ -26,7 +33,6 @@ var (
 	out = make(chan Message) // TODO multiple channels?
 
 	// routes
-	me       = config.ID + config.Separator + config.ServiceName
 	replicas map[string][]string // map services to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
 	mu       = sync.RWMutex{}    // synchronize changes to routes
@@ -34,7 +40,20 @@ var (
 	// termination
 	ctx context.Context
 
-	latest = map[int32]int64{}
+	// state of this sidecar
+	here = userData{
+		Sidecar: config.ID,
+		Service: config.ServiceName,
+		Live:    map[int32]map[int64]struct{}{},
+	}
+
+	// local progress
+	local = map[int32]map[int64]struct{}{} // offsets started or finished by this sidecar
+	lock  = sync.Mutex{}                   // lock to protect local and here.Live
+
+	// global progress (no lock needed)
+	live map[int32]map[int64]struct{}     // live offsets at beginning of session
+	done = map[int32]map[int64]struct{}{} // done offsets at beginning of session
 )
 
 // Message is the type of messages
@@ -43,21 +62,50 @@ type Message struct {
 	Valid     bool
 	partition int32
 	offset    int64
-	session   sarama.ConsumerGroupSession
 }
 
-// Mark marks the message as consumed
-func (msg *Message) Mark() {
-	latest[msg.partition] = msg.offset
-	// the following might be a noop if it happens after repartitioning
-	msg.session.MarkOffset(topic, msg.partition, msg.offset+1, "")
-}
-
-// Confirm confirms that message has not been processed yet
-func (msg *Message) Confirm() bool {
-	if last, ok := latest[msg.partition]; ok {
-		return msg.offset > last
+func marshal(ud userData) []byte {
+	lock.Lock()
+	b, err := json.Marshal(ud)
+	lock.Unlock()
+	if err != nil {
+		logger.Fatal("failed to marshal userData: %v", err)
 	}
+	return b
+}
+
+func mangle(p int32) string {
+	return "partition" + config.Separator + strconv.Itoa(int(p))
+}
+
+// Mark must be called when a message has been processed
+func (msg *Message) Mark() {
+	logger.Debug("finishing partition %d offset %d", msg.partition, msg.offset)
+	_, err := store.ZAdd(mangle(msg.partition), msg.offset, strconv.FormatInt(msg.offset, 10)) // tell store offset is done
+	if err != nil {
+		logger.Error("redis error: %v", err)
+	}
+	lock.Lock()
+	delete(here.Live[msg.partition], msg.offset)
+	lock.Unlock()
+}
+
+// Confirm must be called before processing a message
+func (msg *Message) Confirm() bool {
+	lock.Lock()
+	if local[msg.partition] == nil { // new partition
+		local[msg.partition] = map[int64]struct{}{}
+		here.Live[msg.partition] = map[int64]struct{}{}
+	}
+	if _, ok := local[msg.partition][msg.offset]; ok { // already processed or in progress
+		lock.Unlock()
+		logger.Debug("skipping partition %d offset %d", msg.partition, msg.offset)
+		return false
+	}
+	here.Live[msg.partition][msg.offset] = struct{}{}
+	local[msg.partition][msg.offset] = struct{}{}
+	lock.Unlock()
+	logger.Debug("starting to process partition %d offset %d", msg.partition, msg.offset)
 	return true
 }
 
@@ -168,8 +216,10 @@ type handler struct{}
 
 // Setup consumer group session
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
-	rp := map[string][]string{} // temp replicas
-	rt := map[string][]int32{}  // temp routes
+	rp := map[string][]string{}           // temp replicas
+	rt := map[string][]int32{}            // temp routes
+	live = map[int32]map[int64]struct{}{} // clear live list
+	done = map[int32]map[int64]struct{}{} // clear done list
 	groups, err := admin.DescribeConsumerGroups([]string{topic})
 	if err != nil {
 		logger.Debug("failed to describe consumer group: %v", err)
@@ -187,17 +237,36 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 			logger.Debug("failed to parse member metadata: %v", err)
 			return err
 		}
-		data := strings.Split(string(m.UserData), config.Separator)
-		sidecar := data[0]
-		service := data[1]
-		rp[service] = append(rp[service], sidecar)
-		rt[sidecar] = append(rt[sidecar], a.Topics[topic]...)
+		var there userData
+		if err := json.Unmarshal(m.UserData, &there); err != nil {
+			logger.Fatal("failed to unmarshal userdata: %v", err)
+		}
+		rp[there.Service] = append(rp[there.Service], there.Sidecar)
+		rt[there.Sidecar] = append(rt[there.Sidecar], a.Topics[topic]...)
+		for _, p := range session.Claims()[topic] { // for each partition assigned to this sidecar
+			if live[p] == nil { // new partition
+				live[p] = map[int64]struct{}{}
+				done[p] = map[int64]struct{}{}
+			}
+			r, err := store.ZRange(mangle(p), 0, -1) // fetch done offsets from store
+			if err != nil {
+				logger.Error("redis error: %v", err)
+			}
+			for _, o := range r {
+				k, _ := strconv.ParseInt(o, 10, 64)
+				done[p][k] = struct{}{}
+			}
+			for k := range there.Live[p] {
+				live[p][k] = struct{}{}
+			}
+		}
 		if memberID == session.MemberID() {
 			logger.Info("partitions: %v", a.Topics[topic])
 		}
 	}
 	logger.Info("replicas: %v", rp)
 	logger.Info("routes: %v", rt)
+	logger.Info("userData: %v", here)
 	mu.Lock()
 	replicas = rp
 	routes = rt
@@ -206,24 +275,40 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 }
 
 // Cleanup consumer group session
-func (consumer *handler) Cleanup(sarama.ConsumerGroupSession) error {
+func (consumer *handler) Cleanup(session sarama.ConsumerGroupSession) error {
+	conf.Consumer.Group.Member.UserData = marshal(here)
 	return nil
 }
 
 // ConsumeClaim processes messages of consumer claim
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	store.ZRemRangeByScore(mangle(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
+	prefix := true                                                                // should advance cursor
 	for msg := range claim.Messages() {
 		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+		if _, ok := live[msg.Partition][msg.Offset]; ok {
+			prefix = false // stop advancing cursor
+			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+			continue
+		}
+		if _, ok := done[msg.Partition][msg.Offset]; ok {
+			if prefix {
+				session.MarkMessage(msg, "") // advance cursor
+			}
+			logger.Debug("skipping done message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+			continue
+		}
+		prefix = false
 		var message map[string]string
 		err := json.Unmarshal(msg.Value, &message)
 		if err != nil {
 			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
 			continue
 		}
-		valid := strings.Contains(me, message["to"])
+		valid := message["to"] == here.Sidecar || message["to"] == here.Service
 		select {
 		case <-session.Context().Done():
-		case out <- Message{Value: message, Valid: valid, partition: msg.Partition, offset: msg.Offset, session: session}:
+		case out <- Message{Value: message, Valid: valid, partition: msg.Partition, offset: msg.Offset}:
 		}
 	}
 	return nil
@@ -251,7 +336,6 @@ func setContext(c context.Context) {
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
 func Dial(ctx context.Context) <-chan Message {
 	setContext(ctx)
-	conf := sarama.NewConfig()
 
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
 		logger.Fatal("invalid Kafka version: %v", err)
@@ -263,8 +347,9 @@ func Dial(ctx context.Context) <-chan Message {
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
+	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	conf.Consumer.Group.Member.UserData = []byte(me)
+	conf.Consumer.Group.Member.UserData = marshal(here)
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
