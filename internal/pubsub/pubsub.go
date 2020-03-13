@@ -383,7 +383,12 @@ func Dial(ctx context.Context) <-chan Message {
 			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 10, ReplicationFactor: 1}, false)
 		}
 		if err != nil {
-			logger.Fatal("failed to create Kafka topic: %v", err)
+			if e, ok := err.(*sarama.TopicError); ok {
+				// do not fail if another sidecar created the topic already
+				if e.Err != sarama.ErrTopicAlreadyExists {
+					logger.Fatal("failed to create Kafka topic: %v", err)
+				}
+			}
 		}
 	}
 
