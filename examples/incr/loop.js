@@ -13,8 +13,31 @@ async function main () {
   }
   console.log('Sequential increments completed')
 
+  console.log('Initiating 50 potentially concurrent increments')
+  const incs = Array.from(new Array(50), (_, i) => i + 1000).map(function (elem, _) {
+    return sync('myService', 'incr', elem)
+      .then(function (v) {
+        console.log(`${v}`)
+        if (v !== elem + 1) {
+          return Promise.reject(new Error(`Failed! incr(${elem}) returned ${v}`))
+        } else {
+          return Promise.resolve(`Success incr ${elem} returned ${v}`)
+        }
+      })
+  })
+  await Promise.all(incs)
+    .then(function (_) {
+      console.log('All concurrent increments completed successfully')
+    })
+    .catch(function (reason) {
+      console.log(reason)
+      failure = true
+    })
+
+  console.log('Requesting server shutdown')
   await async('myService', 'shutdown')
 
+  console.log('Terminating sidecar')
   await shutdown()
 
   if (failure) {
@@ -22,6 +45,7 @@ async function main () {
     process.exitCode = 1
   } else {
     console.log('All tests succeeded')
+    process.exitCode = 0
   }
 }
 

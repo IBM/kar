@@ -1,12 +1,6 @@
 const express = require('express')
 const { logger, preprocessor, postprocessor, shutdown } = require('./kar')
 
-async function doShutdown (reg, res) {
-  console.log('Shutting down service')
-  await shutdown()
-  await server.close(() => process.exit())
-}
-
 const app = express()
 
 app.use(logger, preprocessor)
@@ -16,7 +10,14 @@ app.post('/incr', (req, res) => {
   res.json(req.body + 1)
 })
 
-app.post('/shutdown', doShutdown)
+async function doShutdown () {
+  await shutdown()
+  server.close(() => process.exit())
+}
+app.post('/shutdown', (reg, res) => {
+  console.log('Shutting down service')
+  doShutdown()
+})
 
 app.use(postprocessor)
 
