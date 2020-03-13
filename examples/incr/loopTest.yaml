@@ -17,7 +17,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: server
-        image: us.icr.io/groved/sample-incr:latest
+        image: us.icr.io/kar-dev/sample-incr:latest
         env:
         - name: MAIN
           value: server.js
@@ -39,7 +39,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: client
-        image: us.icr.io/groved/sample-incr:latest
+        image: us.icr.io/kar-dev/sample-incr:latest
         env:
         - name: MAIN
           value: loop.js
