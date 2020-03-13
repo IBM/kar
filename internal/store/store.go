@@ -32,6 +32,30 @@ func Set(key, value string) (reply string, err error) {
 	return
 }
 
+// RPush adds elements to a list
+func RPush(key string, value ...string) (reply int, err error) {
+	lock.Lock()
+	reply, err = redis.Int(conn.Do("RPUSH", append([]interface{}{mangle(key)}, value)))
+	lock.Unlock()
+	return
+}
+
+// LRange returns elements from a list
+func LRange(key string, start, stop int) (reply []string, err error) {
+	lock.Lock()
+	reply, err = redis.Strings(conn.Do("LRANGE", mangle(key), start, stop))
+	lock.Unlock()
+	return
+}
+
+// LRem removes elements from a list
+func LRem(key string, count int, value string) (reply int, err error) {
+	lock.Lock()
+	reply, err = redis.Int(conn.Do("LREM", mangle(key), count, value))
+	lock.Unlock()
+	return
+}
+
 // CompareAndSet sets the value associated with a key if its current value is equal to the expected value
 func CompareAndSet(key, expected, value string) (reply int, err error) {
 	lock.Lock()
