@@ -242,6 +242,10 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cancel()
 }
 
+func healthTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Fprint(w, "OK")
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) {
 	router := httprouter.New()
@@ -253,6 +257,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
 	router.GET("/kar/kill", kill)
+	router.GET("kar/health", healthTest)
 	srv := http.Server{Handler: router}
 
 	go func() {

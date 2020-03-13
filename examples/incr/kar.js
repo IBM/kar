@@ -1,4 +1,5 @@
-const fetch = require('node-fetch')
+const rawFetch = require('node-fetch')
+const fetch = require('fetch-retry')(rawFetch, { retries: 10 })
 const http = require('http')
 const parser = require('body-parser')
 const morgan = require('morgan')
@@ -9,6 +10,7 @@ const url = `http://localhost:${process.env.KAR_PORT || 3500}/kar/`
 
 // http post, json stringify request body, json parse response body
 const post = (api, body) => fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, agent }).then(parse)
+const get = (api, body) => fetch(url + api, { method: 'GET', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' }, agent }).then(parse)
 
 const parse = res => res.text().then(text => {
   if (!res.ok) throw new Error(text)
@@ -24,6 +26,7 @@ const async = (service, path, params) => post(`send/${service}/${path}`, params)
 const sync = (service, path, params) => post(`call/${service}/${path}`, params)
 const actorAsync = (service, actor, path, params) => post(`session/${actor}/send/${service}/${path}`, params)
 const actorSync = (service, actor, path, params) => post(`session/${actor}/call/${service}/${path}`, params)
+const shutdown = () => get('kill')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
@@ -60,4 +63,4 @@ const postprocessor = [
     })
     .catch(next)]
 
-module.exports = { post, async, sync, logger, preprocessor, postprocessor, actor: { async: actorAsync, sync: actorSync } }
+module.exports = { post, async, sync, shutdown, logger, preprocessor, postprocessor, actor: { async: actorAsync, sync: actorSync } }
