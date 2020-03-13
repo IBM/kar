@@ -33,9 +33,9 @@ func Set(key, value string) (reply string, err error) {
 }
 
 // RPush adds elements to a list
-func RPush(key string, value ...string) (reply int, err error) {
+func RPush(key string, value string) (reply int, err error) {
 	lock.Lock()
-	reply, err = redis.Int(conn.Do("RPUSH", append([]interface{}{mangle(key)}, value)))
+	reply, err = redis.Int(conn.Do("RPUSH", mangle(key), value))
 	lock.Unlock()
 	return
 }
