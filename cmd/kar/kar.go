@@ -257,7 +257,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
 	router.GET("/kar/kill", kill)
-	router.GET("kar/health", healthTest)
+	router.GET("/kar/health", healthTest)
 	srv := http.Server{Handler: router}
 
 	go func() {
