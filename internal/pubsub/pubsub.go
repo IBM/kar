@@ -401,6 +401,8 @@ func Dial(ctx context.Context) <-chan Message {
 	conf.Producer.Return.Successes = true
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
+	conf.Producer.Idempotent = true
+	conf.Net.MaxOpenRequests = 1
 	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	conf.Consumer.Group.Rebalance.Strategy = &balanceStrategy{sarama.BalanceStrategyRange}
 	conf.Consumer.Group.Member.UserData = marshal(here)
