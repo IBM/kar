@@ -371,6 +371,7 @@ func setContext(c context.Context) {
 	ctx = c
 }
 
+// Wrap balance strategy to detect session leader
 type balanceStrategy struct {
 	strategy sarama.BalanceStrategy
 }
@@ -382,7 +383,6 @@ func (s *balanceStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMeta
 	return s.strategy.Plan(members, topics)
 }
 
-// AssignmentData simple strategies do not require any shared assignment data
 func (s *balanceStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32) ([]byte, error) {
 	return s.strategy.AssignmentData(memberID, topics, generationID)
 }
