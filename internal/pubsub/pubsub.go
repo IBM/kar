@@ -25,6 +25,7 @@ type userData struct {
 var (
 	conf     = sarama.NewConfig()
 	admin    sarama.ClusterAdmin
+	client   sarama.Client // client for producer to control topic refresh
 	producer sarama.SyncProducer
 	consumer sarama.ConsumerGroup
 	topic    = "kar" + config.Separator + config.AppName
@@ -36,6 +37,7 @@ var (
 	replicas map[string][]string // map services to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
 	mu       = sync.RWMutex{}    // synchronize changes to routes
+	leader   = false             // session leader?
 
 	// termination
 	ctx context.Context
@@ -212,21 +214,50 @@ func Send(message map[string]string) error {
 }
 
 // handler of consumer group session
-type handler struct{}
+type handler struct {
+	repartitionPending bool
+}
+
+type tooFewPartitionsError struct {
+	tag struct{}
+}
+
+func (e tooFewPartitionsError) Error() string {
+	return "too few partitions"
+}
 
 // Setup consumer group session
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
-	rp := map[string][]string{}           // temp replicas
-	rt := map[string][]int32{}            // temp routes
-	live = map[int32]map[int64]struct{}{} // clear live list
-	done = map[int32]map[int64]struct{}{} // clear done list
+	logger.Info("generation %d, member %s, service %s, sidecar %s, claims %v", session.GenerationID(), session.MemberID(), here.Service, here.Sidecar, session.Claims()[topic])
 	groups, err := admin.DescribeConsumerGroups([]string{topic})
 	if err != nil {
 		logger.Debug("failed to describe consumer group: %v", err)
 		return err
 	}
 	members := groups[0].Members
-	for memberID, member := range members {
+	for _, member := range members { // ensure enough partitions
+		if len(member.MemberAssignment) == 0 { // sidecar without partition
+			consumer.repartitionPending = true
+			if leader {
+				logger.Info("increasing partition count to %d", len(members))
+				if err := admin.CreatePartitions(topic, int32(len(members)), nil, false); err != nil {
+					// do not fail if another sidecar added partitions already
+					if e, ok := err.(*sarama.TopicPartitionError); !ok || e.Err != sarama.ErrInvalidPartitions {
+						logger.Debug("failed to add partitions: %v", err)
+						return err
+					}
+				}
+				return tooFewPartitionsError{} // abort
+			}
+			return nil
+		}
+	}
+	consumer.repartitionPending = false
+	rp := map[string][]string{}           // temp replicas
+	rt := map[string][]int32{}            // temp routes
+	live = map[int32]map[int64]struct{}{} // clear live list
+	done = map[int32]map[int64]struct{}{} // clear done list
+	for _, member := range members {
 		a, err := member.GetMemberAssignment()
 		if err != nil {
 			logger.Debug("failed to parse member assignment: %v", err)
@@ -260,13 +291,13 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 				live[p][k] = struct{}{}
 			}
 		}
-		if memberID == session.MemberID() {
-			logger.Info("partitions: %v", a.Topics[topic])
-		}
+	}
+	if err := client.RefreshMetadata(topic); err != nil { // refresh producer
+		logger.Debug("failed to refresh topic: %v", err)
+		return err
 	}
 	logger.Info("replicas: %v", rp)
 	logger.Info("routes: %v", rt)
-	logger.Info("userData: %v", here)
 	mu.Lock()
 	replicas = rp
 	routes = rt
@@ -276,12 +307,17 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 
 // Cleanup consumer group session
 func (consumer *handler) Cleanup(session sarama.ConsumerGroupSession) error {
+	leader = false
 	conf.Consumer.Group.Member.UserData = marshal(here)
 	return nil
 }
 
 // ConsumeClaim processes messages of consumer claim
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	if consumer.repartitionPending {
+		<-session.Context().Done() // wait for repartition
+		return nil
+	}
 	store.ZRemRangeByScore(mangle(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
 	prefix := true                                                                // should advance cursor
 	for msg := range claim.Messages() {
@@ -318,7 +354,9 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 func consume() {
 	for { // for each session
 		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
-			logger.Fatal("consumer error: %v", err)
+			if _, ok := err.(tooFewPartitionsError); !ok {
+				logger.Fatal("consumer error: %v", err)
+			}
 		}
 		if ctx.Err() != nil {
 			close(out)
@@ -331,6 +369,22 @@ func consume() {
 // setContext sets the global context
 func setContext(c context.Context) {
 	ctx = c
+}
+
+type balanceStrategy struct {
+	strategy sarama.BalanceStrategy
+}
+
+func (s *balanceStrategy) Name() string { return s.strategy.Name() }
+
+func (s *balanceStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
+	leader = true
+	return s.strategy.Plan(members, topics)
+}
+
+// AssignmentData simple strategies do not require any shared assignment data
+func (s *balanceStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32) ([]byte, error) {
+	return s.strategy.AssignmentData(memberID, topics, generationID)
 }
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
@@ -348,7 +402,7 @@ func Dial(ctx context.Context) <-chan Message {
 	conf.Producer.RequiredAcks = sarama.WaitForAll
 	conf.Producer.Partitioner = sarama.NewManualPartitioner
 	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
-	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	conf.Consumer.Group.Rebalance.Strategy = &balanceStrategy{sarama.BalanceStrategyRange}
 	conf.Consumer.Group.Member.UserData = marshal(here)
 
 	if config.KafkaPassword != "" {
@@ -378,21 +432,24 @@ func Dial(ctx context.Context) <-chan Message {
 		logger.Fatal("failed to list Kafka topics: %v", err)
 	}
 	if _, ok := topics[topic]; !ok {
-		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 10, ReplicationFactor: 3}, false) // TODO fix NumPartitions
+		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 		if err != nil {
-			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 10, ReplicationFactor: 1}, false)
+			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 		}
 		if err != nil {
-			if e, ok := err.(*sarama.TopicError); ok {
-				// do not fail if another sidecar created the topic already
-				if e.Err != sarama.ErrTopicAlreadyExists {
-					logger.Fatal("failed to create Kafka topic: %v", err)
-				}
+			// do not fail if another sidecar created the topic already
+			if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists {
+				logger.Fatal("failed to create Kafka topic: %v", err)
 			}
 		}
 	}
 
-	producer, err = sarama.NewSyncProducer(config.KafkaBrokers, conf)
+	client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	if err != nil {
+		logger.Fatal("failed to create Kafka client: %v", err)
+	}
+
+	producer, err = sarama.NewSyncProducerFromClient(client)
 	if err != nil {
 		logger.Fatal("failed to create Kafka producer: %v", err)
 	}
@@ -412,4 +469,5 @@ func Close() {
 	consumer.Close() // stop accepting incoming messages first
 	producer.Close()
 	admin.Close()
+	client.Close()
 }
