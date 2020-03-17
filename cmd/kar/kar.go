@@ -62,7 +62,11 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"content-type": r.Header.Get("Content-Type"),
 		"payload":      text(r.Body)})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		if ctx.Err() != nil {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
 	} else {
 		fmt.Fprint(w, "OK")
 	}
@@ -92,7 +96,11 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"request":      request,   // this request
 		"payload":      text(r.Body)})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		if ctx.Err() != nil {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
 		requests.Delete(request)
 		return
 	}
@@ -140,11 +148,14 @@ func post(msg map[string]string) (*http.Response, error) {
 }
 
 // dispatch handles one incoming message
-func dispatch(msg map[string]string) {
+func dispatch(msg map[string]string) error {
 	switch msg["command"] {
 	case "send":
 		res, err := post(msg)
 		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
 		} else {
 			io.Copy(ioutil.Discard, res.Body)
@@ -154,6 +165,9 @@ func dispatch(msg map[string]string) {
 	case "call":
 		res, err := post(msg)
 		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
 			callback(msg, http.StatusBadGateway, "text/plain", "Bad Gateway")
 		} else {
@@ -167,6 +181,7 @@ func dispatch(msg map[string]string) {
 			statusCode, _ := strconv.Atoi(msg["statusCode"])
 			select {
 			case <-ctx.Done():
+				return ctx.Err()
 			case ch.(chan reply) <- reply{statusCode: statusCode, contentType: msg["content-type"], payload: msg["payload"]}:
 			}
 		} else {
@@ -176,34 +191,46 @@ func dispatch(msg map[string]string) {
 	default:
 		logger.Error("failed to process message with command %s", msg["command"])
 	}
+	return nil
+}
+
+// forward handles misdirected messages due to rebalance
+func forward(msg map[string]string) error {
+	switch msg["protocol"] {
+	case "service": // route to service
+		logger.Info("forwarding message to service %s%s%s", msg["to"], config.Separator, msg["session"])
+	case "sidecar": // route to sidecar
+		logger.Info("forwarding message to sidecar %s", msg["to"])
+	}
+	if err := pubsub.Send(msg); err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		switch msg["protocol"] {
+		case "service": // route to service
+			logger.Error("failed to forward message to service %s%s%s: %v", msg["to"], config.Separator, msg["session"], err)
+		case "sidecar": // route to sidecar
+			logger.Debug("failed to forward message to sidecar %s: %v", msg["to"], err) // not an error
+		}
+	}
+	return nil
 }
 
 // subscriber handles incoming messages
 func subscriber(channel <-chan pubsub.Message) {
 	for msg := range channel {
 		if !msg.Confirm() {
-			continue
+			continue // message has been or is handled elsewhere
 		}
-		message := msg.Value
-		if msg.Valid {
-			dispatch(message)
-		} else { // message reached wrong sidecar
-			switch message["protocol"] {
-			case "service": // route to service
-				logger.Info("forwarding message to service %s%s%s", message["to"], config.Separator, message["session"])
-			case "sidecar": // route to sidecar
-				logger.Info("forwarding message to sidecar %s", message["to"])
+		if msg.Valid { // message is intended for this sidecar
+			if dispatch(msg.Value) == nil {
+				msg.Mark() // message handled successfully
 			}
-			if err := pubsub.Send(message); err != nil {
-				switch message["protocol"] {
-				case "service": // route to service
-					logger.Error("failed to forward message to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
-				case "sidecar": // route to sidecar
-					logger.Debug("failed to forward message to sidecar %s: %v", message["to"], err) // not an error
-				}
+		} else { // message is intended for another sidecar
+			if forward(msg.Value) == nil {
+				msg.Mark() // message forwarded successfully
 			}
 		}
-		msg.Mark()
 	}
 }
 
