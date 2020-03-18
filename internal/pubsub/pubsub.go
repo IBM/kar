@@ -129,6 +129,17 @@ func routeToService(service string) (partition int32, sidecar string, err error)
 	return
 }
 
+// Sidecars returns all the routable sidecars
+func Sidecars() []string {
+	mu.RLock()
+	sidecars := []string{}
+	for sidecar := range routes {
+		sidecars = append(sidecars, sidecar)
+	}
+	mu.RUnlock()
+	return sidecars
+}
+
 // routeToSidecar maps a sidecar to a partition (no retries)
 func routeToSidecar(sidecar string) (int32, error) {
 	mu.RLock()

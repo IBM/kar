@@ -72,6 +72,22 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// broadcast route handler
+func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	for _, sidecar := range pubsub.Sidecars() {
+		if sidecar != config.ID { // send to all other sidecars
+			pubsub.Send(map[string]string{ // ignore errors?
+				"protocol":     "sidecar",
+				"to":           sidecar,
+				"command":      "send", // post with no callback expected
+				"path":         ps.ByName("path"),
+				"content-type": r.Header.Get("Content-Type"),
+				"payload":      text(r.Body)})
+		}
+	}
+	fmt.Fprint(w, "OK")
+}
+
 type reply struct {
 	statusCode  int
 	contentType string
@@ -285,6 +301,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/del/:key", del)
 	router.GET("/kar/kill", kill)
 	router.GET("/kar/health", healthTest)
+	router.POST("/kar/broadcast/*path", broadcast)
 	srv := http.Server{Handler: router}
 
 	go func() {

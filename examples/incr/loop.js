@@ -1,4 +1,4 @@
-const { async, shutdown, sync } = require('./kar')
+const { broadcast, shutdown, sync } = require('./kar')
 
 async function main () {
   let x = 0
@@ -35,7 +35,7 @@ async function main () {
     })
 
   console.log('Requesting server shutdown')
-  await async('myService', 'shutdown')
+  await broadcast('shutdown')
 
   console.log('Terminating sidecar')
   await shutdown()

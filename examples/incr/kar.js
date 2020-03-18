@@ -27,6 +27,7 @@ const sync = (service, path, params) => post(`call/${service}/${path}`, params)
 const actorAsync = (service, actor, path, params) => post(`session/${actor}/send/${service}/${path}`, params)
 const actorSync = (service, actor, path, params) => post(`session/${actor}/call/${service}/${path}`, params)
 const shutdown = () => get('kill')
+const broadcast = (path, params) => post(`broadcast/${path}`, params)
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
@@ -63,4 +64,4 @@ const postprocessor = [
     })
     .catch(next)]
 
-module.exports = { post, async, sync, shutdown, logger, preprocessor, postprocessor, actor: { async: actorAsync, sync: actorSync } }
+module.exports = { post, async, sync, shutdown, logger, preprocessor, postprocessor, actor: { async: actorAsync, sync: actorSync }, broadcast }
