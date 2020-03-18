@@ -337,6 +337,8 @@ func server(listener net.Listener) {
 
 func main() {
 	logger.Warning("starting...")
+	exitCode := 0
+	defer func() { os.Exit(exitCode) }()
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
@@ -377,7 +379,7 @@ func main() {
 	args := flag.Args()
 
 	if len(args) > 0 {
-		launcher.Run(ctx, args, append(os.Environ(), port1, port2))
+		exitCode = launcher.Run(ctx, args, append(os.Environ(), port1, port2))
 		cancel()
 	}
 

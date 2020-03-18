@@ -21,7 +21,7 @@ func dump(prefix string, in io.Reader) {
 }
 
 // Run command with given arguments and environment
-func Run(ctx context.Context, args, env []string) {
+func Run(ctx context.Context, args, env []string) (exitCode int) {
 	logger.Info("launching service...")
 	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
 	cmd.Env = env
@@ -57,6 +57,7 @@ func Run(ctx context.Context, args, env []string) {
 				logger.Info("service was interrupted")
 			} else {
 				logger.Info("service exited with status code %d", v.ExitCode())
+				exitCode = v.ExitCode()
 			}
 		} else {
 			logger.Fatal("error waiting for service: %v", err)
@@ -64,4 +65,5 @@ func Run(ctx context.Context, args, env []string) {
 	} else {
 		logger.Info("service exited normally")
 	}
+	return
 }
