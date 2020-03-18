@@ -204,6 +204,9 @@ func dispatch(msg map[string]string) error {
 			logger.Error("unexpected request in callback %s", msg["request"])
 		}
 
+	case "kill":
+		cancel()
+
 	default:
 		logger.Error("failed to process message with command %s", msg["command"])
 	}
@@ -285,6 +288,20 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cancel()
 }
 
+func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	for _, sidecar := range pubsub.Sidecars() {
+		if sidecar != config.ID { // send to all other sidecars
+			pubsub.Send(map[string]string{ // ignore errors?
+				"protocol": "sidecar",
+				"to":       sidecar,
+				"command":  "kill",
+			})
+		}
+	}
+	fmt.Fprint(w, "OK")
+	cancel()
+}
+
 func healthTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
@@ -300,6 +317,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
 	router.GET("/kar/kill", kill)
+	router.GET("/kar/killall", killall)
 	router.GET("/kar/health", healthTest)
 	router.POST("/kar/broadcast/*path", broadcast)
 	srv := http.Server{Handler: router}
