@@ -29,6 +29,9 @@ var (
 	// RuntimePort is the HTTP port the runtime will be listening on
 	RuntimePort int
 
+	// Is this process running as a sidecar container in a Kubernetes Pod
+	KubernetesMode bool
+
 	// KafkaBrokers is an array of Kafka brokers
 	KafkaBrokers []string
 
@@ -68,6 +71,7 @@ func init() {
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
 	flag.IntVar(&ServicePort, "send", 8080, "The service port")
 	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
+	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
 	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
