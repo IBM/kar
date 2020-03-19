@@ -29,7 +29,7 @@ var (
 	// RuntimePort is the HTTP port the runtime will be listening on
 	RuntimePort int
 
-	// Is this process running as a sidecar container in a Kubernetes Pod
+	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
 	KubernetesMode bool
 
 	// KafkaBrokers is an array of Kafka brokers
