@@ -33,7 +33,8 @@ var (
 	requests = sync.Map{}
 
 	// termination
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx9, cancel9 = context.WithCancel(context.Background()) // preemptive: kill subprocess
+	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 
 	// http client
 	client http.Client
@@ -344,7 +345,7 @@ func main() {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-signals
-		cancel()
+		cancel9()
 	}()
 
 	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
@@ -379,7 +380,7 @@ func main() {
 	args := flag.Args()
 
 	if len(args) > 0 {
-		exitCode = launcher.Run(ctx, args, append(os.Environ(), port1, port2))
+		exitCode = launcher.Run(ctx9, args, append(os.Environ(), port1, port2))
 		cancel()
 	}
 
