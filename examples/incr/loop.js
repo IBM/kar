@@ -1,11 +1,11 @@
-const { broadcast, shutdown, sync } = require('./kar')
+const { broadcast, shutdown, call } = require('kar')
 
 async function main () {
   let x = 0
   var failure = false
   console.log('Initiating 500 sequential increments')
   for (let i = 0; i < 500; i++) {
-    x = await sync('myService', 'incr', x)
+    x = await call('myService', 'incr', x)
     if (x !== i + 1) {
       console.log(`Failed! incr(${i}) returned ${x}`)
       failure = true
@@ -15,7 +15,7 @@ async function main () {
 
   console.log('Initiating 50 potentially concurrent increments')
   const incs = Array.from(new Array(50), (_, i) => i + 1000).map(function (elem, _) {
-    return sync('myService', 'incr', elem)
+    return call('myService', 'incr', elem)
       .then(function (v) {
         console.log(`${v}`)
         if (v !== elem + 1) {

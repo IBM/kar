@@ -1,24 +1,22 @@
 const express = require('express')
-const { logger, preprocessor, postprocessor, shutdown } = require('./kar')
+const { logger, jsonParser, errorHandler, shutdown } = require('kar')
 
 const app = express()
 
-app.use(logger, preprocessor)
+app.use(logger, jsonParser) // enable kar logging and parsing
 
 app.post('/incr', (req, res) => {
   console.log('incr', req.body)
   res.json(req.body + 1)
 })
 
-async function doShutdown () {
+app.post('/shutdown', async (_reg, res) => {
+  console.log('Shutting down service')
+  res.sendStatus(200)
   await shutdown()
   server.close(() => process.exit())
-}
-app.post('/shutdown', (reg, res) => {
-  console.log('Shutting down service')
-  doShutdown()
 })
 
-app.use(postprocessor)
+app.use(errorHandler) // enable kar error handling
 
 const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

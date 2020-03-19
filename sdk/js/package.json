@@ -1,12 +1,15 @@
 {
-  "name": "incr",
+  "name": "kar",
+  "main": "index.js",
   "version": "0.0.1",
   "scripts": {
     "test": "standard"
   },
   "dependencies": {
-    "kar": "../../sdk/js",
-    "express": "^4.17.1"
+    "body-parser": "^1.19.0",
+    "fetch-retry": "^3.1.0",
+    "morgan": "^1.9.1",
+    "node-fetch": "^2.6.0"
   },
   "devDependencies": {
     "mocha": "^7.1.1",

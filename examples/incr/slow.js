@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, preprocessor, postprocessor } = require('./kar')
+const { logger, preprocessor, postprocessor } = require('kar')
 
 const app = express()
 

@@ -2,12 +2,14 @@ FROM node:12-alpine
 
 ENV MAIN server.js
 
-WORKDIR /kar-sample
+WORKDIR /kar/sdk/js
 
-ADD *.js ./
-COPY package.json .
-COPY package-lock.json .
+COPY sdk/js/*.js sdk/js/*.json ./
 
-RUN npm install
+WORKDIR /kar/examples/incr
+
+COPY examples/incr/*.js examples/incr/*.json ./
+
+RUN npm install --prod
 
 CMD node "$MAIN"

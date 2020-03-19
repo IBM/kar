@@ -1,7 +1,7 @@
-const { sync } = require('./kar')
+const { call } = require('kar')
 
 async function main () {
-  console.log(await sync('myService', 'incr', 42))
+  console.log(await call('myService', 'incr', 42))
 }
 
 main()

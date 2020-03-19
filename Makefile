@@ -17,7 +17,7 @@ kar:
 docker: kar
 	docker build -f build/Dockerfile --build-arg KAR_BINARY=$(KAR_OUTPUT_DIR)/linux/amd64/kar -t $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG) .
 	docker build -f build/Dockerfile --build-arg KAR_BINARY=$(KAR_OUTPUT_DIR)/linux/amd64/kar-injector -t $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG) .
-	docker build -f examples/incr/Dockerfile -t $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) examples/incr
+	docker build -f examples/incr/Dockerfile -t $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) .
 
 dockerPush: docker
 	docker push $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG)
