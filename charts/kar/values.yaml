@@ -16,8 +16,11 @@ redis:
 kar:
   injector:
     replicaCount: 1
-    imageRegistry: 'us.icr.io'
-    imageName: 'kar-dev/kar-injector'
+    imageName: 'us.icr.io/kar-dev/kar-injector'
     imageTag: 'latest'
-    sidecarImageName: 'kar-dev/kar'
+    sidecarImageName: 'us.icr.io/kar-dev/kar'
     sidecarImageTag: 'latest'
+
+global:
+  kafkaNodePort: 31093
+  redisNodePort: 31379

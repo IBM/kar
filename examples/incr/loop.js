@@ -34,19 +34,19 @@ async function main () {
       failure = true
     })
 
+  if (failure) {
+    console.log('FAILED; setting non-zero exit code')
+    process.exitCode = 1
+  } else {
+    console.log('SUCCESS')
+    process.exitCode = 0
+  }
+
   console.log('Requesting server shutdown')
   await broadcast('shutdown')
 
   console.log('Terminating sidecar')
   await shutdown()
-
-  if (failure) {
-    console.log('Test failure; setting non-zero exit code')
-    process.exitCode = 1
-  } else {
-    console.log('All tests succeeded')
-    process.exitCode = 0
-  }
 }
 
 main()

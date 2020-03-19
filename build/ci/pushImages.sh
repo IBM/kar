@@ -3,7 +3,7 @@
 set -eux
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../../"
+ROOTDIR="$SCRIPTDIR/../.."
 
 BRANCH=$1
 IMAGE_TAG=$2

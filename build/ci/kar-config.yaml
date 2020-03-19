@@ -1,0 +1,7 @@
+kar:
+  injector:
+    replicaCount: 1
+    imageName: 'kar-injector'
+    imageTag: 'dev'
+    sidecarImageName: 'kar'
+    sidecarImageTag: 'dev'

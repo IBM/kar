@@ -11,6 +11,7 @@ kafka:
   imageName: 'wurstmeister/kafka'
   imageTag: '2.12-2.4.0'
   version: '2.4.0'
-  port: 9092
+  portInternal: 9092
+  portExternal: 9093
   username: ''
   password: ''

@@ -3,7 +3,7 @@
 set -ex
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../../"
+ROOTDIR="$SCRIPTDIR/../.."
 cd $ROOTDIR
 
-DOCKER_IMAGE_PREFIX=kar-travis make docker
+DOCKER_IMAGE_PREFIX= DOCKER_IMAGE_TAG=dev make install kindPush

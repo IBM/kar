@@ -24,4 +24,9 @@ dockerPush: docker
 	docker push $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
 	docker push $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG)
 
+kindPush: docker
+	kind load docker-image $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG)
+	kind load docker-image $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
+	kind load docker-image $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG)
+
 .PHONY: docker

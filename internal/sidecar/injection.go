@@ -14,9 +14,8 @@ import (
 )
 
 var (
-	sidecarImageRegistry string
-	sidecarImage         string
-	sidecarImageTag      string
+	sidecarImage    string
+	sidecarImageTag string
 )
 
 const (
@@ -36,8 +35,9 @@ const (
 )
 
 func init() {
-	flag.StringVar(&sidecarImageRegistry, "sidecar_image_registry", "us.icr.io", "docker image registry to use for kar sidecar")
-	flag.StringVar(&sidecarImage, "sidecar_image", "kar-dev/kar", "docker image to use for kar sidecar")
+	var ignored string
+	flag.StringVar(&ignored, "sidecar_image_registry", "", "DEPRECATED: WILL BE REMOVED")
+	flag.StringVar(&sidecarImage, "sidecar_image", "us.icr.io/kar-dev/kar", "docker image to use for kar sidecar")
 	flag.StringVar(&sidecarImageTag, "sidecar_image_tag", "latest", "docker image tag to use for kar sidecar")
 }
 
@@ -110,7 +110,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 
 		sidecar := []corev1.Container{{
 			Name:         sidecarName,
-			Image:        fmt.Sprintf("%s/%s:%s", sidecarImageRegistry, sidecarImage, sidecarImageTag),
+			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
 			Command:      []string{"/kar/kar"},
 			Args:         cmdLine,
 			VolumeMounts: []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},

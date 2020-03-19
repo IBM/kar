@@ -10,7 +10,8 @@ before_install:
   - ./build/ci/setup.sh && ./build/ci/start-kind.sh
 
 script:
-  - ./build/ci/build.sh
+  - ./build/ci/build.sh && ./build/ci/start-kar.sh
+  - ./build/ci/testLocal.sh
 
 deploy:
   - provider: script

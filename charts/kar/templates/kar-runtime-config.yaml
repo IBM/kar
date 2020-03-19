@@ -7,7 +7,7 @@ metadata:
     name: kar.ibm.com.runtime-config
 data:
 {{- if .Values.kafka.internal }}
-  kafka_brokers: {{ print ( include "kar.kafka_host_zero" . ) ":" .Values.kafka.port | b64enc }}
+  kafka_brokers: {{ print ( include "kar.kafka_host_zero" . ) ":" .Values.kafka.portInternal | b64enc }}
   kafka_version: {{ .Values.kafka.version | b64enc }}
 {{ else }}
   kafka_brokers: {{ .Values.kafka.externalConfig.brokers | b64enc }}
