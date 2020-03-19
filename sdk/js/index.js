@@ -3,7 +3,8 @@ const parser = require('body-parser') // for parsing http requests
 const morgan = require('morgan') // for logging http requests and responses
 
 // retry http requests up to 10 times on failure or 503 error
-const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10, retryOn: [503] })
+const rawFetch = require('node-fetch')
+const fetch = require('fetch-retry')(rawFetch, { retries: 10, retryOn: [503] })
 
 // agent to keep connections to sidecar alive
 const agent = new http.Agent({ keepAlive: true })
