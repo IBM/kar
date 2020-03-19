@@ -6,7 +6,7 @@
 
 TRAVIS_KUBE_VERSION=v1.16.4
 
-set -x
+set -eu
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."

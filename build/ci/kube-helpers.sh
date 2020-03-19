@@ -21,6 +21,7 @@
 # 
 
 NAMESPACE=kar-system
+TIMEOUT_STEP_LIMIT=30
 
 #################
 # Helper functions for verifying pod creation
