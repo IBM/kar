@@ -29,4 +29,7 @@ kindPush: docker
 	kind load docker-image $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
 	kind load docker-image $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG)
 
+kindPushDev:
+	DOCKER_IMAGE_PREFIX= DOCKER_IMAGE_TAG=dev make kindPush
+
 .PHONY: docker

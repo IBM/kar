@@ -1,10 +1,37 @@
 # KAR: Kubernetes Application Runtime
 
+## Prerequisites
+
+1. You need a Kubernetes 1.16 (or newer) cluster.
+   a. You can use an IKS cluster without additional setup
+   b. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual Kubernetes cluster using Docker
+      on your development machine. Just run [start-kind.sh](build/ci/start-kind.sh)
+      to create a cluster.
+
+2. You will need the `kubectl` cli installed locally.
+
+3. You will need the `helm` (Helm 3) cli installed locally.
+
+4. You will need a local git clone of this repository.
+
 ## Getting Started with KAR
 
-### Deploy KAR to the `kar-system` namespace
+### Deploying KAR to the `kar-system` namespace
 
-Please follow the instructions in [deploying.md](docs/deploying.md).
+Unless you are actively developing the KAR runtime, you will probably
+want to deploy it using pre-built images from the KAR namespaces in
+the IBM container registry (kar-dev, kar-stage, kar-prod). Currently,
+you will have to ask Dave or Olivier for an apikey that enables this
+access. After you have that apikey pass it as an argument to `kar-deploy.sh`
+as shown below.
+```script
+./scripts/kar-deploy.sh -a <KAR_CR_APIKEY>
+```
+
+You can also deploy KAR in a dev mode where it will instead always
+use locally built images for all KAR runtime components and examples.
+Deploy this way with `./scripts/kar-deploy.sh -dev` and use
+`make kindPushDev` to build and push images to your kind cluster.
 
 ### Enable a namespace to run KAR-based applications.
 
