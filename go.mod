@@ -8,7 +8,7 @@ require (
 	github.com/gomodule/redigo v1.7.0
 	github.com/google/uuid v1.1.1
 	github.com/julienschmidt/httprouter v1.3.0
-	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f
+	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a
 	k8s.io/api v0.16.7
 	k8s.io/apimachinery v0.16.7
 )
