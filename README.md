@@ -61,7 +61,7 @@ Now you are ready to run KAR applications!
 
 First try running the incr example:
 ```shell
-kubectl apply -f examples/incr/incr.yaml -n kar-apps
+kubectl apply -f examples/incr/deploy/incr.yaml -n kar-apps
 ```
 After a few seconds, you should see the following pods
 ```

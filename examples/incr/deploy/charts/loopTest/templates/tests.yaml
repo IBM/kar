@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: incr-client
+  labels:
+    name: incr-client
+  annotations:
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: hook-succeeded
+    kar.ibm.com/app: myApp
+    kar.ibm.com/service: myClient
+    kar.ibm.com/verbose: info
+spec:
+  restartPolicy: Never
+  containers:
+  - name: client
+    image: {{ .Values.image }}
+    env:
+    - name: MAIN
+      value: loop.js
+    - name: KUBERNETES_MODE
+      value: 'true'

@@ -10,8 +10,9 @@ before_install:
   - ./build/ci/setup.sh && ./build/ci/start-kind.sh
 
 script:
-  - ./build/ci/build.sh && ./build/ci/start-kar.sh
+  - (./build/ci/build.sh && ./build/ci/start-kar.sh) || travis_terminate 1
   - ./build/ci/testLocal.sh
+  - ./build/ci/testInCluster.sh
 
 deploy:
   - provider: script

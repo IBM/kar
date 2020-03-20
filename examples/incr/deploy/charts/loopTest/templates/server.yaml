@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incr-server
+  labels:
+    name: incr-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: incr-server
+  template:
+    metadata:
+      labels:
+        name: incr-server
+      annotations:
+        kar.ibm.com/app: myApp
+        kar.ibm.com/service: myService
+        kar.ibm.com/verbose: info
+    spec:
+      containers:
+      - name: server
+        image: {{ .Values.image }}
+        env:
+        - name: MAIN
+          value: server.js
