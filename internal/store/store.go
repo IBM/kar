@@ -16,7 +16,7 @@ var (
 
 	// connection
 	conn redis.Conn      // for now use a single connection
-	lock = &sync.Mutex{} // connection lock
+	lock = &sync.Mutex{} // and a lock
 )
 
 // mangle add common prefix to all keys
@@ -24,6 +24,7 @@ func mangle(key string) string {
 	return "kar" + config.Separator + config.AppName + config.Separator + key
 }
 
+// send a command while holding the connection lock
 func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	lock.Lock()
 	reply, err = conn.Do(command, args...)
@@ -31,6 +32,7 @@ func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	return
 }
 
+// mangle the key before sending the command (assuming args[0] is the key)
 func do(command string, args ...interface{}) (interface{}, error) {
 	args[0] = mangle(args[0].(string))
 	return doRaw(command, args...)
@@ -99,7 +101,6 @@ func Dial() {
 	if config.RedisPassword != "" {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
 	}
-
 	var err error
 	conn, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
 	if err != nil {
@@ -109,6 +110,9 @@ func Dial() {
 
 // Close closes the connection to the store
 func Close() {
+	// forcefully closing the connection appears to correctly and immediately
+	// terminate pending requests as well as prevent new commands to be sent to
+	// redis so there is no need for synchronization here
 	err := conn.Close()
 	if err != nil {
 		logger.Fatal("failed to close connection to Redis: %v", err)
