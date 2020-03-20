@@ -153,12 +153,12 @@ func callback(msg map[string]string, statusCode int, contentType string, payload
 }
 
 // post posts a message to the service
-func post(msg map[string]string) (*http.Response, error) {
+func httpRequest(method string, msg map[string]string) (*http.Response, error) {
 	p := msg["path"]
 	if msg["actor"] != "" {
 		p = "/actor/" + msg["actor"] + p
 	}
-	req, err := http.NewRequest("POST", serviceURL+p, strings.NewReader(msg["payload"]))
+	req, err := http.NewRequest(method, serviceURL+p, strings.NewReader(msg["payload"]))
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func post(msg map[string]string) (*http.Response, error) {
 
 func activate(actor string) {
 	logger.Info("activating actor %s", actor)
-	res, err := post(map[string]string{"path": "/activate", "actor": actor})
+	res, err := httpRequest("GET", map[string]string{"path": "", "actor": actor})
 	if err != nil {
 		logger.Info("error activating actor: %v", err)
 	} else if res.StatusCode != http.StatusOK {
@@ -187,7 +187,7 @@ func activate(actor string) {
 
 func deactivate(actor string) {
 	logger.Info("deactivating actor %s", actor)
-	res, err := post(map[string]string{"path": "/deactivate", "actor": actor})
+	res, err := httpRequest("DELETE", map[string]string{"path": "", "actor": actor})
 	if err != nil {
 		logger.Info("error deactivating actor: %v", err)
 	} else if res.StatusCode != http.StatusOK {
@@ -215,7 +215,7 @@ func dispatch(msg map[string]string) error {
 
 	switch msg["command"] {
 	case "send":
-		res, err := post(msg)
+		res, err := httpRequest("POST", msg)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
@@ -227,7 +227,7 @@ func dispatch(msg map[string]string) error {
 		}
 
 	case "call":
-		res, err := post(msg)
+		res, err := httpRequest("POST", msg)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()

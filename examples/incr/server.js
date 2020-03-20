@@ -21,12 +21,12 @@ app.post('/shutdown', async (_reg, res) => {
   server.close(() => process.exit())
 })
 
-app.post('/actor/:id/activate', (req, res) => {
+app.get('/actor/:id', (req, res) => {
   console.log('actor', req.params.id, 'activate')
   res.sendStatus(200)
 })
 
-app.post('/actor/:id/deactivate', (req, res) => {
+app.delete('/actor/:id', (req, res) => {
   console.log('actor', req.params.id, 'deactivate')
   res.sendStatus(200)
 })
