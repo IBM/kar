@@ -177,11 +177,11 @@ func dispatch(msg map[string]string) error {
 	var e *actors.Entry
 	if msg["actor"] != "" {
 		var fresh bool
-		e, fresh = actors.Activate(ctx, msg["actor"])
+		e, fresh = actors.Acquire(ctx, msg["actor"])
 		if e == nil {
 			return ctx.Err()
 		}
-		defer e.Unlock()
+		defer e.Release()
 		if fresh {
 			logger.Info("activating actor %s", msg["actor"])
 			res, err := post(map[string]string{"path": "/activate", "actor": msg["actor"]})
@@ -414,7 +414,7 @@ func main() {
 			select {
 			case now := <-ticker.C:
 				logger.Debug("starting collection")
-				actors.Collect(now.Add(-10*time.Second), func(key string) {}) // TODO invoke deactivate route
+				actors.Collect(ctx, now.Add(-10*time.Second), func(key string) {}) // TODO invoke deactivate route
 				logger.Debug("finishing collection")
 			case <-ctx.Done():
 				ticker.Stop()

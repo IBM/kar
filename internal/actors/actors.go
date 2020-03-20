@@ -9,10 +9,7 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-var (
-	table = map[string]*Entry{} // actor table
-	lock  = sync.Mutex{}        // table lock
-)
+var table = sync.Map{} // actor table
 
 // Entry is the type of table entries
 type Entry struct {
@@ -21,76 +18,52 @@ type Entry struct {
 	valid bool                // false iff entry has been removed from table
 }
 
-// Activate acquires the entry initializing the entry if absent
-func Activate(ctx context.Context, key string) (*Entry, bool) {
+// Acquire acquires the entry initializing the entry if absent
+func Acquire(ctx context.Context, key string) (*Entry, bool) {
+	e := &Entry{sem: semaphore.NewWeighted(1)}
 	for {
-		lock.Lock()
-		if e, ok := table[key]; ok {
-			lock.Unlock()
+		if v, loaded := table.LoadOrStore(key, e); loaded {
+			e = v.(*Entry) // existing entry
 			err := e.sem.Acquire(ctx, 1)
 			if err != nil { // cancelled
 				return nil, false
 			}
 			if e.valid {
-				return e, false // existing entry
+				return e, false
 			}
 			e.sem.Release(1) // deleted, try again
 		} else {
-			e = &Entry{sem: semaphore.NewWeighted(1), valid: true}
-			e.sem.Acquire(ctx, 1) // no risk of failure
-			table[key] = e
-			lock.Unlock()
-			return e, true // new entry
+			err := e.sem.Acquire(ctx, 1)
+			if err != nil { // cancelled
+				return nil, false
+			}
+			e.valid = true
+			return e, true
 		}
 	}
 }
 
-// Unlock updates the timestamp and unlocks the entry
-func (e *Entry) Unlock() {
+// Release updates the timestamp and releases the entry
+func (e *Entry) Release() {
 	e.time = time.Now() // update last release time
 	e.sem.Release(1)
 }
 
-// get tries to acquire the entry if already present
-func get(key string) *Entry {
-	for {
-		lock.Lock()
-		if e, ok := table[key]; ok {
-			lock.Unlock()
-			if !e.sem.TryAcquire(1) {
-				return nil // entry is busy, abort
-			}
-			if e.valid {
-				return e // key already present
-			}
-			e.sem.Release(1) // deleted, try again
-		} else {
-			lock.Unlock()
-			return nil // key absent
-		}
-	}
-}
-
-// deactivate releases and deletes the entry
-func (e *Entry) deactivate(key string) {
-	lock.Lock()
-	delete(table, key)
-	lock.Unlock()
-	e.valid = false
-	e.sem.Release(1)
-}
-
 // Collect removes entries older than time
-func Collect(time time.Time, f func(key string)) {
-	for key := range table { // TODO parallel loop?
-		if e := get(key); e != nil {
-			if e.time.Before(time) {
-				logger.Debug("deactivating entry %s", key)
-				f(key)
-				e.deactivate(key)
+func Collect(ctx context.Context, time time.Time, f func(key string)) {
+	table.Range(func(key, v interface{}) bool {
+		e := v.(*Entry)
+		if e.sem.TryAcquire(1) {
+			if e.valid && e.time.Before(time) {
+				logger.Debug("deactivating %s", key)
+				f(key.(string))
+				e.valid = false
+				e.sem.Release(1)
+				table.Delete(key)
 			} else {
-				e.Unlock()
+				e.sem.Release(1)
 			}
 		}
-	}
+		return ctx.Err() == nil // stop collection if cancelled
+	})
 }
