@@ -15,8 +15,8 @@ var (
 	ErrNil = redis.ErrNil
 
 	// connection
-	conn redis.Conn // for now use a single connection
-	lock sync.Mutex // connection lock
+	conn redis.Conn      // for now use a single connection
+	lock = &sync.Mutex{} // connection lock
 )
 
 // mangle add common prefix to all keys
@@ -24,88 +24,69 @@ func mangle(key string) string {
 	return "kar" + config.Separator + config.AppName + config.Separator + key
 }
 
-// Set sets the value associated with a key
-func Set(key, value string) (reply string, err error) {
+func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	lock.Lock()
-	reply, err = redis.String(conn.Do("SET", mangle(key), value))
+	reply, err = conn.Do(command, args...)
 	lock.Unlock()
 	return
+}
+
+func do(command string, args ...interface{}) (interface{}, error) {
+	args[0] = mangle(args[0].(string))
+	return doRaw(command, args...)
+}
+
+// Set sets the value associated with a key
+func Set(key, value string) (string, error) {
+	return redis.String(do("SET", key, value))
 }
 
 // RPush adds elements to a list
-func RPush(key string, value string) (reply int, err error) {
-	lock.Lock()
-	reply, err = redis.Int(conn.Do("RPUSH", mangle(key), value))
-	lock.Unlock()
-	return
+func RPush(key string, value string) (int, error) {
+	return redis.Int(do("RPUSH", key, value))
 }
 
 // LRange returns elements from a list
-func LRange(key string, start, stop int) (reply []string, err error) {
-	lock.Lock()
-	reply, err = redis.Strings(conn.Do("LRANGE", mangle(key), start, stop))
-	lock.Unlock()
-	return
+func LRange(key string, start, stop int) ([]string, error) {
+	return redis.Strings(do("LRANGE", key, start, stop))
 }
 
 // LRem removes elements from a list
-func LRem(key string, count int, value string) (reply int, err error) {
-	lock.Lock()
-	reply, err = redis.Int(conn.Do("LREM", mangle(key), count, value))
-	lock.Unlock()
-	return
+func LRem(key string, count int, value string) (int, error) {
+	return redis.Int(do("LREM", key, count, value))
 }
 
 // ZAdd adds elements to a sorted set
-func ZAdd(key string, score int64, value string) (reply int, err error) {
-	lock.Lock()
-	reply, err = redis.Int(conn.Do("ZADD", mangle(key), score, value))
-	lock.Unlock()
-	return
+func ZAdd(key string, score int64, value string) (int, error) {
+	return redis.Int(do("ZADD", key, score, value))
 }
 
 // ZRange returns elements from a sorted set
-func ZRange(key string, start, stop int) (reply []string, err error) {
-	lock.Lock()
-	reply, err = redis.Strings(conn.Do("ZRANGE", mangle(key), start, stop))
-	lock.Unlock()
-	return
+func ZRange(key string, start, stop int) ([]string, error) {
+	return redis.Strings(do("ZRANGE", key, start, stop))
 }
 
 // ZRemRangeByScore removes elements from a sorted set
-func ZRemRangeByScore(key string, min, max int64) (reply int, err error) {
-	lock.Lock()
-	reply, err = redis.Int(conn.Do("ZREMRANGEBYSCORE", mangle(key), min, max))
-	lock.Unlock()
-	return
+func ZRemRangeByScore(key string, min, max int64) (int, error) {
+	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
 }
 
 // CompareAndSet sets the value associated with a key if its current value is equal to the expected value
-func CompareAndSet(key, expected, value string) (reply int, err error) {
-	lock.Lock()
+func CompareAndSet(key, expected, value string) (int, error) {
 	if expected == "" {
-		reply, err = redis.Int(conn.Do("SETNX", mangle(key), value))
-	} else {
-		reply, err = redis.Int(conn.Do("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
+		return redis.Int(do("SETNX", key, value))
 	}
-	lock.Unlock()
-	return
+	return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
 }
 
 // Get returns the value associated with the key
-func Get(key string) (reply string, err error) {
-	lock.Lock()
-	reply, err = redis.String(conn.Do("GET", mangle(key)))
-	lock.Unlock()
-	return
+func Get(key string) (string, error) {
+	return redis.String(do("GET", key))
 }
 
 // Del deletes the value associated with a key
-func Del(key string) (reply int, err error) {
-	lock.Lock()
-	reply, err = redis.Int(conn.Do("DEL", mangle(key)))
-	lock.Unlock()
-	return
+func Del(key string) (int, error) {
+	return redis.Int(do("DEL", key))
 }
 
 // Dial establishes a connection to the store
@@ -128,5 +109,8 @@ func Dial() {
 
 // Close closes the connection to the store
 func Close() {
-	conn.Close()
+	err := conn.Close()
+	if err != nil {
+		logger.Fatal("failed to close connection to Redis: %v", err)
+	}
 }
