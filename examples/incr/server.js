@@ -26,6 +26,11 @@ app.post('/actor/:id/activate', (req, res) => {
   res.sendStatus(200)
 })
 
+app.post('/actor/:id/deactivate', (req, res) => {
+  console.log('actor', req.params.id, 'deactivate')
+  res.sendStatus(200)
+})
+
 app.post('/actor/:id/incr', (req, res) => {
   console.log('actor', req.params.id, 'incr', req.body)
   res.json(req.body + 1)

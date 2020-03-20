@@ -172,6 +172,32 @@ func post(msg map[string]string) (*http.Response, error) {
 	return res, err
 }
 
+func activate(actor string) {
+	logger.Info("activating actor %s", actor)
+	res, err := post(map[string]string{"path": "/activate", "actor": actor})
+	if err != nil {
+		logger.Info("error activating actor: %v", err)
+	} else if res.StatusCode != http.StatusOK {
+		logger.Info("error activating actor: %s", text(res.Body))
+	} else {
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
+	}
+}
+
+func deactivate(actor string) {
+	logger.Info("deactivating actor %s", actor)
+	res, err := post(map[string]string{"path": "/deactivate", "actor": actor})
+	if err != nil {
+		logger.Info("error deactivating actor: %v", err)
+	} else if res.StatusCode != http.StatusOK {
+		logger.Info("error deactivating actor: %s", text(res.Body))
+	} else {
+		io.Copy(ioutil.Discard, res.Body)
+		res.Body.Close()
+	}
+}
+
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) error {
 	var e *actors.Entry
@@ -183,16 +209,7 @@ func dispatch(msg map[string]string) error {
 		}
 		defer e.Release()
 		if fresh {
-			logger.Info("activating actor %s", msg["actor"])
-			res, err := post(map[string]string{"path": "/activate", "actor": msg["actor"]})
-			if err != nil {
-				logger.Info("error activating actor: %v", err)
-			} else if res.StatusCode != http.StatusOK {
-				logger.Info("error activating actor: %s", text(res.Body))
-			} else {
-				io.Copy(ioutil.Discard, res.Body)
-				res.Body.Close()
-			}
+			activate(msg["actor"])
 		}
 	}
 
@@ -414,7 +431,7 @@ func main() {
 			select {
 			case now := <-ticker.C:
 				logger.Debug("starting collection")
-				actors.Collect(ctx, now.Add(-10*time.Second), func(key string) {}) // TODO invoke deactivate route
+				actors.Collect(ctx, now.Add(-10*time.Second), deactivate) // TODO invoke deactivate route
 				logger.Debug("finishing collection")
 			case <-ctx.Done():
 				ticker.Stop()
