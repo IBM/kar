@@ -14,10 +14,12 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
+	"github.ibm.com/solsa/kar.git/internal/actors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/launcher"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
@@ -57,7 +59,8 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := pubsub.Send(map[string]string{
 		"protocol":     "service",
 		"to":           ps.ByName("service"),
-		"session":      ps.ByName("session"),
+		"session":      ps.ByName("actor") + ps.ByName("session"),
+		"actor":        ps.ByName("actor"),
 		"command":      "send", // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
@@ -104,7 +107,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := pubsub.Send(map[string]string{
 		"protocol":     "service",
 		"to":           ps.ByName("service"),
-		"session":      ps.ByName("session"),
+		"session":      ps.ByName("actor") + ps.ByName("session"),
+		"actor":        ps.ByName("actor"),
 		"command":      "call", // post expecting a callback with the result
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
@@ -150,7 +154,11 @@ func callback(msg map[string]string, statusCode int, contentType string, payload
 
 // post posts a message to the service
 func post(msg map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest("POST", serviceURL+msg["path"], strings.NewReader(msg["payload"]))
+	p := msg["path"]
+	if msg["actor"] != "" {
+		p = "/actor/" + msg["actor"] + p
+	}
+	req, err := http.NewRequest("POST", serviceURL+p, strings.NewReader(msg["payload"]))
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +174,28 @@ func post(msg map[string]string) (*http.Response, error) {
 
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) error {
+	var e *actors.Entry
+	if msg["actor"] != "" {
+		var fresh bool
+		e, fresh = actors.Activate(ctx, msg["actor"])
+		if e == nil {
+			return ctx.Err()
+		}
+		defer e.Unlock()
+		if fresh {
+			logger.Info("activating actor %s", msg["actor"])
+			res, err := post(map[string]string{"path": "/activate", "actor": msg["actor"]})
+			if err != nil {
+				logger.Info("error activating actor: %v", err)
+			} else if res.StatusCode != http.StatusOK {
+				logger.Info("error activating actor: %s", text(res.Body))
+			} else {
+				io.Copy(ioutil.Discard, res.Body)
+				res.Body.Close()
+			}
+		}
+	}
+
 	switch msg["command"] {
 	case "send":
 		res, err := post(msg)
@@ -211,6 +241,7 @@ func dispatch(msg map[string]string) error {
 	default:
 		logger.Error("failed to process message with command %s", msg["command"])
 	}
+
 	return nil
 }
 
@@ -314,6 +345,8 @@ func server(listener net.Listener) {
 	router.POST("/kar/call/:service/*path", call)
 	router.POST("/kar/session/:session/send/:service/*path", send)
 	router.POST("/kar/session/:session/call/:service/*path", call)
+	router.POST("/kar/actor/:actor/send/:service/*path", send)
+	router.POST("/kar/actor/:actor/call/:service/*path", call)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
@@ -371,6 +404,23 @@ func main() {
 	go func() {
 		defer wg.Done()
 		server(listener)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case now := <-ticker.C:
+				logger.Debug("starting collection")
+				actors.Collect(now.Add(-10*time.Second), func(key string) {}) // TODO invoke deactivate route
+				logger.Debug("finishing collection")
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			}
+		}
 	}()
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
