@@ -10,6 +10,10 @@ app.post('/incr', (req, res) => {
   res.json(req.body + 1)
 })
 
+app.post('/incrQuiet', (req, res) => {
+  res.json(req.body + 1)
+})
+
 app.post('/shutdown', async (_reg, res) => {
   console.log('Shutting down service')
   res.sendStatus(200)

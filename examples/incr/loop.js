@@ -5,7 +5,8 @@ async function main () {
   var failure = false
   console.log('Initiating 500 sequential increments')
   for (let i = 0; i < 500; i++) {
-    x = await call('myService', 'incr', x)
+    x = await call('myService', 'incrQuiet', x)
+    if (i % 100 == 0) { console.log(`incr(${i} = ${x})`) }
     if (x !== i + 1) {
       console.log(`Failed! incr(${i}) returned ${x}`)
       failure = true
@@ -13,11 +14,10 @@ async function main () {
   }
   console.log('Sequential increments completed')
 
-  console.log('Initiating 50 potentially concurrent increments')
-  const incs = Array.from(new Array(50), (_, i) => i + 1000).map(function (elem, _) {
-    return call('myService', 'incr', elem)
+  console.log('Initiating 250 potentially concurrent increments')
+  const incs = Array.from(new Array(250), (_, i) => i + 1000).map(function (elem, _) {
+    return call('myService', 'incrQuiet', elem)
       .then(function (v) {
-        console.log(`${v}`)
         if (v !== elem + 1) {
           return Promise.reject(new Error(`Failed! incr(${elem}) returned ${v}`))
         } else {
