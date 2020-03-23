@@ -38,7 +38,7 @@ var (
 	replicas map[string][]string // map services to sidecars
 	hosts    map[string][]string // map actor types to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
-	mu       = sync.RWMutex{}    // synchronize changes to routes
+	mu       = &sync.RWMutex{}   // synchronize changes to routes
 	leader   = false             // session leader?
 
 	// termination
@@ -69,9 +69,9 @@ type Message struct {
 	offset    int64
 }
 
-func marshal(ud userData) []byte {
+func marshal() []byte {
 	lock.Lock()
-	b, err := json.Marshal(ud)
+	b, err := json.Marshal(here)
 	lock.Unlock()
 	if err != nil {
 		logger.Fatal("failed to marshal userData: %v", err)
@@ -88,7 +88,7 @@ func (msg *Message) Mark() {
 	logger.Debug("finishing partition %d offset %d", msg.partition, msg.offset)
 	_, err := store.ZAdd(mangle(msg.partition), msg.offset, strconv.FormatInt(msg.offset, 10)) // tell store offset is done
 	if err != nil {
-		logger.Error("redis error: %v", err)
+		logger.Error("failed to mark offset: %v", err)
 	}
 	lock.Lock()
 	delete(here.Live[msg.partition], msg.offset)
@@ -110,7 +110,7 @@ func (msg *Message) Confirm() bool {
 	here.Live[msg.partition][msg.offset] = struct{}{}
 	local[msg.partition][msg.offset] = struct{}{}
 	lock.Unlock()
-	logger.Debug("starting to process partition %d offset %d", msg.partition, msg.offset)
+	logger.Debug("starting partition %d offset %d", msg.partition, msg.offset)
 	return true
 }
 
@@ -205,46 +205,46 @@ func routeToActor(t, id string) (partition int32, sidecar string, err error) {
 }
 
 // Send sends message to receiver
-func Send(message map[string]string) error {
+func Send(msg map[string]string) error {
 	var partition int32
 	var err error
-	switch message["protocol"] {
+	switch msg["protocol"] {
 	case "service": // route to service
-		partition, err = routeToService(message["to"])
+		partition, err = routeToService(msg["service"])
 		if err != nil {
-			logger.Debug("failed to route to service %s: %v", message["to"], err)
+			logger.Debug("failed to route to service %s: %v", msg["service"], err)
 			return err
 		}
 	case "actor": // route to actor
 		var sidecar string
-		partition, sidecar, err = routeToActor(message["to"], message["id"])
+		partition, sidecar, err = routeToActor(msg["type"], msg["id"])
 		if err != nil {
-			logger.Debug("failed to route to actor type %s id $s %v: %v", message["to"], message["id"], err)
+			logger.Debug("failed to route to actor type %s id $s %v: %v", msg["type"], msg["id"], err)
 			return err
 		}
-		message["sidecar"] = sidecar
+		msg["sidecar"] = sidecar
 	case "sidecar": // route to sidecar
-		partition, err = routeToSidecar(message["to"])
+		partition, err = routeToSidecar(msg["sidecar"])
 		if err != nil {
-			logger.Debug("failed to route to sidecar %s: %v", message["to"], err)
+			logger.Debug("failed to route to sidecar %s: %v", msg["sidecar"], err)
 			return err
 		}
 	}
-	msg, err := json.Marshal(message)
+	m, err := json.Marshal(msg)
 	if err != nil {
-		logger.Debug("failed to marshal message with value %v: %v", message, err)
+		logger.Debug("failed to marshal message with value %v: %v", msg, err)
 		return err
 	}
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,
-		Value:     sarama.ByteEncoder(msg),
+		Value:     sarama.ByteEncoder(m),
 	})
 	if err != nil {
 		logger.Debug("failed to send message to partition %d: %v", partition, err)
 		return err
 	}
-	logger.Debug("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(msg))
+	logger.Debug("sent message on topic %s, at partition %d, offset %d, with value %s", topic, partition, offset, string(m))
 	return nil
 }
 
@@ -349,7 +349,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 // Cleanup consumer group session
 func (consumer *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 	leader = false
-	conf.Consumer.Group.Member.UserData = marshal(here)
+	conf.Consumer.Group.Member.UserData = marshal()
 	return nil
 }
 
@@ -361,39 +361,39 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 	}
 	store.ZRemRangeByScore(mangle(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
 	prefix := true                                                                // should advance cursor
-	for msg := range claim.Messages() {
-		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
-		if _, ok := live[msg.Partition][msg.Offset]; ok {
+	for m := range claim.Messages() {
+		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+		if _, ok := live[m.Partition][m.Offset]; ok {
 			prefix = false // stop advancing cursor
-			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
 			continue
 		}
-		if _, ok := done[msg.Partition][msg.Offset]; ok {
+		if _, ok := done[m.Partition][m.Offset]; ok {
 			if prefix {
-				session.MarkMessage(msg, "") // advance cursor
+				session.MarkMessage(m, "") // advance cursor
 			}
-			logger.Debug("skipping done message on topic %s, at partition %d, offset %d, with value %s", msg.Topic, msg.Partition, msg.Offset, msg.Value)
+			logger.Debug("skipping done message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
 			continue
 		}
 		prefix = false
-		var message map[string]string
-		err := json.Unmarshal(msg.Value, &message)
+		var msg map[string]string
+		err := json.Unmarshal(m.Value, &msg)
 		if err != nil {
-			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
+			logger.Error("failed to unmarshal message with value %s: %v", m.Value, err)
 			continue
 		}
 		valid := false
-		switch message["protocol"] {
+		switch msg["protocol"] {
 		case "service":
-			valid = message["to"] == here.Service
+			valid = msg["service"] == here.Service
 		case "actor":
-			valid = message["sidecar"] == here.Sidecar
+			valid = msg["sidecar"] == here.Sidecar
 		case "sidecar":
-			valid = message["to"] == here.Sidecar
+			valid = msg["sidecar"] == here.Sidecar
 		}
 		select {
 		case <-session.Context().Done():
-		case out <- Message{Value: message, Valid: valid, partition: msg.Partition, offset: msg.Offset}:
+		case out <- Message{Value: msg, Valid: valid, partition: m.Partition, offset: m.Offset}:
 		}
 	}
 	return nil
@@ -420,7 +420,7 @@ func setContext(c context.Context) {
 	ctx = c
 }
 
-// Wrap balance strategy to detect session leader
+// wrap balance strategy to detect session leader
 type balanceStrategy struct {
 	strategy sarama.BalanceStrategy
 }
@@ -454,7 +454,7 @@ func Dial(ctx context.Context) <-chan Message {
 	conf.Net.MaxOpenRequests = 1
 	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	conf.Consumer.Group.Rebalance.Strategy = &balanceStrategy{sarama.BalanceStrategyRange}
-	conf.Consumer.Group.Member.UserData = marshal(here)
+	conf.Consumer.Group.Member.UserData = marshal()
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true

@@ -65,10 +65,10 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"payload":      text(r.Body)}
 	if ps.ByName("service") != "" {
 		msg["protocol"] = "service"
-		msg["to"] = ps.ByName("service")
+		msg["service"] = ps.ByName("service")
 	} else {
 		msg["protocol"] = "actor"
-		msg["to"] = ps.ByName("type")
+		msg["type"] = ps.ByName("type")
 		msg["id"] = ps.ByName("id")
 	}
 	if err := pubsub.Send(msg); err != nil {
@@ -89,7 +89,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if sidecar != config.ID { // send to all other sidecars
 			pubsub.Send(map[string]string{ // TODO log errors, reuse message object?
 				"protocol":     "sidecar",
-				"to":           sidecar,
+				"sidecar":      sidecar,
 				"command":      "send", // post with no callback expected
 				"path":         ps.ByName("path"),
 				"content-type": r.Header.Get("Content-Type"),
@@ -121,10 +121,10 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"payload":      text(r.Body)}
 	if ps.ByName("service") != "" {
 		msg["protocol"] = "service"
-		msg["to"] = ps.ByName("service")
+		msg["service"] = ps.ByName("service")
 	} else {
 		msg["protocol"] = "actor"
-		msg["to"] = ps.ByName("type")
+		msg["type"] = ps.ByName("type")
 		msg["id"] = ps.ByName("id")
 	}
 	if err := pubsub.Send(msg); err != nil {
@@ -152,7 +152,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(map[string]string{
 		"protocol":     "sidecar",
-		"to":           msg["from"],
+		"sidecar":      msg["from"],
 		"command":      "callback",
 		"request":      msg["request"],
 		"statusCode":   strconv.Itoa(statusCode),
@@ -209,7 +209,7 @@ func deactivate(actor actors.Actor) {
 func dispatch(msg map[string]string) error {
 	var e *actors.Entry
 	if msg["protocol"] == "actor" {
-		actor := actors.Actor{Type: msg["to"], ID: msg["id"]}
+		actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
 		var fresh bool
 		e, fresh = actors.Acquire(ctx, actor)
 		if e == nil {
@@ -275,11 +275,11 @@ func dispatch(msg map[string]string) error {
 func forward(msg map[string]string) error {
 	switch msg["protocol"] {
 	case "service": // route to service
-		logger.Info("forwarding message to service %s", msg["to"])
+		logger.Info("forwarding message to service %s", msg["service"])
 	case "actor": // route to actor
-		logger.Info("forwarding message to actor %v", actors.Actor{Type: msg["to"], ID: msg["id"]})
+		logger.Info("forwarding message to actor %v", actors.Actor{Type: msg["type"], ID: msg["id"]})
 	case "sidecar": // route to sidecar
-		logger.Info("forwarding message to sidecar %s", msg["to"])
+		logger.Info("forwarding message to sidecar %s", msg["sidecar"])
 	}
 	if err := pubsub.Send(msg); err != nil {
 		if ctx.Err() != nil {
@@ -287,11 +287,11 @@ func forward(msg map[string]string) error {
 		}
 		switch msg["protocol"] {
 		case "service": // route to service
-			logger.Error("failed to forward message to service %s: %v", msg["to"], err)
+			logger.Error("failed to forward message to service %s: %v", msg["service"], err)
 		case "actor": // route to actor
-			logger.Error("failed to forward message to actor %v: %v", actors.Actor{Type: msg["to"], ID: msg["id"]}, err)
+			logger.Error("failed to forward message to actor %v: %v", actors.Actor{Type: msg["type"], ID: msg["id"]}, err)
 		case "sidecar": // route to sidecar
-			logger.Debug("failed to forward message to sidecar %s: %v", msg["to"], err) // not an error
+			logger.Debug("failed to forward message to sidecar %s: %v", msg["sidecar"], err) // not an error
 		}
 	}
 	return nil
@@ -357,7 +357,7 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if sidecar != config.ID { // send to all other sidecars
 			pubsub.Send(map[string]string{ // ignore errors?
 				"protocol": "sidecar",
-				"to":       sidecar,
+				"sidecar":  sidecar,
 				"command":  "kill",
 			})
 		}
