@@ -37,6 +37,8 @@ var (
 	// termination
 	ctx9, cancel9 = context.WithCancel(context.Background()) // preemptive: kill subprocess
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
+	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
+	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 
 	// http client
 	client http.Client
@@ -333,9 +335,10 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // kill route handler
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	fmt.Fprint(w, "OK")
 	logger.Info("Invoking cancel() in response to kill request")
 	cancel()
+	wg.Wait()
+	fmt.Fprint(w, "OK")
 }
 
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -374,17 +377,21 @@ func server(listener net.Listener) {
 	router.POST("/kar/broadcast/*path", broadcast)
 	srv := http.Server{Handler: router}
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		if err := srv.Serve(listener); err != http.ErrServerClosed {
 			logger.Fatal("HTTP server failed: %v", err)
 		}
 	}()
 
-	<-ctx.Done() // wait
-
-	if err := srv.Shutdown(context.Background()); err != nil {
-		logger.Fatal("failed to shutdown HTTP server: %v", err)
-	}
+	go func() {
+		defer close(finished)
+		<-ctx.Done() // wait
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logger.Fatal("failed to shutdown HTTP server: %v", err)
+		}
+	}()
 }
 
 func main() {
@@ -417,19 +424,13 @@ func main() {
 	store.Dial()
 	defer store.Close()
 
-	wg := sync.WaitGroup{}
-
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		subscriber(channel)
 	}()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		server(listener)
-	}()
+	server(listener)
 
 	wg.Add(1)
 	go func() {
@@ -460,6 +461,8 @@ func main() {
 	}
 
 	wg.Wait()
+
+	<-finished
 
 	logger.Warning("exiting...")
 }
