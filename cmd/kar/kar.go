@@ -58,16 +58,20 @@ func text(r io.Reader) string {
 
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := pubsub.Send(map[string]string{
-		"protocol":     "service",
-		"to":           ps.ByName("service"),
-		"session":      ps.ByName("actor") + ps.ByName("session"),
-		"actor":        ps.ByName("actor"),
+	msg := map[string]string{
 		"command":      "send", // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      text(r.Body)})
-	if err != nil {
+		"payload":      text(r.Body)}
+	if ps.ByName("service") != "" {
+		msg["protocol"] = "service"
+		msg["to"] = ps.ByName("service")
+	} else {
+		msg["protocol"] = "actor"
+		msg["to"] = ps.ByName("type")
+		msg["id"] = ps.ByName("id")
+	}
+	if err := pubsub.Send(msg); err != nil {
 		if ctx.Err() != nil {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
@@ -80,15 +84,16 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // broadcast route handler
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	payload := text(r.Body)
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(map[string]string{ // ignore errors?
+			pubsub.Send(map[string]string{ // TODO log errors, reuse message object?
 				"protocol":     "sidecar",
 				"to":           sidecar,
 				"command":      "send", // post with no callback expected
 				"path":         ps.ByName("path"),
 				"content-type": r.Header.Get("Content-Type"),
-				"payload":      text(r.Body)})
+				"payload":      payload})
 		}
 	}
 	fmt.Fprint(w, "OK")
@@ -106,19 +111,23 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	ch := make(chan reply)
 	requests.Store(request, ch)
 
-	err := pubsub.Send(map[string]string{
-		"protocol":     "service",
-		"to":           ps.ByName("service"),
-		"session":      ps.ByName("actor") + ps.ByName("session"),
-		"actor":        ps.ByName("actor"),
+	msg := map[string]string{
 		"command":      "call", // post expecting a callback with the result
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
 		"accept":       r.Header.Get("Accept"),
 		"from":         config.ID, // this sidecar
 		"request":      request,   // this request
-		"payload":      text(r.Body)})
-	if err != nil {
+		"payload":      text(r.Body)}
+	if ps.ByName("service") != "" {
+		msg["protocol"] = "service"
+		msg["to"] = ps.ByName("service")
+	} else {
+		msg["protocol"] = "actor"
+		msg["to"] = ps.ByName("type")
+		msg["id"] = ps.ByName("id")
+	}
+	if err := pubsub.Send(msg); err != nil {
 		if ctx.Err() != nil {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
@@ -150,17 +159,13 @@ func callback(msg map[string]string, statusCode int, contentType string, payload
 		"content-type": contentType,
 		"payload":      payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from service %s: %v", msg["request"], msg["from"], err)
+		logger.Error("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
 	}
 }
 
 // post posts a message to the service
 func httpRequest(method string, msg map[string]string) (*http.Response, error) {
-	p := msg["path"]
-	if msg["actor"] != "" {
-		p = "/actor/" + msg["actor"] + p
-	}
-	req, err := http.NewRequest(method, serviceURL+p, strings.NewReader(msg["payload"]))
+	req, err := http.NewRequest(method, serviceURL+msg["path"], strings.NewReader(msg["payload"]))
 	if err != nil {
 		return nil, err
 	}
@@ -174,26 +179,26 @@ func httpRequest(method string, msg map[string]string) (*http.Response, error) {
 	return res, err
 }
 
-func activate(actor string) {
-	logger.Info("activating actor %s", actor)
-	res, err := httpRequest("GET", map[string]string{"path": "", "actor": actor})
+func activate(actor actors.Actor) {
+	logger.Debug("activating actor %v", actor)
+	res, err := httpRequest("GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
-		logger.Info("error activating actor: %v", err)
-	} else if res.StatusCode != http.StatusOK {
-		logger.Info("error activating actor: %s", text(res.Body))
+		logger.Error("failed to activate actor %v: %v", actor, err)
+	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
+		logger.Error("failed to activate actor %v: %s", actor, text(res.Body))
 	} else {
 		io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
 	}
 }
 
-func deactivate(actor string) {
-	logger.Info("deactivating actor %s", actor)
-	res, err := httpRequest("DELETE", map[string]string{"path": "", "actor": actor})
+func deactivate(actor actors.Actor) {
+	logger.Info("deactivating actor %v", actor)
+	res, err := httpRequest("DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
-		logger.Info("error deactivating actor: %v", err)
-	} else if res.StatusCode != http.StatusOK {
-		logger.Info("error deactivating actor: %s", text(res.Body))
+		logger.Error("failed to deactivate actor %v: %v", actor, err)
+	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
+		logger.Error("failed to deactivate actor %v: %s", actor, text(res.Body))
 	} else {
 		io.Copy(ioutil.Discard, res.Body)
 		res.Body.Close()
@@ -203,16 +208,18 @@ func deactivate(actor string) {
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) error {
 	var e *actors.Entry
-	if msg["actor"] != "" {
+	if msg["protocol"] == "actor" {
+		actor := actors.Actor{Type: msg["to"], ID: msg["id"]}
 		var fresh bool
-		e, fresh = actors.Acquire(ctx, msg["actor"])
+		e, fresh = actors.Acquire(ctx, actor)
 		if e == nil {
 			return ctx.Err()
 		}
 		defer e.Release()
 		if fresh {
-			activate(msg["actor"])
+			activate(actor)
 		}
+		msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
 	}
 
 	switch msg["command"] {
@@ -268,7 +275,9 @@ func dispatch(msg map[string]string) error {
 func forward(msg map[string]string) error {
 	switch msg["protocol"] {
 	case "service": // route to service
-		logger.Info("forwarding message to service %s%s%s", msg["to"], config.Separator, msg["session"])
+		logger.Info("forwarding message to service %s", msg["to"])
+	case "actor": // route to actor
+		logger.Info("forwarding message to actor %v", actors.Actor{Type: msg["to"], ID: msg["id"]})
 	case "sidecar": // route to sidecar
 		logger.Info("forwarding message to sidecar %s", msg["to"])
 	}
@@ -278,7 +287,9 @@ func forward(msg map[string]string) error {
 		}
 		switch msg["protocol"] {
 		case "service": // route to service
-			logger.Error("failed to forward message to service %s%s%s: %v", msg["to"], config.Separator, msg["session"], err)
+			logger.Error("failed to forward message to service %s: %v", msg["to"], err)
+		case "actor": // route to actor
+			logger.Error("failed to forward message to actor %v: %v", actors.Actor{Type: msg["to"], ID: msg["id"]}, err)
 		case "sidecar": // route to sidecar
 			logger.Debug("failed to forward message to sidecar %s: %v", msg["to"], err) // not an error
 		}
@@ -364,10 +375,8 @@ func server(listener net.Listener) {
 	router := httprouter.New()
 	router.POST("/kar/send/:service/*path", send)
 	router.POST("/kar/call/:service/*path", call)
-	router.POST("/kar/session/:session/send/:service/*path", send)
-	router.POST("/kar/session/:session/call/:service/*path", call)
-	router.POST("/kar/actor/:actor/send/:service/*path", send)
-	router.POST("/kar/actor/:actor/call/:service/*path", call)
+	router.POST("/kar/actor-send/:type/:id/*path", send)
+	router.POST("/kar/actor-call/:type/:id/*path", call)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)

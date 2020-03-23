@@ -19,6 +19,7 @@ import (
 type userData struct {
 	Sidecar string                       // id of this sidecar
 	Service string                       // name of this service
+	Actors  []string                     // types of actors implemented by this service
 	Live    map[int32]map[int64]struct{} // live offsets
 }
 
@@ -35,6 +36,7 @@ var (
 
 	// routes
 	replicas map[string][]string // map services to sidecars
+	hosts    map[string][]string // map actor types to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
 	mu       = sync.RWMutex{}    // synchronize changes to routes
 	leader   = false             // session leader?
@@ -46,6 +48,7 @@ var (
 	here = userData{
 		Sidecar: config.ID,
 		Service: config.ServiceName,
+		Actors:  config.ActorTypes,
 		Live:    map[int32]map[int64]struct{}{},
 	}
 
@@ -112,7 +115,7 @@ func (msg *Message) Confirm() bool {
 }
 
 // routeToService maps a service to a partition (keep trying)
-func routeToService(service string) (partition int32, sidecar string, err error) {
+func routeToService(service string) (partition int32, err error) {
 	err = backoff.Retry(func() error { // keep trying
 		mu.RLock()
 		sidecars := replicas[service]
@@ -121,8 +124,25 @@ func routeToService(service string) (partition int32, sidecar string, err error)
 			logger.Debug("no sidecar for service %s", service)
 			return errors.New("no sidecar for service " + service)
 		}
+		sidecar := sidecars[rand.Int31n(int32(len(sidecars)))] // select random sidecar from list
+		partition, err = routeToSidecar(sidecar)               // map sidecar to partition
+		mu.RUnlock()
+		return err
+	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
+	return
+}
+
+// routeToHost maps an actor type to a sidecar (keep trying)
+func routeToHost(t string) (sidecar string, err error) {
+	err = backoff.Retry(func() error { // keep trying
+		mu.RLock()
+		sidecars := hosts[t]
+		if len(sidecars) == 0 { // no sidecar matching this service
+			mu.RUnlock()
+			logger.Debug("no sidecar for actor type %s", t)
+			return errors.New("no sidecar for actor type " + t)
+		}
 		sidecar = sidecars[rand.Int31n(int32(len(sidecars)))] // select random sidecar from list
-		partition, err = routeToSidecar(sidecar)              // map sidecar to partition
 		mu.RUnlock()
 		return err
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
@@ -152,30 +172,30 @@ func routeToSidecar(sidecar string) (int32, error) {
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }
 
-// routeToSession maps a session of a service to a stable sidecar to a partition
+// routeToActor maps an actor to a stable sidecar to a partition
 // only switching to a new sidecar if the existing sidecar has died
-func routeToSession(service string, session string) (partition int32, err error) {
-	key := "session" + config.Separator + service + config.Separator + session
+func routeToActor(t, id string) (partition int32, err error) {
+	key := "actor" + config.Separator + "sidecar" + config.Separator + t + config.Separator + id
 	var sidecar string
 	for { // keep trying
 		sidecar, err = store.Get(key) // retrieve already assigned sidecar if any
 		if err != nil && err != store.ErrNil {
 			return // redis error
 		}
-		if sidecar != "" { // no assigned sidecar yet
-			_, _, err = routeToService(service) // make sure routes have been initialized
+		if sidecar != "" { // sidecar is already assigned
+			_, err = routeToHost(t) // make sure routes have been initialized
 			if err != nil {
-				return // no matching service, abort
+				return // no matching host, abort
 			}
 			partition, err = routeToSidecar(sidecar) // find partition for sidecar
 			if err == nil {
 				return // found sidecar and partition
 			}
 		}
-		expected := sidecar                       // prepare to update assigned sidecar
-		_, sidecar, err = routeToService(service) // wait for matching service
+		expected := sidecar           // prepare to assign new sidecar
+		sidecar, err = routeToHost(t) // wait for matching service
 		if err != nil {
-			return // no matching service, abort
+			return // no matching host, abort
 		}
 		_, err = store.CompareAndSet(key, expected, sidecar) // try saving sidecar
 		if err != nil {
@@ -195,13 +215,15 @@ func Send(message map[string]string) error {
 	var partition int32
 	switch message["protocol"] {
 	case "service": // route to service
-		if message["session"] != "" {
-			partition, err = routeToSession(message["to"], message["session"])
-		} else {
-			partition, _, err = routeToService(message["to"])
-		}
+		partition, err = routeToService(message["to"])
 		if err != nil {
-			logger.Debug("failed to route to service %s%s%s: %v", message["to"], config.Separator, message["session"], err)
+			logger.Debug("failed to route to service %s: %v", message["to"], err)
+			return err
+		}
+	case "actor": // route to actor
+		partition, err = routeToActor(message["to"], message["id"])
+		if err != nil {
+			logger.Debug("failed to route to actor type %s id $s %v: %v", message["to"], message["id"], err)
 			return err
 		}
 	case "sidecar": // route to sidecar
@@ -265,6 +287,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	}
 	consumer.repartitionPending = false
 	rp := map[string][]string{}           // temp replicas
+	hs := map[string][]string{}           // temp hosts
 	rt := map[string][]int32{}            // temp routes
 	live = map[int32]map[int64]struct{}{} // clear live list
 	done = map[int32]map[int64]struct{}{} // clear done list
@@ -284,6 +307,9 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 			logger.Fatal("failed to unmarshal userdata: %v", err)
 		}
 		rp[there.Service] = append(rp[there.Service], there.Sidecar)
+		for _, t := range there.Actors {
+			hs[t] = append(hs[t], there.Sidecar)
+		}
 		rt[there.Sidecar] = append(rt[there.Sidecar], a.Topics[topic]...)
 		for _, p := range session.Claims()[topic] { // for each partition assigned to this sidecar
 			if live[p] == nil { // new partition
@@ -308,9 +334,11 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 		return err
 	}
 	logger.Info("replicas: %v", rp)
+	logger.Info("hosts: %v", hs)
 	logger.Info("routes: %v", rt)
 	mu.Lock()
 	replicas = rp
+	hosts = hs
 	routes = rt
 	mu.Unlock()
 	return nil
@@ -352,7 +380,20 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			logger.Error("failed to unmarshal message with value %s: %v", msg.Value, err)
 			continue
 		}
-		valid := message["to"] == here.Sidecar || message["to"] == here.Service
+		valid := false
+		switch message["protocol"] {
+		case "service":
+			valid = message["to"] == here.Service
+		case "actor":
+			for _, v := range here.Actors {
+				if message["to"] == v {
+					valid = true
+					break
+				}
+			}
+		case "sidecar":
+			valid = message["to"] == here.Sidecar
+		}
 		select {
 		case <-session.Context().Done():
 		case out <- Message{Value: message, Valid: valid, partition: msg.Partition, offset: msg.Offset}:

@@ -47,10 +47,10 @@ const send = (service, path, params) => post(`send/${service}/${path}`, params)
 const call = (service, path, params) => post(`call/${service}/${path}`, params)
 
 // asynchronous actor invocation, returns "OK" immediately
-const actorSend = (service, actor, path, params) => post(`actor/${actor}/send/${service}/${path}`, params)
+const actorSend = (type, id, path, params) => post(`actor-send/${type}/${id}/${path}`, params)
 
 // synchronous actor invocation: returns invocation result
-const actorCall = (service, actor, path, params) => post(`actor/${actor}/call/${service}/${path}`, params)
+const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
 
 // broadcast to all sidecars except for ours
 const broadcast = (path, params) => post(`broadcast/${path}`, params)

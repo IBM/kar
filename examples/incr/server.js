@@ -21,17 +21,17 @@ app.post('/shutdown', async (_reg, res) => {
   server.close(() => process.exit())
 })
 
-app.get('/actor/:id', (req, res) => {
+app.get('/actor/foo/:id', (req, res) => {
   console.log('actor', req.params.id, 'activate')
   res.sendStatus(200)
 })
 
-app.delete('/actor/:id', (req, res) => {
+app.delete('/actor/foo/:id', (req, res) => {
   console.log('actor', req.params.id, 'deactivate')
   res.sendStatus(200)
 })
 
-app.post('/actor/:id/incr', (req, res) => {
+app.post('/actor/foo/:id/incr', (req, res) => {
   console.log('actor', req.params.id, 'incr', req.body)
   res.json(req.body + 1)
 })

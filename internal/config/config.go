@@ -23,6 +23,9 @@ var (
 	// ServiceName is the name of the service
 	ServiceName string
 
+	// ActorTypes are the actor types implemented by this service
+	ActorTypes []string
+
 	// ServicePort is the HTTP port the service will be listening on
 	ServicePort int
 
@@ -64,11 +67,12 @@ var (
 )
 
 func init() {
-	var kafkaBrokers, verbosity, configDir string
+	var kafkaBrokers, verbosity, configDir, actorTypes string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
+	flag.StringVar(&actorTypes, "actors", "", "The actor types implemented by this service, as a comma separated list")
 	flag.IntVar(&ServicePort, "send", 8080, "The service port")
 	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
@@ -94,6 +98,12 @@ func init() {
 
 	if ServiceName == "" {
 		logger.Fatal("service name is required")
+	}
+
+	if actorTypes == "" {
+		ActorTypes = []string{}
+	} else {
+		ActorTypes = strings.Split(actorTypes, ",")
 	}
 
 	if !KafkaEnableTLS && os.Getenv("KAFKA_ENABLE_TLS") != "" {
