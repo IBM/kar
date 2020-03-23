@@ -373,9 +373,8 @@ func healthTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // test scaffolding for reminders.  to be deleted soon.
 func reminderTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	now := time.Now()
-	actors.ScheduleOneShotReminder("hello-5", now.Add(5*time.Second))
-	actors.ScheduleOneShotReminder("hello-3", now.Add(3*time.Second))
-	actors.ScheduleOneShotReminder("hello-7", now.Add(7*time.Second))
+	actors.SchedulePeriodicReminder("hello-10", now.Add(5*time.Second), 10*time.Second)
+	actors.SchedulePeriodicReminder("hello-2", now.Add(10*time.Second), 2*time.Second)
 }
 
 // server implements the HTTP server

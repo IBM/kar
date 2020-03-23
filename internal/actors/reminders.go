@@ -30,6 +30,10 @@ func ProcessReminders(ctx context.Context, time time.Time) {
 			break
 		}
 		logger.Info("at %v scheduling %v (deadline %v)", time, r.id, r.deadline)
+		if r.period > 0 {
+			r.deadline = r.deadline.Add(r.period)
+			activeReminders.addReminder(r)
+		}
 	}
 	logger.Info("Completed reminder processing for time %v", time)
 
@@ -39,6 +43,14 @@ func ProcessReminders(ctx context.Context, time time.Time) {
 // ScheduleOneShotReminder schedules a reminder
 func ScheduleOneShotReminder(id string, deadline time.Time) {
 	r := reminder{deadline: deadline, id: id}
+	arMutex.Lock()
+	activeReminders.addReminder(r)
+	arMutex.Unlock()
+}
+
+// SchedulePeriodicReminder schedules a reminder
+func SchedulePeriodicReminder(id string, deadline time.Time, period time.Duration) {
+	r := reminder{deadline: deadline, period: period, id: id}
 	arMutex.Lock()
 	activeReminders.addReminder(r)
 	arMutex.Unlock()
