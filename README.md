@@ -79,5 +79,5 @@ Examining the logs of the client pod, you should see the number `43`.
 
 To cleanup, do
 ```
-kubectl delete -f examples/incr/incr.yaml -n kar-apps
+kubectl delete -f examples/incr/deploy/incr.yaml -n kar-apps
 ```
