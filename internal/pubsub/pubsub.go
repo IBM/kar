@@ -174,9 +174,8 @@ func routeToSidecar(sidecar string) (int32, error) {
 
 // routeToActor maps an actor to a stable sidecar to a partition
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(t, id string) (partition int32, err error) {
+func routeToActor(t, id string) (partition int32, sidecar string, err error) {
 	key := "actor" + config.Separator + "sidecar" + config.Separator + t + config.Separator + id
-	var sidecar string
 	for { // keep trying
 		sidecar, err = store.Get(key) // retrieve already assigned sidecar if any
 		if err != nil && err != store.ErrNil {
@@ -207,12 +206,8 @@ func routeToActor(t, id string) (partition int32, err error) {
 
 // Send sends message to receiver
 func Send(message map[string]string) error {
-	msg, err := json.Marshal(message)
-	if err != nil {
-		logger.Debug("failed to marshal message with value %v: %v", message, err)
-		return err
-	}
 	var partition int32
+	var err error
 	switch message["protocol"] {
 	case "service": // route to service
 		partition, err = routeToService(message["to"])
@@ -221,17 +216,24 @@ func Send(message map[string]string) error {
 			return err
 		}
 	case "actor": // route to actor
-		partition, err = routeToActor(message["to"], message["id"])
+		var sidecar string
+		partition, sidecar, err = routeToActor(message["to"], message["id"])
 		if err != nil {
 			logger.Debug("failed to route to actor type %s id $s %v: %v", message["to"], message["id"], err)
 			return err
 		}
+		message["sidecar"] = sidecar
 	case "sidecar": // route to sidecar
 		partition, err = routeToSidecar(message["to"])
 		if err != nil {
 			logger.Debug("failed to route to sidecar %s: %v", message["to"], err)
 			return err
 		}
+	}
+	msg, err := json.Marshal(message)
+	if err != nil {
+		logger.Debug("failed to marshal message with value %v: %v", message, err)
+		return err
 	}
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
@@ -385,12 +387,7 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		case "service":
 			valid = message["to"] == here.Service
 		case "actor":
-			for _, v := range here.Actors {
-				if message["to"] == v {
-					valid = true
-					break
-				}
-			}
+			valid = message["sidecar"] == here.Sidecar
 		case "sidecar":
 			valid = message["to"] == here.Sidecar
 		}
