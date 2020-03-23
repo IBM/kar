@@ -334,6 +334,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // kill route handler
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
+	logger.Info("Invoking cancel() in response to kill request")
 	cancel()
 }
 
@@ -395,10 +396,17 @@ func main() {
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-signals
+		logger.Info("Invoking cancel9() from signal handler")
 		cancel9()
 	}()
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", config.RuntimePort))
+	var listenHost string
+	if config.KubernetesMode {
+		listenHost = fmt.Sprintf(":%d", config.RuntimePort)
+	} else {
+		listenHost = fmt.Sprintf("127.0.0.1:%d", config.RuntimePort)
+	}
+	listener, err := net.Listen("tcp", listenHost)
 	if err != nil {
 		logger.Fatal("Listener failed: %v", err)
 	}

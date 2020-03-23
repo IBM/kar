@@ -5,12 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var (
@@ -100,7 +102,8 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
-		cmdLine, appEnv := processAnnotations(pod)
+		cmdLine, appEnv, karPortStr := processAnnotations(pod)
+		karPort, err := strconv.Atoi(karPortStr)
 
 		if len(appEnv) > 0 {
 			for index, container := range containers {
@@ -113,6 +116,9 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
 			Command:      []string{"/kar/kar"},
 			Args:         cmdLine,
+			Env:          []corev1.EnvVar{corev1.EnvVar{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
+			Ports:        []corev1.ContainerPort{corev1.ContainerPort{ContainerPort: int32(karPort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
+			Lifecycle:    &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/kill", Port: intstr.FromInt(karPort)}}},
 			VolumeMounts: []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)
@@ -175,7 +181,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	return &reviewResponse
 }
 
-func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
+func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
 	cmd := []string{"-kubernetes_mode", "-config_dir", karRTConfigMount, "-app", appName}
@@ -203,7 +209,7 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar) {
 		cmd = append(cmd, "-v", verbose)
 	}
 
-	return cmd, appEnv
+	return cmd, appEnv, recvPort
 }
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {
