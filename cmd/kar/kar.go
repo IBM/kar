@@ -370,6 +370,14 @@ func healthTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+// test scaffolding for reminders.  to be deleted soon.
+func reminderTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	now := time.Now()
+	actors.ScheduleOneShotReminder("hello-5", now.Add(5*time.Second))
+	actors.ScheduleOneShotReminder("hello-3", now.Add(3*time.Second))
+	actors.ScheduleOneShotReminder("hello-7", now.Add(7*time.Second))
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) {
 	router := httprouter.New()
@@ -384,6 +392,8 @@ func server(listener net.Listener) {
 	router.GET("/kar/killall", killall)
 	router.GET("/kar/health", healthTest)
 	router.POST("/kar/broadcast/*path", broadcast)
+	// TEMP: dummy route for reminders
+	router.GET("/kar/reminder/testme", reminderTest)
 	srv := http.Server{Handler: router}
 
 	wg.Add(1)
@@ -451,6 +461,21 @@ func main() {
 				logger.Debug("starting collection")
 				actors.Collect(ctx, now.Add(-10*time.Second), deactivate) // TODO invoke deactivate route
 				logger.Debug("finishing collection")
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(1 * time.Second)
+		for {
+			select {
+			case now := <-ticker.C:
+				actors.ProcessReminders(ctx, now)
 			case <-ctx.Done():
 				ticker.Stop()
 				return
