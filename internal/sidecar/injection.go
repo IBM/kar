@@ -112,14 +112,15 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		}
 
 		sidecar := []corev1.Container{{
-			Name:         sidecarName,
-			Image:        fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
-			Command:      []string{"/kar/kar"},
-			Args:         cmdLine,
-			Env:          []corev1.EnvVar{corev1.EnvVar{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
-			Ports:        []corev1.ContainerPort{corev1.ContainerPort{ContainerPort: int32(karPort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
-			Lifecycle:    &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/kill", Port: intstr.FromInt(karPort)}}},
-			VolumeMounts: []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
+			Name:          sidecarName,
+			Image:         fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
+			Command:       []string{"/kar/kar"},
+			Args:          cmdLine,
+			Env:           []corev1.EnvVar{corev1.EnvVar{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
+			Ports:         []corev1.ContainerPort{corev1.ContainerPort{ContainerPort: int32(karPort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
+			LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/health", Port: intstr.FromInt(karPort)}}},
+			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/kill", Port: intstr.FromInt(karPort)}}},
+			VolumeMounts:  []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)
 		updateContainersPatch := patchOperation{
