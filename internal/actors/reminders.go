@@ -35,9 +35,9 @@ func ProcessReminders(ctx context.Context, time time.Time) {
 			activeReminders.addReminder(r)
 		}
 	}
-	logger.Info("Completed reminder processing for time %v", time)
 
 	arMutex.Unlock()
+	logger.Debug("Completed reminder processing for time %v", time)
 }
 
 // ScheduleOneShotReminder schedules a reminder
