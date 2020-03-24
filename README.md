@@ -81,3 +81,22 @@ To cleanup, do
 ```
 kubectl delete -f examples/incr/deploy/incr.yaml -n kar-apps
 ```
+
+### Running a sample application outside of Kubernetes
+
+KAR also supports running applications outside of Kubernetes. Access
+to Redis and Kafka is configured by defining environment variables
+that are read by the `kar` executable that launches each application
+process.
+
+One simple way to experiment with this mode is to first deploy KAR on
+kind as described above.  Then do `. ./scripts/kar-kind-env.sh` to
+configure a shell to access Redis and Kafka.  Finally, run the `incr`
+example by doing:
+```shell
+# start server
+kar -app myApp -service myService node server.js &
+
+# run client
+kar -app myApp -service myClient node client.js
+```
