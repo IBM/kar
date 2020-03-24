@@ -49,22 +49,19 @@ var (
 		Sidecar: config.ID,
 		Service: config.ServiceName,
 		Actors:  config.ActorTypes,
-		Live:    map[int32]map[int64]struct{}{},
+		Live:    map[int32]map[int64]struct{}{}, // offsets in progress in this sidecar
 	}
+	lock = &sync.Mutex{} // synchronize updates (Mark is called asynchronously)
 
-	// local progress
-	local = map[int32]map[int64]struct{}{} // offsets started or finished by this sidecar
-	lock  = sync.Mutex{}                   // lock to protect local and here.Live
-
-	// global progress (no lock needed)
-	live map[int32]map[int64]struct{}     // live offsets at beginning of session
-	done = map[int32]map[int64]struct{}{} // done offsets at beginning of session
+	// progress (no lock needed)
+	offsets = make([]int64, 1)           // next offset to read from each partition (local uncommitted progress)
+	live    map[int32]map[int64]struct{} // live offsets at beginning of session (from all sidecars)
+	done    map[int32]map[int64]struct{} // done offsets at beginning of session (from all sidecars)
 )
 
 // Message is the type of messages
 type Message struct {
 	Value     map[string]string
-	Valid     bool
 	partition int32
 	offset    int64
 }
@@ -83,35 +80,20 @@ func mangle(p int32) string {
 	return "partition" + config.Separator + strconv.Itoa(int(p))
 }
 
-// Mark must be called when a message has been processed
-func (msg *Message) Mark() {
-	logger.Debug("finishing partition %d offset %d", msg.partition, msg.offset)
-	_, err := store.ZAdd(mangle(msg.partition), msg.offset, strconv.FormatInt(msg.offset, 10)) // tell store offset is done
+func mark(partition int32, offset int64) {
+	logger.Debug("finishing partition %d offset %d", partition, offset)
+	_, err := store.ZAdd(mangle(partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done
 	if err != nil {
-		logger.Error("failed to mark offset: %v", err)
+		logger.Error("failed to add offset to store: %v", err)
 	}
 	lock.Lock()
-	delete(here.Live[msg.partition], msg.offset)
+	delete(here.Live[partition], offset) // no longer in progress
 	lock.Unlock()
 }
 
-// Confirm must be called before processing a message
-func (msg *Message) Confirm() bool {
-	lock.Lock()
-	if local[msg.partition] == nil { // new partition
-		local[msg.partition] = map[int64]struct{}{}
-		here.Live[msg.partition] = map[int64]struct{}{}
-	}
-	if _, ok := local[msg.partition][msg.offset]; ok { // already processed or in progress
-		lock.Unlock()
-		logger.Debug("skipping partition %d offset %d", msg.partition, msg.offset)
-		return false
-	}
-	here.Live[msg.partition][msg.offset] = struct{}{}
-	local[msg.partition][msg.offset] = struct{}{}
-	lock.Unlock()
-	logger.Debug("starting partition %d offset %d", msg.partition, msg.offset)
-	return true
+// Mark marks message as done after processing is complete
+func (msg *Message) Mark() {
+	mark(msg.partition, msg.offset)
 }
 
 // routeToService maps a service to a partition (keep trying)
@@ -137,7 +119,7 @@ func routeToHost(t string) (sidecar string, err error) {
 	err = backoff.Retry(func() error { // keep trying
 		mu.RLock()
 		sidecars := hosts[t]
-		if len(sidecars) == 0 { // no sidecar matching this service
+		if len(sidecars) == 0 { // no sidecar matching this actor type
 			mu.RUnlock()
 			logger.Debug("no sidecar for actor type %s", t)
 			return errors.New("no sidecar for actor type " + t)
@@ -222,7 +204,7 @@ func Send(msg map[string]string) error {
 			logger.Debug("failed to route to actor type %s id $s %v: %v", msg["type"], msg["id"], err)
 			return err
 		}
-		msg["sidecar"] = sidecar
+		msg["sidecar"] = sidecar // mutate msg
 	case "sidecar": // route to sidecar
 		partition, err = routeToSidecar(msg["sidecar"])
 		if err != nil {
@@ -293,6 +275,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	rt := map[string][]int32{}            // temp routes
 	live = map[int32]map[int64]struct{}{} // clear live list
 	done = map[int32]map[int64]struct{}{} // clear done list
+	max := 0                              // max partition index
 	for _, member := range members {
 		a, err := member.GetMemberAssignment()
 		if err != nil {
@@ -314,13 +297,19 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 		}
 		rt[there.Sidecar] = append(rt[there.Sidecar], a.Topics[topic]...)
 		for _, p := range session.Claims()[topic] { // for each partition assigned to this sidecar
+			if int(p) > max {
+				max = int(p)
+			}
 			if live[p] == nil { // new partition
 				live[p] = map[int64]struct{}{}
 				done[p] = map[int64]struct{}{}
+				lock.Lock()
+				here.Live[p] = map[int64]struct{}{}
+				lock.Unlock()
 			}
 			r, err := store.ZRange(mangle(p), 0, -1) // fetch done offsets from store
 			if err != nil {
-				logger.Error("redis error: %v", err)
+				logger.Error("failed to retrieve mark offsets to store: %v", err)
 			}
 			for _, o := range r {
 				k, _ := strconv.ParseInt(o, 10, 64)
@@ -334,6 +323,9 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	if err := client.RefreshMetadata(topic); err != nil { // refresh producer
 		logger.Debug("failed to refresh topic: %v", err)
 		return err
+	}
+	if max >= len(offsets) { // grow array to accommodate more partitions
+		offsets = append(offsets, make([]int64, max+1-len(offsets))...)
 	}
 	logger.Info("replicas: %v", rp)
 	logger.Info("hosts: %v", hs)
@@ -363,11 +355,6 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 	prefix := true                                                                // should advance cursor
 	for m := range claim.Messages() {
 		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
-		if _, ok := live[m.Partition][m.Offset]; ok {
-			prefix = false // stop advancing cursor
-			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
-			continue
-		}
 		if _, ok := done[m.Partition][m.Offset]; ok {
 			if prefix {
 				session.MarkMessage(m, "") // advance cursor
@@ -375,25 +362,35 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			logger.Debug("skipping done message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
 			continue
 		}
-		prefix = false
+		prefix = false // stop advancing cursor
+		if _, ok := live[m.Partition][m.Offset]; ok {
+			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+			continue
+		}
+		if offsets[m.Partition] > m.Offset {
+			logger.Debug("skipping already seen message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+			continue
+		}
+		offsets[m.Partition] = m.Offset + 1
+		lock.Lock()
+		here.Live[m.Partition][m.Offset] = struct{}{}
+		lock.Unlock()
 		var msg map[string]string
 		err := json.Unmarshal(m.Value, &msg)
 		if err != nil {
 			logger.Error("failed to unmarshal message with value %s: %v", m.Value, err)
+			mark(m.Partition, m.Offset) // mark invalid message as completed
 			continue
 		}
-		valid := false
-		switch msg["protocol"] {
-		case "service":
-			valid = msg["service"] == here.Service
-		case "actor":
-			valid = msg["sidecar"] == here.Sidecar
-		case "sidecar":
-			valid = msg["sidecar"] == here.Sidecar
-		}
+		logger.Debug("starting partition %d offset %d", m.Partition, m.Offset)
 		select {
 		case <-session.Context().Done():
-		case out <- Message{Value: msg, Valid: valid, partition: m.Partition, offset: m.Offset}:
+			logger.Debug("cancelling partition %d offset %d", m.Partition, m.Offset)
+			offsets[m.Partition] = m.Offset // rollback
+			lock.Lock()
+			delete(here.Live[m.Partition], m.Offset) // rollback
+			lock.Unlock()
+		case out <- Message{Value: msg, partition: m.Partition, offset: m.Offset}:
 		}
 	}
 	return nil

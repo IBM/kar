@@ -299,17 +299,24 @@ func forward(msg map[string]string) error {
 
 // subscriber handles incoming messages
 func subscriber(channel <-chan pubsub.Message) {
-	for msg := range channel {
-		if !msg.Confirm() {
-			continue // message has been or is handled elsewhere
+	for m := range channel {
+		msg := m.Value
+		valid := false
+		switch msg["protocol"] {
+		case "service":
+			valid = msg["service"] == config.ServiceName
+		case "actor":
+			valid = msg["sidecar"] == config.ID
+		case "sidecar":
+			valid = msg["sidecar"] == config.ID
 		}
-		if msg.Valid { // message is intended for this sidecar
-			if dispatch(msg.Value) == nil {
-				msg.Mark() // message handled successfully
+		if valid { // message is intended for this sidecar
+			if dispatch(msg) == nil {
+				m.Mark() // message handled successfully
 			}
 		} else { // message is intended for another sidecar
-			if forward(msg.Value) == nil {
-				msg.Mark() // message forwarded successfully
+			if forward(msg) == nil {
+				m.Mark() // message forwarded successfully
 			}
 		}
 	}
