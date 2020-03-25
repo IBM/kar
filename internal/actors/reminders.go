@@ -41,10 +41,10 @@ type GetReminderPayload struct {
 
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
 type ScheduleReminderPayload struct {
-	ID       string        `json:"id"`
-	Deadline time.Time     `json:"deadline"`
-	Period   time.Duration `json:"period,omitempty"`
-	Data     interface{}   `json:"data,omitempty"`
+	ID       string      `json:"id"`
+	Deadline time.Time   `json:"deadline"`
+	Period   string      `json:"period,omitempty"`
+	Data     interface{} `json:"data,omitempty"`
 }
 
 // CancelReminder attempts to cancel the argument reminder
@@ -62,8 +62,15 @@ func ScheduleReminder(actorType string, actorID string, payload ScheduleReminder
 	r := Reminder{
 		ActorType: actorType,
 		ActorID:   actorID,
+		ID:        payload.ID,
 		Deadline:  payload.Deadline,
-		Period:    payload.Period,
+	}
+	if payload.Period != "" {
+		period, err := time.ParseDuration(payload.Period)
+		if err != nil {
+			return false, err
+		}
+		r.Period = period
 	}
 
 	logger.Info("ScheduleReminder: %v", r)
@@ -84,7 +91,7 @@ func ProcessReminders(ctx context.Context, fireTime time.Time) {
 		if !valid {
 			break
 		}
-		logger.Info("ProcessReminders: at %v scheduling %v (deadline %v)", fireTime, r.ID, r.Deadline)
+		logger.Info("ProcessReminders: at %v firing %v (deadline %v)", fireTime, r.ID, r.Deadline)
 		if r.Period > 0 {
 			r.Deadline = fireTime.Add(r.Period)
 			activeReminders.addReminder(r)
