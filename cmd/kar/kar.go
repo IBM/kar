@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -337,6 +338,78 @@ func mangle(key string) string {
 	return "main" + config.Separator + "state" + config.Separator + key
 }
 
+// reminder route handler
+// Supported paths: "/kar/actor-reminder/:type/:id/:action"
+//    :type is an actor type
+//    :id is an actor id
+//    :action is one of: cancel, get, schedule
+//
+// The body of the request is a JSON object with the following format
+//    cancel: { id:string }
+//    get: { id:string }
+//    schedule: { id:string, entrypoint:string, deadline:string(ISO-8601) period:string(ISO-8601), data: any}
+func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	actorType := ps.ByName("type")
+	actorID := ps.ByName("id")
+	action := ps.ByName("action")
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	switch action {
+	case "create":
+		var payload actors.ScheduleReminderPayload
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		validRequest, err := actors.ScheduleReminder(actorType, actorID, payload)
+		if err != nil {
+			if validRequest {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		}
+		fmt.Fprintf(w, "OK")
+
+	case "cancel":
+		var payload actors.CancelReminderPayload
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		found, err := actors.CancelReminder(actorType, actorID, payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		if found {
+			fmt.Fprintf(w, "OK")
+		} else {
+			http.Error(w, "Not Found", http.StatusNotFound)
+		}
+
+	case "get":
+		var payload actors.GetReminderPayload
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		reminders, err := actors.GetReminders(actorType, actorID, payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(reminders)
+
+	default:
+		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
+	}
+
+}
+
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Set(mangle(ps.ByName("key")), text(r.Body)); err != nil {
@@ -388,15 +461,9 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cancel()
 }
 
-func healthTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// implement sidecar's livenessProbe for Kubernetes
+func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
-}
-
-// test scaffolding for reminders.  to be deleted soon.
-func reminderTest(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	now := time.Now()
-	actors.SchedulePeriodicReminder("hello-10", now.Add(5*time.Second), 10*time.Second)
-	actors.SchedulePeriodicReminder("hello-2", now.Add(10*time.Second), 2*time.Second)
 }
 
 // server implements the HTTP server
@@ -407,15 +474,14 @@ func server(listener net.Listener) {
 	router.POST("/kar/actor-send/:type/:id/*path", send)
 	router.POST("/kar/actor-call/:type/:id/*path", call)
 	router.GET("/kar/actor-migrate/:type/:id", migrate)
+	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)
 	router.GET("/kar/kill", kill)
 	router.GET("/kar/killall", killall)
-	router.GET("/kar/health", healthTest)
+	router.GET("/kar/health", health)
 	router.POST("/kar/broadcast/*path", broadcast)
-	// TEMP: dummy route for reminders
-	router.GET("/kar/reminder/testme", reminderTest)
 	srv := http.Server{Handler: router}
 
 	wg.Add(1)

@@ -5,14 +5,8 @@ import (
 	"time"
 )
 
-type reminder struct {
-	deadline time.Time
-	period   time.Duration // 0 for one-shot reminders
-	id       string        // TODO: make this an actor type, id, method
-}
-
 type reminderEntry struct {
-	r     reminder
+	r     Reminder
 	index int
 }
 
@@ -22,7 +16,7 @@ func (rq reminderQueue) Len() int { return len(rq) }
 
 func (rq reminderQueue) Less(i, j int) bool {
 	// Deadlines further in the future have lower priority
-	return rq[i].r.deadline.Before(rq[j].r.deadline)
+	return rq[i].r.Deadline.Before(rq[j].r.Deadline)
 }
 
 func (rq reminderQueue) Swap(i, j int) {
@@ -47,14 +41,14 @@ func (rq *reminderQueue) Pop() interface{} {
 	return r
 }
 
-func (rq *reminderQueue) addReminder(r reminder) {
+func (rq *reminderQueue) addReminder(r Reminder) {
 	heap.Push(rq, &reminderEntry{r: r})
 }
 
-func (rq *reminderQueue) nextReminderBefore(t time.Time) (reminder, bool) {
-	if len(*rq) > 0 && (*rq)[0].r.deadline.Before(t) {
+func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {
+	if len(*rq) > 0 && (*rq)[0].r.Deadline.Before(t) {
 		re := heap.Pop(rq)
 		return re.(*reminderEntry).r, true
 	}
-	return reminder{}, false
+	return Reminder{}, false
 }
