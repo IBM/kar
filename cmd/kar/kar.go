@@ -322,7 +322,7 @@ func invoke(m pubsub.Message) {
 
 func invokeActor(msg map[string]string) error {
 	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-	e, fresh := actors.Acquire(ctx, actor)
+	e, fresh, _ := actors.Acquire(ctx, actor)
 	if e == nil && ctx.Err() == nil {
 		return forward(msg)
 	}

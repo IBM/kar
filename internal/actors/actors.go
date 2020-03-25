@@ -25,47 +25,53 @@ type Entry struct {
 
 var table = sync.Map{} // actor table: ID -> Entry
 
-// Acquire acquires the entry initializing the entry if absent
-func Acquire(ctx context.Context, actor Actor) (*Entry, bool) {
+// Acquire locks the actor
+// Acquire returns nil if actor is mapped to another sidecar
+// Acquire returns true if actor requires activation
+func Acquire(ctx context.Context, actor Actor) (*Entry, bool, error) {
 	e := &Entry{sem: semaphore.NewWeighted(1)}
 	for {
 		if v, loaded := table.LoadOrStore(actor, e); loaded {
 			e = v.(*Entry) // existing entry
 			err := e.sem.Acquire(ctx, 1)
 			if err != nil { // cancelled
-				return nil, false
+				return nil, false, err
 			}
 			if e.valid {
-				return e, false
+				return e, false, nil
 			}
-			e.sem.Release(1) // deleted, try again
+			e.sem.Release(1) // invalid entry, try again
 		} else { // new entry
 			err := e.sem.Acquire(ctx, 1)
 			if err != nil { // cancelled
-				return nil, false
+				return nil, false, err
 			}
-			if sidecar, _ := Get(actor); sidecar == config.ID { // check placement
+			sidecar, err := Get(actor)
+			if err != nil {
+				return nil, false, err
+			}
+			if sidecar == config.ID {
 				e.valid = true
-				return e, true
+				return e, true, nil
 			}
 			e.sem.Release(1) // actor has been moved
 			table.Delete(actor)
-			return nil, false
+			return nil, false, nil
 		}
 	}
 }
 
-// Release updates the timestamp and releases the entry
+// Release updates the timestamp and releases the actor lock
 func (e *Entry) Release() {
 	e.time = time.Now() // update last release time
 	e.sem.Release(1)
 }
 
-// Collect removes entries older than time
-func Collect(ctx context.Context, time time.Time, deactivate func(actor Actor)) {
+// Collect deactivates actors that not been used since time
+func Collect(ctx context.Context, time time.Time, deactivate func(actor Actor)) error {
 	table.Range(func(actor, v interface{}) bool {
 		e := v.(*Entry)
-		if e.sem.TryAcquire(1) {
+		if e.sem.TryAcquire(1) { // skip actor if busy
 			if e.valid && e.time.Before(time) {
 				deactivate(actor.(Actor))
 				e.valid = false
@@ -77,38 +83,26 @@ func Collect(ctx context.Context, time time.Time, deactivate func(actor Actor)) 
 		}
 		return ctx.Err() == nil // stop collection if cancelled
 	})
+	return ctx.Err()
 }
 
-// Migrate deactivates actor if active and deletes placement
+// Migrate deactivates actor if active and deletes placement if local
 func Migrate(ctx context.Context, actor Actor, deactivate func(actor Actor)) error {
-	e := &Entry{sem: semaphore.NewWeighted(1)}
-	for {
-		if v, loaded := table.LoadOrStore(actor, e); loaded {
-			e = v.(*Entry) // existing entry
-			err := e.sem.Acquire(ctx, 1)
-			if err != nil { // cancelled
-				return err
-			}
-			if e.valid {
-				deactivate(actor)
-				e.valid = false
-				Update(actor, config.ID, "") // delete placement if placed here
-				e.sem.Release(1)
-				table.Delete(actor)
-				return nil
-			}
-			e.sem.Release(1) // deleted, try again
-		} else { // new entry
-			err := e.sem.Acquire(ctx, 1)
-			if err != nil { // cancelled
-				return err
-			}
-			Update(actor, config.ID, "") // delete placement if placed here
-			e.sem.Release(1)
-			table.Delete(actor)
-			return nil
-		}
+	e, fresh, err := Acquire(ctx, actor)
+	if err != nil {
+		return err
 	}
+	if e == nil {
+		return nil
+	}
+	if !fresh {
+		deactivate(actor)
+	}
+	e.valid = false
+	_, err = Update(actor, config.ID, "") // delete placement if local
+	e.sem.Release(1)
+	table.Delete(actor)
+	return err
 }
 
 func mangle(actor Actor) string {
