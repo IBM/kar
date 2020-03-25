@@ -5,33 +5,28 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/actors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/launcher"
+	"github.ibm.com/solsa/kar.git/internal/proxy"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
-	// service url
-	serviceURL = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
-
 	// pending requests: map uuids to channels
 	requests = sync.Map{}
 
@@ -51,19 +46,13 @@ func init() {
 	client = http.Client{Transport: transport} // TODO adjust timeout
 }
 
-// text converts a request or response body to a string
-func text(r io.Reader) string {
-	buf, _ := ioutil.ReadAll(r)
-	return string(buf)
-}
-
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	msg := map[string]string{
 		"command":      "send", // post with no callback expected
 		"path":         ps.ByName("path"),
 		"content-type": r.Header.Get("Content-Type"),
-		"payload":      text(r.Body)}
+		"payload":      proxy.Read(r.Body)}
 	if ps.ByName("service") != "" {
 		msg["protocol"] = "service"
 		msg["service"] = ps.ByName("service")
@@ -85,7 +74,7 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // broadcast route handler
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	payload := text(r.Body)
+	payload := proxy.Read(r.Body)
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
 			pubsub.Send(map[string]string{ // TODO log errors, reuse message object?
@@ -119,7 +108,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		"accept":       r.Header.Get("Accept"),
 		"from":         config.ID, // this sidecar
 		"request":      request,   // this request
-		"payload":      text(r.Body)}
+		"payload":      proxy.Read(r.Body)}
 	if ps.ByName("service") != "" {
 		msg["protocol"] = "service"
 		msg["service"] = ps.ByName("service")
@@ -170,45 +159,27 @@ func callback(msg map[string]string, statusCode int, contentType string, payload
 	}
 }
 
-// post posts a message to the service
-func httpRequest(method string, msg map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(method, serviceURL+msg["path"], strings.NewReader(msg["payload"]))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", msg["content-type"])
-	req.Header.Set("Accept", msg["accept"])
-	var res *http.Response
-	err = backoff.Retry(func() error {
-		res, err = client.Do(req)
-		return err
-	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
-	return res, err
-}
-
 func activate(actor actors.Actor) {
 	logger.Debug("activating actor %v", actor)
-	res, err := httpRequest("GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	res, err := proxy.Do(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		logger.Error("failed to activate actor %v: %v", actor, err)
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to activate actor %v: %s", actor, text(res.Body))
+		logger.Error("failed to activate actor %v: %s", actor, proxy.Read(res.Body))
 	} else {
-		io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
+		proxy.Read(res.Body)
 	}
 }
 
 func deactivate(actor actors.Actor) {
 	logger.Info("deactivating actor %v", actor)
-	res, err := httpRequest("DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	res, err := proxy.Do(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		logger.Error("failed to deactivate actor %v: %v", actor, err)
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to deactivate actor %v: %s", actor, text(res.Body))
+		logger.Error("failed to deactivate actor %v: %s", actor, proxy.Read(res.Body))
 	} else {
-		io.Copy(ioutil.Discard, res.Body)
-		res.Body.Close()
+		proxy.Read(res.Body)
 	}
 }
 
@@ -216,27 +187,26 @@ func deactivate(actor actors.Actor) {
 func dispatch(msg map[string]string) error {
 	switch msg["command"] {
 	case "send":
-		res, err := httpRequest("POST", msg)
+		res, err := proxy.Do(ctx, "POST", msg)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
+			logger.Error("failed to post to %s: %v", msg["path"], err)
 		} else {
-			io.Copy(ioutil.Discard, res.Body)
-			res.Body.Close()
+			proxy.Read(res.Body)
 		}
 
 	case "call":
-		res, err := httpRequest("POST", msg)
+		res, err := proxy.Do(ctx, "POST", msg)
 		if err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			logger.Error("failed to post to %s%s: %v", serviceURL, msg["path"], err)
+			logger.Error("failed to post to %s: %v", msg["path"], err)
 			callback(msg, http.StatusBadGateway, "text/plain", "Bad Gateway")
 		} else {
-			payload := text(res.Body)
+			payload := proxy.Read(res.Body)
 			res.Body.Close()
 			callback(msg, res.StatusCode, res.Header.Get("Content-Type"), payload)
 		}
@@ -412,7 +382,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Set(mangle(ps.ByName("key")), text(r.Body)); err != nil {
+	if reply, err := store.Set(mangle(ps.ByName("key")), proxy.Read(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
