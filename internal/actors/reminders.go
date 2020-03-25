@@ -6,27 +6,30 @@ import (
 	"sync"
 	"time"
 
+	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
-	activeReminders reminderQueue
-	arMutex         = sync.Mutex{}
+	activeReminders        reminderQueue
+	arMutex                sync.Mutex
+	jitterWarningThreshold time.Duration
 )
 
 func init() {
 	activeReminders = make(reminderQueue, 0)
 	heap.Init(&activeReminders)
+	jitterWarningThreshold = time.Duration(config.ActorReminderAcceptableJitterFactor * int64(config.ActorReminderInterval))
 }
 
 // Reminder is a reminder
 type Reminder struct {
-	ActorType string        `json:"actorType"`
-	ActorID   string        `json:"actorId"`
-	ID        string        `json:"id"`
-	Deadline  time.Time     `json:"deadline"`
-	Period    time.Duration `json:"period,omitempty"` // 0 for one-shot reminders
-	Data      interface{}   `json:"data,omitempty"`
+	Actor    Actor
+	ID       string        `json:"id"`
+	Path     string        `json:"path"`
+	Deadline time.Time     `json:"deadline"`
+	Period   time.Duration `json:"period,omitempty"` // 0 for one-shot reminders
+	Data     interface{}   `json:"data,omitempty"`
 }
 
 // CancelReminderPayload is the JSON request body for cancelling a reminder
@@ -42,6 +45,7 @@ type GetReminderPayload struct {
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
 type ScheduleReminderPayload struct {
 	ID       string      `json:"id"`
+	Path     string      `json:"path"`
 	Deadline time.Time   `json:"deadline"`
 	Period   string      `json:"period,omitempty"`
 	Data     interface{} `json:"data,omitempty"`
@@ -60,10 +64,10 @@ func GetReminders(actorType string, actorID string, payload GetReminderPayload) 
 // ScheduleReminder schedules a new reminder
 func ScheduleReminder(actorType string, actorID string, payload ScheduleReminderPayload) (validRequest bool, err error) {
 	r := Reminder{
-		ActorType: actorType,
-		ActorID:   actorID,
-		ID:        payload.ID,
-		Deadline:  payload.Deadline,
+		Actor:    Actor{Type: actorType, ID: actorID},
+		Path:     payload.Path,
+		ID:       payload.ID,
+		Deadline: payload.Deadline,
 	}
 	if payload.Period != "" {
 		period, err := time.ParseDuration(payload.Period)
@@ -81,7 +85,7 @@ func ScheduleReminder(actorType string, actorID string, payload ScheduleReminder
 	return true, nil
 }
 
-// ProcessReminders causes all reminders with a deadline before time to be scheduled for execution.
+// ProcessReminders causes all reminders with a deadline before fireTime to be scheduled for execution.
 func ProcessReminders(ctx context.Context, fireTime time.Time) {
 	logger.Debug("ProcessReminders invoked at %v", fireTime)
 	arMutex.Lock()
@@ -91,7 +95,13 @@ func ProcessReminders(ctx context.Context, fireTime time.Time) {
 		if !valid {
 			break
 		}
-		logger.Info("ProcessReminders: at %v firing %v (deadline %v)", fireTime, r.ID, r.Deadline)
+		if fireTime.After(r.Deadline.Add(jitterWarningThreshold)) {
+			logger.Warning("ProcessReminders: LATE by %v firing %v to %v:%v:%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
+		}
+
+		//TODO: When API is ready, this Info log message is removed and replaced by an actual invoke
+		logger.Info("ProcessReminders: firing %v to %v:%v:%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
+
 		if r.Period > 0 {
 			r.Deadline = fireTime.Add(r.Period)
 			activeReminders.addReminder(r)

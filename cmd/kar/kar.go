@@ -308,7 +308,7 @@ func mangle(key string) string {
 // The body of the request is a JSON object with the following format
 //    cancel: { id:string }
 //    get: { id:string }
-//    schedule: { id:string, entrypoint:string, deadline:string(ISO-8601) period:string(ISO-8601), data: any}
+//    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string(ISO-8601), data: any}
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	actorType := ps.ByName("type")
 	actorID := ps.ByName("id")
@@ -520,7 +520,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(1 * time.Second)
+		ticker := time.NewTicker(config.ActorReminderInterval)
 		for {
 			select {
 			case now := <-ticker.C:

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
@@ -25,6 +26,12 @@ var (
 
 	// ActorTypes are the actor types implemented by this service
 	ActorTypes []string
+
+	// ActorReminderInterval is the interval at which reminders are processed
+	ActorReminderInterval time.Duration
+
+	// ActorReminderAcceptableJitterFactor is the multiple of ActorReminderIntervals before a reminder is logged as being late
+	ActorReminderAcceptableJitterFactor int64
 
 	// ServicePort is the HTTP port the service will be listening on
 	ServicePort int
@@ -67,12 +74,14 @@ var (
 )
 
 func init() {
-	var kafkaBrokers, verbosity, configDir, actorTypes string
+	var kafkaBrokers, verbosity, configDir, actorTypes, remindInterval string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
 	flag.StringVar(&actorTypes, "actors", "", "The actor types implemented by this service, as a comma separated list")
+	flag.StringVar(&remindInterval, "actor_reminder_interval", "1s", "The interval at which actor reminders are processed")
+	flag.Int64Var(&ActorReminderAcceptableJitterFactor, "actor_reminder_jitter_factor", 3, "Acceptable jitter factor for reminder delivery")
 	flag.IntVar(&ServicePort, "send", 8080, "The service port")
 	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
@@ -104,6 +113,11 @@ func init() {
 		ActorTypes = []string{}
 	} else {
 		ActorTypes = strings.Split(actorTypes, ",")
+	}
+
+	ActorReminderInterval, err = time.ParseDuration(remindInterval)
+	if err != nil {
+		logger.Fatal("error parsing actor_reminder_interval %v", remindInterval)
 	}
 
 	if !KafkaEnableTLS && os.Getenv("KAFKA_ENABLE_TLS") != "" {
