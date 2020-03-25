@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/store"
+	"github.ibm.com/solsa/kar.git/internal/placement"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -46,7 +46,7 @@ func Acquire(ctx context.Context, actor Actor) (*Entry, bool, error) {
 			if err != nil { // cancelled
 				return nil, false, err
 			}
-			sidecar, err := Get(actor)
+			sidecar, err := placement.Get(actor.Type, actor.ID)
 			if err != nil {
 				return nil, false, err
 			}
@@ -99,22 +99,8 @@ func Migrate(ctx context.Context, actor Actor, deactivate func(actor Actor)) err
 		deactivate(actor)
 	}
 	e.valid = false
-	_, err = Update(actor, config.ID, "") // delete placement if local
+	_, err = placement.Update(actor.Type, actor.ID, config.ID, "") // delete placement if local
 	e.sem.Release(1)
 	table.Delete(actor)
 	return err
-}
-
-func mangle(actor Actor) string {
-	return "actors" + config.Separator + "sidecar" + config.Separator + actor.Type + config.Separator + actor.ID
-}
-
-// Get returns current sidecar for actor
-func Get(actor Actor) (string, error) {
-	return store.Get(mangle(actor))
-}
-
-// Update atomically updates current sidecar for actor (use empty string for no sidecar)
-func Update(actor Actor, old, new string) (int, error) {
-	return store.CompareAndSet(mangle(actor), old, new)
 }
