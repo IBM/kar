@@ -23,13 +23,12 @@ them from firing.
 One shot reminders are automatically cancelled by the runtime after
 they are delivered to the target agent.
 
-All reminders are scheduled using relative time (ie, 10 seconds from
-"now").  Reminders will be delivered no sooner than the requested
-time.
+All reminders are scheduled using absolute time.
+Reminders will be delivered no sooner than the requested time.
 
 The target deadline for the next invocation of a periodic timer is
 determined by the runtime by adding the period to the current time
-when the reminder was delivered to the agent (last fire time).
+when the reminder was scheudled for delivery to the agent (last fire time).
 
 Strawman API
 ```

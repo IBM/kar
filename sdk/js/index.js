@@ -52,6 +52,11 @@ const actorSend = (type, id, path, params) => post(`actor-send/${type}/${id}/${p
 // synchronous actor invocation: returns invocation result
 const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
 
+// reminder operations
+const actorCancelReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/cancel`, params)
+const actorGetReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/get`, params)
+const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, params)
+
 // broadcast to all sidecars except for ours
 const broadcast = (path, params) => post(`broadcast/${path}`, params)
 
@@ -95,7 +100,13 @@ const errorHandler = [
 module.exports = {
   send,
   call,
-  actor: { async: actorSend, call: actorCall },
+  actor: {
+    async: actorSend,
+    call: actorCall,
+    cancelReminder: actorCancelReminder,
+    getReminder: actorGetReminder,
+    scheduleReminder: actorScheduleReminder
+  },
   broadcast,
   shutdown,
   logger,

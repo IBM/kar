@@ -66,6 +66,7 @@ func ScheduleReminder(actorType string, actorID string, payload ScheduleReminder
 		Period:    payload.Period,
 	}
 
+	logger.Info("ScheduleReminder: %v", r)
 	arMutex.Lock()
 	activeReminders.addReminder(r)
 	arMutex.Unlock()
@@ -83,7 +84,7 @@ func ProcessReminders(ctx context.Context, fireTime time.Time) {
 		if !valid {
 			break
 		}
-		logger.Info("at %v scheduling %v (deadline %v)", fireTime, r.ID, r.Deadline)
+		logger.Info("ProcessReminders: at %v scheduling %v (deadline %v)", fireTime, r.ID, r.Deadline)
 		if r.Period > 0 {
 			r.Deadline = fireTime.Add(r.Period)
 			activeReminders.addReminder(r)

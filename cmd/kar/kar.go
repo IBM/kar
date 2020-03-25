@@ -359,22 +359,6 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	switch action {
-	case "create":
-		var payload actors.ScheduleReminderPayload
-		err = json.Unmarshal(body, &payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		validRequest, err := actors.ScheduleReminder(actorType, actorID, payload)
-		if err != nil {
-			if validRequest {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			} else {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-		}
-		fmt.Fprintf(w, "OK")
-
 	case "cancel":
 		var payload actors.CancelReminderPayload
 		err = json.Unmarshal(body, &payload)
@@ -403,6 +387,22 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(reminders)
+
+	case "schedule":
+		var payload actors.ScheduleReminderPayload
+		err = json.Unmarshal(body, &payload)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+		validRequest, err := actors.ScheduleReminder(actorType, actorID, payload)
+		if err != nil {
+			if validRequest {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			} else {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+		}
+		fmt.Fprintf(w, "OK")
 
 	default:
 		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
