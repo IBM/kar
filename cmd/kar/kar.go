@@ -35,16 +35,7 @@ var (
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
 	finished      = make(chan struct{})                      // wait for http server to complete shutdown
-
-	// http client
-	client http.Client
 )
-
-func init() {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConnsPerHost = 256
-	client = http.Client{Transport: transport} // TODO adjust timeout
-}
 
 // send route handler
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
