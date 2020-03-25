@@ -329,7 +329,7 @@ func subscriber(channel <-chan pubsub.Message) {
 }
 
 func mangle(key string) string {
-	return "state" + config.Separator + key
+	return "main" + config.Separator + "state" + config.Separator + key
 }
 
 // set route handler
