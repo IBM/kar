@@ -148,6 +148,12 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	requests.Delete(request)
 }
 
+// migrate route handler
+func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	actors.Migrate(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, deactivate)
+	fmt.Fprint(w, "OK")
+}
+
 // callback sends the result of a call back to the caller
 func callback(msg map[string]string, statusCode int, contentType string, payload string) {
 	err := pubsub.Send(map[string]string{
@@ -322,9 +328,13 @@ func subscriber(channel <-chan pubsub.Message) {
 	}
 }
 
+func mangle(key string) string {
+	return "state" + config.Separator + key
+}
+
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Set("state"+config.Separator+ps.ByName("key"), text(r.Body)); err != nil {
+	if reply, err := store.Set(mangle(ps.ByName("key")), text(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -333,7 +343,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // get route handler
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Get("state" + config.Separator + ps.ByName("key")); err == store.ErrNil {
+	if reply, err := store.Get(mangle(ps.ByName("key"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("failed to get key: %v", err), http.StatusInternalServerError)
@@ -344,7 +354,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // del route handler
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Del("state" + config.Separator + ps.ByName("key")); err != nil {
+	if reply, err := store.Del(mangle(ps.ByName("key"))); err != nil {
 		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -391,6 +401,7 @@ func server(listener net.Listener) {
 	router.POST("/kar/call/:service/*path", call)
 	router.POST("/kar/actor-send/:type/:id/*path", send)
 	router.POST("/kar/actor-call/:type/:id/*path", call)
+	router.GET("/kar/actor-migrate/:type/:id", migrate)
 	router.POST("/kar/set/:key", set)
 	router.GET("/kar/get/:key", get)
 	router.GET("/kar/del/:key", del)

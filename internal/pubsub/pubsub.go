@@ -11,6 +11,7 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/cenkalti/backoff/v4"
+	"github.ibm.com/solsa/kar.git/internal/actors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
@@ -77,7 +78,7 @@ func marshal() []byte {
 }
 
 func mangle(p int32) string {
-	return "partition" + config.Separator + strconv.Itoa(int(p))
+	return "pubsub" + config.Separator + "partition" + config.Separator + strconv.Itoa(int(p))
 }
 
 func mark(partition int32, offset int64) {
@@ -156,15 +157,14 @@ func routeToSidecar(sidecar string) (int32, error) {
 
 // routeToActor maps an actor to a stable sidecar to a partition
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(t, id string) (partition int32, sidecar string, err error) {
-	key := "actor" + config.Separator + "sidecar" + config.Separator + t + config.Separator + id
+func routeToActor(actor actors.Actor) (partition int32, sidecar string, err error) {
 	for { // keep trying
-		sidecar, err = store.Get(key) // retrieve already assigned sidecar if any
+		sidecar, err = actors.Get(actor) // retrieve already assigned sidecar if any
 		if err != nil && err != store.ErrNil {
 			return // redis error
 		}
 		if sidecar != "" { // sidecar is already assigned
-			_, err = routeToHost(t) // make sure routes have been initialized
+			_, err = routeToHost(actor.Type) // make sure routes have been initialized
 			if err != nil {
 				return // no matching host, abort
 			}
@@ -173,12 +173,12 @@ func routeToActor(t, id string) (partition int32, sidecar string, err error) {
 				return // found sidecar and partition
 			}
 		}
-		expected := sidecar           // prepare to assign new sidecar
-		sidecar, err = routeToHost(t) // wait for matching service
+		expected := sidecar                    // prepare to assign new sidecar
+		sidecar, err = routeToHost(actor.Type) // wait for matching service
 		if err != nil {
 			return // no matching host, abort
 		}
-		_, err = store.CompareAndSet(key, expected, sidecar) // try saving sidecar
+		_, err = actors.Update(actor, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // redis error
 		}
@@ -199,7 +199,7 @@ func Send(msg map[string]string) error {
 		}
 	case "actor": // route to actor
 		var sidecar string
-		partition, sidecar, err = routeToActor(msg["type"], msg["id"])
+		partition, sidecar, err = routeToActor(actors.Actor{Type: msg["type"], ID: msg["id"]})
 		if err != nil {
 			logger.Debug("failed to route to actor type %s id $s %v: %v", msg["type"], msg["id"], err)
 			return err

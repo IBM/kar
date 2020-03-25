@@ -78,6 +78,9 @@ func CompareAndSet(key, expected, value string) (int, error) {
 	if expected == "" {
 		return redis.Int(do("SETNX", key, value))
 	}
+	if value == "" {
+		return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1 else return 0 end", 1, mangle(key), expected))
+	}
 	return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
 }
 
