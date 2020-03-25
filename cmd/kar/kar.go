@@ -213,21 +213,6 @@ func deactivate(actor actors.Actor) {
 
 // dispatch handles one incoming message
 func dispatch(msg map[string]string) error {
-	var e *actors.Entry
-	if msg["protocol"] == "actor" {
-		actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-		var fresh bool
-		e, fresh = actors.Acquire(ctx, actor)
-		if e == nil {
-			return ctx.Err()
-		}
-		defer e.Release()
-		if fresh {
-			activate(actor)
-		}
-		msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
-	}
-
 	switch msg["command"] {
 	case "send":
 		res, err := httpRequest("POST", msg)
@@ -306,26 +291,46 @@ func forward(msg map[string]string) error {
 // subscriber handles incoming messages
 func subscriber(channel <-chan pubsub.Message) {
 	for m := range channel {
-		msg := m.Value
-		valid := false
-		switch msg["protocol"] {
-		case "service":
-			valid = msg["service"] == config.ServiceName
-		case "actor":
-			valid = msg["sidecar"] == config.ID
-		case "sidecar":
-			valid = msg["sidecar"] == config.ID
+		invoke(m)
+	}
+}
+
+func invoke(m pubsub.Message) {
+	msg := m.Value
+	var err error
+	switch msg["protocol"] {
+	case "service":
+		if msg["service"] == config.ServiceName {
+			err = dispatch(msg)
+		} else {
+			err = forward(msg)
 		}
-		if valid { // message is intended for this sidecar
-			if dispatch(msg) == nil {
-				m.Mark() // message handled successfully
-			}
-		} else { // message is intended for another sidecar
-			if forward(msg) == nil {
-				m.Mark() // message forwarded successfully
-			}
+	case "actor":
+		err = invokeActor(msg)
+	case "sidecar":
+		if msg["sidecar"] == config.ID {
+			err = dispatch(msg)
+		} else {
+			err = forward(msg)
 		}
 	}
+	if err == nil {
+		m.Mark()
+	}
+}
+
+func invokeActor(msg map[string]string) error {
+	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
+	e, fresh := actors.Acquire(ctx, actor)
+	if e == nil && ctx.Err() == nil {
+		return forward(msg)
+	}
+	defer e.Release()
+	if fresh {
+		activate(actor)
+	}
+	msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
+	return dispatch(msg)
 }
 
 func mangle(key string) string {
