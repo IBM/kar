@@ -53,7 +53,14 @@ type ScheduleReminderPayload struct {
 
 // CancelReminder attempts to cancel the argument reminder
 func CancelReminder(actorType string, actorID string, payload CancelReminderPayload) (bool, error) {
-	return true, nil
+	r := Reminder{Actor: Actor{Type: actorType, ID: actorID}, ID: payload.ID}
+	arMutex.Lock()
+	found := activeReminders.cancelReminder(r)
+	arMutex.Unlock()
+	if found {
+		logger.Debug("Cancelled reminder %v", r)
+	}
+	return found, nil
 }
 
 // GetReminders returns all reminders that match the provided filter

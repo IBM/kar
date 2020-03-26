@@ -6,8 +6,9 @@ import (
 )
 
 type reminderEntry struct {
-	r     Reminder
-	index int
+	r         Reminder
+	cancelled bool
+	index     int
 }
 
 type reminderQueue []*reminderEntry
@@ -45,10 +46,23 @@ func (rq *reminderQueue) addReminder(r Reminder) {
 	heap.Push(rq, &reminderEntry{r: r})
 }
 
+func (rq *reminderQueue) cancelReminder(r Reminder) bool {
+	found := false
+	for idx, elem := range *rq {
+		if elem.r.ID == r.ID && elem.r.Actor == r.Actor {
+			(*rq)[idx].cancelled = true
+			found = true
+		}
+	}
+	return found
+}
+
 func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {
-	if len(*rq) > 0 && (*rq)[0].r.Deadline.Before(t) {
-		re := heap.Pop(rq)
-		return re.(*reminderEntry).r, true
+	for len(*rq) > 0 && (*rq)[0].r.Deadline.Before(t) {
+		re := heap.Pop(rq).(*reminderEntry)
+		if !re.cancelled {
+			return re.r, true
+		}
 	}
 	return Reminder{}, false
 }

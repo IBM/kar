@@ -10,7 +10,10 @@ async function main () {
   const period = '5s'
 
   await actor.scheduleReminder('A', '22', 'foo/bar', { id: 'ticker', deadline, period })
+  await actor.scheduleReminder('A', '23', 'foo/bar', { id: 'ticker', deadline, period })
   await actor.scheduleReminder('A', '22', 'foo/baz', { id: 'once', deadline })
+  await sleep(20000)
+  await actor.cancelReminder('A', '22', { id: 'ticker' })
   await sleep(20000)
 }
 
