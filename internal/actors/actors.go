@@ -68,12 +68,12 @@ func (e *Entry) Release() {
 }
 
 // Collect deactivates actors that not been used since time
-func Collect(ctx context.Context, time time.Time, deactivate func(actor Actor)) error {
+func Collect(ctx context.Context, time time.Time, deactivate func(ctx context.Context, actor Actor)) error {
 	table.Range(func(actor, v interface{}) bool {
 		e := v.(*Entry)
 		if e.sem.TryAcquire(1) { // skip actor if busy
 			if e.valid && e.time.Before(time) {
-				deactivate(actor.(Actor))
+				deactivate(ctx, actor.(Actor))
 				e.valid = false
 				e.sem.Release(1)
 				table.Delete(actor)
@@ -87,7 +87,7 @@ func Collect(ctx context.Context, time time.Time, deactivate func(actor Actor)) 
 }
 
 // Migrate deactivates actor if active and deletes placement if local
-func Migrate(ctx context.Context, actor Actor, deactivate func(actor Actor)) error {
+func Migrate(ctx context.Context, actor Actor, deactivate func(ctx context.Context, actor Actor)) error {
 	e, fresh, err := Acquire(ctx, actor)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func Migrate(ctx context.Context, actor Actor, deactivate func(actor Actor)) err
 		return nil
 	}
 	if !fresh {
-		deactivate(actor)
+		deactivate(ctx, actor)
 	}
 	e.valid = false
 	_, err = placement.Update(actor.Type, actor.ID, config.ID, "") // delete placement if local
