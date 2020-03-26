@@ -52,7 +52,7 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 	request := uuid.New().String()
 	ch := make(chan Reply)
 	requests.Store(request, ch)
-
+	defer requests.Delete(request)
 	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "service",
 		"service":      service,
@@ -63,18 +63,13 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 		"from":         config.ID, // this sidecar
 		"request":      request,
 		"payload":      payload})
-
 	if err != nil {
-		requests.Delete(request)
 		return nil, err
 	}
-
 	select {
 	case r := <-ch:
-		requests.Delete(request)
 		return &r, nil
 	case <-ctx.Done():
-		requests.Delete(request)
 		return nil, ctx.Err()
 	}
 }
@@ -84,7 +79,7 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 	request := uuid.New().String()
 	ch := make(chan Reply)
 	requests.Store(request, ch)
-
+	defer requests.Delete(request)
 	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -96,18 +91,13 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 		"from":         config.ID, // this sidecar
 		"request":      request,
 		"payload":      payload})
-
 	if err != nil {
-		requests.Delete(request)
 		return nil, err
 	}
-
 	select {
 	case r := <-ch:
-		requests.Delete(request)
 		return &r, nil
 	case <-ctx.Done():
-		requests.Delete(request)
 		return nil, ctx.Err()
 	}
 }
@@ -127,23 +117,22 @@ func Broadcast(ctx context.Context, path, payload, contentType string) {
 	}
 }
 
-// KillAll sends the kill command to all sidecars except for this one
+// KillAll sends the cancel command to all sidecars except for this one
 func KillAll(ctx context.Context) {
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
 			pubsub.Send(ctx, map[string]string{ // TODO log errors
 				"protocol": "sidecar",
 				"sidecar":  sidecar,
-				"command":  "kill",
+				"command":  "cancel",
 			})
 		}
 	}
 }
 
-// Migrate deactive an actor if active and reset its placement
-func Migrate(ctx context.Context, actor actors.Actor) {
-	actors.Migrate(ctx, actor, Deactivate)
-}
+// helper methods to handle incoming messages
+// return either nil or ctx.Err() if cancelled
+// log ignored errors to logger.Error
 
 func tell(ctx context.Context, msg map[string]string) error {
 	res, err := proxy.Do(ctx, "POST", msg)
@@ -165,7 +154,7 @@ func call(ctx context.Context, msg map[string]string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		logger.Error("failed to post to %s: %v", msg["path"], err)
+		logger.Warning("failed to post to %s: %v", msg["path"], err) // return error to caller
 		reply = Reply{StatusCode: http.StatusBadGateway, Payload: "Bad Gateway", ContentType: "text/plain"}
 	} else {
 		reply = Reply{StatusCode: res.StatusCode, Payload: proxy.Read(res.Body), ContentType: res.Header.Get("Content-Type")}
@@ -179,7 +168,8 @@ func call(ctx context.Context, msg map[string]string) error {
 		"content-type": reply.ContentType,
 		"payload":      reply.Payload})
 	if err != nil {
-		logger.Error("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
+		// TODO distinguish dead sidecar from other errors
+		logger.Debug("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
 	}
 	return nil
 }
@@ -201,21 +191,20 @@ func callback(ctx context.Context, msg map[string]string) error {
 func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]string) error {
 	switch msg["command"] {
 	case "tell":
-		tell(ctx, msg)
+		return tell(ctx, msg)
 	case "call":
-		call(ctx, msg)
+		return call(ctx, msg)
 	case "callback":
-		callback(ctx, msg)
-	case "kill":
-		cancel()
+		return callback(ctx, msg)
+	case "cancel":
+		cancel() // never fails
 	default:
-		logger.Error("failed to process command %s", msg["command"])
+		logger.Error("unexpected command %s", msg["command"])
 	}
 	return nil
 }
 
 func forwardToService(ctx context.Context, msg map[string]string) error {
-	logger.Info("forwarding message to service %s", msg["service"])
 	if err := pubsub.Send(ctx, msg); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -235,12 +224,12 @@ func forwardToActor(ctx context.Context, msg map[string]string) error {
 }
 
 func forwardToSidecar(ctx context.Context, msg map[string]string) error {
-	logger.Info("forwarding message to sidecar %s", msg["sidecar"])
 	if err := pubsub.Send(ctx, msg); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		logger.Debug("failed to forward message to sidecar %s: %v", msg["sidecar"], err) // not an error
+		// TODO distinguish dead sidecar from other errors
+		logger.Debug("failed to forward message to sidecar %s: %v", msg["sidecar"], err)
 	}
 	return nil
 }
@@ -256,6 +245,12 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		} else {
 			err = forwardToService(ctx, msg)
 		}
+	case "sidecar":
+		if msg["sidecar"] == config.ID {
+			err = dispatch(ctx, cancel, msg)
+		} else {
+			err = forwardToSidecar(ctx, msg)
+		}
 	case "actor":
 		actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
 		e, fresh, _ := actors.Acquire(ctx, actor)
@@ -269,17 +264,13 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
 			err = dispatch(ctx, cancel, msg)
 		}
-	case "sidecar":
-		if msg["sidecar"] == config.ID {
-			err = dispatch(ctx, cancel, msg)
-		} else {
-			err = forwardToSidecar(ctx, msg)
-		}
 	}
 	if err == nil {
 		message.Mark()
 	}
 }
+
+// actors
 
 // Activate activates an actor
 func Activate(ctx context.Context, actor actors.Actor) {
@@ -296,7 +287,7 @@ func Activate(ctx context.Context, actor actors.Actor) {
 
 // Deactivate deactivates an actor (but retains placement)
 func Deactivate(ctx context.Context, actor actors.Actor) {
-	logger.Info("deactivating actor %v", actor)
+	logger.Debug("deactivating actor %v", actor)
 	res, err := proxy.Do(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		logger.Error("failed to deactivate actor %v: %v", actor, err)
@@ -305,4 +296,9 @@ func Deactivate(ctx context.Context, actor actors.Actor) {
 	} else {
 		proxy.Flush(res.Body)
 	}
+}
+
+// Migrate deactivates an actor if active and resets its placement
+func Migrate(ctx context.Context, actor actors.Actor) {
+	actors.Migrate(ctx, actor, Deactivate)
 }
