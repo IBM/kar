@@ -293,18 +293,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(10 * time.Second)
-		for {
-			select {
-			case now := <-ticker.C:
-				logger.Debug("starting collection")
-				actors.Collect(ctx, now.Add(-10*time.Second), commands.Deactivate) // TODO invoke deactivate route
-				logger.Debug("finishing collection")
-			case <-ctx.Done():
-				ticker.Stop()
-				return
-			}
-		}
+		commands.Collect(ctx)
 	}()
 
 	wg.Add(1)

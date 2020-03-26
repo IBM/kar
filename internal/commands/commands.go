@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/internal/actors"
@@ -259,7 +260,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		} else {
 			defer e.Release()
 			if fresh {
-				Activate(ctx, actor)
+				activate(ctx, actor)
 			}
 			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
 			err = dispatch(ctx, cancel, msg)
@@ -272,8 +273,8 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 // actors
 
-// Activate activates an actor
-func Activate(ctx context.Context, actor actors.Actor) {
+// activate an actor
+func activate(ctx context.Context, actor actors.Actor) {
 	logger.Debug("activating actor %v", actor)
 	res, err := proxy.Do(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
@@ -285,8 +286,8 @@ func Activate(ctx context.Context, actor actors.Actor) {
 	}
 }
 
-// Deactivate deactivates an actor (but retains placement)
-func Deactivate(ctx context.Context, actor actors.Actor) {
+// deactivate an actor (but retains placement)
+func deactivate(ctx context.Context, actor actors.Actor) {
 	logger.Debug("deactivating actor %v", actor)
 	res, err := proxy.Do(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
@@ -300,5 +301,21 @@ func Deactivate(ctx context.Context, actor actors.Actor) {
 
 // Migrate deactivates an actor if active and resets its placement
 func Migrate(ctx context.Context, actor actors.Actor) {
-	actors.Migrate(ctx, actor, Deactivate)
+	actors.Migrate(ctx, actor, deactivate)
+}
+
+// Collect periodically collect actors with no recent usage (but retains placement)
+func Collect(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case now := <-ticker.C:
+			logger.Debug("starting collection")
+			actors.Collect(ctx, now.Add(-10*time.Second), deactivate)
+			logger.Debug("finishing collection")
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
 }
