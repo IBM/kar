@@ -319,3 +319,32 @@ func Collect(ctx context.Context) {
 		}
 	}
 }
+
+// ProcessReminders runs periodically and schedules delivery of all reminders whose deadline has passed
+func ProcessReminders(ctx context.Context) {
+	ticker := time.NewTicker(config.ActorReminderInterval)
+	for {
+		select {
+		case now := <-ticker.C:
+			actors.ProcessReminders(ctx, now)
+		case <-ctx.Done():
+			ticker.Stop()
+			return
+		}
+	}
+}
+
+// CancelReminder attempts to cancel a reminder
+func CancelReminder(ctx context.Context, actor actors.Actor, payload actors.CancelReminderPayload) (bool, error) {
+	return actors.CancelReminder(actor, payload)
+}
+
+// GetReminders gets all reminders that match the filter
+func GetReminders(ctx context.Context, actor actors.Actor, payload actors.GetReminderPayload) ([]actors.Reminder, error) {
+	return actors.GetReminders(actor, payload)
+}
+
+// ScheduleReminder schedules a reminder
+func ScheduleReminder(ctx context.Context, actor actors.Actor, payload actors.ScheduleReminderPayload) (validRequest bool, err error) {
+	return actors.ScheduleReminder(actor, payload)
+}

@@ -52,8 +52,8 @@ type ScheduleReminderPayload struct {
 }
 
 // CancelReminder attempts to cancel the argument reminder
-func CancelReminder(actorType string, actorID string, payload CancelReminderPayload) (bool, error) {
-	r := Reminder{Actor: Actor{Type: actorType, ID: actorID}, ID: payload.ID}
+func CancelReminder(actor Actor, payload CancelReminderPayload) (bool, error) {
+	r := Reminder{Actor: actor, ID: payload.ID}
 	arMutex.Lock()
 	found := activeReminders.cancelReminder(r)
 	arMutex.Unlock()
@@ -64,14 +64,14 @@ func CancelReminder(actorType string, actorID string, payload CancelReminderPayl
 }
 
 // GetReminders returns all reminders that match the provided filter
-func GetReminders(actorType string, actorID string, payload GetReminderPayload) ([]Reminder, error) {
+func GetReminders(actor Actor, payload GetReminderPayload) ([]Reminder, error) {
 	return nil, nil
 }
 
 // ScheduleReminder schedules a new reminder
-func ScheduleReminder(actorType string, actorID string, payload ScheduleReminderPayload) (validRequest bool, err error) {
+func ScheduleReminder(actor Actor, payload ScheduleReminderPayload) (validRequest bool, err error) {
 	r := Reminder{
-		Actor:    Actor{Type: actorType, ID: actorID},
+		Actor:    actor,
 		Path:     payload.Path,
 		ID:       payload.ID,
 		Deadline: payload.Deadline,

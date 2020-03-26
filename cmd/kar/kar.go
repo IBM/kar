@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/actors"
@@ -111,12 +110,13 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	actorType := ps.ByName("type")
 	actorID := ps.ByName("id")
 	action := ps.ByName("action")
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := ioutil.ReadAll(r.Body) // TODO: should limit size
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	actor := actors.Actor{Type: actorType, ID: actorID}
 	switch action {
 	case "cancel":
 		var payload actors.CancelReminderPayload
@@ -124,7 +124,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		found, err := actors.CancelReminder(actorType, actorID, payload)
+		found, err := commands.CancelReminder(ctx, actor, payload)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -140,7 +140,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		reminders, err := actors.GetReminders(actorType, actorID, payload)
+		reminders, err := commands.GetReminders(ctx, actor, payload)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -153,7 +153,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		validRequest, err := actors.ScheduleReminder(actorType, actorID, payload)
+		validRequest, err := commands.ScheduleReminder(ctx, actor, payload)
 		if err != nil {
 			if validRequest {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -299,16 +299,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ticker := time.NewTicker(config.ActorReminderInterval)
-		for {
-			select {
-			case now := <-ticker.C:
-				actors.ProcessReminders(ctx, now)
-			case <-ctx.Done():
-				ticker.Stop()
-				return
-			}
-		}
+		commands.ProcessReminders(ctx)
 	}()
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
