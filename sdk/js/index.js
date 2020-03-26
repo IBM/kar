@@ -53,8 +53,8 @@ const actorSend = (type, id, path, params) => post(`actor-send/${type}/${id}/${p
 const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
 
 // reminder operations
-const actorCancelReminder = (type, id, params) => post(`actor-reminder/${type}/${id}/cancel`, params)
-const actorGetReminder = (type, id, params) => post(`actor-reminder/${type}/${id}/get`, params)
+const actorCancelReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/cancel`, params)
+const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/get`, params)
 const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path }, params))
 
 // broadcast to all sidecars except for ours

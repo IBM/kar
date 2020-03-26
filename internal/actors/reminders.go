@@ -34,12 +34,12 @@ type Reminder struct {
 
 // CancelReminderPayload is the JSON request body for cancelling a reminder
 type CancelReminderPayload struct {
-	ID string `json:"id"`
+	ID string `json:"id,omitempty"`
 }
 
 // GetReminderPayload is the JSON request body for getting a reminder
 type GetReminderPayload struct {
-	ID string `json:"id"`
+	ID string `json:"id,omitempty"`
 }
 
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
@@ -53,19 +53,21 @@ type ScheduleReminderPayload struct {
 
 // CancelReminder attempts to cancel the argument reminder
 func CancelReminder(actor Actor, payload CancelReminderPayload) (bool, error) {
-	r := Reminder{Actor: actor, ID: payload.ID}
 	arMutex.Lock()
-	found := activeReminders.cancelReminder(r)
+	found := activeReminders.cancelReminder(actor, payload.ID)
 	arMutex.Unlock()
 	if found {
-		logger.Debug("Cancelled reminder %v", r)
+		logger.Debug("Cancelled reminders matching (%v, %v)", actor, payload.ID)
 	}
 	return found, nil
 }
 
 // GetReminders returns all reminders that match the provided filter
 func GetReminders(actor Actor, payload GetReminderPayload) ([]Reminder, error) {
-	return nil, nil
+	arMutex.Lock()
+	found := activeReminders.findMatchingReminders(actor, payload.ID)
+	arMutex.Unlock()
+	return found, nil
 }
 
 // ScheduleReminder schedules a new reminder

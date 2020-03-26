@@ -46,15 +46,25 @@ func (rq *reminderQueue) addReminder(r Reminder) {
 	heap.Push(rq, &reminderEntry{r: r})
 }
 
-func (rq *reminderQueue) cancelReminder(r Reminder) bool {
+func (rq *reminderQueue) cancelReminder(actor Actor, ID string) bool {
 	found := false
 	for idx, elem := range *rq {
-		if elem.r.ID == r.ID && elem.r.Actor == r.Actor {
+		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			(*rq)[idx].cancelled = true
 			found = true
 		}
 	}
 	return found
+}
+
+func (rq *reminderQueue) findMatchingReminders(actor Actor, ID string) []Reminder {
+	result := make([]Reminder, 0)
+	for _, elem := range *rq {
+		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
+			result = append(result, elem.r)
+		}
+	}
+	return result
 }
 
 func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {

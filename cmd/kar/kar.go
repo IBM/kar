@@ -103,9 +103,9 @@ func mangle(key string) string {
 //    :action is one of: cancel, get, schedule
 //
 // The body of the request is a JSON object with the following format
-//    cancel: { id:string }
-//    get: { id:string }
-//    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string(ISO-8601), data: any}
+//    cancel: { id:string }   id is optional
+//    get: { id:string }      id is optional
+//    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string (valid GoLang time.Duration string), data: any}   period and data are optional
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	actorType := ps.ByName("type")
 	actorID := ps.ByName("id")
