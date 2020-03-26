@@ -42,9 +42,6 @@ var (
 	mu       = &sync.RWMutex{}   // synchronize changes to routes
 	leader   = false             // session leader?
 
-	// termination
-	ctx context.Context
-
 	// state of this sidecar
 	here = userData{
 		Sidecar: config.ID,
@@ -98,7 +95,7 @@ func (msg *Message) Mark() {
 }
 
 // routeToService maps a service to a partition (keep trying)
-func routeToService(service string) (partition int32, err error) {
+func routeToService(ctx context.Context, service string) (partition int32, err error) {
 	err = backoff.Retry(func() error { // keep trying
 		mu.RLock()
 		sidecars := replicas[service]
@@ -116,7 +113,7 @@ func routeToService(service string) (partition int32, err error) {
 }
 
 // routeToHost maps an actor type to a sidecar (keep trying)
-func routeToHost(t string) (sidecar string, err error) {
+func routeToHost(ctx context.Context, t string) (sidecar string, err error) {
 	err = backoff.Retry(func() error { // keep trying
 		mu.RLock()
 		sidecars := hosts[t]
@@ -157,14 +154,14 @@ func routeToSidecar(sidecar string) (int32, error) {
 
 // routeToActor maps an actor to a stable sidecar to a partition
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(t, id string) (partition int32, sidecar string, err error) {
+func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
 	for { // keep trying
 		sidecar, err = placement.Get(t, id) // retrieve already assigned sidecar if any
 		if err != nil {
 			return // redis error
 		}
 		if sidecar != "" { // sidecar is already assigned
-			_, err = routeToHost(t) // make sure routes have been initialized
+			_, err = routeToHost(ctx, t) // make sure routes have been initialized
 			if err != nil {
 				return // no matching host, abort
 			}
@@ -173,8 +170,8 @@ func routeToActor(t, id string) (partition int32, sidecar string, err error) {
 				return // found sidecar and partition
 			}
 		}
-		expected := sidecar           // prepare to assign new sidecar
-		sidecar, err = routeToHost(t) // wait for matching service
+		expected := sidecar                // prepare to assign new sidecar
+		sidecar, err = routeToHost(ctx, t) // wait for matching service
 		if err != nil {
 			return // no matching host, abort
 		}
@@ -187,19 +184,19 @@ func routeToActor(t, id string) (partition int32, sidecar string, err error) {
 }
 
 // Send sends message to receiver
-func Send(msg map[string]string) error {
+func Send(ctx context.Context, msg map[string]string) error {
 	var partition int32
 	var err error
 	switch msg["protocol"] {
 	case "service": // route to service
-		partition, err = routeToService(msg["service"])
+		partition, err = routeToService(ctx, msg["service"])
 		if err != nil {
 			logger.Debug("failed to route to service %s: %v", msg["service"], err)
 			return err
 		}
 	case "actor": // route to actor
 		var sidecar string
-		partition, sidecar, err = routeToActor(msg["type"], msg["id"])
+		partition, sidecar, err = routeToActor(ctx, msg["type"], msg["id"])
 		if err != nil {
 			logger.Debug("failed to route to actor type %s id $s %v: %v", msg["type"], msg["id"], err)
 			return err
@@ -397,7 +394,7 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 }
 
 // consume orchestrate the consumer group sessions
-func consume() {
+func consume(ctx context.Context) {
 	for { // for each session
 		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
 			if _, ok := err.(tooFewPartitionsError); !ok {
@@ -410,11 +407,6 @@ func consume() {
 		}
 		// next session
 	}
-}
-
-// setContext sets the global context
-func setContext(c context.Context) {
-	ctx = c
 }
 
 // wrap balance strategy to detect session leader
@@ -435,8 +427,6 @@ func (s *balanceStrategy) AssignmentData(memberID string, topics map[string][]in
 
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
 func Dial(ctx context.Context) <-chan Message {
-	setContext(ctx)
-
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
 		logger.Fatal("invalid Kafka version: %v", err)
 	} else {
@@ -507,7 +497,7 @@ func Dial(ctx context.Context) <-chan Message {
 		logger.Fatal("failed to create Kafka consumer group: %v", err)
 	}
 
-	go consume()
+	go consume(ctx)
 
 	return out
 }

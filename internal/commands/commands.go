@@ -18,8 +18,8 @@ import (
 var requests = sync.Map{}
 
 // TellService sends a message to a service and does not wait for a reply
-func TellService(service, path, payload, contentType string) error {
-	return pubsub.Send(map[string]string{
+func TellService(ctx context.Context, service, path, payload, contentType string) error {
+	return pubsub.Send(ctx, map[string]string{
 		"protocol":     "service",
 		"service":      service,
 		"command":      "tell", // post with no callback expected
@@ -29,8 +29,8 @@ func TellService(service, path, payload, contentType string) error {
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(actor actors.Actor, path, payload, contentType string) error {
-	return pubsub.Send(map[string]string{
+func TellActor(ctx context.Context, actor actors.Actor, path, payload, contentType string) error {
+	return pubsub.Send(ctx, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
@@ -53,7 +53,7 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 	ch := make(chan Reply)
 	requests.Store(request, ch)
 
-	err := pubsub.Send(map[string]string{
+	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "service",
 		"service":      service,
 		"command":      "call",
@@ -85,7 +85,7 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 	ch := make(chan Reply)
 	requests.Store(request, ch)
 
-	err := pubsub.Send(map[string]string{
+	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
@@ -113,10 +113,10 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 }
 
 // Broadcast sends a message to all sidecars except for this one
-func Broadcast(path, payload, contentType string) {
+func Broadcast(ctx context.Context, path, payload, contentType string) {
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(map[string]string{ // TODO log errors
+			pubsub.Send(ctx, map[string]string{ // TODO log errors
 				"protocol":     "sidecar",
 				"sidecar":      sidecar,
 				"command":      "tell",
@@ -128,10 +128,10 @@ func Broadcast(path, payload, contentType string) {
 }
 
 // KillAll sends the kill command to all sidecars except for this one
-func KillAll() {
+func KillAll(ctx context.Context) {
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(map[string]string{ // TODO log errors
+			pubsub.Send(ctx, map[string]string{ // TODO log errors
 				"protocol": "sidecar",
 				"sidecar":  sidecar,
 				"command":  "kill",
@@ -170,7 +170,7 @@ func call(ctx context.Context, msg map[string]string) error {
 	} else {
 		reply = Reply{StatusCode: res.StatusCode, Payload: proxy.Read(res.Body), ContentType: res.Header.Get("Content-Type")}
 	}
-	err = pubsub.Send(map[string]string{
+	err = pubsub.Send(ctx, map[string]string{
 		"protocol":     "sidecar",
 		"sidecar":      msg["from"],
 		"command":      "callback",
@@ -216,7 +216,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 
 func forwardToService(ctx context.Context, msg map[string]string) error {
 	logger.Info("forwarding message to service %s", msg["service"])
-	if err := pubsub.Send(msg); err != nil {
+	if err := pubsub.Send(ctx, msg); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -225,7 +225,7 @@ func forwardToService(ctx context.Context, msg map[string]string) error {
 	return nil
 }
 func forwardToActor(ctx context.Context, msg map[string]string) error {
-	if err := pubsub.Send(msg); err != nil {
+	if err := pubsub.Send(ctx, msg); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -236,7 +236,7 @@ func forwardToActor(ctx context.Context, msg map[string]string) error {
 
 func forwardToSidecar(ctx context.Context, msg map[string]string) error {
 	logger.Info("forwarding message to sidecar %s", msg["sidecar"])
-	if err := pubsub.Send(msg); err != nil {
+	if err := pubsub.Send(ctx, msg); err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}

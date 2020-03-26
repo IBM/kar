@@ -37,9 +37,9 @@ var (
 func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		err = commands.TellService(ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = commands.TellService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	} else {
-		err = commands.TellActor(actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = commands.TellActor(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -54,7 +54,7 @@ func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // broadcast route handler
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	commands.Broadcast(ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+	commands.Broadcast(ctx, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
 }
 
@@ -207,7 +207,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	commands.KillAll()
+	commands.KillAll(ctx)
 	fmt.Fprint(w, "OK")
 	cancel()
 }
