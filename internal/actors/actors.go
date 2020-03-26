@@ -26,7 +26,7 @@ type Entry struct {
 var table = sync.Map{} // actor table: ID -> Entry
 
 // Acquire locks the actor
-// Acquire returns nil if actor is mapped to another sidecar
+// Acquire returns nil if actor is mapped to another sidecar or context is cancelled
 // Acquire returns true if actor requires activation
 func Acquire(ctx context.Context, actor Actor) (*Entry, bool, error) {
 	e := &Entry{sem: semaphore.NewWeighted(1)}
