@@ -153,7 +153,7 @@ func tell(ctx context.Context, msg map[string]string) error {
 		}
 		logger.Error("failed to post to %s: %v", msg["path"], err)
 	} else {
-		proxy.Read(res.Body)
+		proxy.Flush(res.Body)
 	}
 	return nil
 }
@@ -290,7 +290,7 @@ func Activate(ctx context.Context, actor actors.Actor) {
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
 		logger.Error("failed to activate actor %v: %s", actor, proxy.Read(res.Body))
 	} else {
-		proxy.Read(res.Body)
+		proxy.Flush(res.Body)
 	}
 }
 
@@ -303,6 +303,6 @@ func Deactivate(ctx context.Context, actor actors.Actor) {
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
 		logger.Error("failed to deactivate actor %v: %s", actor, proxy.Read(res.Body))
 	} else {
-		proxy.Read(res.Body)
+		proxy.Flush(res.Body)
 	}
 }
