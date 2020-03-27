@@ -2,6 +2,8 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -95,6 +97,20 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 	return callHelper(ctx, msg)
 }
 
+// Reminders sends a reminder command (delete, get, schedule) to an actor's sidecar and waits for a reply
+func Reminders(ctx context.Context, actor actors.Actor, action, payload, contentType, accept string) (*Reply, error) {
+	msg := map[string]string{
+		"protocol":     "actor",
+		"type":         actor.Type,
+		"id":           actor.ID,
+		"command":      "reminder",
+		"action":       action,
+		"content-type": contentType,
+		"accept":       accept,
+		"payload":      payload}
+	return callHelper(ctx, msg)
+}
+
 // Broadcast sends a message to all sidecars except for this one
 func Broadcast(ctx context.Context, path, payload, contentType string) {
 	for _, sidecar := range pubsub.Sidecars() {
@@ -127,15 +143,18 @@ func KillAll(ctx context.Context) {
 // return either nil or ctx.Err() if cancelled
 // log ignored errors to logger.Error
 
-func tell(ctx context.Context, msg map[string]string) error {
-	res, err := proxy.Do(ctx, "POST", msg)
+func respond(ctx context.Context, msg map[string]string, reply Reply) error {
+	err := pubsub.Send(ctx, map[string]string{
+		"protocol":     "sidecar",
+		"sidecar":      msg["from"],
+		"command":      "callback",
+		"request":      msg["request"],
+		"statusCode":   strconv.Itoa(reply.StatusCode),
+		"content-type": reply.ContentType,
+		"payload":      reply.Payload})
 	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		logger.Error("failed to post to %s: %v", msg["path"], err)
-	} else {
-		proxy.Flush(res.Body)
+		// TODO distinguish dead sidecar from other errors
+		logger.Debug("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
 	}
 	return nil
 }
@@ -152,19 +171,8 @@ func call(ctx context.Context, msg map[string]string) error {
 	} else {
 		reply = Reply{StatusCode: res.StatusCode, Payload: proxy.Read(res.Body), ContentType: res.Header.Get("Content-Type")}
 	}
-	err = pubsub.Send(ctx, map[string]string{
-		"protocol":     "sidecar",
-		"sidecar":      msg["from"],
-		"command":      "callback",
-		"request":      msg["request"],
-		"statusCode":   strconv.Itoa(reply.StatusCode),
-		"content-type": reply.ContentType,
-		"payload":      reply.Payload})
-	if err != nil {
-		// TODO distinguish dead sidecar from other errors
-		logger.Debug("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
-	}
-	return nil
+
+	return respond(ctx, msg, reply)
 }
 
 func callback(ctx context.Context, msg map[string]string) error {
@@ -181,16 +189,68 @@ func callback(ctx context.Context, msg map[string]string) error {
 	return nil
 }
 
+func reminders(ctx context.Context, msg map[string]string) error {
+	var reply Reply
+	actor := actors.Actor{Type: msg["type"], ID: msg["ID"]}
+	switch msg["action"] {
+	case "cancel":
+		found, err := actors.CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+		if err != nil {
+			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		} else {
+			reply = Reply{StatusCode: http.StatusOK, Payload: fmt.Sprintf("%v", found), ContentType: "text/plain"}
+		}
+	case "get":
+		found, err := actors.GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+		if err != nil {
+			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		} else {
+			blob, err := json.Marshal(found)
+			if err != nil {
+				reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
+			} else {
+				reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
+			}
+		}
+	case "schedule":
+		err := actors.ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
+		if err != nil {
+			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		} else {
+			reply = Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
+		}
+	default:
+		reply = Reply{StatusCode: http.StatusBadRequest, Payload: fmt.Sprintf("Invalid action: %v", msg["action"]), ContentType: "text/plain"}
+	}
+
+	return respond(ctx, msg, reply)
+}
+
+func tell(ctx context.Context, msg map[string]string) error {
+	res, err := proxy.Do(ctx, "POST", msg)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		logger.Error("failed to post to %s: %v", msg["path"], err)
+	} else {
+		proxy.Flush(res.Body)
+	}
+	return nil
+}
+
 func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]string) error {
 	switch msg["command"] {
-	case "tell":
-		return tell(ctx, msg)
 	case "call":
 		return call(ctx, msg)
 	case "callback":
 		return callback(ctx, msg)
 	case "cancel":
 		cancel() // never fails
+	case "reminder":
+		return reminders(ctx, msg)
+	case "tell":
+		return tell(ctx, msg)
 	default:
 		logger.Error("unexpected command %s", msg["command"])
 	}
@@ -324,19 +384,4 @@ func ProcessReminders(ctx context.Context) {
 			return
 		}
 	}
-}
-
-// CancelReminder attempts to cancel a reminder
-func CancelReminder(ctx context.Context, actor actors.Actor, payload actors.CancelReminderPayload) (bool, error) {
-	return actors.CancelReminder(actor, payload)
-}
-
-// GetReminders gets all reminders that match the filter
-func GetReminders(ctx context.Context, actor actors.Actor, payload actors.GetReminderPayload) ([]actors.Reminder, error) {
-	return actors.GetReminders(actor, payload)
-}
-
-// ScheduleReminder schedules a reminder
-func ScheduleReminder(ctx context.Context, actor actors.Actor, payload actors.ScheduleReminderPayload) (validRequest bool, err error) {
-	return actors.ScheduleReminder(actor, payload)
 }

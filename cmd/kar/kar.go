@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -103,66 +102,18 @@ func subscriber(channel <-chan pubsub.Message) {
 //    get: { id:string }      id is optional
 //    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string (valid GoLang time.Duration string), data: any}   period and data are optional
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	actorType := ps.ByName("type")
-	actorID := ps.ByName("id")
-	action := ps.ByName("action")
-	body, err := ioutil.ReadAll(r.Body) // TODO: should limit size
+	reply, err := commands.Reminders(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("action"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	actor := actors.Actor{Type: actorType, ID: actorID}
-	switch action {
-	case "cancel":
-		var payload actors.CancelReminderPayload
-		err = json.Unmarshal(body, &payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		found, err := commands.CancelReminder(ctx, actor, payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		if found {
-			fmt.Fprintf(w, "OK")
+		if ctx.Err() != nil {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
-			http.Error(w, "Not Found", http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		}
-
-	case "get":
-		var payload actors.GetReminderPayload
-		err = json.Unmarshal(body, &payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		reminders, err := commands.GetReminders(ctx, actor, payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(reminders)
-
-	case "schedule":
-		var payload actors.ScheduleReminderPayload
-		err = json.Unmarshal(body, &payload)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		validRequest, err := commands.ScheduleReminder(ctx, actor, payload)
-		if err != nil {
-			if validRequest {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			} else {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-		}
-		fmt.Fprintf(w, "OK")
-
-	default:
-		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
+	} else {
+		w.Header().Add("Content-Type", reply.ContentType)
+		w.WriteHeader(reply.StatusCode)
+		fmt.Fprint(w, reply.Payload)
 	}
-
 }
 
 func mangle(t, id string) string {

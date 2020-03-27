@@ -46,12 +46,12 @@ func (rq *reminderQueue) addReminder(r Reminder) {
 	heap.Push(rq, &reminderEntry{r: r})
 }
 
-func (rq *reminderQueue) cancelReminder(actor Actor, ID string) bool {
-	found := false
+func (rq *reminderQueue) cancelMatchingReminders(actor Actor, ID string) int {
+	found := 0
 	for idx, elem := range *rq {
 		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			(*rq)[idx].cancelled = true
-			found = true
+			found = found + 1
 		}
 	}
 	return found

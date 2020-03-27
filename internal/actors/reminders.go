@@ -33,18 +33,12 @@ type Reminder struct {
 	EncodedData string        `json:"encodedData,omitempty"`
 }
 
-// CancelReminderPayload is the JSON request body for cancelling a reminder
-type CancelReminderPayload struct {
-	ID string `json:"id,omitempty"`
-}
-
-// GetReminderPayload is the JSON request body for getting a reminder
-type GetReminderPayload struct {
+type reminderFilter struct {
 	ID string `json:"id,omitempty"`
 }
 
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
-type ScheduleReminderPayload struct {
+type scheduleReminderPayload struct {
 	ID       string      `json:"id"`
 	Path     string      `json:"path"`
 	Deadline time.Time   `json:"deadline"`
@@ -52,44 +46,54 @@ type ScheduleReminderPayload struct {
 	Data     interface{} `json:"data,omitempty"`
 }
 
-// CancelReminder attempts to cancel the argument reminder
-func CancelReminder(actor Actor, payload CancelReminderPayload) (bool, error) {
-	arMutex.Lock()
-	found := activeReminders.cancelReminder(actor, payload.ID)
-	arMutex.Unlock()
-	if found {
-		logger.Debug("Cancelled reminders matching (%v, %v)", actor, payload.ID)
+// CancelReminders cancels all reminders that match the provided filter
+func CancelReminders(actor Actor, payload string, contentType string, accepts string) (int, error) {
+	var f reminderFilter
+	if err := json.Unmarshal([]byte(payload), &f); err != nil {
+		return 0, err
 	}
+
+	arMutex.Lock()
+	found := activeReminders.cancelMatchingReminders(actor, f.ID)
+	arMutex.Unlock()
+
+	logger.Debug("Cancelled %v reminders matching (%v, %v)", found, actor, f.ID)
 	return found, nil
 }
 
 // GetReminders returns all reminders that match the provided filter
-func GetReminders(actor Actor, payload GetReminderPayload) ([]Reminder, error) {
+func GetReminders(actor Actor, payload string, contentType string, accepts string) ([]Reminder, error) {
+	var f reminderFilter
+	if err := json.Unmarshal([]byte(payload), &f); err != nil {
+		return nil, err
+	}
+
 	arMutex.Lock()
-	found := activeReminders.findMatchingReminders(actor, payload.ID)
+	found := activeReminders.findMatchingReminders(actor, f.ID)
 	arMutex.Unlock()
+
 	return found, nil
 }
 
 // ScheduleReminder schedules a new reminder
-func ScheduleReminder(actor Actor, payload ScheduleReminderPayload) (validRequest bool, err error) {
-	r := Reminder{
-		Actor:    actor,
-		Path:     payload.Path,
-		ID:       payload.ID,
-		Deadline: payload.Deadline,
+func ScheduleReminder(actor Actor, payload string, contentType string, accepts string) error {
+	var data scheduleReminderPayload
+	if err := json.Unmarshal([]byte(payload), &data); err != nil {
+		return err
 	}
-	if payload.Period != "" {
-		period, err := time.ParseDuration(payload.Period)
+
+	r := Reminder{Actor: actor, Path: data.Path, ID: data.ID, Deadline: data.Deadline}
+	if data.Period != "" {
+		period, err := time.ParseDuration(data.Period)
 		if err != nil {
-			return false, err
+			return err
 		}
 		r.Period = period
 	}
-	if payload.Data != nil {
-		buf, err := json.Marshal(payload.Data)
+	if data.Data != nil {
+		buf, err := json.Marshal(data.Data)
 		if err != nil {
-			return false, err
+			return err
 		}
 		r.EncodedData = string(buf)
 	}
@@ -99,7 +103,7 @@ func ScheduleReminder(actor Actor, payload ScheduleReminderPayload) (validReques
 	activeReminders.addReminder(r)
 	arMutex.Unlock()
 
-	return true, nil
+	return nil
 }
 
 // ProcessReminders causes all reminders with a deadline before fireTime to be scheduled for execution.
