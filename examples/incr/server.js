@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime } = require('kar')
 
 const app = express()
 
@@ -21,29 +21,37 @@ app.post('/shutdown', async (_reg, res) => {
   server.close(() => process.exit())
 })
 
-app.get('/actor/foo/:id', (req, res) => {
-  console.log('actor', req.params.id, 'activate')
-  res.sendStatus(200)
-})
+// example actor
 
-app.delete('/actor/foo/:id', (req, res) => {
-  console.log('actor', req.params.id, 'deactivate')
-  res.sendStatus(200)
-})
-
-app.post('/actor/foo/:id/incr', (req, res) => {
-  console.log('actor', req.params.id, 'incr', req.body)
-  res.json(req.body + 1)
-})
-
-app.post('/actor/foo/:id/echo', (req, res) => {
-  if (req.body && req.body.msg) {
-    console.log(`actor ${req.params.id} says "${req.body.msg}"`)
-  } else {
-    console.log(`actor ${req.params.id} has nothing to say`)
+class Foo {
+  constructor (id) {
+    this.id = id
   }
-  res.json('OK')
-})
+
+  activate () {
+    console.log('actor', this.id, 'activate')
+  }
+
+  incr (v) {
+    console.log('actor', this.id, 'incr', v)
+    return v + 1
+  }
+
+  echo (body) {
+    if (body && body.msg) {
+      console.log(`actor ${this.id} says "${body.msg}"`)
+    } else {
+      console.log(`actor ${this.id} has nothing to say`)
+    }
+    return 'OK'
+  }
+
+  deactivate () {
+    console.log('actor', this.id, 'deactivate')
+  }
+}
+
+app.use(actorRuntime({ foo: Foo }))
 
 app.use(errorHandler) // enable kar error handling
 

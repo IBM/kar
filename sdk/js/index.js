@@ -1,3 +1,4 @@
+const express = require('express') // for parsing http requests
 const http = require('http') // for configuring http agent
 const parser = require('body-parser') // for parsing http requests
 const morgan = require('morgan') // for logging http requests and responses
@@ -120,6 +121,41 @@ const sys = (type, id) => ({
   scheduleReminder: (path, params) => actorScheduleReminder(type, id, path, params)
 })
 
+const table = {} // live actor instances: table[actorType][actorId]
+
+function actorRuntime (actors) {
+  const router = express.Router()
+
+  // actor activation route
+  router.get('/actor/:type/:id', (req, res, next) => Promise.resolve()
+    .then(_ => {
+      table[req.params.type] = table[req.params.type] || {}
+      table[req.params.type][req.params.id] = new (actors[req.params.type])(req.params.id)
+    }) // instantiate actor and add to index
+    .then(_ => { // run optional activate callback
+      if (typeof table[req.params.type][req.params.id].activate === 'function') table[req.params.type][req.params.id].activate()
+    })
+    .then(_ => res.sendStatus(200)) // OK
+    .catch(next))
+
+  // actor deactivation route
+  router.delete('/actor/:type/:id', (req, res, next) => Promise.resolve()
+    .then(_ => { // run optional deactivate callback
+      if (typeof table[req.params.type][req.params.id].deactivate === 'function') table[req.params.type][req.params.id].deactivate()
+    })
+    .then(_ => delete table[req.params.type][req.params.id]) // remove actor from index
+    .then(_ => res.sendStatus(200)) // OK
+    .catch(next))
+
+  // method invocation route
+  router.post('/actor/:type/:id/:method', (req, res, next) => Promise.resolve()
+    .then(_ => table[req.params.type][req.params.id][req.params.method](req.body)) // invoke method on actor
+    .then(result => res.json(result)) // stringify invocation result
+    .catch(next)) // delegate error handling to postprocessor
+
+  return router
+}
+
 const actors = new Proxy({}, {
   get: function (_, type) {
     return new Proxy({}, {
@@ -157,6 +193,7 @@ module.exports = {
     }
   },
   actors,
+  actorRuntime,
   broadcast,
   shutdown,
   logger,
