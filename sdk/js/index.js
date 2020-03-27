@@ -1,4 +1,4 @@
-const express = require('express') // for parsing http requests
+const express = require('express')
 const http = require('http') // for configuring http agent
 const parser = require('body-parser') // for parsing http requests
 const morgan = require('morgan') // for logging http requests and responses
@@ -83,6 +83,11 @@ const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method
 const jsonParser = [
   parser.text({ type: '*/*' }), // parse to string first irrespective of content-type
   (req, _res, next) => {
+    if (req._parsed) {
+      next()
+      return
+    }
+    req._parsed = true
     if (req.body.length > 0) {
       try {
         req.body = JSON.parse(req.body) // return parsed json
@@ -126,6 +131,8 @@ const table = {} // live actor instances: table[actorType][actorId]
 function actorRuntime (actors) {
   const router = express.Router()
 
+  router.use(jsonParser)
+
   // actor activation route
   router.get('/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => {
@@ -153,6 +160,8 @@ function actorRuntime (actors) {
     .then(_ => table[req.params.type][req.params.id][req.params.method](req.body)) // invoke method on actor
     .then(result => res.json(result)) // stringify invocation result
     .catch(next)) // delegate error handling to postprocessor
+
+  router.use(errorHandler)
 
   return router
 }
