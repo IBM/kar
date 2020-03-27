@@ -37,14 +37,11 @@ app.post('/actor/foo/:id/incr', (req, res) => {
 })
 
 app.post('/actor/foo/:id/echo', (req, res) => {
-  console.log('I got your message!')
-  /*
-  if (req.body.msg) {
-    console.log(`actor ${req.params.id} says ${req.body.msg}`)
+  if (req.body && req.body.msg) {
+    console.log(`actor ${req.params.id} says "${req.body.msg}"`)
   } else {
     console.log(`actor ${req.params.id} has nothing to say`)
   }
-  */
   res.json('OK')
 })
 
