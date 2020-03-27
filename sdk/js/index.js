@@ -114,7 +114,10 @@ const sys = (type, id) => ({
   set: (key, params) => actorSetState(type, id, key, params),
   delete: key => actorDeleteState(type, id, key),
   getAll: () => actorGetAllState(type, id),
-  deleteAll: () => actorDeleteAllState(type, id)
+  deleteAll: () => actorDeleteAllState(type, id),
+  cancelReminder: params => actorCancelReminder(type, id, params),
+  getReminder: params => actorGetReminder(type, id, params),
+  scheduleReminder: (path, params) => actorScheduleReminder(type, id, path, params)
 })
 
 const actors = new Proxy({}, {
