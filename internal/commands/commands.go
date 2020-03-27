@@ -103,8 +103,7 @@ func Reminders(ctx context.Context, actor actors.Actor, action, payload, content
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
-		"command":      "reminder",
-		"action":       action,
+		"command":      "reminder:" + action,
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
@@ -189,40 +188,44 @@ func callback(ctx context.Context, msg map[string]string) error {
 	return nil
 }
 
-func reminders(ctx context.Context, msg map[string]string) error {
+func reminderCancel(ctx context.Context, msg map[string]string) error {
 	var reply Reply
 	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-	switch msg["action"] {
-	case "cancel":
-		found, err := actors.CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
-		if err != nil {
-			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
-		} else {
-			reply = Reply{StatusCode: http.StatusOK, Payload: fmt.Sprintf("%v", found), ContentType: "text/plain"}
-		}
-	case "get":
-		found, err := actors.GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
-		if err != nil {
-			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
-		} else {
-			blob, err := json.Marshal(found)
-			if err != nil {
-				reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
-			} else {
-				reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
-			}
-		}
-	case "schedule":
-		err := actors.ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
-		if err != nil {
-			reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
-		} else {
-			reply = Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
-		}
-	default:
-		reply = Reply{StatusCode: http.StatusBadRequest, Payload: fmt.Sprintf("Invalid action: %v", msg["action"]), ContentType: "text/plain"}
+	found, err := actors.CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	if err != nil {
+		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+	} else {
+		reply = Reply{StatusCode: http.StatusOK, Payload: fmt.Sprintf("%v", found), ContentType: "text/plain"}
 	}
+	return respond(ctx, msg, reply)
+}
 
+func reminderGet(ctx context.Context, msg map[string]string) error {
+	var reply Reply
+	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
+	found, err := actors.GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	if err != nil {
+		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+	} else {
+		blob, err := json.Marshal(found)
+		if err != nil {
+			reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
+		} else {
+			reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
+		}
+	}
+	return respond(ctx, msg, reply)
+}
+
+func reminderSchedule(ctx context.Context, msg map[string]string) error {
+	var reply Reply
+	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
+	err := actors.ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	if err != nil {
+		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+	} else {
+		reply = Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
+	}
 	return respond(ctx, msg, reply)
 }
 
@@ -247,8 +250,12 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 		return callback(ctx, msg)
 	case "cancel":
 		cancel() // never fails
-	case "reminder":
-		return reminders(ctx, msg)
+	case "reminder:cancel":
+		return reminderCancel(ctx, msg)
+	case "reminder:get":
+		return reminderGet(ctx, msg)
+	case "reminder:schedule":
+		return reminderSchedule(ctx, msg)
 	case "tell":
 		return tell(ctx, msg)
 	default:

@@ -102,7 +102,12 @@ func subscriber(channel <-chan pubsub.Message) {
 //    get: { id:string }      id is optional
 //    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string (valid GoLang time.Duration string), data: any}   period and data are optional
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := commands.Reminders(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("action"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	action := ps.ByName("action")
+	if !(action == "cancel" || action == "get" || action == "schedule") {
+		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
+		return
+	}
+	reply, err := commands.Reminders(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if ctx.Err() != nil {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
