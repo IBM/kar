@@ -94,6 +94,26 @@ func Del(key string) (int, error) {
 	return redis.Int(do("DEL", key))
 }
 
+// HGet hash key
+func HGet(hash, key string) (string, error) {
+	return redis.String(do("HGET", hash, key))
+}
+
+// HSet hash key value
+func HSet(hash, key, value string) (int, error) {
+	return redis.Int(do("HSET", hash, key, value))
+}
+
+// HDel hash key
+func HDel(hash, key string) (int, error) {
+	return redis.Int(do("HDEL", hash, key))
+}
+
+// HGetAll hash
+func HGetAll(hash string) (map[string]string, error) {
+	return redis.StringMap(do("HGETALL", hash))
+}
+
 // Dial establishes a connection to the store
 func Dial() {
 	redisOptions := []redis.DialOption{}

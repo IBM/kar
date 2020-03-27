@@ -92,10 +92,6 @@ func subscriber(channel <-chan pubsub.Message) {
 	}
 }
 
-func mangle(key string) string {
-	return "main" + config.Separator + "state" + config.Separator + key
-}
-
 // reminder route handler
 // Supported paths: "/kar/actor-reminder/:type/:id/:action"
 //    :type is an actor type
@@ -169,10 +165,14 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 }
 
+func mangle(t, id string) string {
+	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
+}
+
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Set(mangle(ps.ByName("key")), proxy.Read(r.Body)); err != nil {
-		http.Error(w, fmt.Sprintf("failed to set key: %v", err), http.StatusInternalServerError)
+	if reply, err := store.HSet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), proxy.Read(r.Body)); err != nil {
+		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
 	}
@@ -180,10 +180,10 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // get route handler
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Get(mangle(ps.ByName("key"))); err == store.ErrNil {
+	if reply, err := store.HGet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get key: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
 	}
@@ -191,8 +191,39 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // del route handler
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Del(mangle(ps.ByName("key"))); err != nil {
-		http.Error(w, fmt.Sprintf("failed to delete key: %v", err), http.StatusInternalServerError)
+	if reply, err := store.HDel(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
+		http.Error(w, fmt.Sprintf("HDEL failed: %v", err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, reply)
+	}
+}
+
+// getAll route handler
+func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if reply, err := store.HGetAll(mangle(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	} else if err != nil {
+		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
+	} else {
+		// reply has type map[string]string
+		// we unmarshal the values then marshal the map
+		m := map[string]interface{}{}
+		for i, s := range reply {
+			var v interface{}
+			json.Unmarshal([]byte(s), &v)
+			m[i] = v
+		}
+		b, _ := json.Marshal(m)
+		fmt.Fprint(w, string(b))
+	}
+}
+
+// delAll route handler
+func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if reply, err := store.Del(mangle(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
+		http.Error(w, "Not Found", http.StatusNotFound)
+	} else if err != nil {
+		http.Error(w, fmt.Sprintf("DEL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
 	}
@@ -226,9 +257,11 @@ func server(listener net.Listener) {
 	router.POST("/kar/actor-call/:type/:id/*path", call)
 	router.GET("/kar/actor-migrate/:type/:id", migrate)
 	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
-	router.POST("/kar/set/:key", set)
-	router.GET("/kar/get/:key", get)
-	router.GET("/kar/del/:key", del)
+	router.POST("/kar/actor-state/:type/:id/:key", set)
+	router.GET("/kar/actor-state/:type/:id/:key", get)
+	router.DELETE("/kar/actor-state/:type/:id/:key", del)
+	router.GET("/kar/actor-state/:type/:id", getAll)
+	router.DELETE("/kar/actor-state/:type/:id", delAll)
 	router.GET("/kar/kill", kill)
 	router.GET("/kar/killall", killall)
 	router.GET("/kar/health", health)

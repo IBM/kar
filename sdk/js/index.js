@@ -35,6 +35,11 @@ function get (api) {
   return fetch(url + api, { headers, agent }).then(parse)
 }
 
+// http get: parse response body
+function del (api) {
+  return fetch(url + api, { method: 'DELETE', headers, agent }).then(parse)
+}
+
 // check if string value is truthy
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
@@ -56,6 +61,13 @@ const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${p
 const actorCancelReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/cancel`, params)
 const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/get`, params)
 const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path }, params))
+
+// actor state operations
+const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`)
+const actorSetState = (type, id, key, params = {}) => post(`actor-state/${type}/${id}/${key}`, params)
+const actorDeleteState = (type, id, key) => del(`actor-state/${type}/${id}/${key}`)
+const actorGetAllState = (type, id) => get(`actor-state/${type}/${id}`)
+const actorDeleteAllState = (type, id) => del(`actor-state/${type}/${id}`)
 
 // broadcast to all sidecars except for ours
 const broadcast = (path, params) => post(`broadcast/${path}`, params)
@@ -105,7 +117,14 @@ module.exports = {
     call: actorCall,
     cancelReminder: actorCancelReminder,
     getReminder: actorGetReminder,
-    scheduleReminder: actorScheduleReminder
+    scheduleReminder: actorScheduleReminder,
+    state: {
+      get: actorGetState,
+      set: actorSetState,
+      delete: actorDeleteState,
+      getAll: actorGetAllState,
+      deleteAll: actorDeleteAllState
+    }
   },
   broadcast,
   shutdown,
