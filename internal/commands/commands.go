@@ -48,22 +48,15 @@ type Reply struct {
 	Payload     string
 }
 
-// CallService calls a service and waits for a reply
-func CallService(ctx context.Context, service, path, payload, contentType, accept string) (*Reply, error) {
+// callHelper makes a call via pubsub to a sidecar and waits for a reply
+func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	err := pubsub.Send(ctx, map[string]string{
-		"protocol":     "service",
-		"service":      service,
-		"command":      "call",
-		"path":         path,
-		"content-type": contentType,
-		"accept":       accept,
-		"from":         config.ID, // this sidecar
-		"request":      request,
-		"payload":      payload})
+	msg["from"] = config.ID // this sidecar
+	msg["request"] = request
+	err := pubsub.Send(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -75,13 +68,22 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 	}
 }
 
+// CallService calls a service and waits for a reply
+func CallService(ctx context.Context, service, path, payload, contentType, accept string) (*Reply, error) {
+	msg := map[string]string{
+		"protocol":     "service",
+		"service":      service,
+		"command":      "call",
+		"path":         path,
+		"content-type": contentType,
+		"accept":       accept,
+		"payload":      payload}
+	return callHelper(ctx, msg)
+}
+
 // CallActor calls an actor and waits for a reply
 func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentType, accept string) (*Reply, error) {
-	request := uuid.New().String()
-	ch := make(chan Reply)
-	requests.Store(request, ch)
-	defer requests.Delete(request)
-	err := pubsub.Send(ctx, map[string]string{
+	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
@@ -89,18 +91,8 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 		"path":         path,
 		"content-type": contentType,
 		"accept":       accept,
-		"from":         config.ID, // this sidecar
-		"request":      request,
-		"payload":      payload})
-	if err != nil {
-		return nil, err
-	}
-	select {
-	case r := <-ch:
-		return &r, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+		"payload":      payload}
+	return callHelper(ctx, msg)
 }
 
 // Broadcast sends a message to all sidecars except for this one
