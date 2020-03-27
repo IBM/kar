@@ -191,7 +191,7 @@ func callback(ctx context.Context, msg map[string]string) error {
 
 func reminders(ctx context.Context, msg map[string]string) error {
 	var reply Reply
-	actor := actors.Actor{Type: msg["type"], ID: msg["ID"]}
+	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
 	switch msg["action"] {
 	case "cancel":
 		found, err := actors.CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
