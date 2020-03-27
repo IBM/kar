@@ -36,6 +36,15 @@ app.post('/actor/foo/:id/incr', (req, res) => {
   res.json(req.body + 1)
 })
 
+app.post('/actor/foo/:id/echo', (req, res) => {
+  if (req.body.msg) {
+    console.log(`actor ${req.params.id} says ${req.body.msg}`)
+  } else {
+    console.log(`actor ${req.params.id} has nothing to say`)
+  }
+  res.json('OK')
+})
+
 app.use(errorHandler) // enable kar error handling
 
 const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
