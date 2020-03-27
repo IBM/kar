@@ -97,7 +97,7 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 	return callHelper(ctx, msg)
 }
 
-// Reminders sends a reminder command (delete, get, schedule) to an actor's sidecar and waits for a reply
+// Reminders sends a reminder command (cancel, get, schedule) to an actor's sidecar and waits for a reply
 func Reminders(ctx context.Context, actor actors.Actor, action, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
