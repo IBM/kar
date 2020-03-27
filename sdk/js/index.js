@@ -46,13 +46,13 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 // public methods
 
 // asynchronous service invocation, returns "OK" immediately
-const send = (service, path, params) => post(`send/${service}/${path}`, params)
+const tell = (service, path, params) => post(`tell/${service}/${path}`, params)
 
 // synchronous service invocation, returns invocation result
 const call = (service, path, params) => post(`call/${service}/${path}`, params)
 
 // asynchronous actor invocation, returns "OK" immediately
-const actorSend = (type, id, path, params) => post(`actor-send/${type}/${id}/${path}`, params)
+const actorTell = (type, id, path, params) => post(`actor-tell/${type}/${id}/${path}`, params)
 
 // synchronous actor invocation: returns invocation result
 const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
@@ -108,12 +108,39 @@ const errorHandler = [
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
+const sys = (type, id) => ({
+  tell: (method, params) => actorTell(type, id, method, params),
+  get: key => actorGetState(type, id, key),
+  set: (key, params) => actorSetState(type, id, key, params),
+  delete: key => actorDeleteState(type, id, key),
+  getAll: () => actorGetAllState(type, id),
+  deleteAll: () => actorDeleteAllState(type, id)
+})
+
+const actors = new Proxy({}, {
+  get: function (_, type) {
+    return new Proxy({}, {
+      get: function (_, id) {
+        return new Proxy({}, {
+          get: function (_, method) {
+            if (method === 'sys') {
+              return sys(type, id)
+            } else {
+              return params => actorCall(type, id, method, params)
+            }
+          }
+        })
+      }
+    })
+  }
+})
+
 // exports
 module.exports = {
-  send,
+  tell,
   call,
   actor: {
-    async: actorSend,
+    tell: actorTell,
     call: actorCall,
     cancelReminder: actorCancelReminder,
     getReminder: actorGetReminder,
@@ -126,6 +153,7 @@ module.exports = {
       deleteAll: actorDeleteAllState
     }
   },
+  actors,
   broadcast,
   shutdown,
   logger,

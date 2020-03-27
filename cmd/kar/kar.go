@@ -32,8 +32,8 @@ var (
 	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 )
 
-// send route handler
-func send(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// tell route handler
+func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
 		err = commands.TellService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
@@ -251,9 +251,9 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // server implements the HTTP server
 func server(listener net.Listener) {
 	router := httprouter.New()
-	router.POST("/kar/send/:service/*path", send)
+	router.POST("/kar/tell/:service/*path", tell)
 	router.POST("/kar/call/:service/*path", call)
-	router.POST("/kar/actor-send/:type/:id/*path", send)
+	router.POST("/kar/actor-tell/:type/:id/*path", tell)
 	router.POST("/kar/actor-call/:type/:id/*path", call)
 	router.GET("/kar/actor-migrate/:type/:id", migrate)
 	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
