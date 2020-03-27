@@ -131,6 +131,7 @@ function actorRuntime (actors) {
     .then(_ => {
       table[req.params.type] = table[req.params.type] || {}
       table[req.params.type][req.params.id] = new (actors[req.params.type])(req.params.id)
+      table[req.params.type][req.params.id].sys = sys(req.params.type, req.params.id)
     }) // instantiate actor and add to index
     .then(_ => { // run optional activate callback
       if (typeof table[req.params.type][req.params.id].activate === 'function') table[req.params.type][req.params.id].activate()

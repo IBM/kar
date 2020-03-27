@@ -46,6 +46,17 @@ class Foo {
     return 'OK'
   }
 
+  set ({ key, value }) {
+    console.log('actor', this.id, 'set', key, value)
+    this.sys.set(key, value)
+    return 'OK'
+  }
+
+  get ({ key }) {
+    console.log('actor', this.id, 'get', key)
+    return this.sys.get(key)
+  }
+
   deactivate () {
     console.log('actor', this.id, 'deactivate')
   }
