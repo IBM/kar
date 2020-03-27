@@ -3,6 +3,7 @@ package actors
 import (
 	"container/heap"
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -24,12 +25,12 @@ func init() {
 
 // Reminder is a reminder
 type Reminder struct {
-	Actor    Actor
-	ID       string        `json:"id"`
-	Path     string        `json:"path"`
-	Deadline time.Time     `json:"deadline"`
-	Period   time.Duration `json:"period,omitempty"` // 0 for one-shot reminders
-	Data     interface{}   `json:"data,omitempty"`
+	Actor       Actor
+	ID          string        `json:"id"`
+	Path        string        `json:"path"`
+	Deadline    time.Time     `json:"deadline"`
+	Period      time.Duration `json:"period,omitempty"` // 0 for one-shot reminders
+	EncodedData string        `json:"encodedData,omitempty"`
 }
 
 // CancelReminderPayload is the JSON request body for cancelling a reminder
@@ -85,6 +86,13 @@ func ScheduleReminder(actor Actor, payload ScheduleReminderPayload) (validReques
 		}
 		r.Period = period
 	}
+	if payload.Data != nil {
+		buf, err := json.Marshal(payload.Data)
+		if err != nil {
+			return false, err
+		}
+		r.EncodedData = string(buf)
+	}
 
 	logger.Info("ScheduleReminder: %v", r)
 	arMutex.Lock()
@@ -95,7 +103,7 @@ func ScheduleReminder(actor Actor, payload ScheduleReminderPayload) (validReques
 }
 
 // ProcessReminders causes all reminders with a deadline before fireTime to be scheduled for execution.
-func ProcessReminders(ctx context.Context, fireTime time.Time) {
+func ProcessReminders(ctx context.Context, fireTime time.Time, tell func(context context.Context, actor Actor, path, payload, contentType string) error) {
 	logger.Debug("ProcessReminders invoked at %v", fireTime)
 	arMutex.Lock()
 
@@ -108,8 +116,11 @@ func ProcessReminders(ctx context.Context, fireTime time.Time) {
 			logger.Warning("ProcessReminders: LATE by %v firing %v to %v:%v:%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
 		}
 
-		//TODO: When API is ready, this Info log message is removed and replaced by an actual invoke
-		logger.Info("ProcessReminders: firing %v to %v:%v:%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
+		logger.Debug("ProcessReminders: firing %v to %v:%v:%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
+		err := tell(ctx, r.Actor, r.Path, r.EncodedData, "application/json")
+		if err != nil {
+			logger.Error("ProcessReminders: firing %v raised error %v", r, err)
+		}
 
 		if r.Period > 0 {
 			r.Deadline = fireTime.Add(r.Period)

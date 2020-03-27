@@ -326,7 +326,7 @@ func ProcessReminders(ctx context.Context) {
 	for {
 		select {
 		case now := <-ticker.C:
-			actors.ProcessReminders(ctx, now)
+			actors.ProcessReminders(ctx, now, TellActor)
 		case <-ctx.Done():
 			ticker.Stop()
 			return
