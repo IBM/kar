@@ -38,39 +38,21 @@ func do(command string, args ...interface{}) (interface{}, error) {
 	return doRaw(command, args...)
 }
 
+// Keys
+
 // Set sets the value associated with a key
 func Set(key, value string) (string, error) {
 	return redis.String(do("SET", key, value))
 }
 
-// RPush adds elements to a list
-func RPush(key string, value string) (int, error) {
-	return redis.Int(do("RPUSH", key, value))
+// Get returns the value associated with a key
+func Get(key string) (string, error) {
+	return redis.String(do("GET", key))
 }
 
-// LRange returns elements from a list
-func LRange(key string, start, stop int) ([]string, error) {
-	return redis.Strings(do("LRANGE", key, start, stop))
-}
-
-// LRem removes elements from a list
-func LRem(key string, count int, value string) (int, error) {
-	return redis.Int(do("LREM", key, count, value))
-}
-
-// ZAdd adds elements to a sorted set
-func ZAdd(key string, score int64, value string) (int, error) {
-	return redis.Int(do("ZADD", key, score, value))
-}
-
-// ZRange returns elements from a sorted set
-func ZRange(key string, start, stop int) ([]string, error) {
-	return redis.Strings(do("ZRANGE", key, start, stop))
-}
-
-// ZRemRangeByScore removes elements from a sorted set
-func ZRemRangeByScore(key string, min, max int64) (int, error) {
-	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
+// Del deletes the value associated with a key
+func Del(key string) (int, error) {
+	return redis.Int(do("DEL", key))
 }
 
 // CompareAndSet sets the value associated with a key if its current value is equal to the expected value
@@ -84,24 +66,16 @@ func CompareAndSet(key, expected, value string) (int, error) {
 	return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), expected, value))
 }
 
-// Get returns the value associated with the key
-func Get(key string) (string, error) {
-	return redis.String(do("GET", key))
-}
+// Hashes
 
-// Del deletes the value associated with a key
-func Del(key string) (int, error) {
-	return redis.Int(do("DEL", key))
+// HSet hash key value
+func HSet(hash, key, value string) (int, error) {
+	return redis.Int(do("HSET", hash, key, value))
 }
 
 // HGet hash key
 func HGet(hash, key string) (string, error) {
 	return redis.String(do("HGET", hash, key))
-}
-
-// HSet hash key value
-func HSet(hash, key, value string) (int, error) {
-	return redis.Int(do("HSET", hash, key, value))
 }
 
 // HDel hash key
@@ -112,6 +86,23 @@ func HDel(hash, key string) (int, error) {
 // HGetAll hash
 func HGetAll(hash string) (map[string]string, error) {
 	return redis.StringMap(do("HGETALL", hash))
+}
+
+// Sorted sets
+
+// ZAdd adds an element to a sorted set
+func ZAdd(key string, score int64, value string) (int, error) {
+	return redis.Int(do("ZADD", key, score, value))
+}
+
+// ZRange returns a range of elements from a sorted set
+func ZRange(key string, start, stop int) ([]string, error) {
+	return redis.Strings(do("ZRANGE", key, start, stop))
+}
+
+// ZRemRangeByScore removes elements by scores from a sorted set
+func ZRemRangeByScore(key string, min, max int64) (int, error) {
+	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
 }
 
 // Dial establishes a connection to the store
