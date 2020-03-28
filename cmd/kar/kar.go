@@ -15,7 +15,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/launcher"
-	"github.ibm.com/solsa/kar.git/internal/proxy"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/runtime"
 	"github.ibm.com/solsa/kar.git/internal/store"
@@ -34,9 +33,9 @@ var (
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -51,7 +50,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // broadcast route handler
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.Broadcast(ctx, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
 }
 
@@ -60,9 +59,9 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
-		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	} else {
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -106,7 +105,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
 		return
 	}
-	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if ctx.Err() != nil {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -126,7 +125,7 @@ func mangle(t, id string) string {
 
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HSet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), proxy.Read(r.Body)); err != nil {
+	if reply, err := store.HSet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)

@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/proxy"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -159,7 +158,7 @@ func respond(ctx context.Context, msg map[string]string, reply Reply) error {
 
 func call(ctx context.Context, msg map[string]string) error {
 	var reply Reply
-	res, err := proxy.Do(ctx, "POST", msg)
+	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -167,7 +166,7 @@ func call(ctx context.Context, msg map[string]string) error {
 		logger.Warning("failed to post to %s: %v", msg["path"], err) // return error to caller
 		reply = Reply{StatusCode: http.StatusBadGateway, Payload: "Bad Gateway", ContentType: "text/plain"}
 	} else {
-		reply = Reply{StatusCode: res.StatusCode, Payload: proxy.Read(res.Body), ContentType: res.Header.Get("Content-Type")}
+		reply = Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}
 	}
 
 	return respond(ctx, msg, reply)
@@ -229,14 +228,14 @@ func reminderSchedule(ctx context.Context, msg map[string]string) error {
 }
 
 func tell(ctx context.Context, msg map[string]string) error {
-	res, err := proxy.Do(ctx, "POST", msg)
+	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 		logger.Error("failed to post to %s: %v", msg["path"], err)
 	} else {
-		proxy.Flush(res.Body)
+		discard(res.Body)
 	}
 	return nil
 }
@@ -334,26 +333,26 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 // activate an actor
 func activate(ctx context.Context, actor Actor) {
 	logger.Debug("activating actor %v", actor)
-	res, err := proxy.Do(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	res, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		logger.Error("failed to activate actor %v: %v", actor, err)
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to activate actor %v: %s", actor, proxy.Read(res.Body))
+		logger.Error("failed to activate actor %v: %s", actor, ReadAll(res.Body))
 	} else {
-		proxy.Flush(res.Body)
+		discard(res.Body)
 	}
 }
 
 // deactivate an actor (but retains placement)
 func deactivate(ctx context.Context, actor Actor) {
 	logger.Debug("deactivating actor %v", actor)
-	res, err := proxy.Do(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	res, err := invoke(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		logger.Error("failed to deactivate actor %v: %v", actor, err)
 	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to deactivate actor %v: %s", actor, proxy.Read(res.Body))
+		logger.Error("failed to deactivate actor %v: %s", actor, ReadAll(res.Body))
 	} else {
-		proxy.Flush(res.Body)
+		discard(res.Body)
 	}
 }
 

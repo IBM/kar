@@ -1,4 +1,4 @@
-package proxy
+package runtime
 
 import (
 	"context"
@@ -23,21 +23,21 @@ func init() {
 	client = http.Client{Transport: transport} // TODO adjust timeout
 }
 
-// Read converts a request or response body to a string
-func Read(r io.ReadCloser) string {
+// ReadAll converts a request or response body to a string
+func ReadAll(r io.ReadCloser) string {
 	buf, _ := ioutil.ReadAll(r) // TODO size limit?
 	r.Close()
 	return string(buf)
 }
 
-// Flush discards a response body
-func Flush(r io.ReadCloser) {
+// discard discards a response body
+func discard(r io.ReadCloser) {
 	io.Copy(ioutil.Discard, r)
 	r.Close()
 }
 
-// Do sends an HTTP request to the service and returns the response
-func Do(ctx context.Context, method string, msg map[string]string) (*http.Response, error) {
+// invoke sends an HTTP request to the service and returns the response
+func invoke(ctx context.Context, method string, msg map[string]string) (*http.Response, error) {
 	req, err := http.NewRequest(method, url+msg["path"], strings.NewReader(msg["payload"]))
 	if err != nil {
 		return nil, err
