@@ -1,4 +1,4 @@
-package actors
+package runtime
 
 import (
 	"container/heap"

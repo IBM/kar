@@ -1,4 +1,4 @@
-package actors
+package runtime
 
 import (
 	"context"
@@ -68,7 +68,7 @@ func (e *Entry) Release() {
 }
 
 // Collect deactivates actors that not been used since time
-func Collect(ctx context.Context, time time.Time, deactivate func(ctx context.Context, actor Actor)) error {
+func collect(ctx context.Context, time time.Time) error {
 	table.Range(func(actor, v interface{}) bool {
 		e := v.(*Entry)
 		if e.sem.TryAcquire(1) { // skip actor if busy
@@ -87,7 +87,7 @@ func Collect(ctx context.Context, time time.Time, deactivate func(ctx context.Co
 }
 
 // Migrate deactivates actor if active and deletes placement if local
-func Migrate(ctx context.Context, actor Actor, deactivate func(ctx context.Context, actor Actor)) error {
+func Migrate(ctx context.Context, actor Actor) error {
 	e, fresh, err := Acquire(ctx, actor)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package commands
+package runtime
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.ibm.com/solsa/kar.git/internal/actors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/proxy"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
@@ -32,7 +31,7 @@ func TellService(ctx context.Context, service, path, payload, contentType string
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor actors.Actor, path, payload, contentType string) error {
+func TellActor(ctx context.Context, actor Actor, path, payload, contentType string) error {
 	return pubsub.Send(ctx, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -84,7 +83,7 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentType, accept string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -98,7 +97,7 @@ func CallActor(ctx context.Context, actor actors.Actor, path, payload, contentTy
 }
 
 // Reminders sends a reminder command (cancel, get, schedule) to an actor's sidecar and waits for a reply
-func Reminders(ctx context.Context, actor actors.Actor, action, payload, contentType, accept string) (*Reply, error) {
+func Reminders(ctx context.Context, actor Actor, action, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -190,8 +189,8 @@ func callback(ctx context.Context, msg map[string]string) error {
 
 func reminderCancel(ctx context.Context, msg map[string]string) error {
 	var reply Reply
-	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-	found, err := actors.CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	actor := Actor{Type: msg["type"], ID: msg["id"]}
+	found, err := CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
 	if err != nil {
 		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -202,8 +201,8 @@ func reminderCancel(ctx context.Context, msg map[string]string) error {
 
 func reminderGet(ctx context.Context, msg map[string]string) error {
 	var reply Reply
-	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-	found, err := actors.GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	actor := Actor{Type: msg["type"], ID: msg["id"]}
+	found, err := GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
 	if err != nil {
 		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -219,8 +218,8 @@ func reminderGet(ctx context.Context, msg map[string]string) error {
 
 func reminderSchedule(ctx context.Context, msg map[string]string) error {
 	var reply Reply
-	actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-	err := actors.ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	actor := Actor{Type: msg["type"], ID: msg["id"]}
+	err := ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
 	if err != nil {
 		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -278,7 +277,7 @@ func forwardToActor(ctx context.Context, msg map[string]string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		logger.Error("failed to forward message to actor %v: %v", actors.Actor{Type: msg["type"], ID: msg["id"]}, err)
+		logger.Error("failed to forward message to actor %v: %v", Actor{Type: msg["type"], ID: msg["id"]}, err)
 	}
 	return nil
 }
@@ -312,8 +311,8 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			err = forwardToSidecar(ctx, msg)
 		}
 	case "actor":
-		actor := actors.Actor{Type: msg["type"], ID: msg["id"]}
-		e, fresh, _ := actors.Acquire(ctx, actor)
+		actor := Actor{Type: msg["type"], ID: msg["id"]}
+		e, fresh, _ := Acquire(ctx, actor)
 		if e == nil && ctx.Err() == nil {
 			err = forwardToActor(ctx, msg)
 		} else {
@@ -333,7 +332,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 // actors
 
 // activate an actor
-func activate(ctx context.Context, actor actors.Actor) {
+func activate(ctx context.Context, actor Actor) {
 	logger.Debug("activating actor %v", actor)
 	res, err := proxy.Do(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
@@ -346,7 +345,7 @@ func activate(ctx context.Context, actor actors.Actor) {
 }
 
 // deactivate an actor (but retains placement)
-func deactivate(ctx context.Context, actor actors.Actor) {
+func deactivate(ctx context.Context, actor Actor) {
 	logger.Debug("deactivating actor %v", actor)
 	res, err := proxy.Do(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
@@ -358,11 +357,6 @@ func deactivate(ctx context.Context, actor actors.Actor) {
 	}
 }
 
-// Migrate deactivates an actor if active and resets its placement
-func Migrate(ctx context.Context, actor actors.Actor) {
-	actors.Migrate(ctx, actor, deactivate)
-}
-
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Second)
@@ -370,7 +364,7 @@ func Collect(ctx context.Context) {
 		select {
 		case now := <-ticker.C:
 			logger.Debug("starting collection")
-			actors.Collect(ctx, now.Add(-10*time.Second), deactivate)
+			collect(ctx, now.Add(-10*time.Second))
 			logger.Debug("finishing collection")
 		case <-ctx.Done():
 			ticker.Stop()
@@ -385,7 +379,7 @@ func ProcessReminders(ctx context.Context) {
 	for {
 		select {
 		case now := <-ticker.C:
-			actors.ProcessReminders(ctx, now, TellActor)
+			processReminders(ctx, now)
 		case <-ctx.Done():
 			ticker.Stop()
 			return

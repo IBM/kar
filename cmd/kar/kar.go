@@ -13,12 +13,11 @@ import (
 	"syscall"
 
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/internal/actors"
-	"github.ibm.com/solsa/kar.git/internal/commands"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/launcher"
 	"github.ibm.com/solsa/kar.git/internal/proxy"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/internal/runtime"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -35,9 +34,9 @@ var (
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		err = commands.TellService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	} else {
-		err = commands.TellActor(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -52,18 +51,18 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // broadcast route handler
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	commands.Broadcast(ctx, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
+	runtime.Broadcast(ctx, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
 }
 
 // call route handler
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var reply *commands.Reply
+	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
-		reply, err = commands.CallService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	} else {
-		reply, err = commands.CallActor(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -80,14 +79,14 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // migrate route handler
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	commands.Migrate(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
+	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
 	fmt.Fprint(w, "OK")
 }
 
 // subscriber handles incoming messages
 func subscriber(channel <-chan pubsub.Message) {
 	for m := range channel {
-		commands.Process(ctx, cancel, m)
+		runtime.Process(ctx, cancel, m)
 	}
 }
 
@@ -107,7 +106,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
 		return
 	}
-	reply, err := commands.Reminders(ctx, actors.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, proxy.Read(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if ctx.Err() != nil {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -194,7 +193,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	commands.KillAll(ctx)
+	runtime.KillAll(ctx)
 	fmt.Fprint(w, "OK")
 	cancel()
 }
@@ -282,13 +281,13 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		commands.Collect(ctx)
+		runtime.Collect(ctx)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		commands.ProcessReminders(ctx)
+		runtime.ProcessReminders(ctx)
 	}()
 
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)

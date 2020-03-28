@@ -1,4 +1,4 @@
-package actors
+package runtime
 
 import (
 	"container/heap"
@@ -107,7 +107,7 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 }
 
 // ProcessReminders causes all reminders with a deadline before fireTime to be scheduled for execution.
-func ProcessReminders(ctx context.Context, fireTime time.Time, tell func(context context.Context, actor Actor, path, payload, contentType string) error) {
+func processReminders(ctx context.Context, fireTime time.Time) {
 	logger.Debug("ProcessReminders invoked at %v", fireTime)
 	arMutex.Lock()
 
@@ -121,7 +121,7 @@ func ProcessReminders(ctx context.Context, fireTime time.Time, tell func(context
 		}
 
 		logger.Debug("ProcessReminders: firing %v to %v:%v:%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
-		err := tell(ctx, r.Actor, r.Path, r.EncodedData, "application/json")
+		err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/json")
 		if err != nil {
 			logger.Error("ProcessReminders: firing %v raised error %v", r, err)
 		}
