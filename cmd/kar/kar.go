@@ -14,7 +14,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/launcher"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/runtime"
 	"github.ibm.com/solsa/kar.git/internal/store"
@@ -296,7 +295,7 @@ func main() {
 	args := flag.Args()
 
 	if len(args) > 0 {
-		exitCode = launcher.Run(ctx9, args, append(os.Environ(), port1, port2))
+		exitCode = runtime.Run(ctx9, args, append(os.Environ(), port1, port2))
 		cancel()
 	}
 
