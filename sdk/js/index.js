@@ -158,7 +158,16 @@ function actorRuntime (actors) {
 
   // method invocation route
   router.post('/actor/:type/:id/:method', (req, res, next) => Promise.resolve()
-    .then(_ => table[req.params.type][req.params.id][req.params.method](req.body)) // invoke method on actor
+    .then(_ => {
+      const actor = table[req.params.type][req.params.id]
+      if (req.params.method in actor) {
+        if (typeof actor[req.params.method] === 'function') {
+          return actor[req.params.method](req.body)
+        }
+        return actor[req.params.method]
+      }
+      throw new Error(`${req.params.method} is not defined on actor with type ${req.params.type} and id ${req.params.id}`)
+    }) // invoke method on actor
     .then(result => res.json(result)) // stringify invocation result
     .catch(next)) // delegate error handling to postprocessor
 

@@ -21,6 +21,23 @@ async function main () {
 
   // asynchronous invocation
   console.log(await a.sys.tell('incr', 42))
+
+  // getter
+  console.log(await a.field())
+
+  // error in synchronous invocation
+  try {
+    console.log(await a.fail('error message 123'))
+  } catch (err) {
+    console.log('caught', err)
+  }
+
+  // undefined method
+  try {
+    console.log(await a.missing('error message 123'))
+  } catch (err) {
+    console.log('caught', err)
+  }
 }
 
 main()

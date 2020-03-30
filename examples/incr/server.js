@@ -26,10 +26,16 @@ app.post('/shutdown', async (_reg, res) => {
 class Foo {
   constructor (id) {
     this.id = id
+    this.field = 42
   }
 
   activate () {
     console.log('actor', this.id, 'activate')
+  }
+
+  fail (msg) {
+    console.log('actor', this.id, 'fail', msg)
+    throw new Error(msg)
   }
 
   incr (v) {
