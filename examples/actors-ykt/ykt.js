@@ -94,7 +94,7 @@ class Site extends ActorWithCount {
 
   async startReporting (period = '10s') {
     await this.sys.cancelReminder({ id: 'siteReport' })
-    await this.sys.scheduleReminder('siteReport', { id: 'siteReport', deadline: '1s', period: period })
+    await this.sys.scheduleReminder('siteReport', { id: 'siteReport', deadline: Date.now(), period: period })
   }
 
   async enter (name = 'anon') {
@@ -221,8 +221,8 @@ class Researcher {
     await this.checkpointState()
     await actors.Site[site].enter(this.name)
     await actors.Office[this.location].enter(this.name)
-    const deadline = Date.now() + 1000 * delay
-    await this.sys.scheduleReminder('move', { id: 'move', deadline, data: { target: deadline } })
+    const deadline = new Date(Date.now() + 1000 * delay)
+    await this.sys.scheduleReminder('/move', { id: 'move', deadline, data: { target: deadline.getTime() } })
   }
 
   async move ({ data }) {
@@ -264,13 +264,14 @@ class Researcher {
       await this.checkpointState()
       await actors.Office[this.location].enter(this.name)
       if (verbose) console.log(`Researcher: ${this.name} starting reminder update`)
-      const deadline = Date.now() + 1000 * thinkTime
-      await this.sys.scheduleReminder('move', { id: 'move', deadline, data: { target: deadline } })
+      const deadline = new Date(Date.now() + 1000 * thinkTime)
+      await this.sys.scheduleReminder('move', { id: 'move', deadline, data: { target: deadline.getTime() } })
       if (verbose) console.log(`Researcher: ${this.name} completed reminder update`)
     }
     if (verbose) console.log(`Researcher: ${this.name} exited move`)
   }
 }
+
 app.use(actorRuntime({ Site, Floor, Office, Researcher }))
 
 app.use(errorHandler) // enable kar error handling

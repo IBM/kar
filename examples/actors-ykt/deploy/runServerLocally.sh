@@ -5,4 +5,4 @@ CODEDIR="$SCRIPTDIR/.."
 
 VERBOSE=${VERBOSE:="debug"}
 
-kar -actor_reminder_interval=60s -v $VERBOSE -app ykt -service simulation -actors Site,Floor,Office,Researcher node $CODEDIR/ykt.js
+VERBOSE=1 kar -actor_reminder_interval=5s -v $VERBOSE -app ykt -service simulation -actors Site,Floor,Office,Researcher node $CODEDIR/ykt.js
