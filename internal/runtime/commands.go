@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -311,21 +312,21 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			err = forwardToSidecar(ctx, msg)
 		}
 	case "actor":
-		actor := Actor{Type: msg["type"], ID: msg["id"]}
-		e, fresh, _ := actor.acquire(ctx)
-		if e == nil && ctx.Err() == nil {
-			err = forwardToActor(ctx, msg)
-		} else {
-			defer e.release()
-			if fresh {
-				if msg["command"] == "tell" || msg["command"] == "call" {
-					activate(ctx, actor)
-				} else {
-					e.valid = false
-				}
-			}
-			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
+		if strings.HasPrefix(msg["command"], "reminder:") { // TODO temporary hack
 			err = dispatch(ctx, cancel, msg)
+		} else {
+			actor := Actor{Type: msg["type"], ID: msg["id"]}
+			e, fresh, _ := actor.acquire(ctx)
+			if e == nil && ctx.Err() == nil {
+				err = forwardToActor(ctx, msg)
+			} else {
+				defer e.release()
+				if fresh {
+					activate(ctx, actor)
+				}
+				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
+				err = dispatch(ctx, cancel, msg)
+			}
 		}
 	}
 	if err == nil {
