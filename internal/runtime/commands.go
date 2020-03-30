@@ -237,6 +237,11 @@ func tell(ctx context.Context, msg map[string]string) error {
 		}
 		logger.Error("failed to post to %s: %v", msg["path"], err)
 	} else {
+		if res.StatusCode >= http.StatusBadRequest {
+			logger.Error("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+		} else {
+			logger.Debug("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+		}
 		discard(res.Body)
 	}
 	return nil
