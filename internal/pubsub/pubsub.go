@@ -40,7 +40,6 @@ var (
 	hosts    map[string][]string // map actor types to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
 	mu       = &sync.RWMutex{}   // synchronize changes to routes
-	leader   = false             // session leader?
 
 	// state of this sidecar
 	here = userData{
@@ -252,17 +251,15 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for _, member := range members { // ensure enough partitions
 		if len(member.MemberAssignment) == 0 { // sidecar without partition
 			consumer.repartitionPending = true
-			if leader {
-				logger.Info("increasing partition count to %d", len(members))
-				if err := admin.CreatePartitions(topic, int32(len(members)), nil, false); err != nil {
-					// do not fail if another sidecar added partitions already
-					if e, ok := err.(*sarama.TopicPartitionError); !ok || e.Err != sarama.ErrInvalidPartitions {
-						logger.Debug("failed to add partitions: %v", err)
-						return err
-					}
+			logger.Info("increasing partition count to %d", len(members))
+			if err := admin.CreatePartitions(topic, int32(len(members)), nil, false); err != nil {
+				// do not fail if another sidecar added partitions already
+				if e, ok := err.(*sarama.TopicPartitionError); !ok || e.Err != sarama.ErrInvalidPartitions {
+					logger.Debug("failed to add partitions: %v", err)
+					return err
 				}
-				return tooFewPartitionsError{} // abort
 			}
+			return tooFewPartitionsError{} // abort
 			return nil
 		}
 	}
@@ -337,7 +334,6 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 
 // Cleanup consumer group session
 func (consumer *handler) Cleanup(session sarama.ConsumerGroupSession) error {
-	leader = false
 	conf.Consumer.Group.Member.UserData = marshal()
 	return nil
 }
@@ -409,22 +405,6 @@ func consume(ctx context.Context) {
 	}
 }
 
-// wrap balance strategy to detect session leader
-type balanceStrategy struct {
-	strategy sarama.BalanceStrategy
-}
-
-func (s *balanceStrategy) Name() string { return s.strategy.Name() }
-
-func (s *balanceStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
-	leader = true
-	return s.strategy.Plan(members, topics)
-}
-
-func (s *balanceStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32) ([]byte, error) {
-	return s.strategy.AssignmentData(memberID, topics, generationID)
-}
-
 // Dial establishes a connection to Kafka and returns a read channel from incoming messages
 func Dial(ctx context.Context) <-chan Message {
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
@@ -440,7 +420,7 @@ func Dial(ctx context.Context) <-chan Message {
 	conf.Producer.Idempotent = true
 	conf.Net.MaxOpenRequests = 1
 	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
-	conf.Consumer.Group.Rebalance.Strategy = &balanceStrategy{sarama.BalanceStrategyRange}
+	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
 	conf.Consumer.Group.Member.UserData = marshal()
 
 	if config.KafkaPassword != "" {
