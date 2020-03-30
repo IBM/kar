@@ -3,9 +3,6 @@
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 CODEDIR="$SCRIPTDIR/.."
 
-VERBOSE=${VERBOSE:="debug"}
+KAR_VERBOSE=${KAR_VERBOSE:="info"}
 
-kar  -v $VERBOSE -recv 30666 -app ykt -service client node $CODEDIR/ykt-client.js
-
-sleep 600
-
+kar  -v $KAR_VERBOSE -recv 30666 -app ykt -service client node $CODEDIR/ykt-client.js
