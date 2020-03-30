@@ -175,7 +175,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 		if err != nil {
 			return // no matching host, abort
 		}
-		_, err = placement.Update(t, id, expected, sidecar) // try saving sidecar
+		_, err = placement.CompareAndSet(t, id, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // redis error
 		}

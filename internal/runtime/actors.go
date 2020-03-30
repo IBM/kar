@@ -99,7 +99,7 @@ func Migrate(ctx context.Context, actor Actor) error {
 		deactivate(ctx, actor)
 	}
 	e.valid = false
-	_, err = placement.Update(actor.Type, actor.ID, config.ID, "") // delete placement if local
+	_, err = placement.CompareAndSet(actor.Type, actor.ID, config.ID, "") // delete placement if local
 	e.sem.Release(1)
 	table.Delete(actor)
 	return err
