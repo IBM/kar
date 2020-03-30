@@ -81,10 +81,19 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+// process incoming messages in parallel
+func process(m pubsub.Message) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		runtime.Process(ctx, cancel, m)
+	}()
+}
+
 // subscriber handles incoming messages
 func subscriber(channel <-chan pubsub.Message) {
 	for m := range channel {
-		runtime.Process(ctx, cancel, m)
+		process(m)
 	}
 }
 
