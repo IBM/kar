@@ -1,3 +1,4 @@
+// Package runtime implements the core sidecar capabilities
 package runtime
 
 import (
@@ -311,11 +312,11 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		}
 	case "actor":
 		actor := Actor{Type: msg["type"], ID: msg["id"]}
-		e, fresh, _ := Acquire(ctx, actor)
+		e, fresh, _ := actor.acquire(ctx)
 		if e == nil && ctx.Err() == nil {
 			err = forwardToActor(ctx, msg)
 		} else {
-			defer e.Release()
+			defer e.release()
 			if fresh {
 				activate(ctx, actor)
 			}

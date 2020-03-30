@@ -10,29 +10,28 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// Actor uniquely identifies an actor instance
+// Actor uniquely identifies an actor instance.
 type Actor struct {
 	Type string // actor type
 	ID   string // actor instance id
 }
 
-// Entry is the type of table entries
-type Entry struct {
+type actorEntry struct {
 	time  time.Time           // last release time
 	sem   *semaphore.Weighted // cancellable trylock, held while actor is in use
 	valid bool                // false iff entry has been removed from table
 }
 
-var table = sync.Map{} // actor table: ID -> Entry
+var actorTable = sync.Map{} // actor table: Actor -> *actorEntry
 
-// Acquire locks the actor
-// Acquire returns nil if actor is mapped to another sidecar or context is cancelled
-// Acquire returns true if actor requires activation
-func Acquire(ctx context.Context, actor Actor) (*Entry, bool, error) {
-	e := &Entry{sem: semaphore.NewWeighted(1)}
+// acquire locks the actor
+// acquire returns nil if actor is mapped to another sidecar or context is cancelled
+// acquire returns true if actor requires activation
+func (actor Actor) acquire(ctx context.Context) (*actorEntry, bool, error) {
+	e := &actorEntry{sem: semaphore.NewWeighted(1)}
 	for {
-		if v, loaded := table.LoadOrStore(actor, e); loaded {
-			e = v.(*Entry) // existing entry
+		if v, loaded := actorTable.LoadOrStore(actor, e); loaded {
+			e = v.(*actorEntry) // existing entry
 			err := e.sem.Acquire(ctx, 1)
 			if err != nil { // cancelled
 				return nil, false, err
@@ -55,28 +54,28 @@ func Acquire(ctx context.Context, actor Actor) (*Entry, bool, error) {
 				return e, true, nil
 			}
 			e.sem.Release(1) // actor has been moved
-			table.Delete(actor)
+			actorTable.Delete(actor)
 			return nil, false, nil
 		}
 	}
 }
 
-// Release updates the timestamp and releases the actor lock
-func (e *Entry) Release() {
+// release updates the timestamp and releases the actor lock
+func (e *actorEntry) release() {
 	e.time = time.Now() // update last release time
 	e.sem.Release(1)
 }
 
-// Collect deactivates actors that not been used since time
+// collect deactivates actors that not been used since time
 func collect(ctx context.Context, time time.Time) error {
-	table.Range(func(actor, v interface{}) bool {
-		e := v.(*Entry)
+	actorTable.Range(func(actor, v interface{}) bool {
+		e := v.(*actorEntry)
 		if e.sem.TryAcquire(1) { // skip actor if busy
 			if e.valid && e.time.Before(time) {
 				deactivate(ctx, actor.(Actor))
 				e.valid = false
 				e.sem.Release(1)
-				table.Delete(actor)
+				actorTable.Delete(actor)
 			} else {
 				e.sem.Release(1)
 			}
@@ -88,7 +87,7 @@ func collect(ctx context.Context, time time.Time) error {
 
 // Migrate deactivates actor if active and deletes placement if local
 func Migrate(ctx context.Context, actor Actor) error {
-	e, fresh, err := Acquire(ctx, actor)
+	e, fresh, err := actor.acquire(ctx)
 	if err != nil {
 		return err
 	}
@@ -101,6 +100,6 @@ func Migrate(ctx context.Context, actor Actor) error {
 	e.valid = false
 	_, err = placement.CompareAndSet(actor.Type, actor.ID, config.ID, "") // delete placement if local
 	e.sem.Release(1)
-	table.Delete(actor)
+	actorTable.Delete(actor)
 	return err
 }
