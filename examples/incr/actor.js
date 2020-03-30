@@ -1,7 +1,7 @@
 const { actors } = require('kar')
 
 async function main () {
-  const a = actors['foo'][123]
+  const a = actors.Foo[123]
 
   // actor state
   await a.sys.set('key1', 42)

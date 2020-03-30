@@ -62,7 +62,7 @@ class Foo {
   }
 }
 
-app.use(actorRuntime({ foo: Foo }))
+app.use(actorRuntime({ Foo }))
 
 app.use(errorHandler) // enable kar error handling
 
