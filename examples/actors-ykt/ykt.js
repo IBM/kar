@@ -35,7 +35,7 @@ function getRoom (office) { return office.split(':')[1] }
 
 // Common superclass for Office, Floor, and Site (things that count their occupants)
 class ActorWithCount {
-  get count () { return this._count }
+  get count () { console.log(`HELLO: count: ${this.type} ${this.sys.id} ==> ${this._count}`); return this._count }
   async updateCount (newCount) {
     this._count = newCount
     await this.sys.set('count', newCount)
@@ -43,11 +43,12 @@ class ActorWithCount {
 
   async activate () {
     this._count = await this.sys.get('count') || 0
-    if (verbose) console.log(`activated ${this.sys.type}/${this.sys.id} with count ${this.count}`)
+    console.log(`AJA activate: ${this._count}`)
+    if (verbose) console.log(`activated ${this.type}/${this.sys.id} with count ${this.count}`)
   }
 
   deactivate () {
-    if (verbose) console.log(`deactivated ${this.sys.type}/${this.sys.id}`)
+    if (verbose) console.log(`deactivated ${this.type}/${this.sys.id}`)
   }
 
   async clear () {
@@ -56,16 +57,17 @@ class ActorWithCount {
 
   async increment () {
     await this.updateCount(this.count + 1)
-    if (verbose) console.log(`increment ${this.sys.type}/${this.sys.id} count is now ${this.count}`)
+    if (verbose) console.log(`increment ${this.type}/${this.sys.id} count is now ${this.count}`)
   }
 
   async decrement () {
     await this.updateCount(this.count - 1)
-    if (verbose) console.log(`decrement ${this.sys.type}/${this.sys.id} count is now ${this.count}`)
+    if (verbose) console.log(`decrement ${this.type}/${this.sys.id} count is now ${this.count}`)
   }
 }
 
 class Site extends ActorWithCount {
+  get type () { return 'Site' }
   get nextSerialNumber () { return this._nextSerialNumber }
   async updateNextSerialNumber (nextSerialNumber) {
     this._nextSerialNumber = nextSerialNumber
@@ -157,9 +159,11 @@ class Site extends ActorWithCount {
 }
 
 class Floor extends ActorWithCount {
+  get type () { return 'Floor' }
 }
 
 class Office extends ActorWithCount {
+  get type () { return 'Office' }
   getAisle () { return getAisle(this.sys.id) }
   getFloor () { return getFloor(this.sys.id) }
   getRoom () { return getRoom(this.sys.id) }
