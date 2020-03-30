@@ -131,11 +131,20 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// get route handler
-func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// get404 route handler
+func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
+		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, reply)
+	}
+}
+
+// get route handler
+func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	if reply, err := store.HGet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil && err != store.ErrNil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -153,9 +162,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // getAll route handler
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGetAll(mangle(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
-		http.Error(w, "Not Found", http.StatusNotFound)
-	} else if err != nil {
+	if reply, err := store.HGetAll(mangle(ps.ByName("type"), ps.ByName("id"))); err != nil {
 		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		// reply has type map[string]string
@@ -211,6 +218,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/actor-migrate/:type/:id", migrate)
 	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
 	router.POST("/kar/actor-state/:type/:id/:key", set)
+	router.GET("/kar/actor-state-404/:type/:id/:key", get404)
 	router.GET("/kar/actor-state/:type/:id/:key", get)
 	router.DELETE("/kar/actor-state/:type/:id/:key", del)
 	router.GET("/kar/actor-state/:type/:id", getAll)
