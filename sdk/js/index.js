@@ -64,7 +64,7 @@ const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}
 const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path }, params))
 
 // actor state operations
-const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`)
+const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`).catch(() => undefined)
 const actorSetState = (type, id, key, params = {}) => post(`actor-state/${type}/${id}/${key}`, params)
 const actorDeleteState = (type, id, key) => del(`actor-state/${type}/${id}/${key}`)
 const actorGetAllState = (type, id) => get(`actor-state/${type}/${id}`)
@@ -115,6 +115,7 @@ const errorHandler = [
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
 const sys = (type, id) => ({
+  id: id,
   tell: (method, params) => actorTell(type, id, method, params),
   get: key => actorGetState(type, id, key),
   set: (key, params) => actorSetState(type, id, key, params),
