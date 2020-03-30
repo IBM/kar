@@ -1,3 +1,4 @@
+// Package pubsub handles the communication between sidecars.
 package pubsub
 
 import (
@@ -12,7 +13,6 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/placement"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -74,13 +74,13 @@ func marshal() []byte {
 	return b
 }
 
-func mangle(p int32) string {
+func partitionKey(p int32) string {
 	return "pubsub" + config.Separator + "partition" + config.Separator + strconv.Itoa(int(p))
 }
 
 func mark(partition int32, offset int64) {
 	logger.Debug("finishing partition %d offset %d", partition, offset)
-	_, err := store.ZAdd(mangle(partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done
+	_, err := store.ZAdd(partitionKey(partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done
 	if err != nil {
 		logger.Error("failed to add offset to store: %v", err)
 	}
@@ -156,7 +156,7 @@ func routeToSidecar(sidecar string) (int32, error) {
 // only switching to a new sidecar if the existing sidecar has died
 func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
 	for { // keep trying
-		sidecar, err = placement.Get(t, id) // retrieve already assigned sidecar if any
+		sidecar, err = GetSidecar(t, id) // retrieve already assigned sidecar if any
 		if err != nil {
 			return // redis error
 		}
@@ -175,7 +175,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 		if err != nil {
 			return // no matching host, abort
 		}
-		_, err = placement.CompareAndSet(t, id, expected, sidecar) // try saving sidecar
+		_, err = CompareAndSetSidecar(t, id, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // redis error
 		}
@@ -304,7 +304,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 				here.Live[p] = map[int64]struct{}{}
 				lock.Unlock()
 			}
-			r, err := store.ZRange(mangle(p), 0, -1) // fetch done offsets from store
+			r, err := store.ZRange(partitionKey(p), 0, -1) // fetch done offsets from store
 			if err != nil {
 				logger.Error("failed to retrieve mark offsets to store: %v", err)
 			}
@@ -348,8 +348,8 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		<-session.Context().Done() // wait for repartition
 		return nil
 	}
-	store.ZRemRangeByScore(mangle(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
-	prefix := true                                                                // should advance cursor
+	store.ZRemRangeByScore(partitionKey(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
+	prefix := true                                                                      // should advance cursor
 	for m := range claim.Messages() {
 		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
 		if _, ok := done[m.Partition][m.Offset]; ok {

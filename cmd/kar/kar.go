@@ -127,13 +127,13 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func mangle(t, id string) string {
+func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
 // set route handler
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HSet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
+	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -142,7 +142,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // get404 route handler
 func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
+	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
@@ -153,7 +153,7 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // get route handler
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGet(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil && err != store.ErrNil {
+	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil && err != store.ErrNil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -162,7 +162,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // del route handler
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HDel(mangle(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
+	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("HDEL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -171,7 +171,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // getAll route handler
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGetAll(mangle(ps.ByName("type"), ps.ByName("id"))); err != nil {
+	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
 		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		// reply has type map[string]string
@@ -189,7 +189,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // delAll route handler
 func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.Del(mangle(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
+	if reply, err := store.Del(stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("DEL failed: %v", err), http.StatusInternalServerError)

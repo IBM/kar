@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/placement"
+	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -45,7 +45,7 @@ func (actor Actor) acquire(ctx context.Context) (*actorEntry, bool, error) {
 			if err != nil { // cancelled
 				return nil, false, err
 			}
-			sidecar, err := placement.Get(actor.Type, actor.ID)
+			sidecar, err := pubsub.GetSidecar(actor.Type, actor.ID)
 			if err != nil {
 				return nil, false, err
 			}
@@ -98,7 +98,7 @@ func Migrate(ctx context.Context, actor Actor) error {
 		deactivate(ctx, actor)
 	}
 	e.valid = false
-	_, err = placement.CompareAndSet(actor.Type, actor.ID, config.ID, "") // delete placement if local
+	_, err = pubsub.CompareAndSetSidecar(actor.Type, actor.ID, config.ID, "") // delete placement if local
 	e.sem.Release(1)
 	actorTable.Delete(actor)
 	return err
