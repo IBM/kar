@@ -19,7 +19,7 @@ func Get(t, id string) (string, error) {
 	return s, err
 }
 
-// Update atomically updates the sidecar for the given actor type and id.
+// CompareAndSet atomically updates the sidecar for the given actor type and id.
 // Use old = "" to atomically set the initial placement.
 // Use new = "" to atomically delete the current placement.
 func CompareAndSet(t, id, old, new string) (int, error) {
