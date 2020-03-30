@@ -6,7 +6,7 @@ async function main () {
   console.log('Initiating 500 sequential increments')
   for (let i = 0; i < 500; i++) {
     x = await call('myService', 'incrQuiet', x)
-    if (i % 100 === 0) { console.log(`incr(${i} = ${x})`) }
+    if (i % 100 === 0) { console.log(`incr(${i}) = ${x}`) }
     if (x !== i + 1) {
       console.log(`Failed! incr(${i}) returned ${x}`)
       failure = true
