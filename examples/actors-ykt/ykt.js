@@ -35,7 +35,7 @@ function getRoom (office) { return office.split(':')[1] }
 
 // Common superclass for Office, Floor, and Site (things that count their occupants)
 class ActorWithCount {
-  get count () { console.log(`HELLO: count: ${this.type} ${this.sys.id} ==> ${this._count}`); return this._count }
+  get count () { return this._count }
   async updateCount (newCount) {
     this._count = newCount
     await this.sys.set('count', newCount)
@@ -43,7 +43,6 @@ class ActorWithCount {
 
   async activate () {
     this._count = await this.sys.get('count') || 0
-    console.log(`AJA activate: ${this._count}`)
     if (verbose) console.log(`activated ${this.type}/${this.sys.id} with count ${this.count}`)
   }
 
