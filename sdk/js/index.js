@@ -142,7 +142,7 @@ function actorRuntime (actors) {
       table[req.params.type][req.params.id].sys = sys(req.params.type, req.params.id)
     }) // instantiate actor and add to index
     .then(_ => { // run optional activate callback
-      if (typeof table[req.params.type][req.params.id].activate === 'function') table[req.params.type][req.params.id].activate()
+      if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
     })
     .then(_ => res.sendStatus(200)) // OK
     .catch(next))
@@ -150,7 +150,7 @@ function actorRuntime (actors) {
   // actor deactivation route
   router.delete('/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => { // run optional deactivate callback
-      if (typeof table[req.params.type][req.params.id].deactivate === 'function') table[req.params.type][req.params.id].deactivate()
+      if (typeof table[req.params.type][req.params.id].deactivate === 'function') return table[req.params.type][req.params.id].deactivate()
     })
     .then(_ => delete table[req.params.type][req.params.id]) // remove actor from index
     .then(_ => res.sendStatus(200)) // OK
