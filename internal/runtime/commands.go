@@ -318,7 +318,11 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		} else {
 			defer e.release()
 			if fresh {
-				activate(ctx, actor)
+				if msg["command"] == "tell" || msg["command"] == "call" {
+					activate(ctx, actor)
+				} else {
+					e.valid = false
+				}
 			}
 			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
 			err = dispatch(ctx, cancel, msg)
