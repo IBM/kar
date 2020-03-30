@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actor, actorRuntime } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actor, actors, actorRuntime } = require('kar')
 
 const app = express()
 
@@ -80,11 +80,11 @@ class Site extends ActorWithCount {
   async clear () {
     await this.updateNextSerialNumber(0)
     await super.clear()
-    await actor.Floor[0].clear()
-    await actor.Floor[1].clear()
-    await actor.Floor[2].clear()
-    await actor.Office[Cafeteria].clear()
-    await actor.Office[OutTakes].clear()
+    await actors.Floor[0].clear()
+    await actors.Floor[1].clear()
+    await actors.Floor[2].clear()
+    await actors.Office[Cafeteria].clear()
+    await actors.Office[OutTakes].clear()
   }
 
   async stopReporting () {
@@ -112,17 +112,17 @@ class Site extends ActorWithCount {
     await this.updateNextSerialNumber(sn + workers)
     for (var i = 0; i < workers; i++) {
       const name = sn + i
-      actor.Researcher[name].work({ site: this.sys.id, steps }) // Intentionally async.  Initiate work but don't wait for it to start
+      actor.tell('Researcher', name, 'work', { site: this.sys.id, steps })
     }
   }
 
   async siteReport () {
     const totalWorking = await this.count
-    const floor0 = await actor.Floor[0].count()
-    const floor1 = await actor.Floor[1].count()
-    const floor2 = await actor.Floor[2].count()
-    const coffee = await actor.Office[OutTakes].count()
-    const cafeteria = await actor.Office[Cafeteria].count()
+    const floor0 = await actors.Floor[0].count()
+    const floor1 = await actors.Floor[1].count()
+    const floor2 = await actors.Floor[2].count()
+    const coffee = await actors.Office[OutTakes].count()
+    const cafeteria = await actors.Office[Cafeteria].count()
     const time = new Date().toString()
 
     const status = { totalWorking, floor0, floor1, floor2, coffee, cafeteria, time }
@@ -135,7 +135,7 @@ class Site extends ActorWithCount {
   async searchParty () {
     const lost = []
     for (var i = 0; i < this.nextSerialNumber; i++) {
-      const s = await actor.Researcher[i].currentState()
+      const s = await actors.Researcher[i].currentState()
       if (s.location) {
         console.log(`Researcher ${i} is found at `, s)
         lost.push(i)
@@ -174,13 +174,13 @@ class Office extends ActorWithCount {
   async enter (name = 'anon') {
     if (verbose) console.log(`Office: ${name} entered office ${this.prettyName()}`)
     await this.increment()
-    await actor.Floor[this.getFloor()].increment()
+    await actors.Floor[this.getFloor()].increment()
   }
 
   async leave (name = 'anon') {
     if (verbose) console.log(`Office: ${name} left office ${this.prettyName()}`)
     await this.decrement()
-    await actor.Floor[this.getFloor()].decrement()
+    await actors.Floor[this.getFloor()].decrement()
   }
 }
 
@@ -216,8 +216,8 @@ class Researcher {
     this.location = randomOffice()
     const delay = randI(10)
     await this.checkpointState()
-    await actor.Site[site].enter(this.name)
-    await actor.Office[this.location].enter(this.name)
+    await actors.Site[site].enter(this.name)
+    await actors.Office[this.location].enter(this.name)
     const deadline = Date.now() + 1000 * delay
     await this.sys.scheduleReminder('move', { id: 'move', deadline, data: { target: deadline } })
   }
@@ -229,11 +229,11 @@ class Researcher {
     delayStats[missedBucket] = (delayStats[missedBucket] || 0) + 1
     if (verbose) console.log(`Researcher: ${this.name} entered move`)
     const oldLocation = this.location
-    await actor.Office[oldLocation].leave(this.name)
+    await actors.Office[oldLocation].leave(this.name)
 
     this.steps = this.steps - 1
     if (this.steps === 0) {
-      await actor.Site[this.site].leave(this.name)
+      await actors.Site[this.site].leave(this.name)
       await this.sys.delete('state')
       console.log(`Quitting time for ${this.name}`)
     } else {
@@ -251,7 +251,7 @@ class Researcher {
         console.log(`Lunch time for ${this.name}`)
       } else {
         nextLocation = randomOffice()
-        if (!await actor.Office[nextLocation].isEmpty()) {
+        if (!await actors.Office[nextLocation].isEmpty()) {
           thinkTime = thinkTime * 3
           console.log(`${this.name} is heading to a meeting at ${nextLocation}`)
         }
@@ -259,7 +259,7 @@ class Researcher {
 
       this.location = nextLocation
       await this.checkpointState()
-      await actor.Office[this.location].enter(this.name)
+      await actors.Office[this.location].enter(this.name)
       if (verbose) console.log(`Researcher: ${this.name} starting reminder update`)
       const deadline = Date.now() + 1000 * thinkTime
       await this.sys.scheduleReminder('move', { id: 'move', deadline, data: { target: deadline } })
@@ -268,7 +268,7 @@ class Researcher {
     if (verbose) console.log(`Researcher: ${this.name} exited move`)
   }
 }
-app.use(actorRuntime({ site: Site, floor: Floor, office: Office, researcher: Researcher }))
+app.use(actorRuntime({ Site, Floor, Office, Researcher }))
 
 app.use(errorHandler) // enable kar error handling
 
