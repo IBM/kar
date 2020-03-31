@@ -94,7 +94,7 @@ class Site extends ActorWithCount {
 
   async startReporting (period = '10s') {
     await this.sys.cancelReminder({ id: 'siteReport' })
-    await this.sys.scheduleReminder('/siteReport', { id: 'siteReport', deadline: Date.now(), period: period })
+    await this.sys.scheduleReminder('siteReport', { id: 'siteReport', deadline: Date.now(), period: period })
   }
 
   async enter (name = 'anon') {
@@ -222,7 +222,7 @@ class Researcher {
     await actors.Site[site].enter(this.name)
     await actors.Office[this.location].enter(this.name)
     const deadline = new Date(Date.now() + 1000 * delay)
-    await this.sys.scheduleReminder('/move', { id: 'move', deadline, data: deadline.getTime() })
+    await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
   }
 
   async move (targetTime) {
@@ -265,7 +265,7 @@ class Researcher {
       await actors.Office[this.location].enter(this.name)
       if (verbose) console.log(`Researcher: ${this.name} starting reminder update`)
       const deadline = new Date(Date.now() + 1000 * thinkTime)
-      await this.sys.scheduleReminder('/move', { id: 'move', deadline, data: deadline.getTime() })
+      await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
       if (verbose) console.log(`Researcher: ${this.name} completed reminder update`)
     }
     if (verbose) console.log(`Researcher: ${this.name} exited move`)

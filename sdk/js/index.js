@@ -61,7 +61,7 @@ const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${p
 // reminder operations
 const actorCancelReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/cancel`, params)
 const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/get`, params)
-const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path }, params))
+const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path: `/${path}` }, params))
 
 // actor state operations
 const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`).catch(() => undefined)
