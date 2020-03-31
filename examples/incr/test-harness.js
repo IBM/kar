@@ -95,9 +95,7 @@ async function actorTests () {
 
   // external synchronous invocation of an actor method
   for (let i = 0; i < 25; i++) {
-    console.log(`starting ${i}`)
     const x = await actor.call('Foo', 'anotherInstance', 'incr', i)
-    console.log(`   got back ${x}`)
     if (x !== i + 1) {
       console.log(`Failed! incr(${i}) returned ${x}`)
       failure = true
