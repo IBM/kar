@@ -43,6 +43,10 @@ class Foo {
     return v + 1
   }
 
+  incrQuiet (v) {
+    return v + 1
+  }
+
   echo (body) {
     if (body && body.msg) {
       console.log(`actor ${this.id} says "${body.msg}"`)
