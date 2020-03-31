@@ -21,6 +21,7 @@ var (
 )
 
 const (
+	actorAnnotation       = "kar.ibm.com/actors"
 	appNameAnnotation     = "kar.ibm.com/app"
 	serviceNameAnnotation = "kar.ibm.com/service"
 	sendPortAnnotation    = "kar.ibm.com/sendPort"
@@ -190,6 +191,10 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 		cmd = append(cmd, "-service", serviceName)
+	}
+
+	if actors, ok := annotations[actorAnnotation]; ok {
+		cmd = append(cmd, "-actors", actors)
 	}
 
 	var sendPort = defaultSendPort

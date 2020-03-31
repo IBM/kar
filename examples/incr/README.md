@@ -20,8 +20,5 @@ kar -app myApp -service myService -actors Foo node server.js &
 # run a client
 kar -app myApp -service myClient1 node client.js
 
-kar -app myApp -service myClient2 node actor.js
-
-kar -app myApp -service myClient3 node actor-reminder.js
-
+kar -app myApp -service tester node test-harness.js
 ```

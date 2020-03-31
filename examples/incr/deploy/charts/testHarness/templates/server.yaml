@@ -16,6 +16,7 @@ spec:
       annotations:
         kar.ibm.com/app: myApp
         kar.ibm.com/service: myService
+        kar.ibm.com/actors: Foo
         kar.ibm.com/verbose: info
     spec:
       containers:

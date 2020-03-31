@@ -17,6 +17,6 @@ spec:
     image: {{ .Values.image }}
     env:
     - name: MAIN
-      value: loop.js
+      value: test-harness.js
     - name: KUBERNETES_MODE
       value: 'true'
