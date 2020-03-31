@@ -16,4 +16,4 @@ kar -app myApp -service myService -actors Foo node server.js &
 
 sleep 1
 
-kar -app myApp -service myService Foo node test-harness.js
+kar -app myApp -service myService node test-harness.js
