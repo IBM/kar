@@ -1,15 +1,13 @@
-FROM node:12-alpine
+ARG SDK_BASE=us.icr.io/kar-dev/sdk-nodejs-v12
 
-ENV MAIN ykt.js
-
-WORKDIR /kar/sdk/js
-
-COPY sdk/js/*.js sdk/js/*.json ./
+FROM $SDK_BASE
 
 WORKDIR /kar/examples/actors-ykt
 
-COPY examples/actors-ykt/*.js examples/actors-ykt/*.json ./
+COPY *.js *.json ./
 
 RUN npm install --prod
+
+ENV MAIN ykt.js
 
 CMD node "$MAIN"
