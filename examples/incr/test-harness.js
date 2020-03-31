@@ -145,6 +145,24 @@ async function actorTests () {
   return failure
 }
 
+async function testTermination (failure) {
+  if (failure) {
+    console.log('FAILED; setting non-zero exit code')
+    process.exitCode = 1
+  } else {
+    console.log('SUCCESS')
+    process.exitCode = 0
+  }
+
+  if (!truthy(process.env.KUBERNETES_MODE)) {
+    console.log('Requesting server shutdown')
+    await broadcast('shutdown')
+  }
+
+  console.log('Terminating sidecar')
+  await shutdown()
+}
+
 async function main () {
   var failure = false
 
@@ -154,21 +172,7 @@ async function main () {
   console.log('*** Actor Tests ***')
   failure |= await actorTests()
 
-  if (failure) {
-    console.log('FAILED; setting non-zero exit code')
-    process.exitCode = 1
-  } else {
-    console.log('SUCCESS')
-    process.exitCode = 0
-  }
-
-  if (process.env.KUBERNETES_MODE === '') {
-    console.log('Requesting server shutdown')
-    await broadcast('shutdown')
-  }
-
-  console.log('Terminating sidecar')
-  await shutdown()
+  testTermination(failure)
 }
 
 main()
