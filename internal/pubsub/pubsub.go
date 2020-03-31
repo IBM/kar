@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"sync"
 
@@ -51,6 +52,8 @@ var (
 	offsets = make([]int64, 1)           // next offset to read from each partition (local uncommitted progress)
 	live    map[int32]map[int64]struct{} // live offsets at beginning of session (from all sidecars)
 	done    map[int32]map[int64]struct{} // done offsets at beginning of session (from all sidecars)
+
+	errTooFewPartitions = errors.New("too few partitions")
 )
 
 // Message is the type of messages
@@ -65,7 +68,7 @@ func marshal() []byte {
 	b, err := json.Marshal(here)
 	lock.Unlock()
 	if err != nil {
-		logger.Fatal("failed to marshal userData: %v", err)
+		logger.Fatal("failed to marshal user data: %v", err)
 	}
 	return b
 }
@@ -75,7 +78,7 @@ func partitionKey(p int32) string {
 }
 
 func mark(partition int32, offset int64) {
-	logger.Debug("finishing partition %d offset %d", partition, offset)
+	logger.Debug("finishing work on message at partition %d, offset %d", partition, offset)
 	_, err := store.ZAdd(partitionKey(partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done
 	if err != nil {
 		logger.Error("failed to add offset to store: %v", err)
@@ -91,21 +94,11 @@ func (msg *Message) Mark() {
 }
 
 // handler of consumer group session
-type handler struct {
-	repartitionPending bool
-}
-
-type tooFewPartitionsError struct {
-	tag struct{}
-}
-
-func (e tooFewPartitionsError) Error() string {
-	return "too few partitions"
-}
+type handler struct{}
 
 // Setup consumer group session
 func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
-	logger.Info("generation %d, member %s, service %s, sidecar %s, claims %v", session.GenerationID(), session.MemberID(), here.Service, here.Sidecar, session.Claims()[topic])
+	logger.Info("generation %d, sidecar %s, claims %v", session.GenerationID(), here.Sidecar, session.Claims()[topic])
 	groups, err := admin.DescribeConsumerGroups([]string{topic})
 	if err != nil {
 		logger.Debug("failed to describe consumer group: %v", err)
@@ -114,7 +107,6 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	members := groups[0].Members
 	for _, member := range members { // ensure enough partitions
 		if len(member.MemberAssignment) == 0 { // sidecar without partition
-			consumer.repartitionPending = true
 			logger.Info("increasing partition count to %d", len(members))
 			if err := admin.CreatePartitions(topic, int32(len(members)), nil, false); err != nil {
 				// do not fail if another sidecar added partitions already
@@ -123,11 +115,9 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 					return err
 				}
 			}
-			return tooFewPartitionsError{} // abort
-			return nil
+			return errTooFewPartitions // abort
 		}
 	}
-	consumer.repartitionPending = false
 	rp := map[string][]string{}           // temp replicas
 	hs := map[string][]string{}           // temp hosts
 	rt := map[string][]int32{}            // temp routes
@@ -147,7 +137,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 		}
 		var there userData
 		if err := json.Unmarshal(m.UserData, &there); err != nil {
-			logger.Fatal("failed to unmarshal userdata: %v", err)
+			logger.Fatal("failed to unmarshal user data: %v", err)
 		}
 		rp[there.Service] = append(rp[there.Service], there.Sidecar)
 		for _, t := range there.Actors {
@@ -167,7 +157,7 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 			}
 			r, err := store.ZRange(partitionKey(p), 0, -1) // fetch done offsets from store
 			if err != nil {
-				logger.Error("failed to retrieve mark offsets to store: %v", err)
+				logger.Error("failed to retrieve offsets from store: %v", err)
 			}
 			for _, o := range r {
 				k, _ := strconv.ParseInt(o, 10, 64)
@@ -185,9 +175,6 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	if max >= len(offsets) { // grow array to accommodate more partitions
 		offsets = append(offsets, make([]int64, max+1-len(offsets))...)
 	}
-	logger.Info("replicas: %v", rp)
-	logger.Info("hosts: %v", hs)
-	logger.Info("routes: %v", rt)
 	mu.Lock()
 	replicas = rp
 	hosts = hs
@@ -204,28 +191,20 @@ func (consumer *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim processes messages of consumer claim
 func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	if consumer.repartitionPending {
-		<-session.Context().Done() // wait for repartition
-		return nil
-	}
 	store.ZRemRangeByScore(partitionKey(claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
-	prefix := true                                                                      // should advance cursor
+	advancing := true                                                                   // should advance cursor
 	for m := range claim.Messages() {
-		logger.Debug("received message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+		logger.Debug("received message at partition %d, offset %d, with value %s", m.Partition, m.Offset, m.Value)
 		if _, ok := done[m.Partition][m.Offset]; ok {
-			if prefix {
+			if advancing {
 				session.MarkMessage(m, "") // advance cursor
 			}
-			logger.Debug("skipping done message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+			logger.Debug("skipping committed message at partition %d, offset %d", m.Partition, m.Offset)
 			continue
 		}
-		prefix = false // stop advancing cursor
-		if _, ok := live[m.Partition][m.Offset]; ok {
-			logger.Debug("skipping live message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
-			continue
-		}
-		if offsets[m.Partition] > m.Offset {
-			logger.Debug("skipping already seen message on topic %s, at partition %d, offset %d, with value %s", m.Topic, m.Partition, m.Offset, m.Value)
+		advancing = false // stop advancing cursor
+		if _, ok := live[m.Partition][m.Offset]; ok || offsets[m.Partition] > m.Offset {
+			logger.Debug("skipping uncommitted message at partition %d, offset %d", m.Partition, m.Offset)
 			continue
 		}
 		offsets[m.Partition] = m.Offset + 1
@@ -235,14 +214,14 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		var msg map[string]string
 		err := json.Unmarshal(m.Value, &msg)
 		if err != nil {
-			logger.Error("failed to unmarshal message with value %s: %v", m.Value, err)
+			logger.Error("failed to unmarshal message: %v", err)
 			mark(m.Partition, m.Offset) // mark invalid message as completed
 			continue
 		}
-		logger.Debug("starting partition %d offset %d", m.Partition, m.Offset)
+		logger.Debug("starting work on message at partition %d, offset %d", m.Partition, m.Offset)
 		select {
 		case <-session.Context().Done():
-			logger.Debug("cancelling partition %d offset %d", m.Partition, m.Offset)
+			logger.Debug("cancelling work on message at partition %d, offset %d", m.Partition, m.Offset)
 			offsets[m.Partition] = m.Offset // rollback
 			lock.Lock()
 			delete(here.Live[m.Partition], m.Offset) // rollback
@@ -257,7 +236,7 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 func consume(ctx context.Context) {
 	for { // for each session
 		if err := consumer.Consume(ctx, []string{topic}, &handler{}); err != nil {
-			if _, ok := err.(tooFewPartitionsError); !ok {
+			if err != errTooFewPartitions {
 				logger.Fatal("consumer error: %v", err)
 			}
 		}

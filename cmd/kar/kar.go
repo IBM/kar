@@ -276,7 +276,7 @@ func main() {
 	}
 	listener, err := net.Listen("tcp", listenHost)
 	if err != nil {
-		logger.Fatal("Listener failed: %v", err)
+		logger.Fatal("listener failed: %v", err)
 	}
 
 	channel := pubsub.Dial(ctx)

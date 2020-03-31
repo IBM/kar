@@ -62,7 +62,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			if err == nil {
 				return // found sidecar and partition
 			}
-			logger.Debug("sidecar %s for actor type %s id %s is no longer available", sidecar, t, id)
+			logger.Debug("sidecar %s for actor type %s, id %s is no longer available", sidecar, t, id)
 		}
 		expected := sidecar
 		err = backoff.Retry(func() error { // keep trying
@@ -80,7 +80,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 		if err != nil {
 			return // abort
 		}
-		logger.Debug("trying to save new sidecar %s for actor type %s id %s", sidecar, t, id)
+		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)
 		_, err = CompareAndSetSidecar(t, id, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // store error
@@ -106,7 +106,7 @@ func Send(ctx context.Context, msg map[string]string) error {
 		var sidecar string
 		partition, sidecar, err = routeToActor(ctx, msg["type"], msg["id"])
 		if err != nil {
-			logger.Debug("failed to route to actor type %s id $s %v: %v", msg["type"], msg["id"], err)
+			logger.Debug("failed to route to actor type %s, id $s %v: %v", msg["type"], msg["id"], err)
 			return err
 		}
 		msg["sidecar"] = sidecar // add selected sidecar id to message
@@ -131,7 +131,7 @@ func Send(ctx context.Context, msg map[string]string) error {
 		logger.Debug("failed to send message to partition %d: %v", partition, err)
 		return err
 	}
-	logger.Debug("sent message on topic %s, at partition %d, offset %d", topic, partition, offset)
+	logger.Debug("sent message at partition %d, offset %d", partition, offset)
 	return nil
 }
 
