@@ -92,6 +92,16 @@ async function actorTests () {
   }
 
   console.log('Testing actor invocation')
+
+  // external synchronous invocation of an actor method
+  for (let i = 0; i < 25; i++) {
+    const x = await actor.call('Foo', 'anotherInstance', 'incr', i)
+    if (x !== i + 1) {
+      console.log(`Failed! incr(${i}) returned ${x}`)
+      failure = true
+    }
+  }
+
   // synchronous invocation via the actor
   const v6 = await a.incr(42)
   if (v6 !== 43) {
@@ -103,6 +113,7 @@ async function actorTests () {
   const v8 = await a.sys.tell('incr', 42)
   if (v8 !== 'OK') {
     console.log(`Failed: unexpected result from tell ${v8}`)
+    failure = true
   }
 
   // getter
@@ -112,6 +123,7 @@ async function actorTests () {
     failure = true
   }
 
+  console.log('Testing actor invocation error handling')
   // error in synchronous invocation
   try {
     console.log(await a.fail('error message 123'))
@@ -128,15 +140,6 @@ async function actorTests () {
     failure = true
   } catch (err) {
     if (verbose) console.log('Caught expected error: ', err.message)
-  }
-
-  // external synchronous invocation of an actor method
-  for (let i = 0; i < 25; i++) {
-    const x = await actor.call('Foo', 'anotherInstance', 'incr', i)
-    if (x !== i + 1) {
-      console.log(`Failed! incr(${i}) returned ${x}`)
-      failure = true
-    }
   }
 
   return failure
