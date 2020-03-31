@@ -107,13 +107,13 @@ class Site extends ActorWithCount {
     await this.decrement()
   }
 
-  async workDay ({ workers = 3, steps = 20 } = {}) {
+  async workDay ({ workers = 3, steps = 20, thinkms = 10000 } = {}) {
     console.log(`${workers} starting their shift of ${steps} tasks at ${this.sys.id}`)
     const sn = this.nextSerialNumber
     await this.updateNextSerialNumber(sn + workers)
     for (var i = 0; i < workers; i++) {
       const name = sn + i
-      actor.tell('Researcher', name, 'work', { site: this.sys.id, steps })
+      actor.tell('Researcher', name, 'work', { site: this.sys.id, steps, thinkms })
     }
   }
 
@@ -147,7 +147,7 @@ class Site extends ActorWithCount {
 
   async delayReport () {
     for (const i in delayStats) {
-      console.log(`<${i * delayStatsBucketMS}ms\t${delayStats[i]}`)
+      console.log(`<${(parseInt(i) + 1) * delayStatsBucketMS}ms\t${delayStats[i]}`)
     }
     return { bucketSizeInMS: delayStatsBucketMS, delayHistogram: delayStats }
   }
@@ -199,6 +199,9 @@ class Researcher {
   get steps () { return this._state.steps }
   set steps (s) { this._state.steps = s }
 
+  get thinkms () { return this._state.thinkms }
+  set thinkms (t) { this._state.thinkms = t }
+
   currentState () { return this._state }
   async checkpointState () {
     await this.sys.set('state', this._state)
@@ -213,15 +216,16 @@ class Researcher {
     if (verbose) console.log(`deactivated Researcher ${this.name}`)
   }
 
-  async work ({ site, steps }) {
+  async work ({ site, steps, thinkms }) {
     this.site = site
     this.steps = steps
+    this.thinkms = thinkms
     this.location = randomOffice()
-    const delay = randI(10)
+    const thinkTime = 1 + randI(this.thinkms)
     await this.checkpointState()
     await actors.Site[site].enter(this.name)
     await actors.Office[this.location].enter(this.name)
-    const deadline = new Date(Date.now() + 1000 * delay)
+    const deadline = new Date(Date.now() + thinkTime)
     await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
   }
 
@@ -242,7 +246,7 @@ class Researcher {
     } else {
       const nextMove = Math.random()
       let nextLocation
-      let thinkTime = 1 + randI(10)
+      let thinkTime = 1 + randI(this.thinkms)
       if (nextMove < 0.15) {
         // 15% chance of getting coffee
         nextLocation = OutTakes
@@ -264,7 +268,7 @@ class Researcher {
       await this.checkpointState()
       await actors.Office[this.location].enter(this.name)
       if (verbose) console.log(`Researcher: ${this.name} starting reminder update`)
-      const deadline = new Date(Date.now() + 1000 * thinkTime)
+      const deadline = new Date(Date.now() + thinkTime)
       await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
       if (verbose) console.log(`Researcher: ${this.name} completed reminder update`)
     }
