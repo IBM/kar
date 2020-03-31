@@ -1,4 +1,4 @@
-const { actors, broadcast, shutdown, call } = require('kar')
+const { actor, actors, broadcast, shutdown, call } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -92,14 +92,14 @@ async function actorTests () {
   }
 
   console.log('Testing actor invocation')
-  // synchronous invocation
+  // synchronous invocation via the actor
   const v6 = await a.incr(42)
   if (v6 !== 43) {
     console.log(`Failed: unexpected result from incr ${v6}`)
     failure = true
   }
 
-  // asynchronous invocation
+  // asynchronous invocation via the actor
   const v8 = await a.sys.tell('incr', 42)
   if (v8 !== 'OK') {
     console.log(`Failed: unexpected result from tell ${v8}`)
@@ -128,6 +128,15 @@ async function actorTests () {
     failure = true
   } catch (err) {
     if (verbose) console.log('Caught expected error: ', err.message)
+  }
+
+  // external synchronous invocation of an actor method
+  for (let i = 0; i < 25; i++) {
+    const x = await actor.call('Foo', 'anotherInstance', 'incr', i)
+    if (x !== i + 1) {
+      console.log(`Failed! incr(${i}) returned ${x}`)
+      failure = true
+    }
   }
 
   return failure
