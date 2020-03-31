@@ -134,3 +134,14 @@ func Send(ctx context.Context, msg map[string]string) error {
 	logger.Debug("sent message on topic %s, at partition %d, offset %d", topic, partition, offset)
 	return nil
 }
+
+// Sidecars returns all the reachable sidecars
+func Sidecars() []string {
+	mu.RLock()
+	sidecars := []string{}
+	for sidecar := range routes {
+		sidecars = append(sidecars, sidecar)
+	}
+	mu.RUnlock()
+	return sidecars
+}

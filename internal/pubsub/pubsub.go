@@ -90,17 +90,6 @@ func (msg *Message) Mark() {
 	mark(msg.partition, msg.offset)
 }
 
-// Sidecars returns all the routable sidecars
-func Sidecars() []string {
-	mu.RLock()
-	sidecars := []string{}
-	for sidecar := range routes {
-		sidecars = append(sidecars, sidecar)
-	}
-	mu.RUnlock()
-	return sidecars
-}
-
 // handler of consumer group session
 type handler struct {
 	repartitionPending bool
