@@ -4,5 +4,6 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 CODEDIR="$SCRIPTDIR/.."
 
 KAR_VERBOSE=${KAR_VERBOSE:="info"}
+KAR_ACTOR_REMINDER_INTERVAL=${KAR_ACTOR_REMINDER_INTERVAL:="100ms"}
 
-VERBOSE=1 kar -v $KAR_VERBOSE -app ykt -service simulation -actors Site,Floor,Office,Researcher node $CODEDIR/ykt.js
+kar -v $KAR_VERBOSE -actor_reminder_interval $KAR_ACTOR_REMINDER_INTERVAL -app ykt -service simulation -actors Site,Floor,Office,Researcher node $CODEDIR/ykt.js
