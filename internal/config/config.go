@@ -117,7 +117,7 @@ func init() {
 
 	ActorReminderInterval, err = time.ParseDuration(remindInterval)
 	if err != nil {
-		logger.Fatal("error parsing actor_reminder_interval %v", remindInterval)
+		logger.Fatal("error parsing actor_reminder_interval %s", remindInterval)
 	}
 
 	if !KafkaEnableTLS && os.Getenv("KAFKA_ENABLE_TLS") != "" {
@@ -180,7 +180,7 @@ func init() {
 		} else {
 			if rp := loadStringFromConfig(configDir, "redis_port"); rp != "" {
 				if RedisPort, err = strconv.Atoi(rp); err != nil {
-					logger.Fatal("error parsing config value for redis_port: %v", rp)
+					logger.Fatal("error parsing config value for redis_port: %s", rp)
 				}
 			} else {
 				RedisPort = 6379
