@@ -98,7 +98,7 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 		r.EncodedData = string(buf)
 	}
 
-	logger.Info("ScheduleReminder: %v", r)
+	logger.Debug("ScheduleReminder: %v", r)
 	arMutex.Lock()
 	activeReminders.addReminder(r)
 	arMutex.Unlock()
