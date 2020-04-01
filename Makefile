@@ -10,15 +10,9 @@ all: install
 install:
 	go install ./...
 
-KAR_OUTPUT_DIR=./dist
-
-kar:
-	mkdir -p $(KAR_OUTPUT_DIR)/linux/amd64
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $(KAR_OUTPUT_DIR)/linux/amd64 ./...
-
-docker: kar
-	docker build -f build/Dockerfile --build-arg KAR_BINARY=$(KAR_OUTPUT_DIR)/linux/amd64/kar -t $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG) .
-	docker build -f build/Dockerfile --build-arg KAR_BINARY=$(KAR_OUTPUT_DIR)/linux/amd64/kar-injector -t $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG) .
+docker:
+	docker build -f build/Dockerfile --build-arg KAR_BINARY=kar -t $(DOCKER_IMAGE_PREFIX)kar:$(DOCKER_IMAGE_TAG) .
+	docker build -f build/Dockerfile --build-arg KAR_BINARY=kar-injector -t $(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG) .
 	docker build -t $(KAR_JS_SDK) sdk/js
 	docker build -t $(DOCKER_IMAGE_PREFIX)sample-incr:$(DOCKER_IMAGE_TAG) --build-arg SDK_BASE=$(KAR_JS_SDK) examples/incr
 	docker build -t $(DOCKER_IMAGE_PREFIX)sample-ykt:$(DOCKER_IMAGE_TAG) --build-arg SDK_BASE=$(KAR_JS_SDK) examples/actors-ykt
