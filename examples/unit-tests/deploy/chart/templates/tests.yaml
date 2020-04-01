@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: incr-client
+  name: ut-client
   labels:
-    name: incr-client
+    name: ut-client
   annotations:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded

@@ -5,16 +5,16 @@ set -eu
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."
 
-helm install lt $ROOTDIR/examples/incr/deploy/charts/testHarness --set image=sample-incr:dev
+helm install lt $ROOTDIR/examples/unit-tests/deploy/chart --set image=example-unit-tests:dev
 
 if helm test lt; then
-    echo "PASSED! In cluster incr/testHarness passed."
+    echo "PASSED! In cluster unit-tests passed."
     helm delete lt
 else
-    echo "FAILED: In cluster incr/testHarness failed."
-    kubectl logs incr-client -c client
-    kubectl logs incr-client -c kar
-    kubectl delete pod incr-client
+    echo "FAILED: In cluster unit-tests failed."
+    kubectl logs ut-client -c client
+    kubectl logs ut-client -c kar
+    kubectl delete pod ut-client
     helm delete lt
     exit 1
 fi

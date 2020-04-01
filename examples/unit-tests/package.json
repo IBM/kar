@@ -1,5 +1,5 @@
 {
-  "name": "incr",
+  "name": "kar-unit-tests",
   "version": "0.0.1",
   "scripts": {
     "test": "standard"

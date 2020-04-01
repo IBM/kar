@@ -7,10 +7,10 @@ ROOTDIR="$SCRIPTDIR/../.."
 
 . $ROOTDIR/scripts/kar-kind-env.sh
 
-# Run incr/test-harness.js locally
-echo "*** Executing incr/test-harness.js ***"
+# Run unit-tests/test-harness.js locally
+echo "*** Executing unit-tests/test-harness.js ***"
 
-cd $ROOTDIR/examples/incr
+cd $ROOTDIR/examples/unit-tests
 npm install
 
 kar -app myApp -service myService -actors Foo node server.js &
@@ -18,7 +18,7 @@ sleep 1
 kar -app myApp -service myService node test-harness.js
 
 # Run actors-ykt locally
-echo "*** Executing actors-yktr/ykt-client.js ***"
+echo "*** Executing actors-ykt/ykt-client.js ***"
 
 cd $ROOTDIR/examples/actors-ykt
 npm install
