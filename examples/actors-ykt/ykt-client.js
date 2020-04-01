@@ -39,7 +39,7 @@ async function main () {
     if (report.totalWorking === 0) {
       const delays = await actor.call('Site', 'ykt', 'delayReport')
       console.log(delays)
-      const count = delays.delayHistogram.reduce((x, y) => x + y)
+      const count = delays.delayHistogram.reduce((x, y) => x + y, 0)
       if (count !== params.workers * params.steps) {
         console.log(`FAILURE: Expected ${params.workers * params.steps} moves but got ${count}`)
         failure = true

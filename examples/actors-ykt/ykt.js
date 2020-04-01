@@ -15,9 +15,6 @@ app.post('/shutdown', async (_reg, res) => {
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
 
-let delayStats = []
-const delayStatsBucketMS = 100
-
 function randI (max) { return Math.floor(Math.random() * Math.floor(max)) }
 
 // YKT Office Encoding:  aisle:flooroffice   TODO: KAR should be able to use '-' instead of ':' as a separator
@@ -65,6 +62,7 @@ class ActorWithCount {
   }
 }
 
+const delaysBucketMS = 100
 class Site extends ActorWithCount {
   get type () { return 'Site' }
   get nextSerialNumber () { return this._nextSerialNumber }
@@ -75,7 +73,13 @@ class Site extends ActorWithCount {
 
   async activate () {
     this._nextSerialNumber = await this.sys.get('nextSerialNumber') || 0
+    this.delayStats = await this.sys.get('delayStats') || []
     await super.activate()
+  }
+
+  async deactivate () {
+    await this.sys.set('delayStats', this.delayStats)
+    await super.deactivate()
   }
 
   async clear () {
@@ -102,7 +106,12 @@ class Site extends ActorWithCount {
     await this.increment()
   }
 
-  async leave (name = 'anon') {
+  async leave ({ name = 'anon', delays = [] } = {}) {
+    const ds = this.delayStats
+    delays.forEach(function (missedMS, _) {
+      const missedBucket = Math.floor(missedMS / delaysBucketMS)
+      ds[missedBucket] = (ds[missedBucket] || 0) + 1
+    })
     console.log(`${name} left Site ${this.sys.id}`)
     await this.decrement()
   }
@@ -146,14 +155,14 @@ class Site extends ActorWithCount {
   }
 
   async delayReport () {
-    for (const i in delayStats) {
-      console.log(`<${(parseInt(i) + 1) * delayStatsBucketMS}ms\t${delayStats[i]}`)
+    for (const i in this.delayStats) {
+      console.log(`<${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.delayStats[i]}`)
     }
-    return { bucketSizeInMS: delayStatsBucketMS, delayHistogram: delayStats }
+    return { bucketSizeInMS: delaysBucketMS, delayHistogram: this.delayStats }
   }
 
   resetDelayStats () {
-    delayStats = []
+    this.delayStats = []
   }
 }
 
@@ -202,6 +211,13 @@ class Researcher {
   get thinkms () { return this._state.thinkms }
   set thinkms (t) { this._state.thinkms = t }
 
+  recordJitter (ms) {
+    if (this._state.delays === undefined) {
+      this._state.delays = []
+    }
+    this._state.delays.push(ms)
+  }
+
   currentState () { return this._state }
   async checkpointState () {
     await this.sys.set('state', this._state)
@@ -230,17 +246,14 @@ class Researcher {
   }
 
   async move (targetTime) {
-    const now = Date.now()
-    const missedMS = Math.abs(now - targetTime)
-    const missedBucket = Math.floor(missedMS / delayStatsBucketMS)
-    delayStats[missedBucket] = (delayStats[missedBucket] || 0) + 1
+    this.recordJitter(Math.abs(Date.now() - targetTime))
     if (verbose) console.log(`Researcher: ${this.name} entered move`)
     const oldLocation = this.location
     await actors.Office[oldLocation].leave(this.name)
 
     this.steps = this.steps - 1
     if (this.steps === 0) {
-      await actors.Site[this.site].leave(this.name)
+      await actors.Site[this.site].leave({ name: this.name, delays: this._state.delays })
       await this.sys.delete('state')
       console.log(`Quitting time for ${this.name}`)
     } else {
