@@ -11,8 +11,9 @@ for assembling enterprise applications from cloud-native components.
 
 If you are a regular employee in the Research Division, you can access
 our [Challenge Portal Entry](https://aichallenges.sl.cloud9.ibm.com/challenges/2659?tab=details)
-for additional strategic context.  For non-Research employees, we
-summarize some of the challenge portal content below.
+for additional strategic context.  For non-Research employees, the
+[Project Summary](#project-summary) below summarizes the challenge's
+technical overview.
 
 ## Quick Links
 
