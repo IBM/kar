@@ -1,39 +1,47 @@
-# Getting Started with KAR
-
-## Prerequisites
+# Prerequisites
 
 1. You need a Kubernetes 1.16 (or newer) cluster.
-   a. You can use an IKS cluster without additional setup
+   a. You can use an IKS cluster provisioned on the IBM Public Cloud.
    b. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual Kubernetes cluster using Docker
-      on your development machine. Just run [start-kind.sh](build/ci/start-kind.sh)
-      to create a cluster.
+      on your development machine. Just run [start-kind.sh](../build/ci/start-kind.sh)
+      to create a virtual cluster.
 
 2. You will need the `kubectl` cli installed locally.
 
 3. You will need the `helm` (Helm 3) cli installed locally.
 
-4. You will need a local git clone of this repository.
+# Getting Started with KAR
 
-## Getting Started with KAR
+In the sections below, the sample commands are meant to be executed in
+the top level directory of a local git clone of this repository. Get
+one by doing:
+```script
+git clone git@github.ibm.com:solsa/kar.git
+cd kar
+```
 
-### Deploying KAR to the `kar-system` namespace
+## Deploying KAR to the `kar-system` namespace
 
-Unless you are actively developing the KAR runtime, you will probably
-want to deploy it using pre-built images from the KAR namespaces in
-the IBM container registry (kar-dev, kar-stage, kar-prod). Currently,
-you will have to ask Dave or Olivier for an apikey that enables this
-access. After you have that apikey pass it as an argument to `kar-deploy.sh`
-as shown below.
+You can deploy KAR using pre-built images from KAR project namespaces
+in the IBM container registry (kar-dev, kar-stage,
+kar-prod). Currently, you will have to ask Dave or Olivier for an
+apikey to access this namespace.  Use the apikey as an argument to
+`kar-deploy.sh`:
 ```script
 ./scripts/kar-deploy.sh -a <KAR_CR_APIKEY>
 ```
 
-You can also deploy KAR in a dev mode where it will instead always
-use locally built images for all KAR runtime components and examples.
-Deploy this way with `./scripts/kar-deploy.sh -dev` and use
-`make kindPushDev` to build and push images to your kind cluster.
+Alternatively, you can deploy in dev mode where KAR will use
+locally built images for all KAR runtime components and examples.
+Since it is bypassing the container registry, this mode is preferred
+for local development, but only works with `kind`, not IKS.
+Deploy KAR in dev mode by doing:
+```shell
+make kindPushDev
+./scripts/kar-deploy.sh -dev
+```
 
-### Enable a namespace to run KAR-based applications.
+## Enable a namespace to run KAR-based applications.
 
 **NOTE: We strongly recommend against enabling the `kar-system` namespace
   or any Kubernetes system namespace for KAR applications. Enabling
@@ -43,7 +51,7 @@ Enabling a namespace for deploying KAR-based applications requires
 copying configuration secrets from the `kar-system` namespace and
 labeling the namespace to enable KAR sidecar injection.  These steps
 are automated by
-[kar-enable-namespace.sh](scripts/kar-enable-namespace.sh)
+[kar-enable-namespace.sh](../scripts/kar-enable-namespace.sh)
 
 For example, to create and KAR-enable the `kar-apps` namespace execute:
 ```shell
@@ -57,46 +65,22 @@ Or to KAR-enable an existing namespace, for example the `default`namespace:
 
 Now you are ready to run KAR applications!
 
-### Running a sample application
+## Running KAR-based applications
 
-First try running the incr example:
-```shell
-kubectl apply -f examples/incr/deploy/incr.yaml -n kar-apps
-```
-After a few seconds, you should see the following pods
-```
-(%) kubectl get pods -n kar-apps
-NAME                           READY   STATUS    RESTARTS   AGE
-incr-client-nrwst              1/2     Running   0          48m
-incr-server-75944c4fc5-wd26m   2/2     Running   0          48m
-```
+To demonstrate the different modes of running KAR applications, we'll
+use a simple greeting server.  A server process receives a request
+from a client containing a name and responds to each request with a
+greeting.
 
-Examining the logs of the client pod, you should see the number `43`.
-```
-(%) kubectl logs jobs/incr-client -c client -n kar-apps
-43
-```
+### Mode 1: running completely inside Kubernetes
 
-To cleanup, do
-```
-kubectl delete -f examples/incr/deploy/incr.yaml -n kar-apps
-```
+TODO: fill in commands
 
-### Running a sample application outside of Kubernetes
+### Mode 2: running completely locally
 
-KAR also supports running applications outside of Kubernetes. Access
-to Redis and Kafka is configured by defining environment variables
-that are read by the `kar` executable that launches each application
-process.
+TODO: fill in commands
 
-One simple way to experiment with this mode is to first deploy KAR on
-kind as described above.  Then do `. ./scripts/kar-kind-env.sh` to
-configure a shell to access Redis and Kafka.  Finally, run the `incr`
-example by doing:
-```shell
-# start server
-kar -app myApp -service myService node server.js &
+### Mode 3: run the server in Kubernetes and the client locally
 
-# run client
-kar -app myApp -service myClient node client.js
-```
+TODO: fill in commands
+
