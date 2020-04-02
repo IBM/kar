@@ -78,7 +78,44 @@ TODO: fill in commands
 
 ### Mode 2: running completely locally
 
-TODO: fill in commands
+In this mode, both the KAR runtime and the application run
+as processes on your local machine.  The KAR runtime dependencies
+(Kafka and Redis) are assumed to be already running and are made
+available to KAR by defining environment variables.  The simplest way
+to deploy and configure these dependencies is to deploy KAR to a
+`kind` cluster and then source
+[kar-kind-env.sh](../scripts/kar-kind-env.sh) to configure your
+command shell to enable access to them.
+
+You will need to build the `kar` binary locally.  This requires a
+correctly configured Go development environment on your machine. In
+your top-level directory execute:
+```shell
+go install ./...
+```
+You should now have the `kar` executable in your path.
+
+In one window:
+```shell
+. scripts/kar-kind-env.sh
+cd examples/helloWorld
+npm install
+kar -app helloWorld -service greeter node server.js
+```
+
+In a second window:
+```shell
+. scripts/kar-kind-env.sh
+cd examples/helloWorld
+kar -app helloWorld -service client node client.js
+```
+
+You should see output like shown below in both windows:
+```
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+```
+The client process will exit, while the server remains running. You
+can send another request, or exit the server with a Control-C.
 
 ### Mode 3: run the server in Kubernetes and the client locally
 

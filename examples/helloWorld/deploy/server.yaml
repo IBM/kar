@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-server
+  annotations:
+    kar.ibm.com/app: helloWorld
+    kar.ibm.com/service: greeter
+spec:
+  containers:
+  - name: server
+    image: us.icr.io/kar-dev/example-hello-world:latest
+    env:
+    - name: MAIN
+      value: server.js
