@@ -1,7 +1,5 @@
 # KAR: Kubernetes Application Runtime
 
-## Overview
-
 The KAR project is part of a strategic effort in IBM Research to
 simplify cloud native development and drive the growth of IBM's Hybrid
 Cloud strategy. KAR, an acronym for *Kubernetes Application Runtime*,
