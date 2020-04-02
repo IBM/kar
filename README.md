@@ -110,7 +110,7 @@ of application components:
   using Kubernetes mechanisms (or KEDA).
 + **Stateful components** that are managed by the application itself
   (in particular singleton services).
-+ ** Virtual stateful components** (aka actors or agents) whose
++ **Virtual stateful components** (aka actors or agents) whose
   scaling and migration can be completely managed by our runtime layer
   because the runtime layer is able to activate, passivate, and migrate
   agent instances between containers.
