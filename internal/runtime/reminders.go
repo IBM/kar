@@ -12,15 +12,13 @@ import (
 )
 
 var (
-	activeReminders        reminderQueue
-	arMutex                sync.Mutex
-	jitterWarningThreshold time.Duration
+	activeReminders reminderQueue
+	arMutex         sync.Mutex
 )
 
 func init() {
 	activeReminders = make(reminderQueue, 0)
 	heap.Init(&activeReminders)
-	jitterWarningThreshold = time.Duration(config.ActorReminderAcceptableJitterFactor * int64(config.ActorReminderInterval))
 }
 
 // Reminder is a reminder
@@ -116,7 +114,7 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		if !valid {
 			break
 		}
-		if fireTime.After(r.Deadline.Add(jitterWarningThreshold)) {
+		if fireTime.After(r.Deadline.Add(config.ActorReminderAcceptableDelay)) {
 			logger.Warning("ProcessReminders: LATE by %v firing %v to %v:%v:%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
 		}
 
