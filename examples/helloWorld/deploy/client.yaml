@@ -14,7 +14,8 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: client
-        image: us.icr.io/kar-dev/sample-hello-world:latest
+        # image: us.icr.io/kar-dev/sample-hello-world:latest
+        image: example-hello-world:dev
         env:
         - name: MAIN
           value: client.js

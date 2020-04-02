@@ -74,7 +74,32 @@ greeting.
 
 ### Mode 1: running completely inside Kubernetes
 
-TODO: fill in commands
+In this mode, the application runs in Pods in a Kubernetes cluster in
+a KAR-enabled namespace.  The KAR runtime is automatically injected as
+a sidecar container into every application Pod.
+
+If you have not already built and pushed images to your kind cluster,
+execute `make kindPushDev`.
+
+Next run the client and server as shown below:
+```shell
+$ cd examples/helloWorld
+$ kubectl apply -f deploy/server.yaml
+pod/hello-server created
+$ kubectl get pods
+NAME           READY   STATUS    RESTARTS   AGE
+hello-server   2/2     Running   0          3s
+$ kubectl apply -f deploy/client.yaml
+job.batch/hello-client created
+Daves-MacBook-Pro:helloWorld dgrove$ kubectl logs jobs/hello-client -c client
+Hello John Doe!
+Daves-MacBook-Pro:helloWorld dgrove$ kubectl logs hello-server -c server
+Hello John Doe!
+Daves-MacBook-Pro:helloWorld dgrove$ kubectl delete -f deploy/client.yaml
+job.batch "hello-client" deleted
+Daves-MacBook-Pro:helloWorld dgrove$ kubectl delete -f deploy/server.yaml
+pod "hello-server" deleted
+```
 
 ### Mode 2: running completely locally
 
@@ -119,5 +144,16 @@ can send another request, or exit the server with a Control-C.
 
 ### Mode 3: run the server in Kubernetes and the client locally
 
-TODO: fill in commands
+You can also run in a hybrid mode where some parts of your application
+run locally and others run inside the cluster.  KAR will automatically
+connect the pieces of your application via Kafka to each other.
+For example, run the server in the cluster and the client locally.
 
+```shell
+$ kubectl apply -f deploy/server.yaml
+pod/hello-server created
+$ kar -app helloWorld -service client node client.js
+2020/04/02 18:02:19 [STDOUT] Hello John Doe!
+$ kubectl delete -f deploy/server.yaml
+pod "hello-server" deleted
+```
