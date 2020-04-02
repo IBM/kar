@@ -1,0 +1,3 @@
+image: us.icr.io/kar-dev/example-actors-ykt:latest
+verbose: info
+replicas: 2

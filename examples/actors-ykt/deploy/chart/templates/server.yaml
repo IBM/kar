@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ykt-server
+  labels:
+    name: ykt-server
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      name: ykt-server
+  template:
+    metadata:
+      labels:
+        name: ykt-server
+      annotations:
+        kar.ibm.com/app: ykt
+        kar.ibm.com/service: simulation 
+        kar.ibm.com/actors: Site,Floor,Office,Researcher
+        kar.ibm.com/verbose: {{ .Values.verbose }}
+    spec:
+      containers:
+      - name: server
+        image: {{ .Values.image }}
+        env:
+        - name: MAIN
+          value: ykt.js

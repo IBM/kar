@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ykt-client
+  labels:
+    name: ykt-client
+  annotations:
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: hook-succeeded
+    kar.ibm.com/app: ykt
+    kar.ibm.com/service: client
+    kar.ibm.com/verbose: {{ .Values.verbose }}
+spec:
+  restartPolicy: Never
+  containers:
+  - name: client
+    image: {{ .Values.image }}
+    env:
+    - name: MAIN
+      value: ykt-client.js
+    - name: KUBERNETES_MODE
+      value: 'true'
