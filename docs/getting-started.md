@@ -92,13 +92,13 @@ NAME           READY   STATUS    RESTARTS   AGE
 hello-server   2/2     Running   0          3s
 $ kubectl apply -f deploy/client.yaml
 job.batch/hello-client created
-Daves-MacBook-Pro:helloWorld dgrove$ kubectl logs jobs/hello-client -c client
+$ kubectl logs jobs/hello-client -c client
 Hello John Doe!
-Daves-MacBook-Pro:helloWorld dgrove$ kubectl logs hello-server -c server
+$ kubectl logs hello-server -c server
 Hello John Doe!
-Daves-MacBook-Pro:helloWorld dgrove$ kubectl delete -f deploy/client.yaml
+$ kubectl delete -f deploy/client.yaml
 job.batch "hello-client" deleted
-Daves-MacBook-Pro:helloWorld dgrove$ kubectl delete -f deploy/server.yaml
+$ kubectl delete -f deploy/server.yaml
 pod "hello-server" deleted
 ```
 
