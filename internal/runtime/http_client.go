@@ -2,14 +2,17 @@ package runtime
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"golang.org/x/net/http2"
 )
 
 var (
@@ -17,9 +20,19 @@ var (
 	client http.Client
 )
 
+func fakeDialTLS(network, addr string, cfg *tls.Config) (net.Conn, error) {
+	return net.Dial(network, addr)
+}
+
 func init() {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConnsPerHost = 256
+	var transport http.RoundTripper
+	if config.H2C {
+		transport = &http2.Transport{AllowHTTP: true, DialTLS: fakeDialTLS}
+	} else {
+		t1 := http.DefaultTransport.(*http.Transport).Clone()
+		t1.MaxIdleConnsPerHost = 256
+		transport = t1
+	}
 	client = http.Client{Transport: transport} // TODO adjust timeout
 }
 

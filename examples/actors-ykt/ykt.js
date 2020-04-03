@@ -1,5 +1,6 @@
+
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actor, actors, actorRuntime } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actor, actors, actorRuntime, h2c } = require('kar')
 
 const app = express()
 
@@ -293,4 +294,4 @@ app.use(actorRuntime({ Site, Floor, Office, Researcher }))
 
 app.use(errorHandler) // enable kar error handling
 
-const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+const server = h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')

@@ -1,17 +1,36 @@
 const express = require('express')
-const http = require('http') // for configuring http agent
+const http2 = require('http2')
 const parser = require('body-parser') // for parsing http requests
 const morgan = require('morgan') // for logging http requests and responses
+const spdy = require('spdy')
+
+const agent = http2.connect(`http://localhost:${process.env.KAR_PORT || 3500}`)
+
+function rawFetch (path, options) {
+  const obj = { ':path': path }
+  if (options.method) {
+    obj[':method'] = options.method
+  }
+  Object.assign(obj, options.headers)
+  return new Promise((resolve, reject) => {
+    const req = options.agent.request(obj)
+    req.setEncoding('utf8')
+    let ok = true
+    let text = ''
+    req.on('response', headers => { ok = headers[':status'] < 300 })
+    req.on('data', s => { text += s })
+    req.on('error', reject)
+    req.on('end', () => resolve({ ok, text: () => Promise.resolve(text) }))
+    if (options.body) req.write(options.body, 'utf8')
+    req.end()
+  })
+}
 
 // retry http requests up to 10 times on failure or 503 error
-const rawFetch = require('node-fetch')
 const fetch = require('fetch-retry')(rawFetch, { retries: 10, retryOn: [503] })
 
-// agent to keep connections to sidecar alive
-const agent = new http.Agent({ keepAlive: true })
-
 // url prefix for http requests to sidecar
-const url = `http://localhost:${process.env.KAR_PORT || 3500}/kar/`
+const url = '/kar/'
 
 // headers for http requests to sidecar
 const headers = { 'Content-Type': 'application/json' }
@@ -64,7 +83,7 @@ const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}
 const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path: `/${path}` }, params))
 
 // actor state operations
-const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`).catch(() => undefined)
+const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`)
 const actorSetState = (type, id, key, params = {}) => post(`actor-state/${type}/${id}/${key}`, params)
 const actorDeleteState = (type, id, key) => del(`actor-state/${type}/${id}/${key}`)
 const actorGetAllState = (type, id) => get(`actor-state/${type}/${id}`)
@@ -74,7 +93,7 @@ const actorDeleteAllState = (type, id) => del(`actor-state/${type}/${id}`)
 const broadcast = (path, params) => post(`broadcast/${path}`, params)
 
 // kill sidecar
-const shutdown = () => get('kill')
+const shutdown = () => get('kill').then(() => agent.close())
 
 // express middleware to log requests and responses if KAR_VERBOSE env variable is truthy
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
@@ -194,8 +213,12 @@ const actors = new Proxy({}, {
   }
 })
 
+// h2c protocol wrapper
+const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
+
 // exports
 module.exports = {
+  h2c,
   tell,
   call,
   actor: {

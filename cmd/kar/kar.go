@@ -12,6 +12,9 @@ import (
 	"sync"
 	"syscall"
 
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
@@ -236,7 +239,7 @@ func server(listener net.Listener) {
 	router.GET("/kar/killall", killall)
 	router.GET("/kar/health", health)
 	router.POST("/kar/broadcast/*path", broadcast)
-	srv := http.Server{Handler: router}
+	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 
 	wg.Add(1)
 	go func() {

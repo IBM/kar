@@ -71,6 +71,9 @@ var (
 
 	// ID is the unique id of this sidecar instance
 	ID = uuid.New().String()
+
+	// Enable h2c
+	H2C bool
 )
 
 func init() {
@@ -96,6 +99,7 @@ func init() {
 	flag.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
 	flag.StringVar(&verbosity, "v", "error", "Logging verbosity")
 	flag.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
+	flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 
 	flag.Parse()
 
