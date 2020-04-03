@@ -1,11 +1,11 @@
 # Prerequisites
 
 1. You need a Kubernetes 1.16 (or newer) cluster.
-  a. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual
-     Kubernetes cluster using Docker on your development machine. Once
-     you have Docker installed, just run
-     [start-kind.sh](../build/ci/start-kind.sh) to create a virtual cluster.
-  b. You can use an IKS cluster provisioned on the IBM Public Cloud.
+    a. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual
+       Kubernetes cluster using Docker on your development machine. Once
+       you have Docker installed, just run
+       [start-kind.sh](../build/ci/start-kind.sh) to create a virtual cluster.
+    b. You can use an IKS cluster provisioned on the IBM Public Cloud.
 
 2. You will need the `kubectl` cli installed locally.
 
