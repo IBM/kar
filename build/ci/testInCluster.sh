@@ -6,17 +6,17 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."
 
 echo "*** Running in-cluster unit tests ***"
-helm install lt $ROOTDIR/examples/unit-tests/deploy/chart --set image=example-unit-tests:dev
+helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=example-unit-tests:dev
 
-if helm test lt; then
+if helm test ut; then
     echo "PASSED! In cluster unit-tests passed."
-    helm delete lt
+    helm delete ut
 else
     echo "FAILED: In cluster unit-tests failed."
     kubectl logs ut-client -c client
     kubectl logs ut-client -c kar
     kubectl delete pod ut-client
-    helm delete lt
+    helm delete ut
     exit 1
 fi
 

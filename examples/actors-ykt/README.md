@@ -1,4 +1,5 @@
 ## Yorktown site simulation
+
 An agent-based simulation of activity in the Yorktown site.  Researchers
 arrive at work, move around the site, drink coffee, and have meetings.
 
@@ -16,6 +17,8 @@ publish occupancy stats on the `siteReport` channel.  Interested
 processes can subscribe to `siteReport` to track the simulation.
 
 ## Running locally
+
+The first time you run locally, you will need to execute `npm install`.
 
 The easiest way to run locally is to invoke the script `./deploy/runServerLocally.sh` in one shell terminal and `./deploy/runClientLocally.sh` in another terminal. This will simulate one work day in approximately a minute.  Typical output is shown below:
 ```shell
