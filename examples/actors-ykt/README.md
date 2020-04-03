@@ -21,7 +21,7 @@ processes can subscribe to `siteReport` to track the simulation.
 The first time you run locally, you will need to execute `npm install`.
 
 The easiest way to run locally is to invoke the script `./deploy/runServerLocally.sh` in one shell terminal and `./deploy/runClientLocally.sh` in another terminal. This will simulate one work day in approximately a minute.  Typical output is shown below:
-```shell
+```
 $ ./deploy/runClientLocally.sh
 2020/04/03 15:18:17 [WARNING] starting...
 2020/04/03 15:18:17 [INFO] KAR_PORT=30666 KAR_APP_PORT=8080
@@ -49,7 +49,7 @@ $ ./deploy/runClientLocally.sh
 2020/04/03 15:18:56 [WARNING] exiting...
 ```
 
-```shell
+```
 $ ./deploy/runServerLocally.sh
 2020/04/03 15:17:56 [WARNING] starting...
 2020/04/03 15:17:57 [INFO] KAR_PORT=62430 KAR_APP_PORT=8080
@@ -111,7 +111,7 @@ default it creates a `Deployment` with two replicas to execute the
 simulation.  The client is configured as a Helm test that initiates a
 single workday and verifies that the expected work was completed.
 
-```shell
+```
 $ helm install ykt ./deploy/chart --set image=example-ykt:dev
 NAME: ykt
 LAST DEPLOYED: Fri Apr  3 16:08:35 2020
