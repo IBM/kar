@@ -22,7 +22,7 @@ The first time you run locally, you will need to execute `npm install`.
 
 The easiest way to run locally is to invoke the script `./deploy/runServerLocally.sh` in one shell terminal and `./deploy/runClientLocally.sh` in another terminal. This will simulate one work day in approximately a minute.  Typical output is shown below:
 ```shell
-Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runClientLocally.sh 
+$ ./deploy/runClientLocally.sh
 2020/04/03 15:18:17 [WARNING] starting...
 2020/04/03 15:18:17 [INFO] KAR_PORT=30666 KAR_APP_PORT=8080
 2020/04/03 15:18:17 [INFO] launching service...
@@ -50,7 +50,7 @@ Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runClientLocally.sh
 ```
 
 ```shell
-Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh 
+$ ./deploy/runServerLocally.sh
 2020/04/03 15:17:56 [WARNING] starting...
 2020/04/03 15:17:57 [INFO] KAR_PORT=62430 KAR_APP_PORT=8080
 2020/04/03 15:17:57 [INFO] launching service...
