@@ -32,16 +32,25 @@ type Reminder struct {
 }
 
 type reminderFilter struct {
+	// An optional reminder ID
 	ID string `json:"id,omitempty"`
 }
 
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
 type scheduleReminderPayload struct {
-	ID       string      `json:"id"`
-	Path     string      `json:"path"`
-	Deadline time.Time   `json:"deadline"`
-	Period   string      `json:"period,omitempty"`
-	Data     interface{} `json:"data,omitempty"`
+	// The ID to use for this reminder
+	ID string `json:"id"`
+	// The path to invoke on the actor instance when the reminder is fired
+	Path string `json:"path"`
+	// The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
+	Deadline time.Time `json:"deadline"`
+	// The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.
+	// If a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time
+	// to compute a new Deadline for the next invocation of the reminder.
+	Period string `json:"period,omitempty"`
+	// An optional parameter containing an arbitray JSON value that will be provided as the
+	// payload when the `path` is invoked on the actor instance.
+	Data interface{} `json:"data,omitempty"`
 }
 
 // CancelReminders cancels all reminders that match the provided filter

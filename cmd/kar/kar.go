@@ -1,3 +1,5 @@
+//go:generate swagger generate spec
+
 package main
 
 import (
@@ -31,7 +33,31 @@ var (
 	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 )
 
-// tell route handler
+// swagger:route POST /tell/{service}/{path} services idTellService
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
+
+// swagger:route POST /actor-tell/{actorType}/{actorId}/{path} actors idTellActor
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
@@ -50,13 +76,48 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// broadcast route handler
+// swagger:route POST /broadcast/{path} utility idBroadcast
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
 }
 
-// call route handler
+// swagger:route POST /call/{service}/{path} services idCallService
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
+
+// swagger:route POST /actor-call/{actorType}/{actorId}/{path} actors idCallActor
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
@@ -78,7 +139,14 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// migrate route handler
+// swagger:route GET /actor-migrate/{actorType}/{actorId} actors idActorMigrate
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
 	fmt.Fprint(w, "OK")
@@ -100,16 +168,49 @@ func subscriber(channel <-chan pubsub.Message) {
 	}
 }
 
-// reminder route handler
-// Supported paths: "/kar/actor-reminder/:type/:id/:action"
-//    :type is an actor type
-//    :id is an actor id
-//    :action is one of: cancel, get, schedule
+// swagger:route POST /actor-reminder/{actorType}/{actorId}/cancel actors idCancelReminder
 //
-// The body of the request is a JSON object with the following format
-//    cancel: { id:string }   id is optional
-//    get: { id:string }      id is optional
-//    schedule: { id:string, path:string, deadline:string(ISO-8601) period:string (valid GoLang time.Duration string), data: any}   period and data are optional
+// Cancel all matching reminders.
+//
+// This operatation cancels reminders for the actor specified in the path.
+// If a reminder id is provided as a parameter, only the reminder that
+// matches that id will be cancelled. If no id is provided, all
+// of the specified actor's reminders will be cancelled.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
+
+// swagger:route POST /actor-reminder/{actorType}/{actorId}/get actors idCancelReminder
+//
+// Get all matching reminders.
+//
+// This operatation returns all reminders for the actor(s) specified in the path.
+// If a reminder id is provided as a parameter, only reminders that
+// have that id will be returned.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
+
+// swagger:route POST /actor-reminder/{actorType}/{actorId}/schedule actors idScheduleReminder
+//
+// Schedule a reminder.
+//
+// This operatation schedules a reminder for the actor specified in the path.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	action := ps.ByName("action")
 	if !(action == "cancel" || action == "get" || action == "schedule") {
@@ -134,7 +235,18 @@ func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
-// set route handler
+// swagger:route POST /actor-state/{actorType}/{actorId}/{key} actors idActorStateSet
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
@@ -143,7 +255,18 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// get404 route handler
+// swagger:route GET /actor-state-404/{actorType}/{actorId}/{key} actors idActorStateGet404
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -154,7 +277,18 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// get route handler
+// swagger:route GET /actor-state/{actorType}/{actorId}/{key} actors idActorStateGet
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil && err != store.ErrNil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
@@ -163,7 +297,14 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// del route handler
+// swagger:route DELETE /actor-state/{actorType}/{actorId}/{key} actors idActorStateDeleteKey
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
 		http.Error(w, fmt.Sprintf("HDEL failed: %v", err), http.StatusInternalServerError)
@@ -172,7 +313,18 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// getAll route handler
+// swagger:route GET /actor-state/{actorType}/{actorId} actors idActorStateGetAll
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http, https
+//
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
 		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
@@ -190,7 +342,14 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// delAll route handler
+// swagger:route DELETE /actor-state/{actorType}/{actorId} actors idActorStateDeleteAll
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Del(stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -201,7 +360,14 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// kill route handler
+// swagger:route GET /kill utility idKill
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logger.Info("Invoking cancel() in response to kill request")
 	cancel()
@@ -209,13 +375,28 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+// swagger:route GET /killall utility idKillAll
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.KillAll(ctx)
 	fmt.Fprint(w, "OK")
 	cancel()
 }
 
-// implement sidecar's livenessProbe for Kubernetes
+// swagger:route GET /health utility health
+//
+// Operation summary.
+//
+// Operation detailed description
+//
+//     Schemes: http, https
+//
 func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
