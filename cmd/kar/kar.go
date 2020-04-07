@@ -35,24 +35,33 @@ var (
 
 // swagger:route POST /tell/{service}/{path} services idTellService
 //
-// Operation summary.
+// Asynchronously invoke a service's endpoint.
 //
-// Operation detailed description
+// Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
+// through the optional JSON payload it received.
 //
 //     Consumes: application/json
-//     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: response200
+//       500: response500
+//       503: response503
 //
 
 // swagger:route POST /actor-tell/{actorType}/{actorId}/{path} actors idTellActor
 //
-// Operation summary.
+// Asynchronosuly invoke an actor method.
 //
-// Operation detailed description
+// Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
+// actor instance indicated by `actorType` and `actorId` passing through
+// the optional JSON payload it received.
 //
 //     Consumes: application/json
-//     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: response200
+//       500: response500
+//       503: response503
 //
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
@@ -74,13 +83,18 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /broadcast/{path} utility idBroadcast
 //
-// Operation summary.
+// Execute a POST operation to `path` on all KAR runtimes in the application.
 //
-// Operation detailed description
+// The broadcast route cases a `POST` of `path` to be delivered to all
+// KAR runtime processes that are currently part of the application.
+// A `200` response indicates that the request to send the broadcast
+// has been accepted and the POST will eventually be delivered to all sidecars.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: response200
 //
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
@@ -89,9 +103,11 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /call/{service}/{path} services idCallService
 //
-// Operation summary.
+// Synchronously invoke a service's endpoint.
 //
-// Operation detailed description
+// Call synchronously executes a `POST` to the `path` endpoint of `service` passing
+// through an optional JSON payload to the service and responding with the
+// result returned by the service.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -100,9 +116,14 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /actor-call/{actorType}/{actorId}/{path} actors idCallActor
 //
-// Operation summary.
+// Synchronously invoke an actor method.
 //
-// Operation detailed description
+// Call synchronously executes a `POST` to the `path` endpoint of the
+// actor instance indicated by `actorType` and `actorId` passing
+// through an optional JSON payload to the service and responding with the
+// result returned by the actor method.
+//
+// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -131,11 +152,13 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-migrate/{actorType}/{actorId} actors idActorMigrate
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
+//     Responses:
+//       200: response200
 //
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
@@ -221,9 +244,9 @@ func stateKey(t, id string) string {
 
 // swagger:route POST /actor-state/{actorType}/{actorId}/{key} actors idActorStateSet
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -239,9 +262,9 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state-404/{actorType}/{actorId}/{key} actors idActorStateGet404
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -259,9 +282,9 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state/{actorType}/{actorId}/{key} actors idActorStateGet
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -277,9 +300,9 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route DELETE /actor-state/{actorType}/{actorId}/{key} actors idActorStateDeleteKey
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
 //
@@ -293,9 +316,9 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state/{actorType}/{actorId} actors idActorStateGetAll
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -320,9 +343,9 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route DELETE /actor-state/{actorType}/{actorId} actors idActorStateDeleteAll
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
 //
@@ -338,9 +361,9 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /kill utility idKill
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
 //
@@ -353,9 +376,9 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /killall utility idKillAll
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
 //
@@ -367,9 +390,9 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /health utility health
 //
-// Operation summary.
+// TODO: Operation summary.
 //
-// Operation detailed description
+// TODO: Operation detailed description
 //
 //     Schemes: http, https
 //

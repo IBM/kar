@@ -41,3 +41,25 @@ type remninderScheduleParamWrapper struct {
 	// in:body
 	Body scheduleReminderPayload
 }
+
+// A message describing the error
+// swagger:response response500
+type error500 struct {
+	// A message describing the error
+	Body string `json""`
+}
+
+// A message describing the error
+// swagger:response response503
+type error503 struct {
+	// A message describing the error
+	Body string `json""`
+}
+
+// A success message.
+// swagger:response response200
+type success200 struct {
+	// A success message
+	// Example: OK
+	Body string `json""`
+}
