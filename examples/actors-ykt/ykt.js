@@ -123,7 +123,7 @@ class Site extends ActorWithCount {
     await this.updateNextSerialNumber(sn + workers)
     for (var i = 0; i < workers; i++) {
       const name = sn + i
-      actor.tell('Researcher', name, 'work', { site: this.sys.id, steps, thinkms })
+      await actor.tell('Researcher', name, 'work', { site: this.sys.id, steps, thinkms })
     }
   }
 
