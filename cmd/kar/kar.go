@@ -35,7 +35,7 @@ var (
 
 // swagger:route POST /tell/{service}/{path} services idTellService
 //
-// Asynchronously invoke a service's endpoint.
+// Asynchronously invoke a service.
 //
 // Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
 // through the optional JSON payload it received.
@@ -50,7 +50,7 @@ var (
 
 // swagger:route POST /actor-tell/{actorType}/{actorId}/{path} actors idTellActor
 //
-// Asynchronosuly invoke an actor method.
+// Asynchronosuly invoke an actor.
 //
 // Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing through
@@ -83,7 +83,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /broadcast/{path} utility idBroadcast
 //
-// Execute a POST operation to `path` on all KAR runtimes in the application.
+// Broadcast message to KAR runtimes.
 //
 // The broadcast route cases a `POST` of `path` to be delivered to all
 // KAR runtime processes that are currently part of the application.
@@ -103,7 +103,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /call/{service}/{path} services idCallService
 //
-// Synchronously invoke a service's endpoint.
+// Synchronously invoke a service.
 //
 // Call synchronously executes a `POST` to the `path` endpoint of `service` passing
 // through an optional JSON payload to the service and responding with the
@@ -116,7 +116,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /actor-call/{actorType}/{actorId}/{path} actors idCallActor
 //
-// Synchronously invoke an actor method.
+// Synchronously invoke an actor.
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
@@ -152,7 +152,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-migrate/{actorType}/{actorId} actors idActorMigrate
 //
-// TODO: Operation summary.
+// Request the migration of an actor
 //
 // TODO: Operation detailed description
 //
@@ -195,7 +195,7 @@ func subscriber(channel <-chan pubsub.Message) {
 //     Schemes: http, https
 //
 
-// swagger:route POST /actor-reminder/{actorType}/{actorId}/get actors idCancelReminder
+// swagger:route POST /actor-reminder/{actorType}/{actorId}/get actors idGetReminder
 //
 // Get all matching reminders.
 //
@@ -244,7 +244,7 @@ func stateKey(t, id string) string {
 
 // swagger:route POST /actor-state/{actorType}/{actorId}/{key} actors idActorStateSet
 //
-// TODO: Operation summary.
+// Store a key-value pair in an actor's state
 //
 // TODO: Operation detailed description
 //
@@ -262,7 +262,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state-404/{actorType}/{actorId}/{key} actors idActorStateGet404
 //
-// TODO: Operation summary.
+// Get the value associated with a key in an actor's state returning 404 if not found.
 //
 // TODO: Operation detailed description
 //
@@ -282,7 +282,7 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state/{actorType}/{actorId}/{key} actors idActorStateGet
 //
-// TODO: Operation summary.
+// Get the value associated with a key in an actor's state returning nil if not found.
 //
 // TODO: Operation detailed description
 //
@@ -300,7 +300,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route DELETE /actor-state/{actorType}/{actorId}/{key} actors idActorStateDeleteKey
 //
-// TODO: Operation summary.
+// Remove a key-value pair in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -316,7 +316,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /actor-state/{actorType}/{actorId} actors idActorStateGetAll
 //
-// TODO: Operation summary.
+// Get all key-value pairs in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -343,7 +343,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route DELETE /actor-state/{actorType}/{actorId} actors idActorStateDeleteAll
 //
-// TODO: Operation summary.
+// Delete all key-value pairs in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -361,7 +361,7 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /kill utility idKill
 //
-// TODO: Operation summary.
+// Initiate an orderly shutdown of a KAR runtime process.
 //
 // TODO: Operation detailed description
 //
@@ -376,7 +376,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /killall utility idKillAll
 //
-// TODO: Operation summary.
+// Initiate an orderly shutdown of all of an application's KAR runtime processes.
 //
 // TODO: Operation detailed description
 //
@@ -390,7 +390,7 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route GET /health utility health
 //
-// TODO: Operation summary.
+// Health-check endpoint of a KAR runtime process.
 //
 // TODO: Operation detailed description
 //
