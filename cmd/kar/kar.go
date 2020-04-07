@@ -39,10 +39,8 @@ var (
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 
@@ -52,10 +50,8 @@ var (
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -82,10 +78,8 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -99,10 +93,8 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 
@@ -112,10 +104,8 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -177,10 +167,8 @@ func subscriber(channel <-chan pubsub.Message) {
 // matches that id will be cancelled. If no id is provided, all
 // of the specified actor's reminders will be cancelled.
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 
@@ -192,10 +180,8 @@ func subscriber(channel <-chan pubsub.Message) {
 // If a reminder id is provided as a parameter, only reminders that
 // have that id will be returned.
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 
@@ -205,10 +191,8 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 // This operatation schedules a reminder for the actor specified in the path.
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -241,10 +225,8 @@ func stateKey(t, id string) string {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -261,10 +243,8 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -283,10 +263,8 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -319,10 +297,8 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Operation detailed description
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
+//     Consumes: application/json
+//     Produces: application/json
 //     Schemes: http, https
 //
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

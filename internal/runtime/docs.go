@@ -8,22 +8,23 @@
 // needed.  We stick those structs in here to make it clear
 // they are not really used by KAR at runtime.
 
-package runtime
-
-// Package classification KAR.
+// Package classification KAR
 //
-// Kubernetes Application Runtime (KAR).
+// This document describes the RESTful API provided by the
+// Kubernetes Application Runtime (KAR) runtime to application
+// processes.
 //
 //     Schemes: https,http
 //     BasePath: /kar
 //     Version: 1.0.0
-//
+//     Schemes: http, https
 //     Consumes:
 //     - application/json
-//
 //     Produces:
 //     - application/json
 //
+// swagger:meta
+package runtime
 
 // swagger:parameters idCancelReminder
 // swagger:parameters idGetReminder
