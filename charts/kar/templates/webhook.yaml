@@ -2,7 +2,8 @@
 {{- $cn := printf "kar-injector" }}
 {{- $n1 := printf "kar-injector.%s" .Release.Namespace }}
 {{- $n2 := printf "kar-injector.%s.svc" .Release.Namespace }}
-{{- $cert := genSignedCert $cn nil (list $n1 $n2) 1000 $ca }}
+{{- $n3 := printf "kar-injector.%s.svc.%s" .Release.Namespace .Values.global.clusterSubDomain }}
+{{- $cert := genSignedCert $cn nil (list $n1 $n2 $n3) 1000 $ca }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -22,7 +23,7 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-injector-webhook
 webhooks:
-  - name: {{ $n2 }}
+  - name: {{ $n3 }}
     namespaceSelector:
       matchLabels:
         kar.ibm.com/enabled: "true"

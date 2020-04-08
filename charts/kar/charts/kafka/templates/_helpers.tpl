@@ -29,10 +29,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/* host name for server.0 in zookeeper cluster */}}
 {{- define "kar.zookeeper_host_zero" -}}
-kar-zookeeper-0.kar-zookeeper.{{ $.Release.Namespace }}.svc
+kar-zookeeper-0.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
 
 {{/* host name for server.0 in kafka cluster */}}
 {{- define "kar.kafka_host_zero" -}}
-kar-kafka-0.kar-kafka.{{ $.Release.Namespace }}.svc
+kar-kafka-0.kar-kafka.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
