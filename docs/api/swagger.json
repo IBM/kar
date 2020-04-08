@@ -1,0 +1,404 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https,http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR) runtime to application\nprocesses.",
+    "title": "KAR",
+    "version": "1.0.0"
+  },
+  "basePath": "/kar",
+  "paths": {
+    "/actor-call/{actorType}/{actorId}/{path}": {
+      "post": {
+        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the actor method.\n\nTODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-call: Synchronously invoke an actor.",
+        "operationId": "idCallActor"
+      }
+    },
+    "/actor-migrate/{actorType}/{actorId}": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-migrate: Request the migration of an actor",
+        "operationId": "idActorMigrate",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
+      }
+    },
+    "/actor-reminder/{actorType}/{actorId}/cancel": {
+      "post": {
+        "description": "This operatation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder that\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-reminder/cancel: Cancel all matching reminders.",
+        "operationId": "idCancelReminder",
+        "parameters": [
+          {
+            "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/reminderFilter"
+            }
+          }
+        ]
+      }
+    },
+    "/actor-reminder/{actorType}/{actorId}/get": {
+      "post": {
+        "description": "This operatation returns all reminders for the actor(s) specified in the path.\nIf a reminder id is provided as a parameter, only reminders that\nhave that id will be returned.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-reminder/get: Get all matching reminders.",
+        "operationId": "idGetReminder",
+        "parameters": [
+          {
+            "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/reminderFilter"
+            }
+          }
+        ]
+      }
+    },
+    "/actor-reminder/{actorType}/{actorId}/schedule": {
+      "post": {
+        "description": "This operatation schedules a reminder for the actor specified in the path.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-reminder/schedule: Schedule a reminder.",
+        "operationId": "idScheduleReminder",
+        "parameters": [
+          {
+            "description": "The request body describes the reminder to be scheduled",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/scheduleReminderPayload"
+            }
+          }
+        ]
+      }
+    },
+    "/actor-state-404/{actorType}/{actorId}/{key}": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state-404: Get the value associated with a key in an actor's state returning 404 if not found.",
+        "operationId": "idActorStateGet404"
+      }
+    },
+    "/actor-state/{actorType}/{actorId}": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state: Get all key-value pairs in an actor's state.",
+        "operationId": "idActorStateGetAll"
+      },
+      "delete": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state: Delete all key-value pairs in an actor's state.",
+        "operationId": "idActorStateDeleteAll"
+      }
+    },
+    "/actor-state/{actorType}/{actorId}/{key}": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state: Get the value associated with a key in an actor's state returning nil if not found.",
+        "operationId": "idActorStateGet"
+      },
+      "post": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state: Store a key-value pair in an actor's state",
+        "operationId": "idActorStateSet"
+      },
+      "delete": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-state: Remove a key-value pair in an actor's state.",
+        "operationId": "idActorStateDeleteKey"
+      }
+    },
+    "/actor-tell/{actorType}/{actorId}/{path}": {
+      "post": {
+        "description": "Actor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-tell: Asynchronosuly invoke an actor.",
+        "operationId": "idTellActor",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/broadcast/{path}": {
+      "post": {
+        "description": "The broadcast route cases a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "utility"
+        ],
+        "summary": "broadcast: send message to all KAR runtimes.",
+        "operationId": "idBroadcast",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
+      }
+    },
+    "/call/{service}/{path}": {
+      "post": {
+        "description": "Call synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call: Synchronously invoke a service.",
+        "operationId": "idCallService"
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "utility"
+        ],
+        "summary": "health: Health-check endpoint of a KAR runtime process.",
+        "operationId": "health"
+      }
+    },
+    "/kill": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "utility"
+        ],
+        "summary": "kill: Initiate an orderly shutdown of a KAR runtime process.",
+        "operationId": "idKill"
+      }
+    },
+    "/killall": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "utility"
+        ],
+        "summary": "killall: Initiate an orderly shutdown of all of an application's KAR runtime processes.",
+        "operationId": "idKillAll"
+      }
+    },
+    "/tell/{service}/{path}": {
+      "post": {
+        "description": "Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received.",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "tell: Asynchronously invoke a service.",
+        "operationId": "idTellService",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "reminderFilter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "An optional reminder ID",
+          "type": "string",
+          "x-go-name": "ID"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
+    "scheduleReminderPayload": {
+      "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
+      "type": "object",
+      "properties": {
+        "data": {
+          "description": "An optional parameter containing an arbitray JSON value that will be provided as the\npayload when the `path` is invoked on the actor instance.",
+          "type": "object",
+          "x-go-name": "Data"
+        },
+        "deadline": {
+          "description": "The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Deadline"
+        },
+        "id": {
+          "description": "The ID to use for this reminder",
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "path": {
+          "description": "The path to invoke on the actor instance when the reminder is fired",
+          "type": "string",
+          "x-go-name": "Path"
+        },
+        "period": {
+          "description": "The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.\nIf a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time\nto compute a new Deadline for the next invocation of the reminder.",
+          "type": "string",
+          "x-go-name": "Period"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    }
+  },
+  "responses": {
+    "response200": {
+      "description": "A success message.",
+      "headers": {
+        "Body": {
+          "type": "string",
+          "example": "OK",
+          "description": "A success message"
+        }
+      }
+    },
+    "response500": {
+      "description": "A message describing the error",
+      "headers": {
+        "Body": {
+          "type": "string",
+          "description": "A message describing the error"
+        }
+      }
+    },
+    "response503": {
+      "description": "A message describing the error",
+      "headers": {
+        "Body": {
+          "type": "string",
+          "description": "A message describing the error"
+        }
+      }
+    }
+  }
+}

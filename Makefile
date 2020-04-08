@@ -38,10 +38,10 @@ kindPushDev:
 	DOCKER_IMAGE_PREFIX= DOCKER_IMAGE_TAG=dev make kindPush
 
 swagger-gen:
-	swagger generate spec -o docs/swagger.yaml
-	swagger generate spec -o docs/swagger.json
+	swagger generate spec -o docs/api/swagger.yaml
+	swagger generate spec -o docs/api/swagger.json
 
 swagger-serve:
-	swagger serve docs/swagger.yaml
+	swagger serve docs/api/swagger.yaml
 
 .PHONY: docker
