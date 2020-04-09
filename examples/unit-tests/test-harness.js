@@ -142,6 +142,13 @@ async function actorTests () {
     if (verbose) console.log('Caught expected error: ', err.message)
   }
 
+  // reentrancy
+  const v9 = await a.reenter(42)
+  if (v9 !== 43) {
+    console.log(`Failed: unexpected result from reenter ${v9}`)
+    failure = true
+  }
+
   return failure
 }
 

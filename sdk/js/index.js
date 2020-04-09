@@ -76,6 +76,7 @@ const actorTell = (type, id, path, params) => post(`actor-tell/${type}/${id}/${p
 
 // synchronous actor invocation: returns invocation result
 const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
+const actorCallInSession = (type, id, session, path, params) => post(`actor-call-session/${type}/${id}/${session}/${path}`, params)
 
 // reminder operations
 const actorCancelReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/cancel`, params)
@@ -176,9 +177,23 @@ function actorRuntime (actors) {
     .catch(next))
 
   // method invocation route
-  router.post('/actor/:type/:id/:method', (req, res, next) => Promise.resolve()
+  router.post('/actor/:type/:id/:session/:method', (req, res, next) => Promise.resolve()
     .then(_ => {
+      const session = req.params.session
       const actor = table[req.params.type][req.params.id]
+      actor.actors = new Proxy({}, {
+        get: function (_, type) {
+          return new Proxy({}, {
+            get: function (_, id) {
+              return new Proxy({}, {
+                get: function (_, method) {
+                  return params => actorCallInSession(type, id, session, method, params)
+                }
+              })
+            }
+          })
+        }
+      })
       if (req.params.method in actor) {
         if (typeof actor[req.params.method] === 'function') {
           return actor[req.params.method](req.body)

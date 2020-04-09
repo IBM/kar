@@ -84,7 +84,7 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, session string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -93,6 +93,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 		"path":         path,
 		"content-type": contentType,
 		"accept":       accept,
+		"session":      session,
 		"payload":      payload}
 	return callHelper(ctx, msg)
 }
@@ -321,15 +322,19 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			err = dispatch(ctx, cancel, msg)
 		} else {
 			actor := Actor{Type: msg["type"], ID: msg["id"]}
-			e, fresh, _ := actor.acquire(ctx)
+			session := msg["session"]
+			if session == "" {
+				session = uuid.New().String() // start new session
+			}
+			e, fresh, _ := actor.acquire(ctx, session)
 			if e == nil && ctx.Err() == nil {
 				err = forwardToActor(ctx, msg)
 			} else {
-				defer e.release()
+				defer e.release(ctx)
 				if fresh {
 					activate(ctx, actor)
 				}
-				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + msg["path"]
+				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 				err = dispatch(ctx, cancel, msg)
 			}
 		}

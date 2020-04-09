@@ -67,6 +67,10 @@ class Foo {
     return this.sys.get(key)
   }
 
+  reenter (params) {
+    return this.actors.Foo[this.sys.id].incrQuiet(params)
+  }
+
   deactivate () {
     console.log('actor', this.id, 'deactivate')
   }

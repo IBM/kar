@@ -135,7 +135,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if ps.ByName("service") != "" {
 		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	} else {
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"), ps.ByName("session"))
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -406,7 +406,8 @@ func server(listener net.Listener) {
 	router.POST("/kar/tell/:service/*path", tell)
 	router.POST("/kar/call/:service/*path", call)
 	router.POST("/kar/actor-tell/:type/:id/*path", tell)
-	router.POST("/kar/actor-call/:type/:id/*path", call)
+	router.POST("/kar/actor-call/:type/:id/*path", call)                  // new session
+	router.POST("/kar/actor-call-session/:type/:id/:session/*path", call) // existing session
 	router.GET("/kar/actor-migrate/:type/:id", migrate)
 	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
 	router.POST("/kar/actor-state/:type/:id/:key", set)
