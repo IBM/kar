@@ -17,6 +17,8 @@ overview from the Challenge Portal Entry.
 
 + See [Getting Started](docs/getting-started.md) for hands-on instructions on trying KAR.
 + Check out our [examples](examples/README.md)
++ Read about the KAR [Programming Model](#programming-model)
++ Browse the Swagger specification of the [KAR sidecar API](https://pages.github.ibm.com/solsa/kar/api/redoc/).
 
 ## Project Summary
 
@@ -120,3 +122,64 @@ developer experience is essential to success. Our sidecar can run
 outside of Kubernetes with low resource requirements, making it
 possible for a developer to run one or multiple application components
 locally, e.g. on a laptop.
+
+## Programming Model
+
+An application is composed of multiple components. Every instance of
+an application component is paired with its own KAR runtime _sidecar_
+process that mediates all of the component's inter-component
+interactions. From the perspective of the application, all
+inter-component interactions occur via RESTful calls to its sidecar as
+depicted below. The pair of a single application process and single
+sidecar process is the basic building block of a KAR application and
+the unit of [fault-tolerance](#fault-tolerance).
+
+![KAR sidecar and application](docs/images/sidecar-in-pod.png)
+
+The picture below represents the runtime structure of a KAR
+application with two replicated application components, **A** and
+**B**. Each instance of the application relies on local communication
+with its sidecar to handle service discovery, cross-component calls,
+etc. Beneath the hood, the KAR sidecars orchestrate all
+inter-component interactions using reliable messaging on Kafka to
+provide the application with at-least-once delivery semantics. The
+sidecars also mediate application access to Redis, providing a
+persistent key-value store.
+
+![multi-pod KAR application](docs/images/multiple-pods.png)
+
+### Services
+
+An application component can expose one or more logical services to
+other components. Each service can contain an arbitrary set of REST
+endpoints that can be invoked either synchronously or
+asynchronously. Application components that provide services are
+intended to be auto-scaled by KAR/Kubernetes and therefore should
+either be stateless or do their own state management. 
+
+### Actors
+
+KAR includes a virtual actor model that provides system-managed
+stateful entities. An application component can host one or more actor
+types.  The entire actor life cycle and auto-scaling of application
+components that are hosting actors is managed by the KAR runtime.
+
+### State
+
+KAR provides applications with a resilient key-value store to store
+arbitrary application state.
+
+### Event Sources and Sinks
+
+KAR provides applications with a publish/subscribe sub-system that can
+be bound to a variety of concrete event sources and sinks.
+
+### Fault Tolerance
+
+The containment domain for failures in KAR is the basic unit of a
+single application process and its sidecar. KAR provides at-least-once
+semantics for all inter-component interactions.  Once an
+inter-component message has been accepted by a KAR sidecar
+it is guaranteed to be delivered to an instance of the target
+application component. In the presence of failures, some messages may
+be delivered more than once to different instances of the component.
