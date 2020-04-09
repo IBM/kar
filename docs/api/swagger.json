@@ -16,6 +16,20 @@
   },
   "basePath": "/kar",
   "paths": {
+    "/actor-call-session/{actorType}/{actorId}/{session}/{path}": {
+      "post": {
+        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the actor method.\n\nTODO: Operation detailed description",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor-call-session: Synchronously invoke an actor with given session ID.",
+        "operationId": "idCallActorSession"
+      }
+    },
     "/actor-call/{actorType}/{actorId}/{path}": {
       "post": {
         "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the actor method.\n\nTODO: Operation detailed description",

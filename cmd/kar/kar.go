@@ -129,6 +129,22 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Produces: application/json
 //     Schemes: http, https
 //
+
+// swagger:route POST /actor-call-session/{actorType}/{actorId}/{session}/{path} actors idCallActorSession
+//
+// actor-call-session: Synchronously invoke an actor with given session ID.
+//
+// Call synchronously executes a `POST` to the `path` endpoint of the
+// actor instance indicated by `actorType` and `actorId` passing
+// through an optional JSON payload to the service and responding with the
+// result returned by the actor method.
+//
+// TODO: Operation detailed description
+//
+//     Consumes: application/json
+//     Produces: application/json
+//     Schemes: http, https
+//
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error

@@ -52,6 +52,23 @@ info:
   title: KAR
   version: 1.0.0
 paths:
+  /actor-call-session/{actorType}/{actorId}/{session}/{path}:
+    post:
+      description: |-
+        Call synchronously executes a `POST` to the `path` endpoint of the
+        actor instance indicated by `actorType` and `actorId` passing
+        through an optional JSON payload to the service and responding with the
+        result returned by the actor method.
+
+        TODO: Operation detailed description
+      operationId: idCallActorSession
+      schemes:
+      - http
+      - https
+      summary: 'actor-call-session: Synchronously invoke an actor with given session
+        ID.'
+      tags:
+      - actors
   /actor-call/{actorType}/{actorId}/{path}:
     post:
       description: |-
