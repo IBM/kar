@@ -1,4 +1,4 @@
-const { actor, actors, broadcast, shutdown, call, publish } = require('kar')
+const { actor, actors, broadcast, shutdown, call } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
