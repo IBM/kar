@@ -85,6 +85,11 @@ func HSet(hash, key, value string) (int, error) {
 	return redis.Int(do("HSET", hash, key, value))
 }
 
+// HSet2 hash key1 value1 key2 value2
+func HSet2(hash, key1, value1, key2, value2 string) (int, error) {
+	return redis.Int(do("HSET", hash, key1, value1, key2, value2))
+}
+
 // HGet hash key
 func HGet(hash, key string) (string, error) {
 	return redis.String(do("HGET", hash, key))

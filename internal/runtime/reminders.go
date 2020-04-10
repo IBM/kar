@@ -65,9 +65,7 @@ func reminderKey(r Reminder) string {
 
 func persistReminder(key string, reminder string, deadline time.Time) {
 	ts, _ := deadline.MarshalText()
-	// TODO: Should be a single HSet operation that takes 2 keys and 2 values
-	store.HSet(key, reminderStructKey, reminder)
-	store.HSet(key, currentDeadlineKey, string(ts))
+	store.HSet2(key, reminderStructKey, reminder, currentDeadlineKey, string(ts))
 }
 
 func updateDeadline(key string, deadline time.Time) {
