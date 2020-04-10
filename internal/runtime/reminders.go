@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -53,6 +54,27 @@ type scheduleReminderPayload struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
+const (
+	reminderStructKey  = "reminder"
+	currentDeadlineKey = "deadline"
+)
+
+func reminderKey(r Reminder) string {
+	return "reminders" + config.Separator + r.Actor.Type + config.Separator + r.Actor.ID + config.Separator + r.ID
+}
+
+func persistReminder(key string, reminder string, deadline time.Time) {
+	ts, _ := deadline.MarshalText()
+	// TODO: Should be a single HSet operation that takes 2 keys and 2 values
+	store.HSet(key, reminderStructKey, reminder)
+	store.HSet(key, currentDeadlineKey, string(ts))
+}
+
+func updateDeadline(key string, deadline time.Time) {
+	ts, _ := deadline.MarshalText()
+	store.HSet(key, currentDeadlineKey, string(ts))
+}
+
 // CancelReminders cancels all reminders that match the provided filter
 func CancelReminders(actor Actor, payload string, contentType string, accepts string) (int, error) {
 	var f reminderFilter
@@ -62,10 +84,13 @@ func CancelReminders(actor Actor, payload string, contentType string, accepts st
 
 	arMutex.Lock()
 	found := activeReminders.cancelMatchingReminders(actor, f.ID)
+	for _, cancelledReminder := range found {
+		store.Del(reminderKey(cancelledReminder))
+	}
 	arMutex.Unlock()
 
 	logger.Debug("Cancelled %v reminders matching (%v, %v)", found, actor, f.ID)
-	return found, nil
+	return len(found), nil
 }
 
 // GetReminders returns all reminders that match the provided filter
@@ -82,7 +107,7 @@ func GetReminders(actor Actor, payload string, contentType string, accepts strin
 	return found, nil
 }
 
-// ScheduleReminder schedules a new reminder
+// ScheduleReminder schedules a reminder
 func ScheduleReminder(actor Actor, payload string, contentType string, accepts string) error {
 	var data scheduleReminderPayload
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
@@ -106,8 +131,11 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 	}
 
 	logger.Debug("ScheduleReminder: %v", r)
+
 	arMutex.Lock()
+	activeReminders.cancelMatchingReminders(actor, r.ID) // FIXME: cancel is currently an O(# reminder) operation that is only needed if this reminder already exists.
 	activeReminders.addReminder(r)
+	persistReminder(reminderKey(r), payload, r.Deadline)
 	arMutex.Unlock()
 
 	return nil
@@ -133,9 +161,13 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 			logger.Error("ProcessReminders: firing %v raised error %v", r, err)
 		}
 
+		rk := reminderKey(r)
 		if r.Period > 0 {
 			r.Deadline = fireTime.Add(r.Period)
 			activeReminders.addReminder(r)
+			updateDeadline(rk, r.Deadline)
+		} else {
+			store.Del(rk)
 		}
 	}
 
