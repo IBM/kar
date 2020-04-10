@@ -1,4 +1,4 @@
-const { actor, actors, broadcast, shutdown, call } = require('kar')
+const { actor, actors, broadcast, shutdown, call, publish } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -152,6 +152,18 @@ async function actorTests () {
   return failure
 }
 
+async function pubSubTests () {
+  let failure = false
+
+  const v = await call('myService', 'pubsub', 'topic1')
+  if (v !== 'OK') {
+    console.log('Failed: pubsub')
+    failure = true
+  }
+
+  return failure
+}
+
 async function testTermination (failure) {
   if (failure) {
     console.log('FAILED; setting non-zero exit code')
@@ -178,6 +190,9 @@ async function main () {
 
   console.log('*** Actor Tests ***')
   failure |= await actorTests()
+
+  console.log('*** PubSub Tests ***')
+  failure |= await pubSubTests()
 
   testTermination(failure)
 }

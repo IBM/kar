@@ -11,6 +11,7 @@ before_install:
 
 script:
   - (./build/ci/build.sh && ./build/ci/start-kar.sh) || travis_terminate 1
+  - ./build/ci/createTestTopic.sh
   - ./build/ci/testLocal.sh
   - ./build/ci/testInCluster.sh
 

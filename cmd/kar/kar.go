@@ -416,6 +416,37 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+// swagger:route POST /publish/{topic} utility idPublish
+//
+// publish: send message to a topic.
+//
+// TODO: Operation detailed description
+//
+//     Consumes: application/json
+//     Schemes: http, https
+//     Responses:
+//       200: response200
+//
+func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
+	fmt.Fprint(w, "OK")
+}
+
+// swagger:route GET /subscribe/{topic}/{path} utility idSubscribe
+//
+// subscribe: subscribes to a topic.
+//
+// Each incoming messages is posted to the specified path.
+//
+//     Schemes: http, https
+//     Responses:
+//       200: response200
+//
+func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	runtime.Subscribe(ctx, ps.ByName("topic"), ps.ByName("path"))
+	fmt.Fprint(w, "OK")
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) {
 	router := httprouter.New()
@@ -436,6 +467,8 @@ func server(listener net.Listener) {
 	router.GET("/kar/killall", killall)
 	router.GET("/kar/health", health)
 	router.POST("/kar/broadcast/*path", broadcast)
+	router.POST("/kar/publish/:topic", publish)
+	router.GET("/kar/subscribe/:topic/*path", subscribe)
 	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 
 	wg.Add(1)

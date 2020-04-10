@@ -1,7 +1,11 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe } = require('kar')
 
 const app = express()
+
+// pubsub test
+let success
+let count = 0
 
 app.use(logger, jsonParser) // enable kar logging and parsing
 
@@ -19,6 +23,22 @@ app.post('/shutdown', async (_reg, res) => {
   res.sendStatus(200)
   await shutdown()
   server.close(() => process.exit())
+})
+
+app.post('/pubsub', async (req, res) => {
+  await subscribe(req.body, 'accumulate')
+  const promise = new Promise(resolve => { success = resolve })
+  await publish(req.body, 1)
+  await publish(req.body, 2)
+  await publish(req.body, 3)
+  await promise
+  res.sendStatus(200)
+})
+
+app.post('/accumulate', (req, res) => {
+  count += req.body
+  if (count >= 6) success()
+  res.sendStatus(200)
 })
 
 // example actor

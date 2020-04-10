@@ -401,3 +401,23 @@ func ProcessReminders(ctx context.Context) {
 		}
 	}
 }
+
+// Subscribe posts each message on a topic to the specified path until cancelled
+func Subscribe(ctx context.Context, topic, path string) {
+	ch := pubsub.NewSubscriber(ctx, topic)
+	go func() {
+		for msg := range ch {
+			res, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": msg, "content-type": "text/plain"})
+			if err != nil {
+				logger.Error("failed to post to %s: %v", path, err)
+			} else {
+				if res.StatusCode >= http.StatusBadRequest {
+					logger.Error("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+				} else {
+					logger.Debug("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+				}
+				discard(res.Body)
+			}
+		}
+	}()
+}

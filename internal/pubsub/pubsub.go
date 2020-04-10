@@ -23,7 +23,7 @@ type userData struct {
 }
 
 var (
-	conf     = sarama.NewConfig()
+	conf     = newConfig()
 	admin    sarama.ClusterAdmin
 	client   sarama.Client // client for producer to control topic refresh
 	producer sarama.SyncProducer
@@ -248,8 +248,8 @@ func consume(ctx context.Context) {
 	}
 }
 
-// Dial establishes a connection to Kafka and returns a read channel from incoming messages
-func Dial(ctx context.Context) <-chan Message {
+func newConfig() *sarama.Config {
+	conf := sarama.NewConfig()
 	if version, err := sarama.ParseKafkaVersion(config.KafkaVersion); err != nil {
 		logger.Fatal("invalid Kafka version: %v", err)
 	} else {
@@ -257,14 +257,6 @@ func Dial(ctx context.Context) <-chan Message {
 	}
 
 	conf.ClientID = "kar"
-	conf.Producer.Return.Successes = true
-	conf.Producer.RequiredAcks = sarama.WaitForAll
-	conf.Producer.Partitioner = sarama.NewManualPartitioner
-	conf.Producer.Idempotent = true
-	conf.Net.MaxOpenRequests = 1
-	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
-	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
-	conf.Consumer.Group.Member.UserData = marshal()
 
 	if config.KafkaPassword != "" {
 		conf.Net.SASL.Enable = true
@@ -280,6 +272,19 @@ func Dial(ctx context.Context) <-chan Message {
 			InsecureSkipVerify: true, // TODO certificates
 		}
 	}
+	return conf
+}
+
+// Dial establishes a connection to Kafka and returns a read channel from incoming messages
+func Dial(ctx context.Context) <-chan Message {
+	conf.Producer.Return.Successes = true
+	conf.Producer.RequiredAcks = sarama.WaitForAll
+	conf.Producer.Partitioner = sarama.NewManualPartitioner
+	conf.Producer.Idempotent = true
+	conf.Net.MaxOpenRequests = 1
+	conf.Consumer.Offsets.Initial = sarama.OffsetOldest
+	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	conf.Consumer.Group.Member.UserData = marshal()
 
 	var err error
 
@@ -331,4 +336,5 @@ func Close() {
 	producer.Close()
 	admin.Close()
 	client.Close()
+	publisher.Close()
 }

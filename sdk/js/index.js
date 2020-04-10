@@ -96,6 +96,10 @@ const broadcast = (path, params) => post(`broadcast/${path}`, params)
 // kill sidecar
 const shutdown = () => get('kill').then(() => agent.close())
 
+// pubsub
+const publish = (topic, params) => post(`publish/${topic}`, params)
+const subscribe = (topic, path) => get(`subscribe/${topic}/${path}`)
+
 // express middleware to log requests and responses if KAR_VERBOSE env variable is truthy
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
 
@@ -236,6 +240,8 @@ module.exports = {
   h2c,
   tell,
   call,
+  publish,
+  subscribe,
   actor: {
     tell: actorTell,
     call: actorCall,
