@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -112,7 +111,8 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 // Reminders sends a reminder command (cancel, get, schedule) to an actor's sidecar and waits for a reply
 func Reminders(ctx context.Context, actor Actor, action, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
-		"protocol":     "actor",
+		"protocol":     "partition",
+		"partition":    "0",
 		"type":         actor.Type,
 		"id":           actor.ID,
 		"command":      "reminder:" + action,
@@ -328,26 +328,24 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		} else {
 			err = forwardToSidecar(ctx, msg)
 		}
+	case "partition":
+		err = dispatch(ctx, cancel, msg)
 	case "actor":
-		if strings.HasPrefix(msg["command"], "reminder:") { // TODO temporary hack
-			err = dispatch(ctx, cancel, msg)
+		actor := Actor{Type: msg["type"], ID: msg["id"]}
+		session := msg["session"]
+		if session == "" {
+			session = uuid.New().String() // start new session
+		}
+		e, fresh, _ := actor.acquire(ctx, session)
+		if e == nil && ctx.Err() == nil {
+			err = forwardToActor(ctx, msg)
 		} else {
-			actor := Actor{Type: msg["type"], ID: msg["id"]}
-			session := msg["session"]
-			if session == "" {
-				session = uuid.New().String() // start new session
+			defer e.release(ctx)
+			if fresh {
+				activate(ctx, actor)
 			}
-			e, fresh, _ := actor.acquire(ctx, session)
-			if e == nil && ctx.Err() == nil {
-				err = forwardToActor(ctx, msg)
-			} else {
-				defer e.release(ctx)
-				if fresh {
-					activate(ctx, actor)
-				}
-				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
-				err = dispatch(ctx, cancel, msg)
-			}
+			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+			err = dispatch(ctx, cancel, msg)
 		}
 	}
 	if err == nil {

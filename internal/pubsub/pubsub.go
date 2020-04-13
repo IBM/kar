@@ -31,7 +31,8 @@ var (
 	topic    = "kar" + config.Separator + config.AppName
 
 	// output channel
-	out = make(chan Message) // TODO multiple channels?
+	out  = make(chan Message) // TODO multiple channels?
+	tick = make(chan struct{})
 
 	// routes
 	replicas map[string][]string // map services to sidecars
@@ -179,6 +180,8 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 	replicas = rp
 	hosts = hs
 	routes = rt
+	close(tick)
+	tick = make(chan struct{})
 	mu.Unlock()
 	return nil
 }
@@ -328,6 +331,15 @@ func Dial(ctx context.Context) <-chan Message {
 	go consume(ctx)
 
 	return out
+}
+
+// Partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
+func Partitions() ([]int32, <-chan struct{}) {
+	mu.Lock()
+	t := tick
+	r := routes[config.ID]
+	mu.Unlock()
+	return r, t
 }
 
 // Close closes the connection to Kafka

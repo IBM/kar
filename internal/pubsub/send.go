@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/rand"
+	"strconv"
 
 	"github.com/Shopify/sarama"
 	"github.com/cenkalti/backoff/v4"
@@ -116,6 +117,13 @@ func Send(ctx context.Context, msg map[string]string) error {
 			logger.Debug("failed to route to sidecar %s: %v", msg["sidecar"], err)
 			return err
 		}
+	case "partition": // route to partition
+		p64, err := strconv.ParseInt(msg["partition"], 10, 32)
+		if err != nil {
+			logger.Debug("failed to route to partition %s: %v", msg["sidecar"], err)
+			return err
+		}
+		partition = int32(p64)
 	}
 	m, err := json.Marshal(msg)
 	if err != nil {
