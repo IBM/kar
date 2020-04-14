@@ -120,10 +120,14 @@ func Send(ctx context.Context, msg map[string]string) error {
 	case "partition": // route to partition
 		p64, err := strconv.ParseInt(msg["partition"], 10, 32)
 		if err != nil {
-			logger.Debug("failed to route to partition %s: %v", msg["sidecar"], err)
+			logger.Debug("failed to route to partition %s: %v", msg["partition"], err)
 			return err
 		}
 		partition = int32(p64)
+		_, _, err = routeToService(ctx, config.ServiceName) // make sure routes have been initialized
+		if err != nil {
+			return err // abort
+		}
 	}
 	m, err := json.Marshal(msg)
 	if err != nil {
