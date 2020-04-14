@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
@@ -452,7 +451,7 @@ func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
 		subscriptions.Delete(id)
 		return "OK", nil
 	}
-	return "", errors.New(fmt.Sprintf("no subscription with id %s", id))
+	return "", fmt.Errorf("no subscription with id %s", id)
 }
 
 // Subscribe posts each message on a topic to the specified path until cancelled
