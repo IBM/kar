@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
 
 const app = express()
 
@@ -29,9 +29,11 @@ app.post('/pubsub', async (req, res) => {
   await subscribe(req.body, 'accumulate')
   const promise = new Promise(resolve => { success = resolve })
   await publish(req.body, 1)
+  await subscribe(req.body, 'accumulate')
   await publish(req.body, 2)
   await publish(req.body, 3)
   await promise
+  await unsubscribe(req.body)
   res.sendStatus(200)
 })
 

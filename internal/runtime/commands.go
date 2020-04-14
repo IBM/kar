@@ -12,13 +12,24 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
-// pending requests: map request uuid (string) to channel (chan Reply)
-var requests = sync.Map{}
+type subscription struct {
+	path   chan string        // to update subscription path
+	cancel context.CancelFunc // to cancel subscription
+	done   chan struct{}      // to wait for cancellation to complete
+}
+
+var (
+	// pending requests: map request uuid (string) to channel (chan Reply)
+	requests = sync.Map{}
+
+	subscriptions = sync.Map{}
+)
 
 // TellService sends a message to a service and does not wait for a reply
 func TellService(ctx context.Context, service, path, payload, contentType string) error {
@@ -402,22 +413,79 @@ func ProcessReminders(ctx context.Context) {
 	}
 }
 
+// Unsubscribe unsubscribes from topic
+func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
+	var m map[string]string
+	if options != "" {
+		err := json.Unmarshal([]byte(options), &m)
+		if err != nil {
+			return "", err
+		}
+	}
+	id := m["id"]
+	if id == "" {
+		id = topic
+	}
+	if v, ok := subscriptions.Load(id); ok {
+		s := v.(subscription)
+		s.cancel()
+		select {
+		case <-ctx.Done():
+		case <-s.done:
+		}
+		subscriptions.Delete(id)
+		return "OK", nil
+	}
+	return "", errors.New(fmt.Sprintf("no subscription with id %s", id))
+}
+
 // Subscribe posts each message on a topic to the specified path until cancelled
-func Subscribe(ctx context.Context, topic, path string) {
-	ch := pubsub.NewSubscriber(ctx, topic)
+func Subscribe(ctx context.Context, topic, path, options string) (string, error) {
+	var m map[string]string
+	if options != "" {
+		err := json.Unmarshal([]byte(options), &m)
+		if err != nil {
+			return "", err
+		}
+	}
+	id := m["id"]
+	if id == "" {
+		id = topic
+	}
+	if v, ok := subscriptions.Load(id); ok {
+		s := v.(subscription)
+		s.path <- path
+		return "OK", nil
+	}
+	c, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	s := subscription{path: make(chan string, 1), cancel: cancel, done: done}
+	subscriptions.Store(id, s)
+	ch := pubsub.NewSubscriber(c, topic, id, m["oldest"] != "")
+	ok := true
+	var msg pubsub.RawMessage
 	go func() {
-		for msg := range ch {
-			res, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": msg, "content-type": "text/plain"})
-			if err != nil {
-				logger.Error("failed to post to %s: %v", path, err)
-			} else {
-				if res.StatusCode >= http.StatusBadRequest {
-					logger.Error("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
-				} else {
-					logger.Debug("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+		for ok {
+			select {
+			case msg, ok = <-ch:
+				if ok {
+					res, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": msg.Value, "content-type": "text/plain"})
+					if err != nil {
+						logger.Error("failed to post to %s: %v", path, err)
+					} else {
+						msg.Mark()
+						if res.StatusCode >= http.StatusBadRequest {
+							logger.Error("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+						} else {
+							logger.Debug("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+						}
+						discard(res.Body)
+					}
 				}
-				discard(res.Body)
+			case path = <-s.path:
 			}
 		}
+		close(done)
 	}()
+	return "OK", nil
 }
