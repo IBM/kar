@@ -2,6 +2,46 @@ basePath: /kar
 consumes:
 - application/json
 definitions:
+  Actor:
+    properties:
+      ID:
+        type: string
+      Type:
+        type: string
+    title: Actor uniquely identifies an actor instance.
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+  Duration:
+    description: |-
+      A Duration represents the elapsed time between two instants
+      as an int64 nanosecond count. The representation limits the
+      largest representable duration to approximately 290 years.
+    format: int64
+    type: integer
+    x-go-package: time
+  Reminder:
+    description: Reminder describes a time-triggered asynchronous invocation of a
+      Path on an Actor
+    properties:
+      Actor:
+        $ref: '#/definitions/Actor'
+      deadline:
+        format: date-time
+        type: string
+        x-go-name: Deadline
+      encodedData:
+        type: string
+        x-go-name: EncodedData
+      id:
+        type: string
+        x-go-name: ID
+      path:
+        type: string
+        x-go-name: Path
+      period:
+        $ref: '#/definitions/Duration'
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   reminderFilter:
     properties:
       id:
@@ -18,6 +58,7 @@ definitions:
         description: |-
           An optional parameter containing an arbitray JSON value that will be provided as the
           payload when the `path` is invoked on the actor instance.
+        example: '{ msg: "Hello Friend!" }'
         type: object
         x-go-name: Data
       deadline:
@@ -28,11 +69,13 @@ definitions:
         x-go-name: Deadline
       id:
         description: The ID to use for this reminder
+        example: repeatingGreeter
         type: string
         x-go-name: ID
       path:
         description: The path to invoke on the actor instance when the reminder is
           fired
+        example: sayHello
         type: string
         x-go-name: Path
       period:
@@ -40,6 +83,7 @@ definitions:
           The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.
           If a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time
           to compute a new Deadline for the next invocation of the reminder.
+        example: 30s
         type: string
         x-go-name: Period
     type: object
@@ -57,11 +101,16 @@ paths:
       description: |-
         Call synchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing
-        through an optional JSON payload to the service and responding with the
+        through an optional JSON payload to the actor and responding with the
         result returned by the actor method.
-
-        TODO: Operation detailed description
       operationId: idCallActorSession
+      responses:
+        "200":
+          $ref: '#/responses/callPath200Response'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -74,11 +123,16 @@ paths:
       description: |-
         Call synchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing
-        through an optional JSON payload to the service and responding with the
+        through an optional JSON payload to the actor and responding with the
         result returned by the actor method.
-
-        TODO: Operation detailed description
       operationId: idCallActor
+      responses:
+        "200":
+          $ref: '#/responses/callPath200Response'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -101,10 +155,11 @@ paths:
   /actor-reminder/{actorType}/{actorId}/cancel:
     post:
       description: |-
-        This operatation cancels reminders for the actor specified in the path.
-        If a reminder id is provided as a parameter, only the reminder that
+        This operation cancels reminders for the actor specified in the path.
+        If a reminder id is provided as a parameter, only the reminder whose id
         matches that id will be cancelled. If no id is provided, all
-        of the specified actor's reminders will be cancelled.
+        of the specified actor's reminders will be cancelled.  The number of reminders
+        actually cancelled is returned as the result of the operation.
       operationId: idCancelReminder
       parameters:
       - description: |-
@@ -114,6 +169,13 @@ paths:
         name: Body
         schema:
           $ref: '#/definitions/reminderFilter'
+      responses:
+        "200":
+          $ref: '#/responses/cancelReminder200Response'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -135,6 +197,13 @@ paths:
         name: Body
         schema:
           $ref: '#/definitions/reminderFilter'
+      responses:
+        "200":
+          $ref: '#/responses/getReminder200Response'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -143,8 +212,12 @@ paths:
       - actors
   /actor-reminder/{actorType}/{actorId}/schedule:
     post:
-      description: This operatation schedules a reminder for the actor specified in
-        the path.
+      description: |-
+        This operatation schedules a reminder for the actor specified in the path.
+        Consistient with the expected semantics of a `POST` operation, if there is
+        already a reminder for the actor with the same reminderId, that
+        existing reminder's schedule will be updated based on the request body.
+        The method will not return until after the reminder is scheduled.
       operationId: idScheduleReminder
       parameters:
       - description: The request body describes the reminder to be scheduled
@@ -152,6 +225,13 @@ paths:
         name: Body
         schema:
           $ref: '#/definitions/scheduleReminderPayload'
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -222,7 +302,9 @@ paths:
       description: |-
         Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing through
-        the optional JSON payload it received.
+        the optional JSON payload it received.  A `200` response indicates that
+        the request has been accepted by the runtime and will eventually be delivered to
+        the targeted actor method.
       operationId: idTellActor
       responses:
         "200":
@@ -240,7 +322,7 @@ paths:
   /broadcast/{path}:
     post:
       description: |-
-        The broadcast route cases a `POST` of `path` to be delivered to all
+        The broadcast route causes a `POST` of `path` to be delivered to all
         KAR runtime processes that are currently part of the application.
         A `200` response indicates that the request to send the broadcast
         has been accepted and the POST will eventually be delivered to all sidecars.
@@ -261,6 +343,13 @@ paths:
         through an optional JSON payload to the service and responding with the
         result returned by the service.
       operationId: idCallService
+      responses:
+        "200":
+          $ref: '#/responses/callPath200Response'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
       schemes:
       - http
       - https
@@ -302,7 +391,9 @@ paths:
     post:
       description: |-
         Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
-        through the optional JSON payload it received.
+        through the optional JSON payload it received. A `200` response indicates that
+        the request has been accepted by the runtime and will eventually be delivered to
+        the targeted service endpoint.
       operationId: idTellService
       responses:
         "200":
@@ -320,24 +411,50 @@ paths:
 produces:
 - application/json
 responses:
+  callPath200Response:
+    description: The response returned by the invoked endpoint
+    headers:
+      body:
+        description: The response returned by the invoked endpoint
+    schema:
+      type: object
+  cancelReminder200Response:
+    headers:
+      Body:
+        description: The number of reminders that were actually cancelled
+        example: 3
+        format: int64
+        type: integer
+  getReminder200Response:
+    headers:
+      Body:
+        description: An array containing all matching reminders
+        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          deadline: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }]'
+        items:
+          $ref: '#/definitions/Reminder'
+        type: array
   response200:
     description: A success message.
     headers:
-      Body:
+      body:
         description: A success message
         example: OK
         type: string
   response500:
     description: A message describing the error
     headers:
-      Body:
+      body:
         description: A message describing the error
+        example: Internal Server Error
         type: string
   response503:
     description: A message describing the error
     headers:
-      Body:
+      body:
         description: A message describing the error
+        example: Service Unavailable
         type: string
 schemes:
 - https,http

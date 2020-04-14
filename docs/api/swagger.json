@@ -18,7 +18,7 @@
   "paths": {
     "/actor-call-session/{actorType}/{actorId}/{session}/{path}": {
       "post": {
-        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the actor method.\n\nTODO: Operation detailed description",
+        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
         "schemes": [
           "http",
           "https"
@@ -27,12 +27,23 @@
           "actors"
         ],
         "summary": "actor-call-session: Synchronously invoke an actor with given session ID.",
-        "operationId": "idCallActorSession"
+        "operationId": "idCallActorSession",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/callPath200Response"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/actor-call/{actorType}/{actorId}/{path}": {
       "post": {
-        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the actor method.\n\nTODO: Operation detailed description",
+        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
         "schemes": [
           "http",
           "https"
@@ -41,7 +52,18 @@
           "actors"
         ],
         "summary": "actor-call: Synchronously invoke an actor.",
-        "operationId": "idCallActor"
+        "operationId": "idCallActor",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/callPath200Response"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/actor-migrate/{actorType}/{actorId}": {
@@ -65,7 +87,7 @@
     },
     "/actor-reminder/{actorType}/{actorId}/cancel": {
       "post": {
-        "description": "This operatation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder that\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.",
+        "description": "This operation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
         "schemes": [
           "http",
           "https"
@@ -84,7 +106,18 @@
               "$ref": "#/definitions/reminderFilter"
             }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/cancelReminder200Response"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/actor-reminder/{actorType}/{actorId}/get": {
@@ -108,12 +141,23 @@
               "$ref": "#/definitions/reminderFilter"
             }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/getReminder200Response"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/actor-reminder/{actorType}/{actorId}/schedule": {
       "post": {
-        "description": "This operatation schedules a reminder for the actor specified in the path.",
+        "description": "This operatation schedules a reminder for the actor specified in the path.\nConsistient with the expected semantics of a `POST` operation, if there is\nalready a reminder for the actor with the same reminderId, that\nexisting reminder's schedule will be updated based on the request body.\nThe method will not return until after the reminder is scheduled.",
         "schemes": [
           "http",
           "https"
@@ -132,7 +176,18 @@
               "$ref": "#/definitions/scheduleReminderPayload"
             }
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/actor-state-404/{actorType}/{actorId}/{key}": {
@@ -215,7 +270,7 @@
     },
     "/actor-tell/{actorType}/{actorId}/{path}": {
       "post": {
-        "description": "Actor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.",
+        "description": "Actor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
         "schemes": [
           "http",
           "https"
@@ -240,7 +295,7 @@
     },
     "/broadcast/{path}": {
       "post": {
-        "description": "The broadcast route cases a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
+        "description": "The broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
         "schemes": [
           "http",
           "https"
@@ -268,7 +323,18 @@
           "services"
         ],
         "summary": "call: Synchronously invoke a service.",
-        "operationId": "idCallService"
+        "operationId": "idCallService",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/callPath200Response"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
       }
     },
     "/health": {
@@ -315,7 +381,7 @@
     },
     "/tell/{service}/{path}": {
       "post": {
-        "description": "Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received.",
+        "description": "Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
         "schemes": [
           "http",
           "https"
@@ -340,6 +406,55 @@
     }
   },
   "definitions": {
+    "Actor": {
+      "type": "object",
+      "title": "Actor uniquely identifies an actor instance.",
+      "properties": {
+        "ID": {
+          "type": "string"
+        },
+        "Type": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "Reminder": {
+      "description": "Reminder describes a time-triggered asynchronous invocation of a Path on an Actor",
+      "type": "object",
+      "properties": {
+        "Actor": {
+          "$ref": "#/definitions/Actor"
+        },
+        "deadline": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "Deadline"
+        },
+        "encodedData": {
+          "type": "string",
+          "x-go-name": "EncodedData"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "path": {
+          "type": "string",
+          "x-go-name": "Path"
+        },
+        "period": {
+          "$ref": "#/definitions/Duration"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
     "reminderFilter": {
       "type": "object",
       "properties": {
@@ -358,7 +473,8 @@
         "data": {
           "description": "An optional parameter containing an arbitray JSON value that will be provided as the\npayload when the `path` is invoked on the actor instance.",
           "type": "object",
-          "x-go-name": "Data"
+          "x-go-name": "Data",
+          "example": "{ msg: \"Hello Friend!\" }"
         },
         "deadline": {
           "description": "The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format",
@@ -369,27 +485,63 @@
         "id": {
           "description": "The ID to use for this reminder",
           "type": "string",
-          "x-go-name": "ID"
+          "x-go-name": "ID",
+          "example": "repeatingGreeter"
         },
         "path": {
           "description": "The path to invoke on the actor instance when the reminder is fired",
           "type": "string",
-          "x-go-name": "Path"
+          "x-go-name": "Path",
+          "example": "sayHello"
         },
         "period": {
           "description": "The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.\nIf a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time\nto compute a new Deadline for the next invocation of the reminder.",
           "type": "string",
-          "x-go-name": "Period"
+          "x-go-name": "Period",
+          "example": "30s"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
     }
   },
   "responses": {
+    "callPath200Response": {
+      "description": "The response returned by the invoked endpoint",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The response returned by the invoked endpoint"
+        }
+      }
+    },
+    "cancelReminder200Response": {
+      "headers": {
+        "Body": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of reminders that were actually cancelled"
+        }
+      }
+    },
+    "getReminder200Response": {
+      "headers": {
+        "Body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Reminder"
+          },
+          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }]",
+          "description": "An array containing all matching reminders"
+        }
+      }
+    },
     "response200": {
       "description": "A success message.",
       "headers": {
-        "Body": {
+        "body": {
           "type": "string",
           "example": "OK",
           "description": "A success message"
@@ -399,8 +551,9 @@
     "response500": {
       "description": "A message describing the error",
       "headers": {
-        "Body": {
+        "body": {
           "type": "string",
+          "example": "Internal Server Error",
           "description": "A message describing the error"
         }
       }
@@ -408,8 +561,9 @@
     "response503": {
       "description": "A message describing the error",
       "headers": {
-        "Body": {
+        "body": {
           "type": "string",
+          "example": "Service Unavailable",
           "description": "A message describing the error"
         }
       }
