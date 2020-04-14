@@ -4,6 +4,7 @@ package store
 import (
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/gomodule/redigo/redis"
@@ -23,6 +24,15 @@ var (
 // mangle add common prefix to all keys
 func mangle(key string) string {
 	return "kar" + config.Separator + config.AppName + config.Separator + key
+}
+
+// unmangle a key by removing the common prefix if it has it
+func unmangle(key string) string {
+	parts := strings.Split(key, config.Separator)
+	if parts[0] == "kar" && parts[1] == config.AppName {
+		return strings.Join(parts[2:], config.Separator)
+	}
+	return key
 }
 
 // send a command while holding the connection mutex
@@ -78,6 +88,17 @@ func CompareAndSet(key string, expected, value *string) (int, error) {
 	return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), *expected, *value))
 }
 
+// Keys returns all keys that match the argument pattern
+func Keys(pattern string) ([]string, error) {
+	mangledKeys, err := redis.Strings(do("KEYS", pattern))
+	if err == nil {
+		for idx, val := range mangledKeys {
+			mangledKeys[idx] = unmangle(val)
+		}
+	}
+	return mangledKeys, err
+}
+
 // Hashes
 
 // HSet hash key value
@@ -88,6 +109,25 @@ func HSet(hash, key, value string) (int, error) {
 // HSet2 hash key1 value1 key2 value2
 func HSet2(hash, key1, value1, key2, value2 string) (int, error) {
 	return redis.Int(do("HSET", hash, key1, value1, key2, value2))
+}
+
+// HSet3 hash key1 value1 key2 value2 key3 value3
+func HSet3(hash, key1, value1, key2, value2, key3, value3 string) (int, error) {
+	return redis.Int(do("HSET", hash, key1, value1, key2, value2, key3, value3))
+}
+
+// HSetMultiple hash map[string]string does an HSET of the entire map
+func HSetMultiple(hash string, keyValuePairs map[string]string) (int, error) {
+	nPairs := len(keyValuePairs)
+	args := make([]interface{}, 2*nPairs+1)
+	args[0] = hash
+	idx := 1
+	for k, v := range keyValuePairs {
+		args[idx] = k
+		args[idx+1] = v
+		idx += 2
+	}
+	return redis.Int(do("HSET", args...))
 }
 
 // HGet hash key

@@ -46,14 +46,14 @@ type remninderScheduleParamWrapper struct {
 // swagger:response response500
 type error500 struct {
 	// A message describing the error
-	Body string `json""`
+	Body string `json:"body"`
 }
 
 // A message describing the error
 // swagger:response response503
 type error503 struct {
 	// A message describing the error
-	Body string `json""`
+	Body string `json:"body"`
 }
 
 // A success message.
@@ -61,5 +61,5 @@ type error503 struct {
 type success200 struct {
 	// A success message
 	// Example: OK
-	Body string `json""`
+	Body string `json:"body"`
 }

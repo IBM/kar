@@ -535,6 +535,12 @@ func main() {
 		runtime.ProcessReminders(ctx)
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		runtime.ManageReminderPartitions(ctx)
+	}()
+
 	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", config.ServicePort)
 	logger.Info("%s %s", port1, port2)
