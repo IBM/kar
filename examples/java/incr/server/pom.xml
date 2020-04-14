@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8'?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>com.ibm.research.kar.example.incr</groupId>
+	<artifactId>kar-example-server</artifactId>
+	<version>1.0-SNAPSHOT</version>
+	<packaging>war</packaging>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<failOnMissingWebXml>false</failOnMissingWebXml>
+
+		<version.liberty-maven-plugin>3.1</version.liberty-maven-plugin>
+		<version.maven-failsafe-plugin>2.22.2</version.maven-failsafe-plugin>
+		<version.maven-surefire-plugin>2.22.2</version.maven-surefire-plugin>
+		<version.maven-war-plugin>3.2.3</version.maven-war-plugin>
+		<!-- Liberty configuration -->
+		<liberty.var.default.http.port>9080</liberty.var.default.http.port>
+		<liberty.var.default.https.port>9443</liberty.var.default.https.port>
+		<liberty.var.app.context.root>/</liberty.var.app.context.root>
+	</properties>
+
+	<dependencies>
+		<!-- Provided dependencies -->
+		<dependency>
+			<groupId>javax</groupId>
+			<artifactId>javaee-api</artifactId>
+			<version>8.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.microprofile</groupId>
+			<artifactId>microprofile</artifactId>
+			<version>3.3</version>
+			<type>pom</type>
+			<scope>provided</scope>
+		</dependency>
+		<!-- For tests -->
+		<dependency>
+			<groupId>org.microshed</groupId>
+			<artifactId>microshed-testing-liberty</artifactId>
+			<version>0.8</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.30</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>5.5.2</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>${project.artifactId}</finalName>
+		<plugins>
+			<plugin>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.2.3</version>
+			</plugin>
+			<plugin>
+				<groupId>io.openliberty.tools</groupId>
+				<artifactId>liberty-maven-plugin</artifactId>
+				<version>${version.liberty-maven-plugin}</version>
+			</plugin>
+			<!-- Plugin to run integration tests -->
+			<plugin>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>3.0.0-M4</version>
+				<executions>
+					<execution>
+						<id>integration-test</id>
+						<goals>
+							<goal>integration-test</goal>
+						</goals>
+						<configuration>
+							<trimStackTrace>false</trimStackTrace>
+						</configuration>
+					</execution>
+					<execution>
+						<id>verify</id>
+						<goals>
+							<goal>verify</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

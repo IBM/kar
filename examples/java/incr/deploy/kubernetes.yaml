@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-deployment
+  labels:
+    app: kar-server
+spec:
+  selector:
+    matchLabels:
+      app: kar-server
+  template:
+    metadata:
+      labels:
+        app: kar-server
+      annotations:
+        kar.ibm.com/app: incr-example
+        kar.ibm.com/service: incr
+        kar.ibm.com/sendPort: "9080"
+    spec:
+      containers:
+      - name: kar-server-container
+        image: paulccastro/kar-example-server:v0.6
+        ports:
+        - containerPort: 9080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-deployment
+  labels:
+    app: kar-client
+spec:
+  selector:
+    matchLabels:
+      app: kar-client
+  template:
+    metadata:
+      labels:
+        app: kar-client
+      annotations:
+        kar.ibm.com/app: incr-example
+        kar.ibm.com/service: client
+        kar.ibm.com/sendPort: "9090"
+    spec:
+      containers:
+      - name: kar-client-container
+        image: paulccastro/kar-example-client:v0.7
+        ports:
+        - containerPort: 9090
+---
