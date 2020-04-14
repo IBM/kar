@@ -38,7 +38,9 @@ var (
 // tell: Asynchronously invoke a service.
 //
 // Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
-// through the optional JSON payload it received.
+// through the optional JSON payload it received. A `200` response indicates that
+// the request has been accepted by the runtime and will eventually be delivered to
+// the targeted service endpoint.
 //
 //     Consumes: application/json
 //     Schemes: http, https
@@ -54,7 +56,9 @@ var (
 //
 // Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing through
-// the optional JSON payload it received.
+// the optional JSON payload it received.  A `200` response indicates that
+// the request has been accepted by the runtime and will eventually be delivered to
+// the targeted actor method.
 //
 //     Consumes: application/json
 //     Schemes: http, https
@@ -85,7 +89,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // broadcast: send message to all KAR runtimes.
 //
-// The broadcast route cases a `POST` of `path` to be delivered to all
+// The broadcast route causes a `POST` of `path` to be delivered to all
 // KAR runtime processes that are currently part of the application.
 // A `200` response indicates that the request to send the broadcast
 // has been accepted and the POST will eventually be delivered to all sidecars.
@@ -112,6 +116,10 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: callPath200Response
+//       500: response500
+//       503: response503
 //
 
 // swagger:route POST /actor-call/{actorType}/{actorId}/{path} actors idCallActor
@@ -120,14 +128,16 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
-// through an optional JSON payload to the service and responding with the
+// through an optional JSON payload to the actor and responding with the
 // result returned by the actor method.
-//
-// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: callPath200Response
+//       500: response500
+//       503: response503
 //
 
 // swagger:route POST /actor-call-session/{actorType}/{actorId}/{session}/{path} actors idCallActorSession
@@ -136,14 +146,16 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
-// through an optional JSON payload to the service and responding with the
+// through an optional JSON payload to the actor and responding with the
 // result returned by the actor method.
-//
-// TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: callPath200Response
+//       500: response500
+//       503: response503
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
@@ -201,14 +213,19 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 // actor-reminder/cancel: Cancel all matching reminders.
 //
-// This operatation cancels reminders for the actor specified in the path.
-// If a reminder id is provided as a parameter, only the reminder that
+// This operation cancels reminders for the actor specified in the path.
+// If a reminder id is provided as a parameter, only the reminder whose id
 // matches that id will be cancelled. If no id is provided, all
-// of the specified actor's reminders will be cancelled.
+// of the specified actor's reminders will be cancelled.  The number of reminders
+// actually cancelled is returned as the result of the operation.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: cancelReminder200Response
+//       500: response500
+//       503: response503
 //
 
 // swagger:route POST /actor-reminder/{actorType}/{actorId}/get actors idGetReminder
@@ -222,6 +239,10 @@ func subscriber(channel <-chan pubsub.Message) {
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: getReminder200Response
+//       500: response500
+//       503: response503
 //
 
 // swagger:route POST /actor-reminder/{actorType}/{actorId}/schedule actors idScheduleReminder
@@ -229,10 +250,18 @@ func subscriber(channel <-chan pubsub.Message) {
 // actor-reminder/schedule: Schedule a reminder.
 //
 // This operatation schedules a reminder for the actor specified in the path.
+// Consistient with the expected semantics of a `POST` operation, if there is
+// already a reminder for the actor with the same reminderId, that
+// existing reminder's schedule will be updated based on the request body.
+// The method will not return until after the reminder is scheduled.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http, https
+//     Responses:
+//       200: response200
+//       500: response500
+//       503: response503
 //
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	action := ps.ByName("action")

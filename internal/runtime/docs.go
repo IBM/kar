@@ -46,6 +46,7 @@ type remninderScheduleParamWrapper struct {
 // swagger:response response500
 type error500 struct {
 	// A message describing the error
+	// Example: Internal Server Error
 	Body string `json:"body"`
 }
 
@@ -53,6 +54,7 @@ type error500 struct {
 // swagger:response response503
 type error503 struct {
 	// A message describing the error
+	// Example: Service Unavailable
 	Body string `json:"body"`
 }
 
@@ -62,4 +64,25 @@ type success200 struct {
 	// A success message
 	// Example: OK
 	Body string `json:"body"`
+}
+
+// The response returned by the invoked endpoint
+// swagger:response callPath200Response
+type callPath200Response struct {
+	// The response returned by the invoked endpoint
+	Body interface{} `json:"body"`
+}
+
+// swagger:response cancelReminder200Response
+type cancelReminder200Response struct {
+	// The number of reminders that were actually cancelled
+	// Example: 3
+	Body int
+}
+
+// swagger:response getReminder200Response
+type getReminder200Response struct {
+	// An array containing all matching reminders
+	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }]
+	Body []Reminder
 }
