@@ -8,7 +8,6 @@ require (
 	github.com/gomodule/redigo v1.7.0
 	github.com/google/uuid v1.1.1
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/pkg/errors v0.9.1
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	k8s.io/api v0.16.7
 	k8s.io/apimachinery v0.16.7
