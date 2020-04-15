@@ -1,45 +1,92 @@
+package com.ibm.research.kar;
+
 import java.util.Map;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.ProcessingException;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
-import com.ibm.research.kar.example.client.Number;
+@ApplicationScoped // change as needed
+public class Kar {
 
-@RegisterRestClient(configKey = "kar", baseUri = "http://localhost:3500")
-@Path("kar")
-public interface Kar extends AutoCloseable {
+	@Inject
+	@RestClient
+	private KarRest karClient;
 
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	Number getNumber()  throws ProcessingException;
 	
-	@POST
-	@Path("send/{service}/{path}")
-	public Response send(@PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
+	/******************
+	 * Public methods
+	 ******************/
+
+	// asynchronous service invocation, returns "OK" immediately
+	public Response tell(String service, String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.tell(service, path, params);
+	}
+
+	// synchronous service invocation, returns invocation result
+	public Response call(String service, String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.call(service, path, params);
+	}
+
+	// asynchronous actor invocation, returns "OK" immediately
+	public Response actorTell(String type, String id, String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.actorTell(type, id, path, params);
+	}
+
+	// synchronous actor invocation: returns invocation result
+	public Response actorCall(String type, String id,  String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.actorCall(type, id, path, params);
+	}
+
 	
-	@POST
-	@Path("call/{service}/{path}")
-	public Response call(@PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
+	/*
+	 * Reminder Operations
+	 */
+	public Response actorCancelReminder(String type, String id, Map<String,Object> params) throws ProcessingException {
+		return karClient.actorCancelReminder(type, id, params);
 
-	/*	
-    @POST
-	@Path("session/{actor}/send/{service}/{path}")
-	public Response actorSend(@PathParam("actor") String actor, @PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
+	}
 
-    @POST
-	@Path("session/{actor}/call/{service}/{path}")
-	public Response actorCall(@PathParam("actor") String actor, @PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
+	public Response actorGetReminder(String type, String id, Map<String,Object> params) throws ProcessingException {
+		return karClient.actorGetReminder(type, id, params);
 
-    @POST
-	@Path("broadcast/${path}")
-	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException;*/
+	}
+
+	public Response actorScheduleReminder(String type, String id, String path, Map<String,Object> params) throws ProcessingException {
+		params.put("path", "/"+"path");
+		return karClient.actorScheduleReminder(type, id, params);
+	}
+
+
+	// broadcast to all sidecars except for ours
+	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.broadcast(path, params);
+	}
+	
+	/*
+	 * Actor State Operations
+	 */
+    public Response actorGetState( String type,  String id,  String key) throws ProcessingException {
+    	return karClient.actorGetState(type, id, key);
+    }
+
+    public Response actorSetState(String type,  String id,  String key, Map<String,Object> params) throws ProcessingException {
+    	return karClient.actorSetState(type, id, key, params);
+    }
+
+    public Response actorDeleteState(String type,  String id,  String key) throws ProcessingException {
+    	return karClient.actorDeleteState(type, id, key);
+    }
+    public Response actorGetAllState(String type,  String id) throws ProcessingException {
+    	return karClient.actorGetAllState(type, id);
+}
+
+    public Response actorDeleteAllState(String type,  String id) throws ProcessingException {
+    	return karClient.actorDeleteAllState(type, id);
+    }
 
 }
