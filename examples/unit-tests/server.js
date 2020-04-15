@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe, actor } = require('kar')
 
 const app = express()
 
@@ -26,10 +26,10 @@ app.post('/shutdown', async (_reg, res) => {
 })
 
 app.post('/pubsub', async (req, res) => {
-  await subscribe(req.body, 'accumulate')
+  await subscribe(req.body, 'accumulate') // subscribe service to topic
   const promise = new Promise(resolve => { success = resolve })
   await publish(req.body, 1)
-  await subscribe(req.body, 'accumulate')
+  await actor.subscribe('Foo', 'xyz', req.body, 'accumulate') // update subscription to target an actor
   await publish(req.body, 2)
   await publish(req.body, 3)
   await promise
@@ -49,6 +49,11 @@ class Foo {
   constructor (id) {
     this.id = id
     this.field = 42
+  }
+
+  accumulate (v) {
+    count += v
+    if (count >= 6) success()
   }
 
   activate () {

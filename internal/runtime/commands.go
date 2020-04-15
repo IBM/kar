@@ -16,8 +16,13 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
+type subscriber struct {
+	actor *Actor
+	path  string
+}
+
 type subscription struct {
-	path   chan string        // to update subscription path
+	sub    chan subscriber    // channel to update the subscriber
 	cancel context.CancelFunc // to cancel subscription
 	done   chan struct{}      // to wait for cancellation to complete
 }
@@ -455,7 +460,7 @@ func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
 }
 
 // Subscribe posts each message on a topic to the specified path until cancelled
-func Subscribe(ctx context.Context, topic, path, options string) (string, error) {
+func Subscribe(ctx context.Context, topic, path, options, actorType, actorID string) (string, error) {
 	var m map[string]string
 	if options != "" {
 		err := json.Unmarshal([]byte(options), &m)
@@ -467,14 +472,18 @@ func Subscribe(ctx context.Context, topic, path, options string) (string, error)
 	if id == "" {
 		id = topic
 	}
+	var sub = subscriber{path: path}
+	if actorType != "" {
+		sub.actor = &Actor{Type: actorType, ID: actorID}
+	}
 	if v, ok := subscriptions.Load(id); ok {
 		s := v.(subscription)
-		s.path <- path
+		s.sub <- sub // update subscriber
 		return "OK", nil
 	}
 	c, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
-	s := subscription{path: make(chan string, 1), cancel: cancel, done: done}
+	s := subscription{sub: make(chan subscriber, 1), cancel: cancel, done: done}
 	subscriptions.Store(id, s)
 	ch := pubsub.NewSubscriber(c, topic, id, m["oldest"] != "")
 	ok := true
@@ -484,20 +493,29 @@ func Subscribe(ctx context.Context, topic, path, options string) (string, error)
 			select {
 			case msg, ok = <-ch:
 				if ok {
-					res, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": msg.Value, "content-type": "text/plain"})
-					if err != nil {
-						logger.Error("failed to post to %s: %v", path, err)
+					var reply *Reply
+					var err error
+					if sub.actor != nil {
+						reply, err = CallActor(ctx, *sub.actor, sub.path, msg.Value, "text/plain", "", "")
 					} else {
-						msg.Mark()
-						if res.StatusCode >= http.StatusBadRequest {
-							logger.Error("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
-						} else {
-							logger.Debug("subscriber returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+						var res *http.Response
+						res, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": msg.Value, "content-type": "text/plain"})
+						if res != nil {
+							reply = &Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body)}
 						}
-						discard(res.Body)
+					}
+					msg.Mark()
+					if err != nil {
+						logger.Error("failed to post to %s: %v", sub.path, err)
+					} else {
+						if reply.StatusCode >= http.StatusBadRequest {
+							logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
+						} else {
+							logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
+						}
 					}
 				}
-			case path = <-s.path:
+			case sub = <-s.sub: // updated subscriber
 			}
 		}
 		close(done)

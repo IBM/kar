@@ -455,7 +455,7 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), ps.ByName("path"), runtime.ReadAll(r.Body))
+	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), ps.ByName("path"), runtime.ReadAll(r.Body), ps.ByName("type"), ps.ByName("id"))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
 	} else {
@@ -495,6 +495,7 @@ func server(listener net.Listener) {
 	router.POST("/kar/publish/:topic", publish)
 	router.POST("/kar/subscribe/:topic/*path", subscribe)
 	router.POST("/kar/unsubscribe/:topic", unsubscribe)
+	router.POST("/kar/actor-subscribe/:type/:id/:topic/*path", subscribe)
 	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 
 	wg.Add(1)

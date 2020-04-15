@@ -101,6 +101,8 @@ const publish = (topic, params) => post(`publish/${topic}`, params)
 const subscribe = (topic, path, params) => post(`subscribe/${topic}/${path}`, params)
 const unsubscribe = (topic, params) => post(`unsubscribe/${topic}`, params)
 
+const actorSubscribe = (type, id, topic, path, params) => post(`actor-subscribe/${type}/${id}/${topic}/${path}`, params)
+
 // express middleware to log requests and responses if KAR_VERBOSE env variable is truthy
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
 
@@ -247,6 +249,7 @@ module.exports = {
   actor: {
     tell: actorTell,
     call: actorCall,
+    subscribe: actorSubscribe,
     cancelReminder: actorCancelReminder,
     getReminder: actorGetReminder,
     scheduleReminder: actorScheduleReminder,
