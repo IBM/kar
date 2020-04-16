@@ -295,26 +295,6 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor/{actorType}/{actorId}/state-404/{key} actors idActorStateGet404
-//
-// state-404: Get the value associated with a key in an actor's state returning 404 if not found.
-//
-// TODO: Operation detailed description
-//
-//     Consumes: application/json
-//     Produces: application/json
-//     Schemes: http, https
-//
-func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
-		http.Error(w, "Not Found", http.StatusNotFound)
-	} else if err != nil {
-		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
-	} else {
-		fmt.Fprint(w, reply)
-	}
-}
-
 // swagger:route GET /state/{actorType}/{actorId}/state/{key} actors idActorStateGet
 //
 // state: Get the value associated with a key in an actor's state returning nil if not found.
@@ -326,7 +306,13 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Schemes: http, https
 //
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil && err != store.ErrNil {
+	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
+		if eoa := r.FormValue("errorOnAbsent"); eoa == "true" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+		} else {
+			fmt.Fprint(w, reply)
+		}
+	} else if err != nil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -505,7 +491,6 @@ func server(listener net.Listener) {
 	router.DELETE(base+"/actor/:type/:id/reminder", reminder)
 	//
 	router.GET(base+"/actor/:type/:id/state/:key", get)
-	router.GET(base+"/actor/:type/:id/state-404/:key", get404) // FIXME: merge into state  by encoding 404 behavior as a query parameter
 	router.POST(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
 	router.GET(base+"/actor/:type/:id/state", getAll)

@@ -187,20 +187,6 @@
         "operationId": "idActorStateDeleteAll"
       }
     },
-    "/actor/{actorType}/{actorId}/state-404/{key}": {
-      "get": {
-        "description": "TODO: Operation detailed description",
-        "schemes": [
-          "http",
-          "https"
-        ],
-        "tags": [
-          "actors"
-        ],
-        "summary": "state-404: Get the value associated with a key in an actor's state returning 404 if not found.",
-        "operationId": "idActorStateGet404"
-      }
-    },
     "/actor/{actorType}/{actorId}/state/{key}": {
       "post": {
         "description": "TODO: Operation detailed description",
