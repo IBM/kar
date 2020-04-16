@@ -71,7 +71,12 @@ Now you are ready to run KAR applications!
 To demonstrate the different modes of running KAR applications, we'll
 use a simple greeting server.  A server process receives a request
 from a client containing a name and responds to each request with a
-greeting.
+greeting. The picture below depicts the structure of this application;
+_green_ components represent the application code and _blue_ components
+are KAR system components.
+
+![Greeting server](images/example-hello-world.png)
+
 
 ### Mode 1: running completely inside Kubernetes
 
