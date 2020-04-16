@@ -134,7 +134,7 @@ depicted below. The pair of a single application process and single
 sidecar process is the basic building block of a KAR application and
 the unit of [fault-tolerance](#fault-tolerance).
 
-![KAR sidecar and application](docs/images/sidecar-in-pod.png)
+![KAR sidecar and application](docs/images/one-component.png)
 
 The picture below represents the runtime structure of a KAR
 application with two replicated application components, **A** and
