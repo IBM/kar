@@ -8,7 +8,9 @@ This example demonstrates how to use the Java Microprofile KAR SDK to make synch
 - Java 1.8.0 or above
 
 ### Running Example Incr Code Locally Without KAR
-You can build and run the code locally to see how it works without using KAR. To run, do `mvn liberty:run` or `mvn liberty:dev` in either the client or server directories. Currently, the pom.xml is configured so the example uses Open Liberty v 20.0.0.3 as the runtime.
+You can build and run the code locally to see how it works without using KAR. To build, run the maven command `mvn install` in `example/java/incr/`.  This will build the java SDK in `sdk/java`, the server, and the client (which uses the sdk as a dependency).
+
+To run, do `mvn liberty:run` or `mvn liberty:dev` in either the client or server directories. Currently, the pom.xml is configured so the example uses Open Liberty v 20.0.0.3 as the runtime.
 
 The server code will install the Number Server and bind to port 9080.  The client code will install the Client Service that calls the Number Server.  The client service will bind to port 9090. You can invoke the Client Service using its REST API, which will in turn cause the Client Service to invoke the Number Server.
 
