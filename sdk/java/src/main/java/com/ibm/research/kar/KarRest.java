@@ -23,9 +23,9 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 public interface KarRest extends AutoCloseable {
 	
 	int maxRetry = 10;
-	
+
 	/*
-	 * Public methods
+	 * Services
 	 */
 	
 	// asynchronous service invocation, returns "OK" immediately
@@ -39,19 +39,33 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = maxRetry)
 	public Response call(@PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
+	
+    /*
+     * Actors
+     */
+	
 	// asynchronous actor invocation, returns "OK" immediately
     @POST
-	@Path("actor/{type}/{id}}/tell/{path}")
+	@Path("actor/{type}/{id}/tell/{path}")
     @Retry(maxRetries = maxRetry)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
     // synchronous actor invocation: returns invocation result
     @POST
-   	@Path("actor/{type}/{id}}/call/{path}")
+   	@Path("actor/{type}/{id}/call/{path}")
     @Retry(maxRetries = maxRetry)
    	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
-    // reminder operations
+    // Request the migration of an actor
+    @POST
+   	@Path("actor/{type}/{id}/migrate")
+    @Retry(maxRetries = maxRetry)
+   	public Response actorMigrate(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+
+    //
+    // Actor Reminder operations
+    //
+ 
     @DELETE
    	@Path("actor/{type}/{id}/reminder}")
     @Retry(maxRetries = maxRetry)
@@ -66,16 +80,16 @@ public interface KarRest extends AutoCloseable {
    	@Path("actor/{type}/{id}/reminder}")
     @Retry(maxRetries = maxRetry)
     public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, Map<String,Object> params) throws ProcessingException;
+  
+    //
+    // Actor state operations
+    //
     
-    
-    /*
-     * Actor State Operations
-     */
     @GET
    	@Path("actor/{type}/{id}/state/{key}")
     @Retry(maxRetries = maxRetry)
     public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key) throws ProcessingException;
-    
+
     @PUT
    	@Path("actor/{type}/{id}/state/{key}")
     @Retry(maxRetries = maxRetry)
@@ -91,17 +105,59 @@ public interface KarRest extends AutoCloseable {
     @Retry(maxRetries = maxRetry)
     public Response actorGetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
     
+    @POST
+   	@Path("actor/{type}/{id}/state")
+    @Retry(maxRetries = maxRetry)
+    public Response actorSetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+    
     @DELETE
    	@Path("actor/{type}/{id}/state")
     @Retry(maxRetries = maxRetry)
     public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
     
-   
+	/*
+	 * Events
+	 */
     
-	// broadcast to all sidecars except for ours
 	@POST
-	@Path("system/broadcast/${path}")
+	@Path("event/{topic}/publish")
+	@Retry(maxRetries = maxRetry)
+	public Response publish(@PathParam("topic") String topic) throws ProcessingException;
+	
+	@POST
+	@Path("event/{topic}/subscribe")
+	@Retry(maxRetries = maxRetry)
+	public Response subscribe(@PathParam("topic") String topic) throws ProcessingException;
+	
+	@POST
+	@Path("event/{topic}/unsubscribe")
+	@Retry(maxRetries = maxRetry)
+	public Response unsubscribe(@PathParam("topic") String topic) throws ProcessingException;
+	
+	/*
+	 * System 
+	 */
+	
+	@POST
+	@Path("system/broadcast/{path}")
 	@Retry(maxRetries = maxRetry)
 	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
    
+	@GET
+	@Path("system/health")
+	@Retry(maxRetries = maxRetry)
+	public Response health() throws ProcessingException;
+	
+	@POST
+	@Path("system/kill")
+	@Retry(maxRetries = maxRetry)
+	public Response kill() throws ProcessingException;
+	
+	@POST
+	@Path("system/killAll")
+	@Retry(maxRetries = maxRetry)
+	public Response killAll() throws ProcessingException;
+	
+
+  	
 }
