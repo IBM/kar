@@ -33,7 +33,7 @@ var (
 	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 )
 
-// swagger:route POST /tell/{service}/{path} services idTellService
+// swagger:route POST /service/{service}/tell/{path} services idTellService
 //
 // tell: Asynchronously invoke a service.
 //
@@ -50,9 +50,9 @@ var (
 //       503: response503
 //
 
-// swagger:route POST /actor-tell/{actorType}/{actorId}/{path} actors idTellActor
+// swagger:route POST /actor/{actorType}/{actorId}/tell/{path} actors idTellActor
 //
-// actor-tell: Asynchronosuly invoke an actor.
+// tell: Asynchronosuly invoke an actor.
 //
 // Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing through
@@ -85,7 +85,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /broadcast/{path} utility idBroadcast
+// swagger:route POST /system/broadcast/{path} system idBroadcast
 //
 // broadcast: send message to all KAR runtimes.
 //
@@ -105,7 +105,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route POST /call/{service}/{path} services idCallService
+// swagger:route POST /service/{service}/call/{path} services idCallService
 //
 // call: Synchronously invoke a service.
 //
@@ -122,9 +122,9 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /actor-call/{actorType}/{actorId}/{path} actors idCallActor
+// swagger:route POST /actor/{actorType}/{actorId}/call/{path} actors idCallActor
 //
-// actor-call: Synchronously invoke an actor.
+// call: Synchronously invoke an actor.
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
@@ -140,9 +140,9 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /actor-call-session/{actorType}/{actorId}/{session}/{path} actors idCallActorSession
+// swagger:route POST /actor/{actorType}/{actorId}/call-session/{session}/{path} actors idCallActorSession
 //
-// actor-call-session: Synchronously invoke an actor with given session ID.
+// call-session: Synchronously invoke an actor with given session ID.
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
@@ -178,9 +178,9 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor-migrate/{actorType}/{actorId} actors idActorMigrate
+// swagger:route GET /actor/{actorType}/{actorId}/migrate actors idActorMigrate
 //
-// actor-migrate: Request the migration of an actor
+// migrate: Request the migration of an actor
 //
 // TODO: Operation detailed description
 //
@@ -209,9 +209,9 @@ func subscriber(channel <-chan pubsub.Message) {
 	}
 }
 
-// swagger:route POST /actor-reminder/{actorType}/{actorId}/cancel actors idCancelReminder
+// swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idCancelReminder
 //
-// actor-reminder/cancel: Cancel all matching reminders.
+// reminder: Cancel all matching reminders.
 //
 // This operation cancels reminders for the actor specified in the path.
 // If a reminder id is provided as a parameter, only the reminder whose id
@@ -228,9 +228,9 @@ func subscriber(channel <-chan pubsub.Message) {
 //       503: response503
 //
 
-// swagger:route POST /actor-reminder/{actorType}/{actorId}/get actors idGetReminder
+// swagger:route GET /actor/{actorType}/{actorId}/reminder actors idGetReminder
 //
-// actor-reminder/get: Get all matching reminders.
+// reminder: Get all matching reminders.
 //
 // This operatation returns all reminders for the actor(s) specified in the path.
 // If a reminder id is provided as a parameter, only reminders that
@@ -245,9 +245,9 @@ func subscriber(channel <-chan pubsub.Message) {
 //       503: response503
 //
 
-// swagger:route POST /actor-reminder/{actorType}/{actorId}/schedule actors idScheduleReminder
+// swagger:route POST /actor/{actorType}/{actorId}/reminder actors idScheduleReminder
 //
-// actor-reminder/schedule: Schedule a reminder.
+// reminder: Schedule a reminder.
 //
 // This operatation schedules a reminder for the actor specified in the path.
 // Consistient with the expected semantics of a `POST` operation, if there is
@@ -264,9 +264,16 @@ func subscriber(channel <-chan pubsub.Message) {
 //       503: response503
 //
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	action := ps.ByName("action")
-	if !(action == "cancel" || action == "get" || action == "schedule") {
-		http.Error(w, fmt.Sprintf("Invalid action: %v", action), http.StatusBadRequest)
+	var action string
+	switch r.Method {
+	case "GET":
+		action = "get"
+	case "POST":
+		action = "schedule"
+	case "DELETE":
+		action = "cancel"
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
 		return
 	}
 	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
@@ -287,9 +294,9 @@ func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
-// swagger:route POST /actor-state/{actorType}/{actorId}/{key} actors idActorStateSet
+// swagger:route POST /actor/{actorType}/{actorId}/state/{key} actors idActorStateSet
 //
-// actor-state: Store a key-value pair in an actor's state
+// state: Store a key-value pair in an actor's state
 //
 // TODO: Operation detailed description
 //
@@ -305,9 +312,9 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor-state-404/{actorType}/{actorId}/{key} actors idActorStateGet404
+// swagger:route GET /actor/{actorType}/{actorId}/state-404/{key} actors idActorStateGet404
 //
-// actor-state-404: Get the value associated with a key in an actor's state returning 404 if not found.
+// state-404: Get the value associated with a key in an actor's state returning 404 if not found.
 //
 // TODO: Operation detailed description
 //
@@ -325,9 +332,9 @@ func get404(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor-state/{actorType}/{actorId}/{key} actors idActorStateGet
+// swagger:route GET /state/{actorType}/{actorId}/state/{key} actors idActorStateGet
 //
-// actor-state: Get the value associated with a key in an actor's state returning nil if not found.
+// state: Get the value associated with a key in an actor's state returning nil if not found.
 //
 // TODO: Operation detailed description
 //
@@ -343,9 +350,9 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /actor-state/{actorType}/{actorId}/{key} actors idActorStateDeleteKey
+// swagger:route DELETE /actor/{actorType}/{actorId}/state/{key} actors idActorStateDeleteKey
 //
-// actor-state: Remove a key-value pair in an actor's state.
+// state: Remove a key-value pair in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -359,9 +366,9 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor-state/{actorType}/{actorId} actors idActorStateGetAll
+// swagger:route GET /actor/{actorType}/{actorId}/state actors idActorStateGetAll
 //
-// actor-state: Get all key-value pairs in an actor's state.
+// state: Get all key-value pairs in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -386,9 +393,9 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /actor-state/{actorType}/{actorId} actors idActorStateDeleteAll
+// swagger:route DELETE /actor/{actorType}/{actorId}/state actors idActorStateDeleteAll
 //
-// actor-state: Delete all key-value pairs in an actor's state.
+// state: Delete all key-value pairs in an actor's state.
 //
 // TODO: Operation detailed description
 //
@@ -404,7 +411,7 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /kill utility idKill
+// swagger:route GET /system/kill system idKill
 //
 // kill: Initiate an orderly shutdown of a KAR runtime process.
 //
@@ -419,7 +426,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route GET /killall utility idKillAll
+// swagger:route GET /system/killall system idKillAll
 //
 // killall: Initiate an orderly shutdown of all of an application's KAR runtime processes.
 //
@@ -433,7 +440,7 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cancel()
 }
 
-// swagger:route GET /health utility health
+// swagger:route GET /system/health system health
 //
 // health: Health-check endpoint of a KAR runtime process.
 //
@@ -445,6 +452,14 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+// swagger:route POST /event/{topic}/publish events eventPublishId
+//
+// publish: Publish an event to a topic.
+//
+// TODO: Operation detailed description
+//
+//     Schemes: http, https
+//
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
@@ -454,8 +469,16 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// swagger:route POST /event/{topic}/subscribe events eventSubscribeId
+//
+// subscribe: Subscribe to a topic.
+//
+// TODO: Operation detailed description
+//
+//     Schemes: http, https
+//
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), ps.ByName("path"), runtime.ReadAll(r.Body), ps.ByName("type"), ps.ByName("id"))
+	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
 	} else {
@@ -463,6 +486,14 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// swagger:route POST /event/{topic}/unsubscribe events eventUnsubscribeId
+//
+// unsubscribe: Unsubscribe from a topic.
+//
+// TODO: Operation detailed description
+//
+//     Schemes: http, https
+//
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
@@ -474,28 +505,41 @@ func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // server implements the HTTP server
 func server(listener net.Listener) {
+	base := "/kar/v1"
 	router := httprouter.New()
-	router.POST("/kar/tell/:service/*path", tell)
-	router.POST("/kar/call/:service/*path", call)
-	router.POST("/kar/actor-tell/:type/:id/*path", tell)
-	router.POST("/kar/actor-call/:type/:id/*path", call)                  // new session
-	router.POST("/kar/actor-call-session/:type/:id/:session/*path", call) // existing session
-	router.GET("/kar/actor-migrate/:type/:id", migrate)
-	router.POST("/kar/actor-reminder/:type/:id/:action", reminder)
-	router.POST("/kar/actor-state/:type/:id/:key", set)
-	router.GET("/kar/actor-state-404/:type/:id/:key", get404)
-	router.GET("/kar/actor-state/:type/:id/:key", get)
-	router.DELETE("/kar/actor-state/:type/:id/:key", del)
-	router.GET("/kar/actor-state/:type/:id", getAll)
-	router.DELETE("/kar/actor-state/:type/:id", delAll)
-	router.GET("/kar/kill", kill)
-	router.GET("/kar/killall", killall)
-	router.GET("/kar/health", health)
-	router.POST("/kar/broadcast/*path", broadcast)
-	router.POST("/kar/publish/:topic", publish)
-	router.POST("/kar/subscribe/:topic/*path", subscribe)
-	router.POST("/kar/unsubscribe/:topic", unsubscribe)
-	router.POST("/kar/actor-subscribe/:type/:id/:topic/*path", subscribe)
+	// service invocation
+	router.POST(base+"/service/:service/call/*path", call)
+	router.POST(base+"/service/:service/tell/*path", tell)
+
+	//actor invocation
+	router.POST(base+"/actor/:type/:id/call/*path", call)                  // new session
+	router.POST(base+"/actor/:type/:id/call-session/:session/*path", call) // FIXME: merge into call by encoding session as a query parameter
+	router.POST(base+"/actor/:type/:id/tell/*path", tell)
+	//
+	router.GET(base+"/actor/:type/:id/migrate", migrate)
+	//
+	router.GET(base+"/actor/:type/:id/reminder", reminder)
+	router.POST(base+"/actor/:type/:id/reminder", reminder)
+	router.DELETE(base+"/actor/:type/:id/reminder", reminder)
+	//
+	router.GET(base+"/actor/:type/:id/state/:key", get)
+	router.GET(base+"/actor/:type/:id/state-404/:key", get404) // FIXME: merge into state  by encoding 404 behavior as a query parameter
+	router.POST(base+"/actor/:type/:id/state/:key", set)
+	router.DELETE(base+"/actor/:type/:id/state/:key", del)
+	router.GET(base+"/actor/:type/:id/state", getAll)
+	router.DELETE(base+"/actor/:type/:id/state", delAll)
+
+	// kar system methods
+	router.POST(base+"/system/broadcast/*path", broadcast)
+	router.GET(base+"/system/health", health)
+	router.GET(base+"/system/kill", kill)
+	router.GET(base+"/system/killall", killall)
+
+	// events
+	router.POST(base+"/event/:topic/publish", publish)
+	router.POST(base+"/event/:topic/subscribe", subscribe)
+	router.POST(base+"/event/:topic/unsubscribe", unsubscribe)
+
 	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 
 	wg.Add(1)

@@ -18,7 +18,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @Default
 @RegisterRestClient(configKey = "kar", baseUri = "http://localhost:3500/")
-@Path("kar")
+@Path("kar/v1")
 public interface KarRest extends AutoCloseable {
 	
 	int maxRetry = 10;
@@ -29,40 +29,40 @@ public interface KarRest extends AutoCloseable {
 	
 	// asynchronous service invocation, returns "OK" immediately
 	@POST
-	@Path("tell/{service}/{path}")
+	@Path("service/{service}/tell/{path}")
 	public Response tell(@PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 	
 	// synchronous service invocation, returns invocation result
 	@POST
-	@Path("call/{service}/{path}")
+	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = maxRetry)
 	public Response call(@PathParam("service") String service, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
 	// asynchronous actor invocation, returns "OK" immediately
     @POST
-	@Path("actor-tell/{type}/{id}}/{path}")
+	@Path("actor/{type}/{id}}/tell/{path}")
     @Retry(maxRetries = maxRetry)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
     // synchronous actor invocation: returns invocation result
     @POST
-   	@Path("actor-call/{type}/{id}}/{path}")
+   	@Path("actor/{type}/{id}}/call/{path}")
     @Retry(maxRetries = maxRetry)
    	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
 
     // reminder operations
-    @POST
-   	@Path("actor-reminder/{type}/{id}/cancel}")
+    @DELETE
+   	@Path("actor/{type}/{id}/reminder}")
     @Retry(maxRetries = maxRetry)
     public Response actorCancelReminder(@PathParam("type") String type, @PathParam("id") String id, Map<String,Object> params) throws ProcessingException;
     
-    @POST
-   	@Path("actor-reminder/{type}/{id}/get}")
+    @GET
+   	@Path("actor/{type}/{id}/reminder}")
     @Retry(maxRetries = maxRetry)
     public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id, Map<String,Object> params) throws ProcessingException;
     
     @POST
-   	@Path("actor-reminder/{type}/{id}/schedule}")
+   	@Path("actor/{type}/{id}/reminder}")
     @Retry(maxRetries = maxRetry)
     public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, Map<String,Object> params) throws ProcessingException;
     
@@ -71,27 +71,27 @@ public interface KarRest extends AutoCloseable {
      * Actor State Operations
      */
     @GET
-   	@Path("actor-state/{type}/{id}/{key}")
+   	@Path("actor/{type}/{id}/state/{key}")
     @Retry(maxRetries = maxRetry)
     public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key) throws ProcessingException;
     
     @POST
-   	@Path("actor-state/{type}/{id}/{key}")
+   	@Path("actor/{type}/{id}/state/{key}")
     @Retry(maxRetries = maxRetry)
     public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, Map<String,Object> params) throws ProcessingException;
     
     @DELETE
-   	@Path("actor-state/{type}/{id}/{key}")
+   	@Path("actor/{type}/{id}/state/{key}")
     @Retry(maxRetries = maxRetry)
     public Response actorDeleteState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key) throws ProcessingException;
     
     @GET
-   	@Path("actor-state/{type}/{id}")
+   	@Path("actor/{type}/{id}/state")
     @Retry(maxRetries = maxRetry)
     public Response actorGetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
     
     @DELETE
-   	@Path("actor-state/{type}/{id}")
+   	@Path("actor/{type}/{id}/state")
     @Retry(maxRetries = maxRetry)
     public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
     
@@ -99,7 +99,7 @@ public interface KarRest extends AutoCloseable {
     
 	// broadcast to all sidecars except for ours
 	@POST
-	@Path("broadcast/${path}")
+	@Path("system/broadcast/${path}")
 	@Retry(maxRetries = maxRetry)
 	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException;
    

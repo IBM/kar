@@ -1,4 +1,4 @@
-basePath: /kar
+basePath: /kar/v1
 consumes:
 - application/json
 definitions:
@@ -96,7 +96,7 @@ info:
   title: KAR
   version: 1.0.0
 paths:
-  /actor-call-session/{actorType}/{actorId}/{session}/{path}:
+  /actor/{actorType}/{actorId}/call-session/{session}/{path}:
     post:
       description: |-
         Call synchronously executes a `POST` to the `path` endpoint of the
@@ -114,11 +114,10 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-call-session: Synchronously invoke an actor with given session
-        ID.'
+      summary: 'call-session: Synchronously invoke an actor with given session ID.'
       tags:
       - actors
-  /actor-call/{actorType}/{actorId}/{path}:
+  /actor/{actorType}/{actorId}/call/{path}:
     post:
       description: |-
         Call synchronously executes a `POST` to the `path` endpoint of the
@@ -136,10 +135,10 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-call: Synchronously invoke an actor.'
+      summary: 'call: Synchronously invoke an actor.'
       tags:
       - actors
-  /actor-migrate/{actorType}/{actorId}:
+  /actor/{actorType}/{actorId}/migrate:
     get:
       description: 'TODO: Operation detailed description'
       operationId: idActorMigrate
@@ -149,11 +148,11 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-migrate: Request the migration of an actor'
+      summary: 'migrate: Request the migration of an actor'
       tags:
       - actors
-  /actor-reminder/{actorType}/{actorId}/cancel:
-    post:
+  /actor/{actorType}/{actorId}/reminder:
+    delete:
       description: |-
         This operation cancels reminders for the actor specified in the path.
         If a reminder id is provided as a parameter, only the reminder whose id
@@ -179,11 +178,10 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-reminder/cancel: Cancel all matching reminders.'
+      summary: 'reminder: Cancel all matching reminders.'
       tags:
       - actors
-  /actor-reminder/{actorType}/{actorId}/get:
-    post:
+    get:
       description: |-
         This operatation returns all reminders for the actor(s) specified in the path.
         If a reminder id is provided as a parameter, only reminders that
@@ -207,10 +205,9 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-reminder/get: Get all matching reminders.'
+      summary: 'reminder: Get all matching reminders.'
       tags:
       - actors
-  /actor-reminder/{actorType}/{actorId}/schedule:
     post:
       description: |-
         This operatation schedules a reminder for the actor specified in the path.
@@ -235,28 +232,17 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-reminder/schedule: Schedule a reminder.'
+      summary: 'reminder: Schedule a reminder.'
       tags:
       - actors
-  /actor-state-404/{actorType}/{actorId}/{key}:
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: idActorStateGet404
-      schemes:
-      - http
-      - https
-      summary: 'actor-state-404: Get the value associated with a key in an actor''s
-        state returning 404 if not found.'
-      tags:
-      - actors
-  /actor-state/{actorType}/{actorId}:
+  /actor/{actorType}/{actorId}/state:
     delete:
       description: 'TODO: Operation detailed description'
       operationId: idActorStateDeleteAll
       schemes:
       - http
       - https
-      summary: 'actor-state: Delete all key-value pairs in an actor''s state.'
+      summary: 'state: Delete all key-value pairs in an actor''s state.'
       tags:
       - actors
     get:
@@ -265,27 +251,28 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-state: Get all key-value pairs in an actor''s state.'
+      summary: 'state: Get all key-value pairs in an actor''s state.'
       tags:
       - actors
-  /actor-state/{actorType}/{actorId}/{key}:
+  /actor/{actorType}/{actorId}/state-404/{key}:
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: idActorStateGet404
+      schemes:
+      - http
+      - https
+      summary: 'state-404: Get the value associated with a key in an actor''s state
+        returning 404 if not found.'
+      tags:
+      - actors
+  /actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: 'TODO: Operation detailed description'
       operationId: idActorStateDeleteKey
       schemes:
       - http
       - https
-      summary: 'actor-state: Remove a key-value pair in an actor''s state.'
-      tags:
-      - actors
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: idActorStateGet
-      schemes:
-      - http
-      - https
-      summary: 'actor-state: Get the value associated with a key in an actor''s state
-        returning nil if not found.'
+      summary: 'state: Remove a key-value pair in an actor''s state.'
       tags:
       - actors
     post:
@@ -294,10 +281,10 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-state: Store a key-value pair in an actor''s state'
+      summary: 'state: Store a key-value pair in an actor''s state'
       tags:
       - actors
-  /actor-tell/{actorType}/{actorId}/{path}:
+  /actor/{actorType}/{actorId}/tell/{path}:
     post:
       description: |-
         Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
@@ -316,27 +303,40 @@ paths:
       schemes:
       - http
       - https
-      summary: 'actor-tell: Asynchronosuly invoke an actor.'
+      summary: 'tell: Asynchronosuly invoke an actor.'
       tags:
       - actors
-  /broadcast/{path}:
+  /event/{topic}/publish:
     post:
-      description: |-
-        The broadcast route causes a `POST` of `path` to be delivered to all
-        KAR runtime processes that are currently part of the application.
-        A `200` response indicates that the request to send the broadcast
-        has been accepted and the POST will eventually be delivered to all sidecars.
-      operationId: idBroadcast
-      responses:
-        "200":
-          $ref: '#/responses/response200'
+      description: 'TODO: Operation detailed description'
+      operationId: eventPublishId
       schemes:
       - http
       - https
-      summary: 'broadcast: send message to all KAR runtimes.'
+      summary: 'publish: Publish an event to a topic.'
       tags:
-      - utility
-  /call/{service}/{path}:
+      - events
+  /event/{topic}/subscribe:
+    post:
+      description: 'TODO: Operation detailed description'
+      operationId: eventSubscribeId
+      schemes:
+      - http
+      - https
+      summary: 'subscribe: Subscribe to a topic.'
+      tags:
+      - events
+  /event/{topic}/unsubscribe:
+    post:
+      description: 'TODO: Operation detailed description'
+      operationId: eventUnsubscribeId
+      schemes:
+      - http
+      - https
+      summary: 'unsubscribe: Unsubscribe from a topic.'
+      tags:
+      - events
+  /service/{service}/call/{path}:
     post:
       description: |-
         Call synchronously executes a `POST` to the `path` endpoint of `service` passing
@@ -356,38 +356,7 @@ paths:
       summary: 'call: Synchronously invoke a service.'
       tags:
       - services
-  /health:
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: health
-      schemes:
-      - http
-      - https
-      summary: 'health: Health-check endpoint of a KAR runtime process.'
-      tags:
-      - utility
-  /kill:
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: idKill
-      schemes:
-      - http
-      - https
-      summary: 'kill: Initiate an orderly shutdown of a KAR runtime process.'
-      tags:
-      - utility
-  /killall:
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: idKillAll
-      schemes:
-      - http
-      - https
-      summary: 'killall: Initiate an orderly shutdown of all of an application''s
-        KAR runtime processes.'
-      tags:
-      - utility
-  /tell/{service}/{path}:
+  /service/{service}/tell/{path}:
     post:
       description: |-
         Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
@@ -408,6 +377,65 @@ paths:
       summary: 'tell: Asynchronously invoke a service.'
       tags:
       - services
+  /state/{actorType}/{actorId}/state/{key}:
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: idActorStateGet
+      schemes:
+      - http
+      - https
+      summary: 'state: Get the value associated with a key in an actor''s state returning
+        nil if not found.'
+      tags:
+      - actors
+  /system/broadcast/{path}:
+    post:
+      description: |-
+        The broadcast route causes a `POST` of `path` to be delivered to all
+        KAR runtime processes that are currently part of the application.
+        A `200` response indicates that the request to send the broadcast
+        has been accepted and the POST will eventually be delivered to all sidecars.
+      operationId: idBroadcast
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+      schemes:
+      - http
+      - https
+      summary: 'broadcast: send message to all KAR runtimes.'
+      tags:
+      - system
+  /system/health:
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: health
+      schemes:
+      - http
+      - https
+      summary: 'health: Health-check endpoint of a KAR runtime process.'
+      tags:
+      - system
+  /system/kill:
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: idKill
+      schemes:
+      - http
+      - https
+      summary: 'kill: Initiate an orderly shutdown of a KAR runtime process.'
+      tags:
+      - system
+  /system/killall:
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: idKillAll
+      schemes:
+      - http
+      - https
+      summary: 'killall: Initiate an orderly shutdown of all of an application''s
+        KAR runtime processes.'
+      tags:
+      - system
 produces:
 - application/json
 responses:

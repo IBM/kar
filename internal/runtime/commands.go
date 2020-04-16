@@ -460,7 +460,7 @@ func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
 }
 
 // Subscribe posts each message on a topic to the specified path until cancelled
-func Subscribe(ctx context.Context, topic, path, options, actorType, actorID string) (string, error) {
+func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	var m map[string]string
 	if options != "" {
 		err := json.Unmarshal([]byte(options), &m)
@@ -472,6 +472,9 @@ func Subscribe(ctx context.Context, topic, path, options, actorType, actorID str
 	if id == "" {
 		id = topic
 	}
+	path := m["path"]
+	actorType := m["actorType"]
+	actorID := m["actorId"]
 	var sub = subscriber{path: path}
 	if actorType != "" {
 		sub.actor = &Actor{Type: actorType, ID: actorID}

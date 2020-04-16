@@ -30,7 +30,7 @@ function rawFetch (path, options) {
 const fetch = require('fetch-retry')(rawFetch, { retries: 10, retryOn: [503] })
 
 // url prefix for http requests to sidecar
-const url = '/kar/'
+const url = '/kar/v1/'
 
 // headers for http requests to sidecar
 const headers = { 'Content-Type': 'application/json' }
@@ -66,42 +66,42 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 // public methods
 
 // asynchronous service invocation, returns "OK" immediately
-const tell = (service, path, params) => post(`tell/${service}/${path}`, params)
+const tell = (service, path, params) => post(`service/${service}/tell/${path}`, params)
 
 // synchronous service invocation, returns invocation result
-const call = (service, path, params) => post(`call/${service}/${path}`, params)
+const call = (service, path, params) => post(`service/${service}/call/${path}`, params)
 
 // asynchronous actor invocation, returns "OK" immediately
-const actorTell = (type, id, path, params) => post(`actor-tell/${type}/${id}/${path}`, params)
+const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${path}`, params)
 
 // synchronous actor invocation: returns invocation result
-const actorCall = (type, id, path, params) => post(`actor-call/${type}/${id}/${path}`, params)
-const actorCallInSession = (type, id, session, path, params) => post(`actor-call-session/${type}/${id}/${session}/${path}`, params)
+const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${path}`, params)
+const actorCallInSession = (type, id, session, path, params) => post(`actor/${type}/${id}/call-session/${session}/${path}`, params)
 
 // reminder operations
-const actorCancelReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/cancel`, params)
-const actorGetReminder = (type, id, params = {}) => post(`actor-reminder/${type}/${id}/get`, params)
-const actorScheduleReminder = (type, id, path, params) => post(`actor-reminder/${type}/${id}/schedule`, Object.assign({ path: `/${path}` }, params))
+const actorCancelReminder = (type, id, params = {}) => del(`actor/${type}/${id}/reminder`, params)
+const actorGetReminder = (type, id, params = {}) => get(`actor/${type}/${id}/reminder`, params)
+const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${id}/reminder`, Object.assign({ path: `/${path}` }, params))
 
 // actor state operations
-const actorGetState = (type, id, key) => get(`actor-state/${type}/${id}/${key}`)
-const actorSetState = (type, id, key, params = {}) => post(`actor-state/${type}/${id}/${key}`, params)
-const actorDeleteState = (type, id, key) => del(`actor-state/${type}/${id}/${key}`)
-const actorGetAllState = (type, id) => get(`actor-state/${type}/${id}`)
-const actorDeleteAllState = (type, id) => del(`actor-state/${type}/${id}`)
+const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}`)
+const actorSetState = (type, id, key, params = {}) => post(`actor/${type}/${id}/state/${key}`, params)
+const actorDeleteState = (type, id, key) => del(`actor/${type}/${id}/state/${key}`)
+const actorGetAllState = (type, id) => get(`actor/${type}/${id}/state`)
+const actorDeleteAllState = (type, id) => del(`actor/${type}/${id}/state`)
 
 // broadcast to all sidecars except for ours
-const broadcast = (path, params) => post(`broadcast/${path}`, params)
+const broadcast = (path, params) => post(`system/broadcast/${path}`, params)
 
 // kill sidecar
-const shutdown = () => get('kill').then(() => agent.close())
+const shutdown = () => get('system/kill').then(() => agent.close())
 
 // pubsub
-const publish = (topic, params) => post(`publish/${topic}`, params)
-const subscribe = (topic, path, params) => post(`subscribe/${topic}/${path}`, params)
-const unsubscribe = (topic, params) => post(`unsubscribe/${topic}`, params)
+const publish = (topic, params) => post(`event/${topic}/publish`, params)
+const subscribe = (topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, params))
+const unsubscribe = (topic, params) => post(`event/${topic}/unsubscribe`, params)
 
-const actorSubscribe = (type, id, topic, path, params) => post(`actor-subscribe/${type}/${id}/${topic}/${path}`, params)
+const actorSubscribe = (type, id, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: type, actorId: id }, params))
 
 // express middleware to log requests and responses if KAR_VERBOSE env variable is truthy
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []

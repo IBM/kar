@@ -15,7 +15,7 @@
 // processes.
 //
 //     Schemes: https,http
-//     BasePath: /kar
+//     BasePath: /kar/v1
 //     Version: 1.0.0
 //     Schemes: http, https
 //     Consumes:
