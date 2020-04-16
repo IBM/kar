@@ -139,31 +139,14 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       500: response500
 //       503: response503
 //
-
-// swagger:route POST /actor/{actorType}/{actorId}/call-session/{session}/{path} actors idCallActorSession
-//
-// call-session: Synchronously invoke an actor with given session ID.
-//
-// Call synchronously executes a `POST` to the `path` endpoint of the
-// actor instance indicated by `actorType` and `actorId` passing
-// through an optional JSON payload to the actor and responding with the
-// result returned by the actor method.
-//
-//     Consumes: application/json
-//     Produces: application/json
-//     Schemes: http, https
-//     Responses:
-//       200: callPath200Response
-//       500: response500
-//       503: response503
-//
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
 		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	} else {
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"), ps.ByName("session"))
+		session := r.FormValue("session")
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"), session)
 	}
 	if err != nil {
 		if ctx.Err() != nil {
@@ -512,8 +495,7 @@ func server(listener net.Listener) {
 	router.POST(base+"/service/:service/tell/*path", tell)
 
 	//actor invocation
-	router.POST(base+"/actor/:type/:id/call/*path", call)                  // new session
-	router.POST(base+"/actor/:type/:id/call-session/:session/*path", call) // FIXME: merge into call by encoding session as a query parameter
+	router.POST(base+"/actor/:type/:id/call/*path", call)
 	router.POST(base+"/actor/:type/:id/tell/*path", tell)
 	//
 	router.GET(base+"/actor/:type/:id/migrate", migrate)

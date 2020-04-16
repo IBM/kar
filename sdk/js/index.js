@@ -76,7 +76,7 @@ const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${p
 
 // synchronous actor invocation: returns invocation result
 const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${path}`, params)
-const actorCallInSession = (type, id, session, path, params) => post(`actor/${type}/${id}/call-session/${session}/${path}`, params)
+const actorCallInSession = (type, id, session, path, params) => post(`actor/${type}/${id}/call/${path}?session=${session}`, params)
 
 // reminder operations
 const actorCancelReminder = (type, id, params = {}) => del(`actor/${type}/${id}/reminder`, params)
