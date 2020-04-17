@@ -42,6 +42,58 @@ definitions:
         $ref: '#/definitions/Duration'
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+  cloudeventWrapper:
+    properties:
+      Event:
+        description: A JSON value conforming to the CloudEvent 1.0 specification
+        type: object
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+  eventSubscribeRequestBody:
+    properties:
+      actorId:
+        description: The subscribing actor instance id
+        type: string
+        x-go-name: ActorID
+      actorType:
+        description: The subscribing actor type
+        type: string
+        x-go-name: ActorType
+      id:
+        description: |-
+          A optional unique id to use for this subscribtion.
+          If not id is provided, the `topic` will be used as the id.
+        type: string
+        x-go-name: ID
+      oldest:
+        description: |-
+          Should the subscription start with the oldest available event or
+          only include events published after the subscription operation?
+        type: boolean
+        x-go-name: Oldest
+      path:
+        description: The target endpoint to which events will be delivered
+        example: an/arbitray/valid/pathSegment
+        type: string
+        x-go-name: Path
+      service:
+        description: The subscribing service name
+        type: string
+        x-go-name: Service
+    required:
+    - path
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+  eventUnsubscribeRequestBody:
+    properties:
+      id:
+        description: |-
+          The id of the subscription to be removed.
+          If not id is provided, the `topic` will be used as the id.
+        type: string
+        x-go-name: ID
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   reminderFilter:
     properties:
       id:
@@ -91,8 +143,14 @@ definitions:
 info:
   description: |-
     This document describes the RESTful API provided by the
-    Kubernetes Application Runtime (KAR) runtime to application
-    processes.
+    Kubernetes Application Runtime (KAR). It consists of
+    four logical sets of sub-APIs:
+    + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+    + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
+    + **Services**: APIs to invoke service endpoints
+    + **System**: APIs for controlling the KAR runtime mesh
+
+    All operations are scoped to a single instance of an application.
   title: KAR
   version: v1
 paths:
@@ -120,6 +178,7 @@ paths:
         type: string
         x-go-name: ActorID
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
@@ -127,10 +186,17 @@ paths:
         x-go-name: Path
       - description: Optionally specific the session to use when performing the call.  Enables
           re-entrancy for nested actor calls.
+        format: uuid
         in: query
         name: session
         type: string
         x-go-name: Session
+      - description: An arbitrary JSON value to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
@@ -498,11 +564,18 @@ paths:
         type: string
         x-go-name: ActorID
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
         type: string
         x-go-name: Path
+      - description: An arbitrary JSON value to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -531,6 +604,11 @@ paths:
         required: true
         type: string
         x-go-name: Topic
+      - description: A JSON value conforming to the CloudEvent 1.0 specification
+        in: body
+        name: Event
+        schema:
+          $ref: '#/definitions/cloudeventWrapper'
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -558,11 +636,16 @@ paths:
         type: string
         x-go-name: Topic
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
         type: string
         x-go-name: Path
+      - in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/eventSubscribeRequestBody'
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -590,6 +673,10 @@ paths:
         required: true
         type: string
         x-go-name: Topic
+      - in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/eventUnsubscribeRequestBody'
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -617,11 +704,18 @@ paths:
         type: string
         x-go-name: Service
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
         type: string
         x-go-name: Path
+      - description: An arbitrary JSON value to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
@@ -654,11 +748,18 @@ paths:
         type: string
         x-go-name: Service
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
         type: string
         x-go-name: Path
+      - description: An arbitrary JSON value to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -685,11 +786,18 @@ paths:
       operationId: idSystemBroadcast
       parameters:
       - description: The target endpoint to be invoked by the operation
+        example: an/arbitray/valid/pathSegment
         in: path
         name: path
         required: true
         type: string
         x-go-name: Path
+      - description: An arbitrary JSON value to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'

@@ -10,7 +10,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR) runtime to application\nprocesses.",
+    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfour logical sets of sub-APIs:\n+ **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.\n+ **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks\n+ **Services**: APIs to invoke service endpoints\n+ **System**: APIs for controlling the KAR runtime mesh\n\nAll operations are scoped to a single instance of an application.",
     "title": "KAR",
     "version": "v1"
   },
@@ -46,6 +46,7 @@
           },
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -54,10 +55,19 @@
           },
           {
             "type": "string",
+            "format": "uuid",
             "x-go-name": "Session",
             "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.",
             "name": "session",
             "in": "query"
+          },
+          {
+            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -490,11 +500,20 @@
           },
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -529,6 +548,14 @@
             "name": "topic",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "A JSON value conforming to the CloudEvent 1.0 specification",
+            "name": "Event",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/cloudeventWrapper"
+            }
           }
         ],
         "responses": {
@@ -563,11 +590,19 @@
           },
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
             "in": "path",
             "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/eventSubscribeRequestBody"
+            }
           }
         ],
         "responses": {
@@ -599,6 +634,13 @@
             "name": "topic",
             "in": "path",
             "required": true
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/eventUnsubscribeRequestBody"
+            }
           }
         ],
         "responses": {
@@ -633,11 +675,20 @@
           },
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -678,11 +729,20 @@
           },
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -712,11 +772,20 @@
         "parameters": [
           {
             "type": "string",
+            "example": "an/arbitray/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
             "in": "path",
             "required": true
+          },
+          {
+            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
           }
         ],
         "responses": {
@@ -827,6 +896,67 @@
         },
         "period": {
           "$ref": "#/definitions/Duration"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
+    "cloudeventWrapper": {
+      "type": "object",
+      "properties": {
+        "Event": {
+          "description": "A JSON value conforming to the CloudEvent 1.0 specification",
+          "type": "object"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
+    "eventSubscribeRequestBody": {
+      "type": "object",
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "actorId": {
+          "description": "The subscribing actor instance id",
+          "type": "string",
+          "x-go-name": "ActorID"
+        },
+        "actorType": {
+          "description": "The subscribing actor type",
+          "type": "string",
+          "x-go-name": "ActorType"
+        },
+        "id": {
+          "description": "A optional unique id to use for this subscribtion.\nIf not id is provided, the `topic` will be used as the id.",
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "oldest": {
+          "description": "Should the subscription start with the oldest available event or\nonly include events published after the subscription operation?",
+          "type": "boolean",
+          "x-go-name": "Oldest"
+        },
+        "path": {
+          "description": "The target endpoint to which events will be delivered",
+          "type": "string",
+          "x-go-name": "Path",
+          "example": "an/arbitray/valid/pathSegment"
+        },
+        "service": {
+          "description": "The subscribing service name",
+          "type": "string",
+          "x-go-name": "Service"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+    },
+    "eventUnsubscribeRequestBody": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The id of the subscription to be removed.\nIf not id is provided, the `topic` will be used as the id.",
+          "type": "string",
+          "x-go-name": "ID"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"

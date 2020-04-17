@@ -2,17 +2,30 @@
 // used to generate the swagger documentation for the KAR.
 //
 // As much as possible, we keep the swagger: comments with
-// the main code they are documenting, but go-swagger does
-// require some additional structs to connect endpoint IDs to
-// their request and response bodies that are not otherwise
-// needed.  We stick those structs in here to make it clear
-// they are not really used by KAR at runtime.
+// the main code they are documenting, but go-swagger uses
+// a collection of additional structs to generate the documentation
+// of request parameters and request/response bodies for endpoint IDs.
+// Since these structs are not othewise used by the KAR runtime,
+// we define them as non-exported types in this file.
+//
+// For documentation of the comment format for go-swagger
+// see https://goswagger.io/use/spec.html
+//
+// Whitespace between comment blocks is
+// semantically significant for go-swagger.  Be careful to
+// preserve it when updating comments in this file and in kar.go.
 
 // Package classification KAR
 //
 // This document describes the RESTful API provided by the
-// Kubernetes Application Runtime (KAR) runtime to application
-// processes.
+// Kubernetes Application Runtime (KAR). It consists of
+// four logical sets of sub-APIs:
+// + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+// + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
+// + **Services**: APIs to invoke service endpoints
+// + **System**: APIs for controlling the KAR runtime mesh
+//
+// All operations are scoped to a single instance of an application.
 //
 //     Schemes: http
 //     BasePath: /kar/v1
@@ -75,6 +88,7 @@ type topicParam struct {
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path
+	// Example: an/arbitray/valid/pathSegment
 	Path string `json:"path"`
 }
 
@@ -82,7 +96,8 @@ type pathParam struct {
 type sessionParam struct {
 	// Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
 	// in:query
-	// required: false
+	// required:false
+	// swagger:strfmt uuid
 	Session string `json:"session"`
 }
 
@@ -102,12 +117,76 @@ type reminderScheduleParamWrapper struct {
 	Body scheduleReminderPayload
 }
 
+// swagger:parameters idActorCall
+// swagger:parameters idActorTell
+// swagger:parameters idServiceCall
+// swagger:parameters idServiceTell
+// swagger:parameters idSystemBroadcast
+type endpointRequestBody struct {
+	// An arbitrary JSON value to be passed through unchanged to the target endpoint
+	// in:body
+	TargetRequestBody interface{}
+}
+
 // swagger:parameters idActorStateGet
 type actorStateGetParamWrapper struct {
 	// Controls response when key is absent; if true an absent key will result in a `404` response, otherwise a `200` response with a nil value will be returned.
 	// in:query
 	// required: false
 	ErrorOnAbsent bool `json:"errorOnAbsent"`
+}
+
+type cloudeventWrapper struct {
+	// A JSON value conforming to the CloudEvent 1.0 specification
+	Event interface{} // FIXME: https://github.ibm.com/solsa/kar/issues/32  provide full schema (import type from golang cloudevent pacakage?)
+}
+
+// swagger:parameters idEventPublish
+type eventPublishRequestWrapper struct {
+	// A JSON value conforming to the CloudEvent 1.0 specification
+	// in:body
+	Event cloudeventWrapper
+}
+
+// swagger:parameters idEventSubscribe
+type eventSubscribeRequestWrapper struct {
+	// in:body
+	Body eventSubscribeRequestBody
+}
+type eventSubscribeRequestBody struct {
+	// A optional unique id to use for this subscribtion.
+	// If not id is provided, the `topic` will be used as the id.
+	// required: false
+	ID string `json:"id"`
+	// The subscribing actor type
+	// required: false
+	ActorType string `json:"actorType"`
+	// The subscribing actor instance id
+	// required:false
+	ActorID string `json:"actorId"`
+	// The subscribing service name
+	// required:false
+	Service string `json:"service"`
+	// The target endpoint to which events will be delivered
+	// Example: an/arbitray/valid/pathSegment
+	// required:true
+	Path string `json:"path"`
+	// Should the subscription start with the oldest available event or
+	// only include events published after the subscription operation?
+	// required:false
+	Oldest bool `json:"oldest"`
+}
+
+// swagger:parameters idEventUnsubscribe
+type eventUnsubscribeRequestWrapper struct {
+	// in:body
+	Body eventUnsubscribeRequestBody
+}
+type eventUnsubscribeRequestBody struct {
+	// The id of the subscription to be removed.
+	// If not id is provided, the `topic` will be used as the id.
+	// required: false
+	ID string `json:"id"`
 }
 
 /*******************************************************************
