@@ -6,13 +6,13 @@
     "application/json"
   ],
   "schemes": [
-    "https,http"
+    "http"
   ],
   "swagger": "2.0",
   "info": {
     "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR) runtime to application\nprocesses.",
     "title": "KAR",
-    "version": "1.0.0"
+    "version": "v1"
   },
   "basePath": "/kar/v1",
   "paths": {
@@ -20,14 +20,46 @@
       "post": {
         "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "call: Synchronously invoke an actor.",
-        "operationId": "idCallActor",
+        "operationId": "idActorCall",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Session",
+            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.",
+            "name": "session",
+            "in": "query"
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/callPath200Response"
@@ -45,14 +77,31 @@
       "get": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "migrate: Request the migration of an actor",
         "operationId": "idActorMigrate",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
@@ -64,15 +113,30 @@
       "get": {
         "description": "This operatation returns all reminders for the actor(s) specified in the path.\nIf a reminder id is provided as a parameter, only reminders that\nhave that id will be returned.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "reminder: Get all matching reminders.",
-        "operationId": "idGetReminder",
+        "operationId": "idActorReminderGet",
         "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
           {
             "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
             "name": "Body",
@@ -97,15 +161,30 @@
       "post": {
         "description": "This operatation schedules a reminder for the actor specified in the path.\nConsistient with the expected semantics of a `POST` operation, if there is\nalready a reminder for the actor with the same reminderId, that\nexisting reminder's schedule will be updated based on the request body.\nThe method will not return until after the reminder is scheduled.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "reminder: Schedule a reminder.",
-        "operationId": "idScheduleReminder",
+        "operationId": "idActorReminderSchedule",
         "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
           {
             "description": "The request body describes the reminder to be scheduled",
             "name": "Body",
@@ -130,15 +209,30 @@
       "delete": {
         "description": "This operation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "reminder: Cancel all matching reminders.",
-        "operationId": "idCancelReminder",
+        "operationId": "idActorReminderCancel",
         "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
           {
             "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
             "name": "Body",
@@ -165,66 +259,195 @@
       "get": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "state: Get all key-value pairs in an actor's state.",
-        "operationId": "idActorStateGetAll"
+        "operationId": "idActorStateGetAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ]
       },
       "delete": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "state: Delete all key-value pairs in an actor's state.",
-        "operationId": "idActorStateDeleteAll"
+        "operationId": "idActorStateDeleteAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ]
       }
     },
     "/actor/{actorType}/{actorId}/state/{key}": {
+      "get": {
+        "description": "TODO: Operation detailed description",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "state: Get the value associated with a key in an actor's state.",
+        "operationId": "idActorStateGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Controls response when key is absent; if true an absent key will result in a `404` response, otherwise a `200` response with a nil value will be returned.",
+            "name": "errorOnAbsent",
+            "in": "query"
+          }
+        ]
+      },
       "post": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "state: Store a key-value pair in an actor's state",
-        "operationId": "idActorStateSet"
+        "operationId": "idActorStateSet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ]
       },
       "delete": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "state: Remove a key-value pair in an actor's state.",
-        "operationId": "idActorStateDeleteKey"
+        "operationId": "idActorStateDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ]
       }
     },
     "/actor/{actorType}/{actorId}/tell/{path}": {
       "post": {
         "description": "Actor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "actors"
         ],
         "summary": "tell: Asynchronosuly invoke an actor.",
-        "operationId": "idTellActor",
+        "operationId": "idActorTell",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
@@ -242,56 +465,108 @@
       "post": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "events"
         ],
         "summary": "publish: Publish an event to a topic.",
-        "operationId": "eventPublishId"
+        "operationId": "idEventPublish",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Topic",
+            "description": "The topic name",
+            "name": "topic",
+            "in": "path",
+            "required": true
+          }
+        ]
       }
     },
     "/event/{topic}/subscribe": {
       "post": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "events"
         ],
         "summary": "subscribe: Subscribe to a topic.",
-        "operationId": "eventSubscribeId"
+        "operationId": "idEventSubscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Topic",
+            "description": "The topic name",
+            "name": "topic",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ]
       }
     },
     "/event/{topic}/unsubscribe": {
       "post": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "events"
         ],
         "summary": "unsubscribe: Unsubscribe from a topic.",
-        "operationId": "eventUnsubscribeId"
+        "operationId": "idEventUnsubscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Topic",
+            "description": "The topic name",
+            "name": "topic",
+            "in": "path",
+            "required": true
+          }
+        ]
       }
     },
     "/service/{service}/call/{path}": {
       "post": {
         "description": "Call synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "services"
         ],
         "summary": "call: Synchronously invoke a service.",
-        "operationId": "idCallService",
+        "operationId": "idServiceCall",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/callPath200Response"
@@ -309,14 +584,31 @@
       "post": {
         "description": "Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "services"
         ],
         "summary": "tell: Asynchronously invoke a service.",
-        "operationId": "idTellService",
+        "operationId": "idServiceTell",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
@@ -330,32 +622,27 @@
         }
       }
     },
-    "/state/{actorType}/{actorId}/state/{key}": {
-      "get": {
-        "description": "TODO: Operation detailed description",
-        "schemes": [
-          "http",
-          "https"
-        ],
-        "tags": [
-          "actors"
-        ],
-        "summary": "state: Get the value associated with a key in an actor's state returning nil if not found.",
-        "operationId": "idActorStateGet"
-      }
-    },
     "/system/broadcast/{path}": {
       "post": {
         "description": "The broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "system"
         ],
         "summary": "broadcast: send message to all KAR runtimes.",
-        "operationId": "idBroadcast",
+        "operationId": "idSystemBroadcast",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
@@ -367,42 +654,39 @@
       "get": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "system"
         ],
         "summary": "health: Health-check endpoint of a KAR runtime process.",
-        "operationId": "health"
+        "operationId": "isSystemHealth"
       }
     },
     "/system/kill": {
       "get": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "system"
         ],
         "summary": "kill: Initiate an orderly shutdown of a KAR runtime process.",
-        "operationId": "idKill"
+        "operationId": "idSystemKill"
       }
     },
     "/system/killall": {
       "get": {
         "description": "TODO: Operation detailed description",
         "schemes": [
-          "http",
-          "https"
+          "http"
         ],
         "tags": [
           "system"
         ],
         "summary": "killall: Initiate an orderly shutdown of all of an application's KAR runtime processes.",
-        "operationId": "idKillAll"
+        "operationId": "idSystemKillAll"
       }
     }
   },

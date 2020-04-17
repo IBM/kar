@@ -94,7 +94,7 @@ info:
     Kubernetes Application Runtime (KAR) runtime to application
     processes.
   title: KAR
-  version: 1.0.0
+  version: v1
 paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
@@ -103,7 +103,32 @@ paths:
         actor instance indicated by `actorType` and `actorId` passing
         through an optional JSON payload to the actor and responding with the
         result returned by the actor method.
-      operationId: idCallActor
+      operationId: idActorCall
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: Optionally specific the session to use when performing the call.  Enables
+          re-entrancy for nested actor calls.
+        in: query
+        name: session
+        type: string
+        x-go-name: Session
       responses:
         "200":
           $ref: '#/responses/callPath200Response'
@@ -113,7 +138,6 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'call: Synchronously invoke an actor.'
       tags:
       - actors
@@ -121,12 +145,24 @@ paths:
     get:
       description: 'TODO: Operation detailed description'
       operationId: idActorMigrate
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       responses:
         "200":
           $ref: '#/responses/response200'
       schemes:
       - http
-      - https
       summary: 'migrate: Request the migration of an actor'
       tags:
       - actors
@@ -138,8 +174,20 @@ paths:
         matches that id will be cancelled. If no id is provided, all
         of the specified actor's reminders will be cancelled.  The number of reminders
         actually cancelled is returned as the result of the operation.
-      operationId: idCancelReminder
+      operationId: idActorReminderCancel
       parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       - description: |-
           The request body is an optional filter
           used to select a subset of an actor's reminders.
@@ -156,7 +204,6 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'reminder: Cancel all matching reminders.'
       tags:
       - actors
@@ -165,8 +212,20 @@ paths:
         This operatation returns all reminders for the actor(s) specified in the path.
         If a reminder id is provided as a parameter, only reminders that
         have that id will be returned.
-      operationId: idGetReminder
+      operationId: idActorReminderGet
       parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       - description: |-
           The request body is an optional filter
           used to select a subset of an actor's reminders.
@@ -183,7 +242,6 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'reminder: Get all matching reminders.'
       tags:
       - actors
@@ -194,8 +252,20 @@ paths:
         already a reminder for the actor with the same reminderId, that
         existing reminder's schedule will be updated based on the request body.
         The method will not return until after the reminder is scheduled.
-      operationId: idScheduleReminder
+      operationId: idActorReminderSchedule
       parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       - description: The request body describes the reminder to be scheduled
         in: body
         name: Body
@@ -210,7 +280,6 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'reminder: Schedule a reminder.'
       tags:
       - actors
@@ -218,37 +287,113 @@ paths:
     delete:
       description: 'TODO: Operation detailed description'
       operationId: idActorStateDeleteAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       schemes:
       - http
-      - https
       summary: 'state: Delete all key-value pairs in an actor''s state.'
       tags:
       - actors
     get:
       description: 'TODO: Operation detailed description'
       operationId: idActorStateGetAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       schemes:
       - http
-      - https
       summary: 'state: Get all key-value pairs in an actor''s state.'
       tags:
       - actors
   /actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: 'TODO: Operation detailed description'
-      operationId: idActorStateDeleteKey
+      operationId: idActorStateDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       schemes:
       - http
-      - https
       summary: 'state: Remove a key-value pair in an actor''s state.'
+      tags:
+      - actors
+    get:
+      description: 'TODO: Operation detailed description'
+      operationId: idActorStateGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: Controls response when key is absent; if true an absent key will
+          result in a `404` response, otherwise a `200` response with a nil value
+          will be returned.
+        in: query
+        name: errorOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      schemes:
+      - http
+      summary: 'state: Get the value associated with a key in an actor''s state.'
       tags:
       - actors
     post:
       description: 'TODO: Operation detailed description'
       operationId: idActorStateSet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       schemes:
       - http
-      - https
       summary: 'state: Store a key-value pair in an actor''s state'
       tags:
       - actors
@@ -260,7 +405,26 @@ paths:
         the optional JSON payload it received.  A `200` response indicates that
         the request has been accepted by the runtime and will eventually be delivered to
         the targeted actor method.
-      operationId: idTellActor
+      operationId: idActorTell
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -270,37 +434,60 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'tell: Asynchronosuly invoke an actor.'
       tags:
       - actors
   /event/{topic}/publish:
     post:
       description: 'TODO: Operation detailed description'
-      operationId: eventPublishId
+      operationId: idEventPublish
+      parameters:
+      - description: The topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+        x-go-name: Topic
       schemes:
       - http
-      - https
       summary: 'publish: Publish an event to a topic.'
       tags:
       - events
   /event/{topic}/subscribe:
     post:
       description: 'TODO: Operation detailed description'
-      operationId: eventSubscribeId
+      operationId: idEventSubscribe
+      parameters:
+      - description: The topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+        x-go-name: Topic
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       schemes:
       - http
-      - https
       summary: 'subscribe: Subscribe to a topic.'
       tags:
       - events
   /event/{topic}/unsubscribe:
     post:
       description: 'TODO: Operation detailed description'
-      operationId: eventUnsubscribeId
+      operationId: idEventUnsubscribe
+      parameters:
+      - description: The topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+        x-go-name: Topic
       schemes:
       - http
-      - https
       summary: 'unsubscribe: Unsubscribe from a topic.'
       tags:
       - events
@@ -310,7 +497,20 @@ paths:
         Call synchronously executes a `POST` to the `path` endpoint of `service` passing
         through an optional JSON payload to the service and responding with the
         result returned by the service.
-      operationId: idCallService
+      operationId: idServiceCall
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       responses:
         "200":
           $ref: '#/responses/callPath200Response'
@@ -320,7 +520,6 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'call: Synchronously invoke a service.'
       tags:
       - services
@@ -331,7 +530,20 @@ paths:
         through the optional JSON payload it received. A `200` response indicates that
         the request has been accepted by the runtime and will eventually be delivered to
         the targeted service endpoint.
-      operationId: idTellService
+      operationId: idServiceTell
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -341,21 +553,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      - https
       summary: 'tell: Asynchronously invoke a service.'
       tags:
       - services
-  /state/{actorType}/{actorId}/state/{key}:
-    get:
-      description: 'TODO: Operation detailed description'
-      operationId: idActorStateGet
-      schemes:
-      - http
-      - https
-      summary: 'state: Get the value associated with a key in an actor''s state returning
-        nil if not found.'
-      tags:
-      - actors
   /system/broadcast/{path}:
     post:
       description: |-
@@ -363,43 +563,46 @@ paths:
         KAR runtime processes that are currently part of the application.
         A `200` response indicates that the request to send the broadcast
         has been accepted and the POST will eventually be delivered to all sidecars.
-      operationId: idBroadcast
+      operationId: idSystemBroadcast
+      parameters:
+      - description: The target endpoint to be invoked by the operation
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       responses:
         "200":
           $ref: '#/responses/response200'
       schemes:
       - http
-      - https
       summary: 'broadcast: send message to all KAR runtimes.'
       tags:
       - system
   /system/health:
     get:
       description: 'TODO: Operation detailed description'
-      operationId: health
+      operationId: isSystemHealth
       schemes:
       - http
-      - https
       summary: 'health: Health-check endpoint of a KAR runtime process.'
       tags:
       - system
   /system/kill:
     get:
       description: 'TODO: Operation detailed description'
-      operationId: idKill
+      operationId: idSystemKill
       schemes:
       - http
-      - https
       summary: 'kill: Initiate an orderly shutdown of a KAR runtime process.'
       tags:
       - system
   /system/killall:
     get:
       description: 'TODO: Operation detailed description'
-      operationId: idKillAll
+      operationId: idSystemKillAll
       schemes:
       - http
-      - https
       summary: 'killall: Initiate an orderly shutdown of all of an application''s
         KAR runtime processes.'
       tags:
@@ -453,5 +656,5 @@ responses:
         example: Service Unavailable
         type: string
 schemes:
-- https,http
+- http
 swagger: "2.0"

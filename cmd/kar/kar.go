@@ -33,7 +33,7 @@ var (
 	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 )
 
-// swagger:route POST /service/{service}/tell/{path} services idTellService
+// swagger:route POST /service/{service}/tell/{path} services idServiceTell
 //
 // tell: Asynchronously invoke a service.
 //
@@ -43,14 +43,14 @@ var (
 // the targeted service endpoint.
 //
 //     Consumes: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: response200
 //       500: response500
 //       503: response503
 //
 
-// swagger:route POST /actor/{actorType}/{actorId}/tell/{path} actors idTellActor
+// swagger:route POST /actor/{actorType}/{actorId}/tell/{path} actors idActorTell
 //
 // tell: Asynchronosuly invoke an actor.
 //
@@ -61,7 +61,7 @@ var (
 // the targeted actor method.
 //
 //     Consumes: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: response200
 //       500: response500
@@ -85,7 +85,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /system/broadcast/{path} system idBroadcast
+// swagger:route POST /system/broadcast/{path} system idSystemBroadcast
 //
 // broadcast: send message to all KAR runtimes.
 //
@@ -96,7 +96,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: response200
 //
@@ -105,7 +105,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route POST /service/{service}/call/{path} services idCallService
+// swagger:route POST /service/{service}/call/{path} services idServiceCall
 //
 // call: Synchronously invoke a service.
 //
@@ -115,14 +115,14 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: callPath200Response
 //       500: response500
 //       503: response503
 //
 
-// swagger:route POST /actor/{actorType}/{actorId}/call/{path} actors idCallActor
+// swagger:route POST /actor/{actorType}/{actorId}/call/{path} actors idActorCall
 //
 // call: Synchronously invoke an actor.
 //
@@ -133,7 +133,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: callPath200Response
 //       500: response500
@@ -167,7 +167,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: response200
 //
@@ -192,7 +192,7 @@ func subscriber(channel <-chan pubsub.Message) {
 	}
 }
 
-// swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idCancelReminder
+// swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idActorReminderCancel
 //
 // reminder: Cancel all matching reminders.
 //
@@ -204,14 +204,14 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: cancelReminder200Response
 //       500: response500
 //       503: response503
 //
 
-// swagger:route GET /actor/{actorType}/{actorId}/reminder actors idGetReminder
+// swagger:route GET /actor/{actorType}/{actorId}/reminder actors idActorReminderGet
 //
 // reminder: Get all matching reminders.
 //
@@ -221,14 +221,14 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: getReminder200Response
 //       500: response500
 //       503: response503
 //
 
-// swagger:route POST /actor/{actorType}/{actorId}/reminder actors idScheduleReminder
+// swagger:route POST /actor/{actorType}/{actorId}/reminder actors idActorReminderSchedule
 //
 // reminder: Schedule a reminder.
 //
@@ -240,7 +240,7 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //     Responses:
 //       200: response200
 //       500: response500
@@ -285,7 +285,7 @@ func stateKey(t, id string) string {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
@@ -295,15 +295,15 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /state/{actorType}/{actorId}/state/{key} actors idActorStateGet
+// swagger:route GET /actor/{actorType}/{actorId}/state/{key} actors idActorStateGet
 //
-// state: Get the value associated with a key in an actor's state returning nil if not found.
+// state: Get the value associated with a key in an actor's state.
 //
 // TODO: Operation detailed description
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
@@ -319,13 +319,13 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /actor/{actorType}/{actorId}/state/{key} actors idActorStateDeleteKey
+// swagger:route DELETE /actor/{actorType}/{actorId}/state/{key} actors idActorStateDelete
 //
 // state: Remove a key-value pair in an actor's state.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
@@ -343,7 +343,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Consumes: application/json
 //     Produces: application/json
-//     Schemes: http, https
+//     Schemes: http
 //
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
@@ -368,7 +368,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Del(stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
@@ -380,13 +380,13 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /system/kill system idKill
+// swagger:route GET /system/kill system idSystemKill
 //
 // kill: Initiate an orderly shutdown of a KAR runtime process.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logger.Info("Invoking cancel() in response to kill request")
@@ -395,13 +395,13 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route GET /system/killall system idKillAll
+// swagger:route GET /system/killall system idSystemKillAll
 //
 // killall: Initiate an orderly shutdown of all of an application's KAR runtime processes.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.KillAll(ctx)
@@ -409,25 +409,25 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	cancel()
 }
 
-// swagger:route GET /system/health system health
+// swagger:route GET /system/health system isSystemHealth
 //
 // health: Health-check endpoint of a KAR runtime process.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route POST /event/{topic}/publish events eventPublishId
+// swagger:route POST /event/{topic}/publish events idEventPublish
 //
 // publish: Publish an event to a topic.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
@@ -438,13 +438,13 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /event/{topic}/subscribe events eventSubscribeId
+// swagger:route POST /event/{topic}/subscribe events idEventSubscribe
 //
 // subscribe: Subscribe to a topic.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
@@ -455,13 +455,13 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /event/{topic}/unsubscribe events eventUnsubscribeId
+// swagger:route POST /event/{topic}/unsubscribe events idEventUnsubscribe
 //
 // unsubscribe: Unsubscribe from a topic.
 //
 // TODO: Operation detailed description
 //
-//     Schemes: http, https
+//     Schemes: http
 //
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))

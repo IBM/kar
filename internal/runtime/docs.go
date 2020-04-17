@@ -14,10 +14,9 @@
 // Kubernetes Application Runtime (KAR) runtime to application
 // processes.
 //
-//     Schemes: https,http
+//     Schemes: http
 //     BasePath: /kar/v1
-//     Version: 1.0.0
-//     Schemes: http, https
+//     Version: v1
 //     Consumes:
 //     - application/json
 //     Produces:
@@ -26,8 +25,65 @@
 // swagger:meta
 package runtime
 
-// swagger:parameters idCancelReminder
-// swagger:parameters idGetReminder
+// swagger:parameters idActorCall
+// swagger:parameters idActorMigrate
+// swagger:parameters idActorReminderGet
+// swagger:parameters idActorReminderSchedule
+// swagger:parameters idActorReminderCancel
+// swagger:parameters idActorStateDelete
+// swagger:parameters idActorStateGet
+// swagger:parameters idActorStateSet
+// swagger:parameters idActorStateGetAll
+// swagger:parameters idActorStateDeleteAll
+// swagger:parameters idActorTell
+type actorParam struct {
+	// The actor type
+	// in:path
+	ActorType string `json:"actorType"`
+	// The actor instance id
+	// in:path
+	ActorID string `json:"actorId"`
+}
+
+// swagger:parameters idServiceCall
+// swagger:parameters idServiceTell
+type serviceParam struct {
+	// The service name
+	// in:path
+	Service string `json:"service"`
+}
+
+// swagger:parameters idEventPublish
+// swagger:parameters idEventSubscribe
+// swagger:parameters idEventUnsubscribe
+type topicParam struct {
+	// The topic name
+	// in:path
+	Topic string `json:"topic"`
+}
+
+// swagger:parameters idActorCall
+// swagger:parameters idActorTell
+// swagger:parameters idServiceCall
+// swagger:parameters idServiceTell
+// swagger:parameters idEventSubscribe
+// swagger:parameters idSystemBroadcast
+type pathParam struct {
+	// The target endpoint to be invoked by the operation
+	// in:path
+	Path string `json:"path"`
+}
+
+// swagger:parameters idActorCall
+type sessionParam struct {
+	// Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
+	// in:query
+	// required: false
+	Session string `json:"session"`
+}
+
+// swagger:parameters idActorReminderCancel
+// swagger:parameters idActorReminderGet
 type reminderFilterParamWrapper struct {
 	// The request body is an optional filter
 	// used to select a subset of an actor's reminders.
@@ -35,11 +91,19 @@ type reminderFilterParamWrapper struct {
 	Body reminderFilter
 }
 
-// swagger:parameters idScheduleReminder
-type remninderScheduleParamWrapper struct {
+// swagger:parameters idActorReminderSchedule
+type reminderScheduleParamWrapper struct {
 	// The request body describes the reminder to be scheduled
 	// in:body
 	Body scheduleReminderPayload
+}
+
+// swagger:parameters idActorStateGet
+type actorStateGetParamWrapper struct {
+	// Controls response when key is absent; if true an absent key will result in a `404` response, otherwise a `200` response with a nil value will be returned.
+	// in:query
+	// required: false
+	ErrorOnAbsent bool `json:"errorOnAbsent"`
 }
 
 // A message describing the error
