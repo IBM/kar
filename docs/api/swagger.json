@@ -87,7 +87,7 @@
       }
     },
     "/actor/{actorType}/{actorId}/migrate": {
-      "get": {
+      "post": {
         "description": "### Initiate an actor migration\n\nThis operation is primarily intended to be used by the KAR actor runtime.\nWhen delivered to the runtime currently hosting the designated actor instance,\nit causes the actor to be passivated and the binding of the actor instance to\nthat runtime to be removed from the KAR actor placement service. When next\nactivated, the actor instance may be hosted by a different instance of the\napplication process.",
         "schemes": [
           "http"
@@ -814,7 +814,7 @@
       }
     },
     "/system/kill": {
-      "get": {
+      "post": {
         "description": "### Shutdown a single KAR runtime\n\nInitiate an orderly shutdown of the target KAR runtime process.",
         "schemes": [
           "http"
@@ -832,7 +832,7 @@
       }
     },
     "/system/killall": {
-      "get": {
+      "post": {
         "description": "### Shutdown the KAR runtime mesh for an application\n\nInitiate an orderly shutdown of all KAR runtime processes.",
         "schemes": [
           "http"

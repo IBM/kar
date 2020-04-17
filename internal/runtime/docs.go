@@ -156,10 +156,10 @@ type eventSubscribeRequestWrapper struct {
 type eventSubscribeRequestBody struct {
 	// A optional unique id to use for this subscribtion.
 	// If not id is provided, the `topic` will be used as the id.
-	// required: false
+	// required:false
 	ID string `json:"id"`
 	// The subscribing actor type
-	// required: false
+	// required:false
 	ActorType string `json:"actorType"`
 	// The subscribing actor instance id
 	// required:false

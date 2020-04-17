@@ -175,7 +175,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /actor/{actorType}/{actorId}/migrate actors idActorMigrate
+// swagger:route POST /actor/{actorType}/{actorId}/migrate actors idActorMigrate
 //
 // migrate
 //
@@ -446,7 +446,7 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /system/kill system idSystemKill
+// swagger:route POST /system/kill system idSystemKill
 //
 // kill
 //
@@ -465,7 +465,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route GET /system/killall system idSystemKillAll
+// swagger:route POST /system/killall system idSystemKillAll
 //
 // killall
 //
@@ -592,7 +592,7 @@ func server(listener net.Listener) {
 	router.POST(base+"/actor/:type/:id/call/*path", call)
 	router.POST(base+"/actor/:type/:id/tell/*path", tell)
 	//
-	router.GET(base+"/actor/:type/:id/migrate", migrate)
+	router.POST(base+"/actor/:type/:id/migrate", migrate)
 	//
 	router.GET(base+"/actor/:type/:id/reminder", reminder)
 	router.POST(base+"/actor/:type/:id/reminder", reminder)
@@ -607,8 +607,8 @@ func server(listener net.Listener) {
 	// kar system methods
 	router.POST(base+"/system/broadcast/*path", broadcast)
 	router.GET(base+"/system/health", health)
-	router.GET(base+"/system/kill", kill)
-	router.GET(base+"/system/killall", killall)
+	router.POST(base+"/system/kill", kill)
+	router.POST(base+"/system/killall", killall)
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)

@@ -94,7 +94,7 @@ const actorDeleteAllState = (type, id) => del(`actor/${type}/${id}/state`)
 const broadcast = (path, params) => post(`system/broadcast/${path}`, params)
 
 // kill sidecar
-const shutdown = () => get('system/kill').then(() => agent.close())
+const shutdown = () => post('system/kill').then(() => agent.close())
 
 // pubsub
 const publish = (topic, params) => post(`event/${topic}/publish`, params)

@@ -212,7 +212,7 @@ paths:
       tags:
       - actors
   /actor/{actorType}/{actorId}/migrate:
-    get:
+    post:
       description: |-
         ### Initiate an actor migration
 
@@ -822,7 +822,7 @@ paths:
       tags:
       - system
   /system/kill:
-    get:
+    post:
       description: |-
         ### Shutdown a single KAR runtime
 
@@ -837,7 +837,7 @@ paths:
       tags:
       - system
   /system/killall:
-    get:
+    post:
       description: |-
         ### Shutdown the KAR runtime mesh for an application
 
