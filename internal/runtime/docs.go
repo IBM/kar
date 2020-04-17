@@ -106,6 +106,73 @@ type actorStateGetParamWrapper struct {
 	ErrorOnAbsent bool `json:"errorOnAbsent"`
 }
 
+/*
+ * Responses
+ */
+
+// A success message.
+// swagger:response response200
+type success200 struct {
+	// A success message
+	// Example: OK
+	Body string `json:"body"`
+}
+
+// The response body returned by the invoked endpoint
+// swagger:response response200CallResult
+type response200CallResult struct {
+	// The response body returned by the invoked endpoint
+	Body interface{} `json:"body"`
+}
+
+// swagger:response response200ReminderCancelResult
+type response200ReminderCancelResult struct {
+	// The number of reminders that were actually cancelled
+	// Example: 3
+	NumberCancelled int
+}
+
+// swagger:response response200ReminderGetResult
+type response200ReminderGetResult struct {
+	// An array containing all matching reminders
+	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', deadline: '2020-04-14T14:20:00Z', encodedData: '{"msg":"carpe diem"}' }]
+	Body []Reminder
+}
+
+// swagger:response response200StateGetResult
+type response200StateGetResult struct {
+	// The requested value
+	Response interface{}
+}
+
+// swagger:response response200StateGetAllResult
+type response200StateGetAllResult struct {
+	// A map containing the requested state
+	Response map[string]interface{}
+}
+
+// swagger:response response200StateDeleteResult
+type response200StateDeleteResult struct {
+	// The number of key-value pairs that were deleted
+	// Example: 3
+	// Example: 0
+	NumberDeleted int
+}
+
+// swagger:response response200StateSetResult
+type response200ReminderSetResult struct {
+	// Returns 0 if an existing entry was updated and 1 if a new entry was created
+	NumberCreated int
+}
+
+// Response indicating requested resource is not found
+// swagger:response response404
+type error404 struct {
+	// Requested resource is not found
+	// Example: Not Found
+	Body string `json:"body"`
+}
+
 // A message describing the error
 // swagger:response response500
 type error500 struct {
@@ -120,33 +187,4 @@ type error503 struct {
 	// A message describing the error
 	// Example: Service Unavailable
 	Body string `json:"body"`
-}
-
-// A success message.
-// swagger:response response200
-type success200 struct {
-	// A success message
-	// Example: OK
-	Body string `json:"body"`
-}
-
-// The response returned by the invoked endpoint
-// swagger:response callPath200Response
-type callPath200Response struct {
-	// The response returned by the invoked endpoint
-	Body interface{} `json:"body"`
-}
-
-// swagger:response cancelReminder200Response
-type cancelReminder200Response struct {
-	// The number of reminders that were actually cancelled
-	// Example: 3
-	Body int
-}
-
-// swagger:response getReminder200Response
-type getReminder200Response struct {
-	// An array containing all matching reminders
-	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }]
-	Body []Reminder
 }

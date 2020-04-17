@@ -18,7 +18,7 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke an actor method\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
+        "description": "### Synchronously invoke an actor method\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method.",
         "schemes": [
           "http"
         ],
@@ -62,7 +62,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/callPath200Response"
+            "$ref": "#/responses/response200CallResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -75,7 +75,7 @@
     },
     "/actor/{actorType}/{actorId}/migrate": {
       "get": {
-        "description": "### Request the migration of an actor\n\nTODO: Operation detailed description",
+        "description": "### Initiate an actor migration\n\nThis operation is primarily intended to be used by the KAR actor runtime.\nWhen delivered to the runtime currently hosting the designated actor instance,\nit causes the actor to be passivated and the binding of the actor instance to\nthat runtime to be removed from the KAR actor placement service. When next\nactivated, the actor instance may be hosted by a different instance of the\napplication process.",
         "schemes": [
           "http"
         ],
@@ -111,7 +111,7 @@
     },
     "/actor/{actorType}/{actorId}/reminder": {
       "get": {
-        "description": "### Get all matching reminders\n\nThis operatation returns all reminders for the actor(s) specified in the path.\nIf a reminder id is provided as a parameter, only reminders that\nhave that id will be returned.",
+        "description": "### Get all matching reminders\n\nThis operatation returns all reminders for the actor instance specified in the path.\nIf a reminder id is provided in the request body, only a reminder that\nhas that id will be returned.",
         "schemes": [
           "http"
         ],
@@ -148,7 +148,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/getReminder200Response"
+            "$ref": "#/responses/response200ReminderGetResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -159,7 +159,7 @@
         }
       },
       "post": {
-        "description": "### Schedule a reminder\n\nThis operatation schedules a reminder for the actor specified in the path.\nConsistient with the expected semantics of a `POST` operation, if there is\nalready a reminder for the actor with the same reminderId, that\nexisting reminder's schedule will be updated based on the request body.\nThe method will not return until after the reminder is scheduled.",
+        "description": "### Schedule a reminder\n\nThis operatation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
         "schemes": [
           "http"
         ],
@@ -207,7 +207,7 @@
         }
       },
       "delete": {
-        "description": "### Cancel all matching reminders\n\nThis operation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
+        "description": "### Cancel all matching reminders\n\nThis operation cancels reminders for the actor instance specified in the path.\nIf a reminder id is provided in the request body, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
         "schemes": [
           "http"
         ],
@@ -244,7 +244,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/cancelReminder200Response"
+            "$ref": "#/responses/response200ReminderCancelResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -257,7 +257,7 @@
     },
     "/actor/{actorType}/{actorId}/state": {
       "get": {
-        "description": "### Get all key-value pairs in an actor's state\n\nTODO: Operation detailed description",
+        "description": "### Get an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.",
         "schemes": [
           "http"
         ],
@@ -283,10 +283,18 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateGetAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       },
       "delete": {
-        "description": "### Delete all key-value pairs in an actor's state\n\nTODO: Operation detailed description",
+        "description": "### Remove an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be deleted.",
         "schemes": [
           "http"
         ],
@@ -312,12 +320,23 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       }
     },
     "/actor/{actorType}/{actorId}/state/{key}": {
       "get": {
-        "description": "### Get the value associated with a key in an actor's state\n\nTODO: Operation detailed description",
+        "description": "### Get a single entry of an actor's state\n\nThe `key` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry in the actor instandce's state for `key` the operation will\nby default return a `200` status with a nil response body. If the boolean query parameter\n`errorOnAbsent` is set to `true`, the operation will instead return a `404` status if\nthere is no entry for `key`.",
         "schemes": [
           "http"
         ],
@@ -350,10 +369,21 @@
             "name": "errorOnAbsent",
             "in": "query"
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       },
       "post": {
-        "description": "### Store a key-value pair in an actor's state\n\nTODO: Operation detailed description",
+        "description": "### Update a single entry of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key` to contain the JSON request body.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.",
         "schemes": [
           "http"
         ],
@@ -379,10 +409,18 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateSetResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       },
       "delete": {
-        "description": "### Remove a key-value pair in an actor's state\n\nTODO: Operation detailed description",
+        "description": "### Remove a single entry in an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by removing the entry for `key`.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if an entry was actually removed and\n`0` if there was no entry for `key`.",
         "schemes": [
           "http"
         ],
@@ -408,12 +446,20 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       }
     },
     "/actor/{actorType}/{actorId}/tell/{path}": {
       "post": {
-        "description": "### Asynchronosuly invoke an actor method\n\nActor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
+        "description": "### Asynchronosuly invoke an actor method\n\nTell asynchronously executes a `POST` to the `path` endpoint of\nthe actor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted actor method.",
         "schemes": [
           "http"
         ],
@@ -463,7 +509,7 @@
     },
     "/event/{topic}/publish": {
       "post": {
-        "description": "### Publish an event to a topic\n\nTODO: Operation detailed description",
+        "description": "### Publish an event to a topic\n\nThe event provived as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guarenteed to\neventually be published to the targeted topic.",
         "schemes": [
           "http"
         ],
@@ -481,12 +527,20 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       }
     },
     "/event/{topic}/subscribe": {
       "post": {
-        "description": "### Subscribe to a topic\n\nTODO: Operation detailed description",
+        "description": "### Subscribe to a topic\n\nSubscribe an application endpoint to be invoked when events are delivered to\nthe targeted `topic`.  The endpoint is described in the request body and\nmay be either a service endpoint or an actor method.",
         "schemes": [
           "http"
         ],
@@ -512,12 +566,20 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       }
     },
     "/event/{topic}/unsubscribe": {
       "post": {
-        "description": "### Unsubscribe from a topic\n\nTODO: Operation detailed description",
+        "description": "### Unsubscribe from a topic\n\nUnsubscribe an appliction endpoint described by the request body from `topic`.\nThe operation may return before the unsubscription actually completes, but upon\nsuccessful it is guarenteed that the endpoint will eventually stop receive\nevents from the topic.",
         "schemes": [
           "http"
         ],
@@ -535,12 +597,20 @@
             "in": "path",
             "required": true
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
       }
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke a service endpoint\n\nCall synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
+        "description": "### Synchronously invoke a service endpoint\n\nCall synchronously executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint.",
         "schemes": [
           "http"
         ],
@@ -569,7 +639,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/callPath200Response"
+            "$ref": "#/responses/response200CallResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -582,7 +652,7 @@
     },
     "/service/{service}/tell/{path}": {
       "post": {
-        "description": "### Asynchronously invoke a service endpoint\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
+        "description": "### Asynchronously invoke a service endpoint\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted service endpoint.",
         "schemes": [
           "http"
         ],
@@ -624,7 +694,7 @@
     },
     "/system/broadcast/{path}": {
       "post": {
-        "description": "### Broadcast a message to all of an application's KAR runtimes\n\nThe broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
+        "description": "### Asynchronously broadcast a message to the KAR runtime\n\nBroadcast asynchronously executes a `POST` on the `path` endpoint\nof all other KAR runtimes that are currently part of the application.\nThe runtime initiating the broadcast is not included as a receipient.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all targeted\nruntime processes.",
         "schemes": [
           "http"
         ],
@@ -652,7 +722,7 @@
     },
     "/system/health": {
       "get": {
-        "description": "### Health-check endpoint of a KAR runtime process\n\nTODO: Operation detailed description",
+        "description": "### Health-check endpoint\n\nReturns a `200` response to indicate that the KAR runtime processes is healthy.",
         "schemes": [
           "http"
         ],
@@ -660,12 +730,17 @@
           "system"
         ],
         "summary": "health",
-        "operationId": "isSystemHealth"
+        "operationId": "isSystemHealth",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
       }
     },
     "/system/kill": {
       "get": {
-        "description": "### Initiate an orderly shutdown of this KAR runtime process\n\nTODO: Operation detailed description",
+        "description": "### Shutdown a single KAR runtime\n\nInitiate an orderly shutdown of the target KAR runtime process.",
         "schemes": [
           "http"
         ],
@@ -673,12 +748,17 @@
           "system"
         ],
         "summary": "kill",
-        "operationId": "idSystemKill"
+        "operationId": "idSystemKill",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
       }
     },
     "/system/killall": {
       "get": {
-        "description": "### Initiate an orderly shutdown of all of an application's KAR runtime processes\n\nTODO: Operation detailed description",
+        "description": "### Shutdown the KAR runtime mesh for an application\n\nInitiate an orderly shutdown of all KAR runtime processes.",
         "schemes": [
           "http"
         ],
@@ -686,7 +766,12 @@
           "system"
         ],
         "summary": "killall",
-        "operationId": "idSystemKillAll"
+        "operationId": "idSystemKillAll",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
       }
     }
   },
@@ -790,39 +875,6 @@
     }
   },
   "responses": {
-    "callPath200Response": {
-      "description": "The response returned by the invoked endpoint",
-      "schema": {
-        "type": "object"
-      },
-      "headers": {
-        "body": {
-          "description": "The response returned by the invoked endpoint"
-        }
-      }
-    },
-    "cancelReminder200Response": {
-      "headers": {
-        "Body": {
-          "type": "integer",
-          "format": "int64",
-          "example": 3,
-          "description": "The number of reminders that were actually cancelled"
-        }
-      }
-    },
-    "getReminder200Response": {
-      "headers": {
-        "Body": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Reminder"
-          },
-          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }]",
-          "description": "An array containing all matching reminders"
-        }
-      }
-    },
     "response200": {
       "description": "A success message.",
       "headers": {
@@ -830,6 +882,91 @@
           "type": "string",
           "example": "OK",
           "description": "A success message"
+        }
+      }
+    },
+    "response200CallResult": {
+      "description": "The response body returned by the invoked endpoint",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The response body returned by the invoked endpoint"
+        }
+      }
+    },
+    "response200ReminderCancelResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of reminders that were actually cancelled"
+        }
+      }
+    },
+    "response200ReminderGetResult": {
+      "headers": {
+        "Body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Reminder"
+          },
+          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', deadline: '2020-04-14T14:20:00Z', encodedData: '{\"msg\":\"carpe diem\"}' }]",
+          "description": "An array containing all matching reminders"
+        }
+      }
+    },
+    "response200StateDeleteResult": {
+      "headers": {
+        "NumberDeleted": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of key-value pairs that were deleted"
+        }
+      }
+    },
+    "response200StateGetAllResult": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        }
+      },
+      "headers": {
+        "Response": {
+          "description": "A map containing the requested state"
+        }
+      }
+    },
+    "response200StateGetResult": {
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "Response": {
+          "description": "The requested value"
+        }
+      }
+    },
+    "response200StateSetResult": {
+      "headers": {
+        "NumberCreated": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns 0 if an existing entry was updated and 1 if a new entry was created"
+        }
+      }
+    },
+    "response404": {
+      "description": "Response indicating requested resource is not found",
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "Not Found",
+          "description": "Requested resource is not found"
         }
       }
     },

@@ -39,10 +39,10 @@ var (
 //
 // ### Asynchronously invoke a service endpoint
 //
-// Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
-// through the optional JSON payload it received. A `200` response indicates that
-// the request has been accepted by the runtime and will eventually be delivered to
-// the targeted service endpoint.
+// Tell asynchronously executes a `POST` to the `path` endpoint of `service`.
+// The JSON request body is passed through to the target endpoint.
+// A `200` response indicates that the request has been accepted by the
+// runtime and will eventually be delivered to the targeted service endpoint.
 //
 //     Consumes: application/json
 //     Schemes: http
@@ -58,11 +58,11 @@ var (
 //
 // ### Asynchronosuly invoke an actor method
 //
-// Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
-// actor instance indicated by `actorType` and `actorId` passing through
-// the optional JSON payload it received.  A `200` response indicates that
-// the request has been accepted by the runtime and will eventually be delivered to
-// the targeted actor method.
+// Tell asynchronously executes a `POST` to the `path` endpoint of
+// the actor instance indicated by `actorType` and `actorId`.
+// The JSON request body is passed through to the target endpoint.
+// A `200` response indicates that the request has been accepted by the
+// runtime and will eventually be delivered to the targeted actor method.
 //
 //     Consumes: application/json
 //     Schemes: http
@@ -93,12 +93,14 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // broadcast
 //
-// ### Broadcast a message to all of an application's KAR runtimes
+// ### Asynchronously broadcast a message to the KAR runtime
 //
-// The broadcast route causes a `POST` of `path` to be delivered to all
-// KAR runtime processes that are currently part of the application.
+// Broadcast asynchronously executes a `POST` on the `path` endpoint
+// of all other KAR runtimes that are currently part of the application.
+// The runtime initiating the broadcast is not included as a receipient.
 // A `200` response indicates that the request to send the broadcast
-// has been accepted and the POST will eventually be delivered to all sidecars.
+// has been accepted and the POST will eventually be delivered to all targeted
+// runtime processes.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -117,15 +119,15 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Synchronously invoke a service endpoint
 //
-// Call synchronously executes a `POST` to the `path` endpoint of `service` passing
-// through an optional JSON payload to the service and responding with the
-// result returned by the service.
+// Call synchronously executes a `POST` to the `path` endpoint of `service`.
+// The JSON request body is passed through to the target endpoint.
+// The result of the call is the result of invoking the target service endpoint.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
 //     Responses:
-//       200: callPath200Response
+//       200: response200CallResult
 //       500: response500
 //       503: response503
 //
@@ -137,15 +139,15 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // ### Synchronously invoke an actor method
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
-// actor instance indicated by `actorType` and `actorId` passing
-// through an optional JSON payload to the actor and responding with the
-// result returned by the actor method.
+// actor instance indicated by `actorType` and `actorId`.
+// The JSON request body is passed through to the target endpoint.
+// The result of the call is the result of invoking the target actor method.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
 //     Responses:
-//       200: callPath200Response
+//       200: response200CallResult
 //       500: response500
 //       503: response503
 //
@@ -175,9 +177,14 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // migrate
 //
-// ### Request the migration of an actor
+// ### Initiate an actor migration
 //
-// TODO: Operation detailed description
+// This operation is primarily intended to be used by the KAR actor runtime.
+// When delivered to the runtime currently hosting the designated actor instance,
+// it causes the actor to be passivated and the binding of the actor instance to
+// that runtime to be removed from the KAR actor placement service. When next
+// activated, the actor instance may be hosted by a different instance of the
+// application process.
 //
 //     Schemes: http
 //     Responses:
@@ -210,8 +217,8 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 // ### Cancel all matching reminders
 //
-// This operation cancels reminders for the actor specified in the path.
-// If a reminder id is provided as a parameter, only the reminder whose id
+// This operation cancels reminders for the actor instance specified in the path.
+// If a reminder id is provided in the request body, only the reminder whose id
 // matches that id will be cancelled. If no id is provided, all
 // of the specified actor's reminders will be cancelled.  The number of reminders
 // actually cancelled is returned as the result of the operation.
@@ -220,7 +227,7 @@ func subscriber(channel <-chan pubsub.Message) {
 //     Produces: application/json
 //     Schemes: http
 //     Responses:
-//       200: cancelReminder200Response
+//       200: response200ReminderCancelResult
 //       500: response500
 //       503: response503
 //
@@ -231,15 +238,15 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 // ### Get all matching reminders
 //
-// This operatation returns all reminders for the actor(s) specified in the path.
-// If a reminder id is provided as a parameter, only reminders that
-// have that id will be returned.
+// This operatation returns all reminders for the actor instance specified in the path.
+// If a reminder id is provided in the request body, only a reminder that
+// has that id will be returned.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
 //     Responses:
-//       200: getReminder200Response
+//       200: response200ReminderGetResult
 //       500: response500
 //       503: response503
 //
@@ -250,11 +257,11 @@ func subscriber(channel <-chan pubsub.Message) {
 //
 // ### Schedule a reminder
 //
-// This operatation schedules a reminder for the actor specified in the path.
-// Consistient with the expected semantics of a `POST` operation, if there is
-// already a reminder for the actor with the same reminderId, that
-// existing reminder's schedule will be updated based on the request body.
-// The method will not return until after the reminder is scheduled.
+// This operatation schedules a reminder for the actor instance specified in the path
+// as described by the data provided in the request body.
+// If there is already a reminder for the target actor instance with the same reminderId,
+// that existing reminder's schedule will be updated based on the request body.
+// The operation will not return until after the reminder is scheduled.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -299,13 +306,19 @@ func stateKey(t, id string) string {
 //
 // state/key
 //
-// ### Store a key-value pair in an actor's state
+// ### Update a single entry of an actor's state
 //
-// TODO: Operation detailed description
+// The state of the actor instance indicated by `actorType` and `actorId`
+// will be updated by setting `key` to contain the JSON request body.
+// The operation will not return until the state has been updated.
+// The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
 //
 //     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
+//     Responses:
+//       200: response200StateSetResult
+//       500: response500
 //
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
@@ -319,13 +332,21 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state/key
 //
-// ### Get the value associated with a key in an actor's state
+// ### Get a single entry of an actor's state
 //
-// TODO: Operation detailed description
+// The `key` entry of the state of the actor instance indicated by `actorType` and `actorId`
+// will be returned as the response body.
+// If there is no entry in the actor instandce's state for `key` the operation will
+// by default return a `200` status with a nil response body. If the boolean query parameter
+// `errorOnAbsent` is set to `true`, the operation will instead return a `404` status if
+// there is no entry for `key`.
 //
-//     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
+//     Responses:
+//       200: response200StateGetResult
+//       404: response404
+//       500: response500
 //
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
@@ -345,11 +366,18 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state/key
 //
-// ### Remove a key-value pair in an actor's state
+// ### Remove a single entry in an actor's state
 //
-// TODO: Operation detailed description
+// The state of the actor instance indicated by `actorType` and `actorId`
+// will be updated by removing the entry for `key`.
+// The operation will not return until the state has been updated.
+// The result of the operation is `1` if an entry was actually removed and
+// `0` if there was no entry for `key`.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200StateDeleteResult
+//       500: response500
 //
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
@@ -363,13 +391,16 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state
 //
-// ### Get all key-value pairs in an actor's state
+// ### Get an actor's state
 //
-// TODO: Operation detailed description
+// The state of the actor instance indicated by `actorType` and `actorId`
+// will be returned as the response body.
 //
-//     Consumes: application/json
 //     Produces: application/json
 //     Schemes: http
+//     Responses:
+//       200: response200StateGetAllResult
+//       500: response500
 //
 func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
@@ -392,11 +423,16 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state
 //
-// ### Delete all key-value pairs in an actor's state
+// ### Remove an actor's state
 //
-// TODO: Operation detailed description
+// The state of the actor instance indicated by `actorType` and `actorId`
+// will be deleted.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200StateDeleteResult
+//       404: response404
+//       500: response500
 //
 func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Del(stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
@@ -412,11 +448,13 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // kill
 //
-// ### Initiate an orderly shutdown of this KAR runtime process
+// ### Shutdown a single KAR runtime
 //
-// TODO: Operation detailed description
+// Initiate an orderly shutdown of the target KAR runtime process.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200
 //
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	logger.Info("Invoking cancel() in response to kill request")
@@ -429,11 +467,13 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // killall
 //
-// ### Initiate an orderly shutdown of all of an application's KAR runtime processes
+// ### Shutdown the KAR runtime mesh for an application
 //
-// TODO: Operation detailed description
+// Initiate an orderly shutdown of all KAR runtime processes.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200
 //
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.KillAll(ctx)
@@ -445,11 +485,13 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // health
 //
-// ### Health-check endpoint of a KAR runtime process
+// ### Health-check endpoint
 //
-// TODO: Operation detailed description
+// Returns a `200` response to indicate that the KAR runtime processes is healthy.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200
 //
 func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
@@ -461,9 +503,14 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Publish an event to a topic
 //
-// TODO: Operation detailed description
+// The event provived as the request body will be published on `topic`.
+// When the operation returns successfully, the event is guarenteed to
+// eventually be published to the targeted topic.
 //
 //     Schemes: http
+//     Responses:
+//       200: response200
+//       500: response500
 //
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
@@ -480,9 +527,15 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Subscribe to a topic
 //
-// TODO: Operation detailed description
+// Subscribe an application endpoint to be invoked when events are delivered to
+// the targeted `topic`.  The endpoint is described in the request body and
+// may be either a service endpoint or an actor method.
 //
 //     Schemes: http
+//     Consumes: application/json
+//     Responses:
+//       200: response200
+//       500: response500
 //
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
@@ -499,9 +552,16 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Unsubscribe from a topic
 //
-// TODO: Operation detailed description
+// Unsubscribe an appliction endpoint described by the request body from `topic`.
+// The operation may return before the unsubscription actually completes, but upon
+// successful it is guarenteed that the endpoint will eventually stop receive
+// events from the topic.
 //
 //     Schemes: http
+//     Consumes: application/json
+//     Responses:
+//       200: response200
+//       500: response500
 //
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
