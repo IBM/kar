@@ -25,6 +25,10 @@
 // swagger:meta
 package runtime
 
+/*******************************************************************
+ * Request parameter and body documentation
+ *******************************************************************/
+
 // swagger:parameters idActorCall
 // swagger:parameters idActorMigrate
 // swagger:parameters idActorReminderGet
@@ -106,9 +110,9 @@ type actorStateGetParamWrapper struct {
 	ErrorOnAbsent bool `json:"errorOnAbsent"`
 }
 
-/*
- * Responses
- */
+/*******************************************************************
+ * Response documentation
+ *******************************************************************/
 
 // A success message.
 // swagger:response response200
@@ -187,4 +191,11 @@ type error503 struct {
 	// A message describing the error
 	// Example: Service Unavailable
 	Body string `json:"body"`
+}
+
+// An error response returned by the invoked endpoint
+// swagger:response responseGenericEndpointError
+type responseGenericEndpointError struct {
+	// The result body returned by the invoked endpoint
+	Body interface{}
 }

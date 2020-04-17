@@ -130,6 +130,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200CallResult
 //       500: response500
 //       503: response503
+//       default: responseGenericEndpointError
 //
 
 // swagger:route POST /actor/{actorType}/{actorId}/call/{path} actors idActorCall
@@ -150,6 +151,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200CallResult
 //       500: response500
 //       503: response503
+//       default: responseGenericEndpointError
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
@@ -513,6 +515,8 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       500: response500
 //
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// FIXME: https://github.ibm.com/solsa/kar/issues/30
+	//        Should return a 404 if topic doesn't exist.
 	reply, err := pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusInternalServerError)
@@ -538,6 +542,8 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       500: response500
 //
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// FIXME: https://github.ibm.com/solsa/kar/issues/31
+	//        Should return a 404 if topic doesn't exist.
 	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
@@ -564,6 +570,8 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       500: response500
 //
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	// FIXME: https://github.ibm.com/solsa/kar/issues/31
+	//        Should return a 404 if topic doesn't exist.
 	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("unsubscribe error: %v", err), http.StatusInternalServerError)

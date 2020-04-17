@@ -138,6 +138,8 @@ paths:
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
       schemes:
       - http
       summary: call
@@ -627,6 +629,8 @@ paths:
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
       schemes:
       - http
       summary: call
@@ -824,6 +828,13 @@ responses:
         description: A message describing the error
         example: Service Unavailable
         type: string
+  responseGenericEndpointError:
+    description: An error response returned by the invoked endpoint
+    headers:
+      Body:
+        description: The result body returned by the invoked endpoint
+    schema:
+      type: object
 schemes:
 - http
 swagger: "2.0"

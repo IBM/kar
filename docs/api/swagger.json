@@ -69,6 +69,9 @@
           },
           "503": {
             "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
           }
         }
       }
@@ -646,6 +649,9 @@
           },
           "503": {
             "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
           }
         }
       }
@@ -987,6 +993,17 @@
           "type": "string",
           "example": "Service Unavailable",
           "description": "A message describing the error"
+        }
+      }
+    },
+    "responseGenericEndpointError": {
+      "description": "An error response returned by the invoked endpoint",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "Body": {
+          "description": "The result body returned by the invoked endpoint"
         }
       }
     }
