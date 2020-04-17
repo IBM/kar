@@ -38,6 +38,8 @@
 // swagger:meta
 package runtime
 
+import "time"
+
 /*******************************************************************
  * Request parameter and body documentation
  *******************************************************************/
@@ -137,13 +139,42 @@ type actorStateGetParamWrapper struct {
 }
 
 type cloudeventWrapper struct {
-	// A JSON value conforming to the CloudEvent 1.0 specification
-	Event interface{} // FIXME: https://github.ibm.com/solsa/kar/issues/32  provide full schema (import type from golang cloudevent pacakage?)
+	// An event identifier
+	// required:true
+	ID string `json:"id"`
+	// A URI identifying the event source
+	// required:true
+	// swagger:strfmt uri
+	Source string `json:"source"`
+	// The version of the CloudEvent spec being used.
+	// required:true
+	// example: 1.0
+	SpecVersion string `json:"specversion"`
+	// The type of the event
+	// required:true
+	// example: com.github.pull.create
+	Type string `json:"type"`
+	// RFC-2046 encoding of data type
+	// required:false
+	// example: application/json
+	DataContentType string `json:"datacontenttype"`
+	// URI identifying the schema that `data` adheres to
+	// required: false
+	// swagger:strfmt uri
+	DataSchema string `json:"dataschema"`
+	// Describes the subject of the event in the context of the event producer
+	// required: false
+	Subject string `json:"subject"`
+	// Time when the event occured
+	// required:false
+	Time time.Time `json:"time"`
+	// The event payload
+	Data interface{} `json:"data"`
 }
 
 // swagger:parameters idEventPublish
 type eventPublishRequestWrapper struct {
-	// A JSON value conforming to the CloudEvent 1.0 specification
+	// A JSON value conforming to the CloudEvent specification
 	// in:body
 	Event cloudeventWrapper
 }

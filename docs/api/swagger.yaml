@@ -44,9 +44,54 @@ definitions:
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   cloudeventWrapper:
     properties:
-      Event:
-        description: A JSON value conforming to the CloudEvent 1.0 specification
+      data:
+        description: The event payload
         type: object
+        x-go-name: Data
+      datacontenttype:
+        description: RFC-2046 encoding of data type
+        example: application/json
+        type: string
+        x-go-name: DataContentType
+      dataschema:
+        description: URI identifying the schema that `data` adheres to
+        format: uri
+        type: string
+        x-go-name: DataSchema
+      id:
+        description: An event identifier
+        type: string
+        x-go-name: ID
+      source:
+        description: A URI identifying the event source
+        format: uri
+        type: string
+        x-go-name: Source
+      specversion:
+        description: The version of the CloudEvent spec being used.
+        example: "1.0"
+        type: string
+        x-go-name: SpecVersion
+      subject:
+        description: Describes the subject of the event in the context of the event
+          producer
+        type: string
+        x-go-name: Subject
+      time:
+        description: Time when the event occured
+        format: date-time
+        type: string
+        x-go-name: Time
+      type:
+        description: The type of the event
+        example: com.github.pull.create
+        type: string
+        x-go-name: Type
+    required:
+    - id
+    - source
+    - specversion
+    - type
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   eventSubscribeRequestBody:
@@ -604,7 +649,7 @@ paths:
         required: true
         type: string
         x-go-name: Topic
-      - description: A JSON value conforming to the CloudEvent 1.0 specification
+      - description: A JSON value conforming to the CloudEvent specification
         in: body
         name: Event
         schema:
