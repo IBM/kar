@@ -37,7 +37,7 @@ var (
 //
 // tell
 //
-// ### Asynchronously invoke a service
+// ### Asynchronously invoke a service endpoint
 //
 // Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
 // through the optional JSON payload it received. A `200` response indicates that
@@ -56,7 +56,7 @@ var (
 //
 // tell
 //
-// ### Asynchronosuly invoke an actor
+// ### Asynchronosuly invoke an actor method
 //
 // Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing through
@@ -93,7 +93,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // broadcast
 //
-// ### Broadcast a message to all KAR runtimes.
+// ### Broadcast a message to all of an application's KAR runtimes
 //
 // The broadcast route causes a `POST` of `path` to be delivered to all
 // KAR runtime processes that are currently part of the application.
@@ -115,7 +115,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // call
 //
-// ### Synchronously invoke a service
+// ### Synchronously invoke a service endpoint
 //
 // Call synchronously executes a `POST` to the `path` endpoint of `service` passing
 // through an optional JSON payload to the service and responding with the
@@ -134,7 +134,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // call
 //
-// ### Synchronously invoke an actor
+// ### Synchronously invoke an actor method
 //
 // Call synchronously executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId` passing
@@ -319,7 +319,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state/key
 //
-// ### Get the value associated with a key in an actor's state.
+// ### Get the value associated with a key in an actor's state
 //
 // TODO: Operation detailed description
 //
@@ -345,7 +345,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // state/key
 //
-// ### Remove a key-value pair in an actor's state.
+// ### Remove a key-value pair in an actor's state
 //
 // TODO: Operation detailed description
 //
@@ -412,7 +412,7 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // kill
 //
-// ### Initiate an orderly shutdown of this KAR runtime process.
+// ### Initiate an orderly shutdown of this KAR runtime process
 //
 // TODO: Operation detailed description
 //
@@ -429,7 +429,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // killall
 //
-// ### Initiate an orderly shutdown of all of an application's KAR runtime processes.
+// ### Initiate an orderly shutdown of all of an application's KAR runtime processes
 //
 // TODO: Operation detailed description
 //
@@ -445,7 +445,7 @@ func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // health
 //
-// ### Health-check endpoint of a KAR runtime process.
+// ### Health-check endpoint of a KAR runtime process
 //
 // TODO: Operation detailed description
 //

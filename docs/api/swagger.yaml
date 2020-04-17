@@ -99,7 +99,7 @@ paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
       description: |-
-        ### Synchronously invoke an actor
+        ### Synchronously invoke an actor method
 
         Call synchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing
@@ -346,7 +346,7 @@ paths:
   /actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: |-
-        ### Remove a key-value pair in an actor's state.
+        ### Remove a key-value pair in an actor's state
 
         TODO: Operation detailed description
       operationId: idActorStateDelete
@@ -370,7 +370,7 @@ paths:
       - actors
     get:
       description: |-
-        ### Get the value associated with a key in an actor's state.
+        ### Get the value associated with a key in an actor's state
 
         TODO: Operation detailed description
       operationId: idActorStateGet
@@ -426,7 +426,7 @@ paths:
   /actor/{actorType}/{actorId}/tell/{path}:
     post:
       description: |-
-        ### Asynchronosuly invoke an actor
+        ### Asynchronosuly invoke an actor method
 
         Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing through
@@ -531,7 +531,7 @@ paths:
   /service/{service}/call/{path}:
     post:
       description: |-
-        ### Synchronously invoke a service
+        ### Synchronously invoke a service endpoint
 
         Call synchronously executes a `POST` to the `path` endpoint of `service` passing
         through an optional JSON payload to the service and responding with the
@@ -565,7 +565,7 @@ paths:
   /service/{service}/tell/{path}:
     post:
       description: |-
-        ### Asynchronously invoke a service
+        ### Asynchronously invoke a service endpoint
 
         Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
         through the optional JSON payload it received. A `200` response indicates that
@@ -600,7 +600,7 @@ paths:
   /system/broadcast/{path}:
     post:
       description: |-
-        ### Broadcast a message to all KAR runtimes.
+        ### Broadcast a message to all of an application's KAR runtimes
 
         The broadcast route causes a `POST` of `path` to be delivered to all
         KAR runtime processes that are currently part of the application.
@@ -625,7 +625,7 @@ paths:
   /system/health:
     get:
       description: |-
-        ### Health-check endpoint of a KAR runtime process.
+        ### Health-check endpoint of a KAR runtime process
 
         TODO: Operation detailed description
       operationId: isSystemHealth
@@ -637,7 +637,7 @@ paths:
   /system/kill:
     get:
       description: |-
-        ### Initiate an orderly shutdown of this KAR runtime process.
+        ### Initiate an orderly shutdown of this KAR runtime process
 
         TODO: Operation detailed description
       operationId: idSystemKill
@@ -649,7 +649,7 @@ paths:
   /system/killall:
     get:
       description: |-
-        ### Initiate an orderly shutdown of all of an application's KAR runtime processes.
+        ### Initiate an orderly shutdown of all of an application's KAR runtime processes
 
         TODO: Operation detailed description
       operationId: idSystemKillAll

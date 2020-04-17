@@ -18,7 +18,7 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke an actor\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
+        "description": "### Synchronously invoke an actor method\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
         "schemes": [
           "http"
         ],
@@ -317,7 +317,7 @@
     },
     "/actor/{actorType}/{actorId}/state/{key}": {
       "get": {
-        "description": "### Get the value associated with a key in an actor's state.\n\nTODO: Operation detailed description",
+        "description": "### Get the value associated with a key in an actor's state\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
@@ -382,7 +382,7 @@
         ]
       },
       "delete": {
-        "description": "### Remove a key-value pair in an actor's state.\n\nTODO: Operation detailed description",
+        "description": "### Remove a key-value pair in an actor's state\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
@@ -413,7 +413,7 @@
     },
     "/actor/{actorType}/{actorId}/tell/{path}": {
       "post": {
-        "description": "### Asynchronosuly invoke an actor\n\nActor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
+        "description": "### Asynchronosuly invoke an actor method\n\nActor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
         "schemes": [
           "http"
         ],
@@ -540,7 +540,7 @@
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke a service\n\nCall synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
+        "description": "### Synchronously invoke a service endpoint\n\nCall synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
         "schemes": [
           "http"
         ],
@@ -582,7 +582,7 @@
     },
     "/service/{service}/tell/{path}": {
       "post": {
-        "description": "### Asynchronously invoke a service\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
+        "description": "### Asynchronously invoke a service endpoint\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
         "schemes": [
           "http"
         ],
@@ -624,7 +624,7 @@
     },
     "/system/broadcast/{path}": {
       "post": {
-        "description": "### Broadcast a message to all KAR runtimes.\n\nThe broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
+        "description": "### Broadcast a message to all of an application's KAR runtimes\n\nThe broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
         "schemes": [
           "http"
         ],
@@ -652,7 +652,7 @@
     },
     "/system/health": {
       "get": {
-        "description": "### Health-check endpoint of a KAR runtime process.\n\nTODO: Operation detailed description",
+        "description": "### Health-check endpoint of a KAR runtime process\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
@@ -665,7 +665,7 @@
     },
     "/system/kill": {
       "get": {
-        "description": "### Initiate an orderly shutdown of this KAR runtime process.\n\nTODO: Operation detailed description",
+        "description": "### Initiate an orderly shutdown of this KAR runtime process\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
@@ -678,7 +678,7 @@
     },
     "/system/killall": {
       "get": {
-        "description": "### Initiate an orderly shutdown of all of an application's KAR runtime processes.\n\nTODO: Operation detailed description",
+        "description": "### Initiate an orderly shutdown of all of an application's KAR runtime processes\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
