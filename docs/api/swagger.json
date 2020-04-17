@@ -18,14 +18,14 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "Call synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
+        "description": "### Synchronously invoke an actor\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing\nthrough an optional JSON payload to the actor and responding with the\nresult returned by the actor method.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "call: Synchronously invoke an actor.",
+        "summary": "call",
         "operationId": "idActorCall",
         "parameters": [
           {
@@ -75,14 +75,14 @@
     },
     "/actor/{actorType}/{actorId}/migrate": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Request the migration of an actor\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "migrate: Request the migration of an actor",
+        "summary": "migrate",
         "operationId": "idActorMigrate",
         "parameters": [
           {
@@ -111,14 +111,14 @@
     },
     "/actor/{actorType}/{actorId}/reminder": {
       "get": {
-        "description": "This operatation returns all reminders for the actor(s) specified in the path.\nIf a reminder id is provided as a parameter, only reminders that\nhave that id will be returned.",
+        "description": "### Get all matching reminders\n\nThis operatation returns all reminders for the actor(s) specified in the path.\nIf a reminder id is provided as a parameter, only reminders that\nhave that id will be returned.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "reminder: Get all matching reminders.",
+        "summary": "reminder",
         "operationId": "idActorReminderGet",
         "parameters": [
           {
@@ -159,14 +159,14 @@
         }
       },
       "post": {
-        "description": "This operatation schedules a reminder for the actor specified in the path.\nConsistient with the expected semantics of a `POST` operation, if there is\nalready a reminder for the actor with the same reminderId, that\nexisting reminder's schedule will be updated based on the request body.\nThe method will not return until after the reminder is scheduled.",
+        "description": "### Schedule a reminder\n\nThis operatation schedules a reminder for the actor specified in the path.\nConsistient with the expected semantics of a `POST` operation, if there is\nalready a reminder for the actor with the same reminderId, that\nexisting reminder's schedule will be updated based on the request body.\nThe method will not return until after the reminder is scheduled.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "reminder: Schedule a reminder.",
+        "summary": "reminder",
         "operationId": "idActorReminderSchedule",
         "parameters": [
           {
@@ -207,14 +207,14 @@
         }
       },
       "delete": {
-        "description": "This operation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
+        "description": "### Cancel all matching reminders\n\nThis operation cancels reminders for the actor specified in the path.\nIf a reminder id is provided as a parameter, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "reminder: Cancel all matching reminders.",
+        "summary": "reminder",
         "operationId": "idActorReminderCancel",
         "parameters": [
           {
@@ -257,14 +257,14 @@
     },
     "/actor/{actorType}/{actorId}/state": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Get all key-value pairs in an actor's state\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "state: Get all key-value pairs in an actor's state.",
+        "summary": "state",
         "operationId": "idActorStateGetAll",
         "parameters": [
           {
@@ -286,14 +286,14 @@
         ]
       },
       "delete": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Delete all key-value pairs in an actor's state\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "state: Delete all key-value pairs in an actor's state.",
+        "summary": "state",
         "operationId": "idActorStateDeleteAll",
         "parameters": [
           {
@@ -317,14 +317,14 @@
     },
     "/actor/{actorType}/{actorId}/state/{key}": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Get the value associated with a key in an actor's state.\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "state: Get the value associated with a key in an actor's state.",
+        "summary": "state/key",
         "operationId": "idActorStateGet",
         "parameters": [
           {
@@ -353,14 +353,14 @@
         ]
       },
       "post": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Store a key-value pair in an actor's state\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "state: Store a key-value pair in an actor's state",
+        "summary": "state/key",
         "operationId": "idActorStateSet",
         "parameters": [
           {
@@ -382,14 +382,14 @@
         ]
       },
       "delete": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Remove a key-value pair in an actor's state.\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "state: Remove a key-value pair in an actor's state.",
+        "summary": "state/key",
         "operationId": "idActorStateDelete",
         "parameters": [
           {
@@ -413,14 +413,14 @@
     },
     "/actor/{actorType}/{actorId}/tell/{path}": {
       "post": {
-        "description": "Actor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
+        "description": "### Asynchronosuly invoke an actor\n\nActor-tell asynchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId` passing through\nthe optional JSON payload it received.  A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted actor method.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "tell: Asynchronosuly invoke an actor.",
+        "summary": "tell",
         "operationId": "idActorTell",
         "parameters": [
           {
@@ -463,14 +463,14 @@
     },
     "/event/{topic}/publish": {
       "post": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Publish an event to a topic\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "events"
         ],
-        "summary": "publish: Publish an event to a topic.",
+        "summary": "publish",
         "operationId": "idEventPublish",
         "parameters": [
           {
@@ -486,14 +486,14 @@
     },
     "/event/{topic}/subscribe": {
       "post": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Subscribe to a topic\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "events"
         ],
-        "summary": "subscribe: Subscribe to a topic.",
+        "summary": "subscribe",
         "operationId": "idEventSubscribe",
         "parameters": [
           {
@@ -517,14 +517,14 @@
     },
     "/event/{topic}/unsubscribe": {
       "post": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Unsubscribe from a topic\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "events"
         ],
-        "summary": "unsubscribe: Unsubscribe from a topic.",
+        "summary": "unsubscribe",
         "operationId": "idEventUnsubscribe",
         "parameters": [
           {
@@ -540,14 +540,14 @@
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "Call synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
+        "description": "### Synchronously invoke a service\n\nCall synchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough an optional JSON payload to the service and responding with the\nresult returned by the service.",
         "schemes": [
           "http"
         ],
         "tags": [
           "services"
         ],
-        "summary": "call: Synchronously invoke a service.",
+        "summary": "call",
         "operationId": "idServiceCall",
         "parameters": [
           {
@@ -582,14 +582,14 @@
     },
     "/service/{service}/tell/{path}": {
       "post": {
-        "description": "Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
+        "description": "### Asynchronously invoke a service\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service` passing\nthrough the optional JSON payload it received. A `200` response indicates that\nthe request has been accepted by the runtime and will eventually be delivered to\nthe targeted service endpoint.",
         "schemes": [
           "http"
         ],
         "tags": [
           "services"
         ],
-        "summary": "tell: Asynchronously invoke a service.",
+        "summary": "tell",
         "operationId": "idServiceTell",
         "parameters": [
           {
@@ -624,14 +624,14 @@
     },
     "/system/broadcast/{path}": {
       "post": {
-        "description": "The broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
+        "description": "### Broadcast a message to all KAR runtimes.\n\nThe broadcast route causes a `POST` of `path` to be delivered to all\nKAR runtime processes that are currently part of the application.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all sidecars.",
         "schemes": [
           "http"
         ],
         "tags": [
           "system"
         ],
-        "summary": "broadcast: send message to all KAR runtimes.",
+        "summary": "broadcast",
         "operationId": "idSystemBroadcast",
         "parameters": [
           {
@@ -652,40 +652,40 @@
     },
     "/system/health": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Health-check endpoint of a KAR runtime process.\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "system"
         ],
-        "summary": "health: Health-check endpoint of a KAR runtime process.",
+        "summary": "health",
         "operationId": "isSystemHealth"
       }
     },
     "/system/kill": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Initiate an orderly shutdown of this KAR runtime process.\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "system"
         ],
-        "summary": "kill: Initiate an orderly shutdown of a KAR runtime process.",
+        "summary": "kill",
         "operationId": "idSystemKill"
       }
     },
     "/system/killall": {
       "get": {
-        "description": "TODO: Operation detailed description",
+        "description": "### Initiate an orderly shutdown of all of an application's KAR runtime processes.\n\nTODO: Operation detailed description",
         "schemes": [
           "http"
         ],
         "tags": [
           "system"
         ],
-        "summary": "killall: Initiate an orderly shutdown of all of an application's KAR runtime processes.",
+        "summary": "killall",
         "operationId": "idSystemKillAll"
       }
     }

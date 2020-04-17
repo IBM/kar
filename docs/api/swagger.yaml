@@ -99,6 +99,8 @@ paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
       description: |-
+        ### Synchronously invoke an actor
+
         Call synchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing
         through an optional JSON payload to the actor and responding with the
@@ -138,12 +140,15 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'call: Synchronously invoke an actor.'
+      summary: call
       tags:
       - actors
   /actor/{actorType}/{actorId}/migrate:
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Request the migration of an actor
+
+        TODO: Operation detailed description
       operationId: idActorMigrate
       parameters:
       - description: The actor type
@@ -163,12 +168,14 @@ paths:
           $ref: '#/responses/response200'
       schemes:
       - http
-      summary: 'migrate: Request the migration of an actor'
+      summary: migrate
       tags:
       - actors
   /actor/{actorType}/{actorId}/reminder:
     delete:
       description: |-
+        ### Cancel all matching reminders
+
         This operation cancels reminders for the actor specified in the path.
         If a reminder id is provided as a parameter, only the reminder whose id
         matches that id will be cancelled. If no id is provided, all
@@ -204,11 +211,13 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'reminder: Cancel all matching reminders.'
+      summary: reminder
       tags:
       - actors
     get:
       description: |-
+        ### Get all matching reminders
+
         This operatation returns all reminders for the actor(s) specified in the path.
         If a reminder id is provided as a parameter, only reminders that
         have that id will be returned.
@@ -242,11 +251,13 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'reminder: Get all matching reminders.'
+      summary: reminder
       tags:
       - actors
     post:
       description: |-
+        ### Schedule a reminder
+
         This operatation schedules a reminder for the actor specified in the path.
         Consistient with the expected semantics of a `POST` operation, if there is
         already a reminder for the actor with the same reminderId, that
@@ -280,12 +291,15 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'reminder: Schedule a reminder.'
+      summary: reminder
       tags:
       - actors
   /actor/{actorType}/{actorId}/state:
     delete:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Delete all key-value pairs in an actor's state
+
+        TODO: Operation detailed description
       operationId: idActorStateDeleteAll
       parameters:
       - description: The actor type
@@ -302,11 +316,14 @@ paths:
         x-go-name: ActorID
       schemes:
       - http
-      summary: 'state: Delete all key-value pairs in an actor''s state.'
+      summary: state
       tags:
       - actors
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Get all key-value pairs in an actor's state
+
+        TODO: Operation detailed description
       operationId: idActorStateGetAll
       parameters:
       - description: The actor type
@@ -323,12 +340,15 @@ paths:
         x-go-name: ActorID
       schemes:
       - http
-      summary: 'state: Get all key-value pairs in an actor''s state.'
+      summary: state
       tags:
       - actors
   /actor/{actorType}/{actorId}/state/{key}:
     delete:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Remove a key-value pair in an actor's state.
+
+        TODO: Operation detailed description
       operationId: idActorStateDelete
       parameters:
       - description: The actor type
@@ -345,11 +365,14 @@ paths:
         x-go-name: ActorID
       schemes:
       - http
-      summary: 'state: Remove a key-value pair in an actor''s state.'
+      summary: state/key
       tags:
       - actors
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Get the value associated with a key in an actor's state.
+
+        TODO: Operation detailed description
       operationId: idActorStateGet
       parameters:
       - description: The actor type
@@ -373,11 +396,14 @@ paths:
         x-go-name: ErrorOnAbsent
       schemes:
       - http
-      summary: 'state: Get the value associated with a key in an actor''s state.'
+      summary: state/key
       tags:
       - actors
     post:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Store a key-value pair in an actor's state
+
+        TODO: Operation detailed description
       operationId: idActorStateSet
       parameters:
       - description: The actor type
@@ -394,12 +420,14 @@ paths:
         x-go-name: ActorID
       schemes:
       - http
-      summary: 'state: Store a key-value pair in an actor''s state'
+      summary: state/key
       tags:
       - actors
   /actor/{actorType}/{actorId}/tell/{path}:
     post:
       description: |-
+        ### Asynchronosuly invoke an actor
+
         Actor-tell asynchronously executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId` passing through
         the optional JSON payload it received.  A `200` response indicates that
@@ -434,12 +462,15 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'tell: Asynchronosuly invoke an actor.'
+      summary: tell
       tags:
       - actors
   /event/{topic}/publish:
     post:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Publish an event to a topic
+
+        TODO: Operation detailed description
       operationId: idEventPublish
       parameters:
       - description: The topic name
@@ -450,12 +481,15 @@ paths:
         x-go-name: Topic
       schemes:
       - http
-      summary: 'publish: Publish an event to a topic.'
+      summary: publish
       tags:
       - events
   /event/{topic}/subscribe:
     post:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Subscribe to a topic
+
+        TODO: Operation detailed description
       operationId: idEventSubscribe
       parameters:
       - description: The topic name
@@ -472,12 +506,15 @@ paths:
         x-go-name: Path
       schemes:
       - http
-      summary: 'subscribe: Subscribe to a topic.'
+      summary: subscribe
       tags:
       - events
   /event/{topic}/unsubscribe:
     post:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Unsubscribe from a topic
+
+        TODO: Operation detailed description
       operationId: idEventUnsubscribe
       parameters:
       - description: The topic name
@@ -488,12 +525,14 @@ paths:
         x-go-name: Topic
       schemes:
       - http
-      summary: 'unsubscribe: Unsubscribe from a topic.'
+      summary: unsubscribe
       tags:
       - events
   /service/{service}/call/{path}:
     post:
       description: |-
+        ### Synchronously invoke a service
+
         Call synchronously executes a `POST` to the `path` endpoint of `service` passing
         through an optional JSON payload to the service and responding with the
         result returned by the service.
@@ -520,12 +559,14 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'call: Synchronously invoke a service.'
+      summary: call
       tags:
       - services
   /service/{service}/tell/{path}:
     post:
       description: |-
+        ### Asynchronously invoke a service
+
         Tell asynchronously executes a `POST` to the `path` endpoint of `service` passing
         through the optional JSON payload it received. A `200` response indicates that
         the request has been accepted by the runtime and will eventually be delivered to
@@ -553,12 +594,14 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: 'tell: Asynchronously invoke a service.'
+      summary: tell
       tags:
       - services
   /system/broadcast/{path}:
     post:
       description: |-
+        ### Broadcast a message to all KAR runtimes.
+
         The broadcast route causes a `POST` of `path` to be delivered to all
         KAR runtime processes that are currently part of the application.
         A `200` response indicates that the request to send the broadcast
@@ -576,35 +619,43 @@ paths:
           $ref: '#/responses/response200'
       schemes:
       - http
-      summary: 'broadcast: send message to all KAR runtimes.'
+      summary: broadcast
       tags:
       - system
   /system/health:
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Health-check endpoint of a KAR runtime process.
+
+        TODO: Operation detailed description
       operationId: isSystemHealth
       schemes:
       - http
-      summary: 'health: Health-check endpoint of a KAR runtime process.'
+      summary: health
       tags:
       - system
   /system/kill:
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Initiate an orderly shutdown of this KAR runtime process.
+
+        TODO: Operation detailed description
       operationId: idSystemKill
       schemes:
       - http
-      summary: 'kill: Initiate an orderly shutdown of a KAR runtime process.'
+      summary: kill
       tags:
       - system
   /system/killall:
     get:
-      description: 'TODO: Operation detailed description'
+      description: |-
+        ### Initiate an orderly shutdown of all of an application's KAR runtime processes.
+
+        TODO: Operation detailed description
       operationId: idSystemKillAll
       schemes:
       - http
-      summary: 'killall: Initiate an orderly shutdown of all of an application''s
-        KAR runtime processes.'
+      summary: killall
       tags:
       - system
 produces:
