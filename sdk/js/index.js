@@ -97,7 +97,13 @@ const broadcast = (path, params) => post(`system/broadcast/${path}`, params)
 const shutdown = () => post('system/kill').then(() => agent.close())
 
 // pubsub
-const publish = (topic, params) => post(`event/${topic}/publish`, params)
+function publish ({ topic, data, datacontenttype, dataschema, id, source, specversion = '1.0', subject, time, type }) {
+  if (typeof topic === 'undefined') throw new Error('publish: must define "topic"')
+  if (typeof id === 'undefined') throw new Error('publish: must define "id"')
+  if (typeof source === 'undefined') throw new Error('publish: must define "source"')
+  if (typeof type === 'undefined') throw new Error('publish: must define "type"')
+  return post(`event/${topic}/publish`, { data, datacontenttype, dataschema, id, source, specversion, subject, time, type })
+}
 const subscribe = (topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, params))
 const unsubscribe = (topic, params) => post(`event/${topic}/unsubscribe`, params)
 

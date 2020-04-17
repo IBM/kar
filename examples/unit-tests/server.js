@@ -26,19 +26,23 @@ app.post('/shutdown', async (_reg, res) => {
 })
 
 app.post('/pubsub', async (req, res) => {
-  await subscribe(req.body, 'accumulate') // subscribe service to topic
+  const topic = req.body
+  const source = 'numServer'
+  const type = 'number'
+  await subscribe(topic, 'accumulate') // subscribe service to topic
   const promise = new Promise(resolve => { success = resolve })
-  await publish(req.body, 1)
+  await publish({ topic, source, type, id: 1, data: 1 })
   await actor.subscribe('Foo', 'xyz', req.body, 'accumulate') // update subscription to target an actor
-  await publish(req.body, 2)
-  await publish(req.body, 3)
+  await publish({ topic, source, type, id: 2, data: 2 })
+  await publish({ topic, source, type, id: 3, data: 3 })
   await promise
   await unsubscribe(req.body)
   res.sendStatus(200)
 })
 
 app.post('/accumulate', (req, res) => {
-  count += req.body
+  const payload = req.body.data
+  count += payload
   if (count >= 6) success()
   res.sendStatus(200)
 })
@@ -51,7 +55,8 @@ class Foo {
     this.field = 42
   }
 
-  accumulate (v) {
+  accumulate (e) {
+    const v = e.data
     count += v
     if (count >= 6) success()
   }
