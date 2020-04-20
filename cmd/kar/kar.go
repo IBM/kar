@@ -304,7 +304,7 @@ func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
-// swagger:route POST /actor/{actorType}/{actorId}/state/{key} actors idActorStateSet
+// swagger:route PUT /actor/{actorType}/{actorId}/state/{key} actors idActorStateSet
 //
 // state/key
 //
@@ -643,7 +643,7 @@ func server(listener net.Listener) {
 	router.DELETE(base+"/actor/:type/:id/reminder", reminder)
 	//
 	router.GET(base+"/actor/:type/:id/state/:key", get)
-	router.POST(base+"/actor/:type/:id/state/:key", set)
+	router.PUT(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
 	router.GET(base+"/actor/:type/:id/state", getAll)
 	router.POST(base+"/actor/:type/:id/state", setMultiple)

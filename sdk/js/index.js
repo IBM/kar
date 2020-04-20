@@ -50,6 +50,11 @@ function post (api, body) {
   return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers, agent }).then(parse)
 }
 
+// http put: json stringify request body, parse response body
+function put (api, body) {
+  return fetch(url + api, { method: 'PUT', body: JSON.stringify(body), headers, agent }).then(parse)
+}
+
 // http get: parse response body
 function get (api) {
   return fetch(url + api, { headers, agent }).then(parse)
@@ -85,7 +90,7 @@ const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${
 
 // actor state operations
 const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}`)
-const actorSetState = (type, id, key, params = {}) => post(`actor/${type}/${id}/state/${key}`, params)
+const actorSetState = (type, id, key, params = {}) => put(`actor/${type}/${id}/state/${key}`, params)
 const actorDeleteState = (type, id, key) => del(`actor/${type}/${id}/state/${key}`)
 const actorGetAllState = (type, id) => get(`actor/${type}/${id}/state`)
 const actorSetStateMultiple = (type, id, params = {}) => post(`actor/${type}/${id}/state`, params)

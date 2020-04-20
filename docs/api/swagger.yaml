@@ -582,7 +582,7 @@ paths:
       summary: state/key
       tags:
       - actors
-    post:
+    put:
       description: |-
         ### Update a single entry of an actor's state
 

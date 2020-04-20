@@ -430,7 +430,7 @@
           }
         }
       },
-      "post": {
+      "put": {
         "description": "### Update a single entry of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key` to contain the JSON request body.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.",
         "schemes": [
           "http"
