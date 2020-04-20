@@ -306,6 +306,41 @@
           }
         }
       },
+      "post": {
+        "description": "### Update multiple entries of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by atomically updated by storing all key-value pairs\nin the request body.\nThe operation will not return until the state has been updated.\nThe result of the operation is the number of new entires that were created.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "state",
+        "operationId": "idActorStateSetMultiple",
+        "parameters": [
+          {
+            "description": "A map containing the state updates to perform",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateSetMultipleResult"
+          },
+          "400": {
+            "$ref": "#/responses/response400"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
       "delete": {
         "description": "### Remove an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be deleted.",
         "schemes": [
@@ -1140,12 +1175,30 @@
         }
       }
     },
+    "response200StateSetMultipleResult": {
+      "headers": {
+        "NumberCreated": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns the number of new entries created by the operation"
+        }
+      }
+    },
     "response200StateSetResult": {
       "headers": {
         "NumberCreated": {
           "type": "integer",
           "format": "int64",
           "description": "Returns 0 if an existing entry was updated and 1 if a new entry was created"
+        }
+      }
+    },
+    "response400": {
+      "description": "Response indicating a bad request",
+      "headers": {
+        "body": {
+          "type": "string",
+          "description": "A message describing the problem with the request"
         }
       }
     },

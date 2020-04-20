@@ -88,6 +88,7 @@ const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}`)
 const actorSetState = (type, id, key, params = {}) => post(`actor/${type}/${id}/state/${key}`, params)
 const actorDeleteState = (type, id, key) => del(`actor/${type}/${id}/state/${key}`)
 const actorGetAllState = (type, id) => get(`actor/${type}/${id}/state`)
+const actorSetStateMultiple = (type, id, params = {}) => post(`actor/${type}/${id}/state`, params)
 const actorDeleteAllState = (type, id) => del(`actor/${type}/${id}/state`)
 
 // broadcast to all sidecars except for ours
@@ -152,6 +153,7 @@ const sys = (type, id) => ({
   tell: (method, params) => actorTell(type, id, method, params),
   get: key => actorGetState(type, id, key),
   set: (key, params) => actorSetState(type, id, key, params),
+  setMultiple: (params) => actorSetStateMultiple(type, id, params),
   delete: key => actorDeleteState(type, id, key),
   getAll: () => actorGetAllState(type, id),
   deleteAll: () => actorDeleteAllState(type, id),
@@ -262,6 +264,7 @@ module.exports = {
     state: {
       get: actorGetState,
       set: actorSetState,
+      setMultiple: actorSetStateMultiple,
       delete: actorDeleteState,
       getAll: actorGetAllState,
       deleteAll: actorDeleteAllState

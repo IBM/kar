@@ -421,6 +421,50 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// swagger:route POST /actor/{actorType}/{actorId}/state actors idActorStateSetMultiple
+//
+// state
+//
+// ### Update multiple entries of an actor's state
+//
+// The state of the actor instance indicated by `actorType` and `actorId`
+// will be updated by atomically updated by storing all key-value pairs
+// in the request body.
+// The operation will not return until the state has been updated.
+// The result of the operation is the number of new entires that were created.
+//
+//     Consumes: application/json
+//     Produces: application/json
+//     Schemes: http
+//     Responses:
+//       200: response200StateSetMultipleResult
+//       400: response400
+//       500: response500
+//
+func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var updates map[string]interface{}
+	if err := json.Unmarshal([]byte(runtime.ReadAll(r.Body)), &updates); err != nil {
+		http.Error(w, "Request body was not a map[string, interface{}]", http.StatusBadRequest)
+		return
+	}
+	sk := stateKey(ps.ByName("type"), ps.ByName("id"))
+	m := map[string]string{}
+	for i, v := range updates {
+		s, err := json.Marshal(v)
+		if err != nil {
+			logger.Error("setMultiple: %v[%v] = %v failued due to %v", sk, i, v, err)
+			http.Error(w, fmt.Sprintf("Unable to re-serialize value %v", v), http.StatusInternalServerError)
+			return
+		}
+		m[i] = string(s)
+	}
+	if reply, err := store.HSetMultiple(sk, m); err != nil {
+		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, reply)
+	}
+}
+
 // swagger:route DELETE /actor/{actorType}/{actorId}/state actors idActorStateDeleteAll
 //
 // state
@@ -602,6 +646,7 @@ func server(listener net.Listener) {
 	router.POST(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
 	router.GET(base+"/actor/:type/:id/state", getAll)
+	router.POST(base+"/actor/:type/:id/state", setMultiple)
 	router.DELETE(base+"/actor/:type/:id/state", delAll)
 
 	// kar system methods

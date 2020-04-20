@@ -475,6 +475,36 @@ paths:
       summary: state
       tags:
       - actors
+    post:
+      description: |-
+        ### Update multiple entries of an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`
+        will be updated by atomically updated by storing all key-value pairs
+        in the request body.
+        The operation will not return until the state has been updated.
+        The result of the operation is the number of new entires that were created.
+      operationId: idActorStateSetMultiple
+      parameters:
+      - description: A map containing the state updates to perform
+        in: body
+        name: Body
+        schema:
+          additionalProperties:
+            type: object
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/response200StateSetMultipleResult'
+        "400":
+          $ref: '#/responses/response400'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state
+      tags:
+      - actors
   /actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: |-
@@ -953,6 +983,12 @@ responses:
         description: The requested value
     schema:
       type: object
+  response200StateSetMultipleResult:
+    headers:
+      NumberCreated:
+        description: Returns the number of new entries created by the operation
+        format: int64
+        type: integer
   response200StateSetResult:
     headers:
       NumberCreated:
@@ -960,6 +996,12 @@ responses:
           was created
         format: int64
         type: integer
+  response400:
+    description: Response indicating a bad request
+    headers:
+      body:
+        description: A message describing the problem with the request
+        type: string
   response404:
     description: Response indicating requested resource is not found
     headers:

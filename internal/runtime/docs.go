@@ -220,6 +220,13 @@ type eventUnsubscribeRequestBody struct {
 	ID string `json:"id"`
 }
 
+// swagger:parameters idActorStateSetMultiple
+type actorStateSetMultipleWrapper struct {
+	// A map containing the state updates to perform
+	// in:body
+	Body map[string]interface{}
+}
+
 /*******************************************************************
  * Response documentation
  *******************************************************************/
@@ -274,9 +281,22 @@ type response200StateDeleteResult struct {
 }
 
 // swagger:response response200StateSetResult
-type response200ReminderSetResult struct {
+type response200StateSetResult struct {
 	// Returns 0 if an existing entry was updated and 1 if a new entry was created
 	NumberCreated int
+}
+
+// swagger:response response200StateSetMultipleResult
+type response200StateSetMultipleResult struct {
+	// Returns the number of new entries created by the operation
+	NumberCreated int
+}
+
+// Response indicating a bad request
+// swagger:response response400
+type error400 struct {
+	// A message describing the problem with the request
+	Body string `json:"body"`
 }
 
 // Response indicating requested resource is not found

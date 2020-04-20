@@ -43,6 +43,9 @@ async function actorTests () {
   const a = actors.Foo[123]
   let failure = false
 
+  // ensure clean start (in case test was run previously against this KAR deployment)
+  await a.sys.deleteAll()
+
   console.log('Testing actor state operations')
   // actor state
   await a.sys.set('key1', 42)
@@ -74,6 +77,27 @@ async function actorTests () {
   } catch (err) {
     console.log(`Failed during validation of getAll: ${err}.`)
     console.log(`    value was ${v3}`)
+    failure = true
+  }
+
+  const numNew = await a.sys.setMultiple({ key1: 2020, key10: { myData: 1234 } })
+  if (numNew !== 1) {
+    console.log(`Failed setMultiple: expected 1 new key created but response was ${numNew}`)
+    failure = true
+  }
+  const v3a = await a.sys.getAll()
+  try {
+    if (v3a.key1 !== 2020 ||
+    v3a.key2 !== 'abc123' ||
+    v3a.key3.field !== 'value' ||
+    v3a.key4 != null ||
+    v3a.key10.myData !== 1234) {
+      console.log(`Failed: getAll ${v3a}`)
+      failure = true
+    }
+  } catch (err) {
+    console.log(`Failed during validation of getAll after setMultiple: ${err}.`)
+    console.log(`    value was ${v3a}`)
     failure = true
   }
 
