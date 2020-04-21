@@ -6,9 +6,11 @@ metadata:
     kar.ibm.com/app: helloWorld
     kar.ibm.com/service: greeter
 spec:
+  imagePullSecrets:
+  - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    # image: us.icr.io/kar-dev/sample-hello-world:latest
+    # image: us.icr.io/kar-dev/example-hello-world:latest
     image: example-hello-world:dev
     env:
     - name: MAIN
