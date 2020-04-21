@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-client
+  labels:
+    name: hello-client
+spec:
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: helloWorld
+        kar.ibm.com/service: client
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: client
+        image: example-hello-world:dev
+        env:
+        - name: MAIN
+          value: client.js

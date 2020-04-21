@@ -36,9 +36,13 @@ Alternatively, you can deploy in dev mode where KAR will use
 locally built images for all KAR runtime components and examples.
 Since it is bypassing the container registry, this mode is preferred
 for local development, but only works with `kind`, not IKS.
-Deploy KAR in dev mode by doing:
+First, build your docker images and push them to kind's internal
+docker registry with:
 ```shell
 make kindPushDev
+```
+Next, deploy KAR in dev mode by doing:
+```shell
 ./scripts/kar-deploy.sh -dev
 ```
 
@@ -52,16 +56,22 @@ Enabling a namespace for deploying KAR-based applications requires
 copying configuration secrets from the `kar-system` namespace and
 labeling the namespace to enable KAR sidecar injection.  These steps
 are automated by
-[kar-enable-namespace.sh](../scripts/kar-enable-namespace.sh)
+[kar-enable-namespace.sh](../scripts/kar-enable-namespace.sh).
 
+The simplest approach is to KAR-enable the default namespace:
+```shell
+./scripts/kar-enable-namespace.sh default
+```
+The rest of our documentation assumes you will be deploying KAR
+applications to the default namespace and omits the `-n <namespace>`
+arguments to `kubectl` and `helm`.
+
+If you are used to working with multiple Kubernetes namespaces,
+you can use the same script to KAR-enable other namespaces.
+If the namespace doesn't exist, the script will create it.
 For example, to create and KAR-enable the `kar-apps` namespace execute:
 ```shell
 ./scripts/kar-enable-namespace.sh kar-apps
-```
-
-Or to KAR-enable an existing namespace, for example the `default`namespace:
-```shell
-./scripts/kar-enable-namespace.sh default
 ```
 
 Now you are ready to run KAR applications!
@@ -77,33 +87,33 @@ are KAR system components.
 
 ![Greeting server](images/example-hello-world.png)
 
-
 ### Mode 1: running completely inside Kubernetes
 
 In this mode, the application runs in Pods in a Kubernetes cluster in
 a KAR-enabled namespace.  The KAR runtime is automatically injected as
 a sidecar container into every application Pod.
 
-If you have not already built and pushed images to your kind cluster,
-execute `make kindPushDev`.
+The command log below assumes you deployed KAR in `-dev` mode.  If you
+instead provided an IBM Container Registry API key (`-a`), use
+`server-icr.yaml` and `client-icr.yaml` in your `kubectl` commands.
 
-Next run the client and server as shown below:
+Run the client and server as shown below:
 ```shell
 $ cd examples/helloWorld
-$ kubectl apply -f deploy/server.yaml
+$ kubectl apply -f deploy/server-dev.yaml
 pod/hello-server created
 $ kubectl get pods
 NAME           READY   STATUS    RESTARTS   AGE
 hello-server   2/2     Running   0          3s
-$ kubectl apply -f deploy/client.yaml
+$ kubectl apply -f deploy/client-dev.yaml
 job.batch/hello-client created
 $ kubectl logs jobs/hello-client -c client
 Hello John Doe!
 $ kubectl logs hello-server -c server
 Hello John Doe!
-$ kubectl delete -f deploy/client.yaml
+$ kubectl delete -f deploy/client-dev.yaml
 job.batch "hello-client" deleted
-$ kubectl delete -f deploy/server.yaml
+$ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted
 ```
 
@@ -156,10 +166,10 @@ connect the pieces of your application via Kafka to each other.
 For example, run the server in the cluster and the client locally.
 
 ```shell
-$ kubectl apply -f deploy/server.yaml
+$ kubectl apply -f deploy/server-dev.yaml
 pod/hello-server created
 $ kar -app helloWorld -service client node client.js
 2020/04/02 18:02:19 [STDOUT] Hello John Doe!
-$ kubectl delete -f deploy/server.yaml
+$ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted
 ```
