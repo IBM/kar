@@ -151,9 +151,6 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 			if live[p] == nil { // new partition
 				live[p] = map[int64]struct{}{}
 				done[p] = map[int64]struct{}{}
-				lock.Lock()
-				here.Live[p] = map[int64]struct{}{}
-				lock.Unlock()
 			}
 			r, err := store.ZRange(partitionKey(p), 0, -1) // fetch done offsets from store
 			if err != nil {
@@ -207,6 +204,9 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			continue
 		}
 		lock.Lock()
+		if here.Live[m.Partition] == nil {
+			here.Live[m.Partition] = map[int64]struct{}{}
+		}
 		here.Live[m.Partition][m.Offset] = struct{}{}
 		lock.Unlock()
 		var msg map[string]string
