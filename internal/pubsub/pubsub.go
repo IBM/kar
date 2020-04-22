@@ -50,9 +50,8 @@ var (
 	lock = &sync.Mutex{} // synchronize updates (Mark is called asynchronously)
 
 	// progress (no lock needed)
-	offsets = make([]int64, 1)           // next offset to read from each partition (local uncommitted progress)
-	live    map[int32]map[int64]struct{} // live offsets at beginning of session (from all sidecars)
-	done    map[int32]map[int64]struct{} // done offsets at beginning of session (from all sidecars)
+	live map[int32]map[int64]struct{} // live offsets at beginning of session (from all sidecars)
+	done map[int32]map[int64]struct{} // done offsets at beginning of session (from all sidecars)
 
 	errTooFewPartitions = errors.New("too few partitions")
 )
@@ -173,9 +172,6 @@ func (consumer *handler) Setup(session sarama.ConsumerGroupSession) error {
 		logger.Debug("failed to refresh topic: %v", err)
 		return err
 	}
-	if max >= len(offsets) { // grow array to accommodate more partitions
-		offsets = append(offsets, make([]int64, max+1-len(offsets))...)
-	}
 	mu.Lock()
 	replicas = rp
 	hosts = hs
@@ -206,11 +202,10 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 			continue
 		}
 		advancing = false // stop advancing cursor
-		if _, ok := live[m.Partition][m.Offset]; ok || offsets[m.Partition] > m.Offset {
+		if _, ok := live[m.Partition][m.Offset]; ok {
 			logger.Debug("skipping uncommitted message at partition %d, offset %d", m.Partition, m.Offset)
 			continue
 		}
-		offsets[m.Partition] = m.Offset + 1
 		lock.Lock()
 		here.Live[m.Partition][m.Offset] = struct{}{}
 		lock.Unlock()
@@ -225,7 +220,6 @@ func (consumer *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim
 		select {
 		case <-session.Context().Done():
 			logger.Debug("cancelling work on message at partition %d, offset %d", m.Partition, m.Offset)
-			offsets[m.Partition] = m.Offset // rollback
 			lock.Lock()
 			delete(here.Live[m.Partition], m.Offset) // rollback
 			lock.Unlock()
