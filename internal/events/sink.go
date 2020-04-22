@@ -15,6 +15,6 @@ func Publish(topic string, message []byte) error {
 		logger.Debug("failed to send message on topic %s: %v", topic, err)
 		return err
 	}
-	logger.Debug("send message on topic %s, partition %d, offset %d", topic, partition, offset)
+	logger.Debug("sent message on topic %s, partition %d, offset %d", topic, partition, offset)
 	return nil
 }

@@ -348,5 +348,4 @@ func Close() {
 	producer.Close()
 	admin.Close()
 	client.Close()
-	publisher.Close()
 }

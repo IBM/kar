@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe, actor } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, unsubscribe, actor } = require('kar')
 
 const app = express()
 
