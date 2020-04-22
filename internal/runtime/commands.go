@@ -427,7 +427,6 @@ func ManageReminderPartitions(ctx context.Context) {
 		priorPartitions = newPartitions
 		select {
 		case <-rebalance:
-			newPartitions, rebalance = pubsub.Partitions()
 		case <-ctx.Done():
 			return
 		}
