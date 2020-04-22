@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, unsubscribe, actor } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
 
 const app = express()
 
@@ -29,8 +29,8 @@ app.post('/pubsub', async (req, res) => {
   const topic = req.body
   const source = 'numServer'
   const type = 'number'
-  await actor.subscribe('Foo', 'xyz', req.body, 'accumulate')
   const promise = new Promise(resolve => { success = resolve })
+  await subscribe(topic, 'accumulate') // subscribe service to topic
   await publish({ topic, source, type, id: 1, data: 1 })
   await publish({ topic, source, type, id: 2, data: 2 })
   await publish({ topic, source, type, id: 3, data: 3 })
@@ -57,7 +57,6 @@ class Foo {
   accumulate (e) {
     const v = e.data
     count += v
-    console.log('accumulate', e, count)
     if (count >= 6) success()
   }
 
