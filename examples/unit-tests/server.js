@@ -29,10 +29,9 @@ app.post('/pubsub', async (req, res) => {
   const topic = req.body
   const source = 'numServer'
   const type = 'number'
-  await subscribe(topic, 'accumulate') // subscribe service to topic
+  await actor.subscribe('Foo', 'xyz', req.body, 'accumulate')
   const promise = new Promise(resolve => { success = resolve })
   await publish({ topic, source, type, id: 1, data: 1 })
-  await actor.subscribe('Foo', 'xyz', req.body, 'accumulate') // update subscription to target an actor
   await publish({ topic, source, type, id: 2, data: 2 })
   await publish({ topic, source, type, id: 3, data: 3 })
   await promise
@@ -58,6 +57,7 @@ class Foo {
   accumulate (e) {
     const v = e.data
     count += v
+    console.log('accumulate', e, count)
     if (count >= 6) success()
   }
 
