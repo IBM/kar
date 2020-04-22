@@ -130,17 +130,17 @@ func (h *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 // ConsumeClaim processes messages of consumer claim
 func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	store.ZRemRangeByScore(mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
-	advancing := true                                                                      // should advance Kafka cursor
+	mark := true
 	for m := range claim.Messages() {
 		logger.Debug("received message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
 		if _, ok := h.done[m.Partition][m.Offset]; ok {
-			if advancing {
-				session.MarkMessage(m, "") // advance Kafka cursor
-			}
 			logger.Debug("skipping committed message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
 			continue
 		}
-		advancing = false // stop advancing Kafka cursor
+		if mark { // mark first offset not known to be done
+			session.MarkOffset(m.Topic, m.Partition, m.Offset, "")
+			mark = false
+		}
 		if _, ok := h.live[m.Partition][m.Offset]; ok {
 			logger.Debug("skipping uncommitted message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
 			continue
