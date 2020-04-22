@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/events"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -488,9 +489,12 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	done := make(chan struct{})
 	s := subscription{sub: make(chan subscriber, 1), cancel: cancel, done: done}
 	subscriptions.Store(id, s)
-	ch := pubsub.NewSubscriber(c, topic, id, m["oldest"] != "")
+	ch, err := events.Subscribe(c, topic, id, m["oldest"] != "")
+	if err != nil {
+		return "", err
+	}
 	ok := true
-	var msg pubsub.RawMessage
+	var msg events.Event
 	go func() {
 		for ok {
 			select {
@@ -499,10 +503,10 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 					var reply *Reply
 					var err error
 					if sub.actor != nil {
-						reply, err = CallActor(ctx, *sub.actor, sub.path, msg.Value, "text/plain", "", "")
+						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), "text/plain", "", "")
 					} else {
 						var res *http.Response
-						res, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": msg.Value, "content-type": "text/plain"})
+						res, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": "text/plain"})
 						if res != nil {
 							reply = &Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body)}
 						}

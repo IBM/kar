@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/events"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/runtime"
 	"github.ibm.com/solsa/kar.git/internal/store"
@@ -561,11 +563,12 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// FIXME: https://github.ibm.com/solsa/kar/issues/30
 	//        Should return a 404 if topic doesn't exist.
-	reply, err := pubsub.Publish(ps.ByName("topic"), runtime.ReadAll(r.Body))
+	buf, _ := ioutil.ReadAll(r.Body)
+	err := events.Publish(ps.ByName("topic"), buf)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprint(w, reply)
+		fmt.Fprint(w, "OK")
 	}
 }
 
@@ -708,6 +711,11 @@ func main() {
 
 	store.Dial()
 	defer store.Close()
+
+	if events.Dial() != nil {
+		logger.Fatal("dial failed %v: ", err)
+	}
+	defer events.Close()
 
 	wg.Add(1)
 	go func() {
