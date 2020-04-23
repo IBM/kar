@@ -29,12 +29,12 @@ async function main () {
 
   const company = 'IBM'
   const researchDivision = {
-    Yorktown: { workers: 20, thinkms: 2000, steps: 20 },
-    Cambridge: { workers: 10, thinkms: 1000, steps: 40 },
-    Almaden: { workers: 15, thinkms: 4000, steps: 10 }
+    Yorktown: { workers: 20, thinkms: 2000, steps: 10, days: 2 },
+    Cambridge: { workers: 10, thinkms: 1000, steps: 40, days: 1 },
+    Almaden: { workers: 15, thinkms: 500, steps: 10, days: 5 }
   }
 
-  console.log(`Staring simulation: ${JSON.stringify(researchDivision)}`)
+  console.log(`Starting simulation: ${JSON.stringify(researchDivision)}`)
 
   for (const site in researchDivision) {
     await actor.call('Site', site, 'resetDelayStats')
@@ -44,17 +44,15 @@ async function main () {
 
   while (true) {
     await sleep(5000)
-    const totalWorking = await actor.call('Company', 'IBM', 'count')
-    console.log(`Num working is ${totalWorking}`)
-    // const sr = await actor.call('Site', 'Yorktown', 'siteReport')
-    // console.log(sr)
-    if (totalWorking === 0) {
+    const employees = await actor.call('Company', 'IBM', 'count')
+    console.log(`Num employees is ${employees}`)
+    if (employees === 0) {
       for (const site in researchDivision) {
         console.log(`Valiadating ${site}`)
         const delays = await actor.call('Site', site, 'delayReport')
         console.log(delays)
         const count = delays.delayHistogram.reduce((x, y) => x + y, 0)
-        const expectedSteps = researchDivision[site].workers * researchDivision[site].steps
+        const expectedSteps = researchDivision[site].workers * researchDivision[site].steps * researchDivision[site].days
         if (count !== expectedSteps) {
           console.log(`FAILURE: Expected ${expectedSteps} moves but got ${count}`)
           failure = true
