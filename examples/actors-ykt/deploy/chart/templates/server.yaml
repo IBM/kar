@@ -16,7 +16,7 @@ spec:
       annotations:
         kar.ibm.com/app: ykt
         kar.ibm.com/service: simulation 
-        kar.ibm.com/actors: Site,Floor,Office,Researcher
+        kar.ibm.com/actors: Company,Site,Office,Researcher
         kar.ibm.com/verbose: {{ .Values.verbose }}
     spec:
       containers:

@@ -1,6 +1,306 @@
-
 const express = require('express')
+
 const { logger, jsonParser, errorHandler, shutdown, actor, actors, actorRuntime, h2c } = require('kar')
+
+const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
+const verbose = truthy(process.env.VERBOSE)
+const debug = truthy(process.env.DEBUG)
+
+function randI (max) { return Math.floor(Math.random() * Math.floor(max)) }
+
+// The states a Researcher can be in
+const States = {
+  HOME: 'home',
+  COMMUTING: 'commuting',
+  WORKING: 'working',
+  MEETING: 'meeting',
+  COFFEE: 'coffee',
+  LUNCH: 'lunch'
+}
+
+const delaysBucketMS = 100
+
+class Company {
+  async checkpoint () {
+    const state = {
+      nextSerialNumber: this.nextSerialNumber,
+      sites: this.sites
+    }
+    await this.sys.setMultiple(state)
+  }
+
+  async activate () {
+    const state = await this.sys.getAll()
+    this.nextSerialNumber = state.nextSerialNumber || 0
+    this.sites = state.sites || []
+  }
+
+  async deactivate () {
+    await this.checkpoint()
+  }
+
+  async hire ({ site = 'Yorktown', workers = 3, steps = 20, thinkms = 10000 } = {}) {
+    if (!this.sites.includes(site)) {
+      this.sites.push(site)
+      actor.scheduleReminder('Site', site, 'siteReport', { id: 'aisle14', deadline: new Date(Date.now() + 1000), period: '5s' })
+    }
+    console.log(`${workers} hired to perform ${steps} tasks a day at ${site}`)
+    const sn = this.nextSerialNumber
+    this.nextSerialNumber = sn + workers
+    await this.checkpoint()
+    await this.sys.set('nextSerialNumber', this.nextSerialNumber)
+    for (var i = 0; i < workers; i++) {
+      const name = sn + i
+      await actor.tell('Researcher', name, 'startDay', { site, steps, thinkms })
+    }
+  }
+
+  async count () {
+    let count = 0
+    for (const site of this.sites) {
+      count += await actors.Site[site].count()
+    }
+    return count
+  }
+}
+
+// Sites update rapidly changing aggregate statistics by processing
+// the workerUpdate and endWorkDay messages from individual workers
+// Rather than checkpointing this data on every change, we will instead
+// detect when a Site is being restored from a potentially outdated checkpoint
+// and recompute the summary.
+// TODO: This recovery is not yet implemented.
+// Most likely scheme is that Company reliably
+// tracks the names of all Researchers assigned to the site, so that a
+// recovery can be implemented by getting the state of each of them to
+// rebuild the workers object.
+class Site {
+  get count () { return Object.keys(this.workers).length }
+
+  async checkpoint () {
+    const state = {
+      delayStats: this.delayStats,
+      workers: this.workers
+    }
+    await this.sys.setMultiple(state)
+  }
+
+  async activate () {
+    const state = await this.sys.getAll()
+    this.delayStats = state.delayStats || []
+    this.workers = state.workers || {}
+    if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
+  }
+
+  async deactivate () {
+    await this.checkpoint()
+    if (debug) console.log(`deactivated Site ${this.sys.id}`)
+  }
+
+  async endWorkDay ({ who, delays = [] } = {}) {
+    const ds = this.delayStats
+    delays.forEach(function (missedMS, _) {
+      const missedBucket = Math.floor(missedMS / delaysBucketMS)
+      ds[missedBucket] = (ds[missedBucket] || 0) + 1
+    })
+
+    delete this.workers[who]
+    if (debug) console.log(`${who} left Site ${this.sys.id} count is now ${this.count}`)
+  }
+
+  async workerUpdate ({ who, activity, office }) {
+    this.workers[who] = activity
+  }
+
+  async siteReport () {
+    const siteEmployees = this.count
+    const time = new Date().toString()
+    const status = { site: this.sys.id, siteEmployees, time }
+    if (siteEmployees > 0) {
+      for (const s in States) {
+        status[States[s]] = 0
+      }
+      for (const worker in this.workers) {
+        status[this.workers[worker]] += 1
+      }
+      if (siteEmployees > 0) {
+        console.log(status)
+      }
+    }
+    // TODO: publish siteReport to KAR pub-sub
+    // await publish('siteReport', status)
+    return status
+  }
+
+  delayReport () {
+    for (const i in this.delayStats) {
+      if (verbose) console.log(`${this.sys.id}: <${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.delayStats[i]}`)
+    }
+    return { site: this.sys.id, bucketSizeInMS: delaysBucketMS, delayHistogram: this.delayStats }
+  }
+
+  resetDelayStats () {
+    this.delayStats = []
+  }
+}
+
+// An Office's Actor ID is of the form Site:Office
+class Office {
+  static coffeeShop (site) { return `${site}:OutTakes` }
+  static cafeteria (site) { return `${site}:Cafeteria` }
+  static randomOffice (site) {
+    // TODO: Introduce site-specific office numbering patterns just for fun.
+    const floor = randI(3)
+    const aisle = 1 + randI(40)
+    const office = 1 + randI(64)
+    return `${site}:${aisle}-${floor}${office}`
+  }
+
+  isEmpty () { return this.occupants.size === 0 }
+
+  get count () { return this.occupants.size }
+
+  async checkpoint () {
+    await this.sys.set('occupants', Array.from(this.occupants))
+  }
+
+  async activate () {
+    const so = await this.sys.get('occupants') || []
+    this.occupants = new Set(so)
+    if (debug) console.log(`activated Office ${this.sys.id} with occupancy ${this.count}`)
+  }
+
+  async deactivate () {
+    await this.checkpoint()
+    if (debug) console.log(`deactivated Office ${this.sys.id}`)
+  }
+
+  async enter ({ who, checkpoint = true }) {
+    this.occupants.add(who)
+    if (checkpoint) {
+      await this.checkpoint()
+    }
+    if (debug) console.log(`${who} entered Office ${this.sys.id} occupancy is now ${this.count}`)
+  }
+
+  async leave ({ who, checkpoint = true }) {
+    this.occupants.delete(who)
+    if (checkpoint) {
+      await this.checkpoint()
+    }
+    if (debug) console.log(`${who} left Office ${this.sys.id} occupancy is now ${this.count}`)
+  }
+}
+
+class Researcher {
+  get name () { return this.sys.id }
+
+  async checkpointState () {
+    const state = {
+      site: this.site,
+      activity: this.activity,
+      location: this.location,
+      steps: this.steps,
+      thinkms: this.thinkms,
+      delays: this.delays
+    }
+    await this.sys.setMultiple(state)
+  }
+
+  async activate () {
+    Object.assign(this, await this.sys.getAll())
+    if (debug) console.log(`activated Researcher ${this.name} with state `, this)
+  }
+
+  async deactivate () {
+    await this.checkpointState()
+    if (debug) console.log(`deactivated Researcher ${this.name}`)
+  }
+
+  recordJitter (ms) {
+    if (this.delays === undefined) {
+      this.delays = []
+    }
+    this.delays.push(ms)
+  }
+
+  async updateActivity (newActivity) {
+    if (this.activity !== newActivity) {
+      await actor.tell('Site', this.site, 'workerUpdate', { who: this.name, activity: newActivity, office: this.location })
+      this.activity = newActivity
+    }
+  }
+
+  async startDay ({ site, steps, thinkms }) {
+    this.site = site
+    this.steps = steps
+    this.thinkms = thinkms
+    this.activity = States.COMMUTING
+    await this.checkpointState()
+    if (verbose) console.log(`${this.site}: ${this.name} is commuting to work`)
+
+    await actor.tell('Site', this.site, 'workerUpdate', { who: this.name, activity: States.COMMUTING })
+
+    const commuteTime = 1 + randI(5 * this.thinkms)
+    const deadline = new Date(Date.now() + commuteTime)
+    await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
+  }
+
+  async move (targetTime) {
+    this.recordJitter(Math.abs(Date.now() - targetTime))
+    if (debug) console.log(`${this.site}: Researcher ${this.name} entered move`)
+
+    if (this.activity !== States.COMMUTING) {
+      const oldLocation = this.location
+      await actors.Office[oldLocation].leave(this.name)
+    }
+
+    this.steps = this.steps - 1
+    if (this.steps <= 0) {
+      await this.updateActivity(States.DONE)
+      await actors.Site[this.site].endWorkDay({ who: this.name, delays: this.delays })
+      await this.sys.delete('state') // FIXME:  Don't delete state when we enable multi-day simulations
+      if (verbose) console.log(`${this.site}: Quitting time for ${this.name}`)
+    } else {
+      const nextMove = Math.random()
+      let nextLocation
+      let thinkTime = 1 + randI(this.thinkms)
+      if (nextMove < 0.10) {
+        // 10% chance of getting coffee
+        nextLocation = Office.coffeeShop(this.site)
+        if (verbose) console.log(`${this.site}: Coffee time for ${this.name}`)
+        await this.updateActivity(States.COFFEE)
+      } else if (nextMove < 0.15) {
+        // 5% chance of lunchtime
+        nextLocation = Office.cafeteria(this.site)
+        thinkTime = thinkTime * 2
+        if (verbose) console.log(`${this.site}: Lunch time for ${this.name}`)
+        await this.updateActivity(States.LUNCH)
+      } else {
+        nextLocation = Office.randomOffice(this.site)
+        if (!await actors.Office[nextLocation].isEmpty()) {
+          thinkTime = thinkTime * 3
+          if (verbose) console.log(`${this.site}: Researcher ${this.name} is heading to a meeting at ${nextLocation}`)
+          await this.updateActivity(States.MEETING)
+        } else {
+          await this.updateActivity(States.WORKING)
+        }
+      }
+
+      this.location = nextLocation
+      const deadline = new Date(Date.now() + thinkTime)
+      await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
+      await this.checkpointState()
+
+      await actors.Office[this.location].enter(this.name)
+    }
+    if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
+  }
+}
+
+/*
+ * Express / KAR boilerplate.  No application logic below here.
+ */
 
 const app = express()
 
@@ -13,285 +313,6 @@ app.post('/shutdown', async (_reg, res) => {
   server.close(() => process.exit())
 })
 
-const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
-const verbose = truthy(process.env.VERBOSE)
-
-function randI (max) { return Math.floor(Math.random() * Math.floor(max)) }
-
-// YKT Office Encoding:  aisle:flooroffice   TODO: KAR should be able to use '-' instead of ':' as a separator
-const Cafeteria = '22:001'
-const OutTakes = '21:001'
-function randomOffice () {
-  const floor = randI(3)
-  const aisle = 1 + randI(40)
-  const office = 1 + randI(64)
-  return `${aisle}:${floor}${office}`
-}
-function getAisle (office) { return office.split(':')[0] }
-function getFloor (office) { return office.split(':')[1][0] }
-function getRoom (office) { return office.split(':')[1] }
-
-// Common superclass for Office, Floor, and Site (things that count their occupants)
-class ActorWithCount {
-  get count () { return this._count }
-  async updateCount (newCount) {
-    this._count = newCount
-    await this.sys.set('count', newCount)
-  }
-
-  async activate () {
-    this._count = await this.sys.get('count') || 0
-    if (verbose) console.log(`activated ${this.type}/${this.sys.id} with count ${this.count}`)
-  }
-
-  deactivate () {
-    if (verbose) console.log(`deactivated ${this.type}/${this.sys.id}`)
-  }
-
-  async clear () {
-    await this.updateCount(0)
-  }
-
-  async increment () {
-    await this.updateCount(this.count + 1)
-    if (verbose) console.log(`increment ${this.type}/${this.sys.id} count is now ${this.count}`)
-  }
-
-  async decrement () {
-    await this.updateCount(this.count - 1)
-    if (verbose) console.log(`decrement ${this.type}/${this.sys.id} count is now ${this.count}`)
-  }
-}
-
-const delaysBucketMS = 100
-class Site extends ActorWithCount {
-  get type () { return 'Site' }
-  get nextSerialNumber () { return this._nextSerialNumber }
-  async updateNextSerialNumber (nextSerialNumber) {
-    this._nextSerialNumber = nextSerialNumber
-    await this.sys.set('nextSerialNumber', nextSerialNumber)
-  }
-
-  async activate () {
-    this._nextSerialNumber = await this.sys.get('nextSerialNumber') || 0
-    this.delayStats = await this.sys.get('delayStats') || []
-    await super.activate()
-  }
-
-  async deactivate () {
-    await this.sys.set('delayStats', this.delayStats)
-    await super.deactivate()
-  }
-
-  async clear () {
-    await this.updateNextSerialNumber(0)
-    await super.clear()
-    await actors.Floor[0].clear()
-    await actors.Floor[1].clear()
-    await actors.Floor[2].clear()
-    await actors.Office[Cafeteria].clear()
-    await actors.Office[OutTakes].clear()
-  }
-
-  async stopReporting () {
-    await this.sys.cancelReminder('siteReport')
-  }
-
-  async startReporting (period = '10s') {
-    await this.sys.cancelReminder({ id: 'siteReport' })
-    await this.sys.scheduleReminder('siteReport', { id: 'siteReport', deadline: Date.now(), period: period })
-  }
-
-  async enter (name = 'anon') {
-    console.log(`${name} entered Site ${this.sys.id}`)
-    await this.increment()
-  }
-
-  async leave ({ name = 'anon', delays = [] } = {}) {
-    const ds = this.delayStats
-    delays.forEach(function (missedMS, _) {
-      const missedBucket = Math.floor(missedMS / delaysBucketMS)
-      ds[missedBucket] = (ds[missedBucket] || 0) + 1
-    })
-    console.log(`${name} left Site ${this.sys.id}`)
-    await this.decrement()
-  }
-
-  async workDay ({ workers = 3, steps = 20, thinkms = 10000 } = {}) {
-    console.log(`${workers} starting their shift of ${steps} tasks at ${this.sys.id}`)
-    const sn = this.nextSerialNumber
-    await this.updateNextSerialNumber(sn + workers)
-    for (var i = 0; i < workers; i++) {
-      const name = sn + i
-      await actor.tell('Researcher', name, 'work', { site: this.sys.id, steps, thinkms })
-    }
-  }
-
-  async siteReport () {
-    const totalWorking = await this.count
-    const floor0 = await actors.Floor[0].count()
-    const floor1 = await actors.Floor[1].count()
-    const floor2 = await actors.Floor[2].count()
-    const coffee = await actors.Office[OutTakes].count()
-    const cafeteria = await actors.Office[Cafeteria].count()
-    const time = new Date().toString()
-
-    const status = { totalWorking, floor0, floor1, floor2, coffee, cafeteria, time }
-    console.log(status)
-    // TODO: publish siteReport to KAR pub-sub
-    // await publish('siteReport', status)
-    return status
-  }
-
-  async searchParty () {
-    const lost = []
-    for (var i = 0; i < this.nextSerialNumber; i++) {
-      const s = await actors.Researcher[i].currentState()
-      if (s.location) {
-        console.log(`Researcher ${i} is found at `, s)
-        lost.push(i)
-      }
-    }
-    return lost
-  }
-
-  async delayReport () {
-    for (const i in this.delayStats) {
-      console.log(`<${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.delayStats[i]}`)
-    }
-    return { bucketSizeInMS: delaysBucketMS, delayHistogram: this.delayStats }
-  }
-
-  resetDelayStats () {
-    this.delayStats = []
-  }
-}
-
-class Floor extends ActorWithCount {
-  get type () { return 'Floor' }
-}
-
-class Office extends ActorWithCount {
-  get type () { return 'Office' }
-  getAisle () { return getAisle(this.sys.id) }
-  getFloor () { return getFloor(this.sys.id) }
-  getRoom () { return getRoom(this.sys.id) }
-  isEmpty () { return this.count === 0 }
-
-  prettyName () {
-    if (this.sys.id === OutTakes) { return 'OutTakes' }
-    if (this.sys.id === Cafeteria) { return 'Cafeteria' }
-    return `${this.getAisle()}-${this.getRoom()}`
-  }
-
-  async enter (name = 'anon') {
-    if (verbose) console.log(`Office: ${name} entered office ${this.prettyName()}`)
-    await this.increment()
-    await actors.Floor[this.getFloor()].increment()
-  }
-
-  async leave (name = 'anon') {
-    if (verbose) console.log(`Office: ${name} left office ${this.prettyName()}`)
-    await this.decrement()
-    await actors.Floor[this.getFloor()].decrement()
-  }
-}
-
-class Researcher {
-  get name () { return this.sys.id }
-
-  get location () { return this._state.location }
-  set location (loc) { this._state.location = loc }
-
-  get site () { return this._state.site }
-  set site (s) { this._state.site = s }
-
-  get steps () { return this._state.steps }
-  set steps (s) { this._state.steps = s }
-
-  get thinkms () { return this._state.thinkms }
-  set thinkms (t) { this._state.thinkms = t }
-
-  recordJitter (ms) {
-    if (this._state.delays === undefined) {
-      this._state.delays = []
-    }
-    this._state.delays.push(ms)
-  }
-
-  currentState () { return this._state }
-  async checkpointState () {
-    await this.sys.set('state', this._state)
-  }
-
-  async activate () {
-    this._state = await this.sys.get('state') || {}
-    if (verbose) console.log(`activated Researcher ${this.name} with state `, this._state)
-  }
-
-  async deactivate () {
-    if (verbose) console.log(`deactivated Researcher ${this.name}`)
-  }
-
-  async work ({ site, steps, thinkms }) {
-    this.site = site
-    this.steps = steps
-    this.thinkms = thinkms
-    this.location = randomOffice()
-    const thinkTime = 1 + randI(this.thinkms)
-    await this.checkpointState()
-    await actors.Site[site].enter(this.name)
-    await actors.Office[this.location].enter(this.name)
-    const deadline = new Date(Date.now() + thinkTime)
-    await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
-  }
-
-  async move (targetTime) {
-    this.recordJitter(Math.abs(Date.now() - targetTime))
-    if (verbose) console.log(`Researcher: ${this.name} entered move`)
-    const oldLocation = this.location
-    await actors.Office[oldLocation].leave(this.name)
-
-    this.steps = this.steps - 1
-    if (this.steps === 0) {
-      await actors.Site[this.site].leave({ name: this.name, delays: this._state.delays })
-      await this.sys.delete('state')
-      console.log(`Quitting time for ${this.name}`)
-    } else {
-      const nextMove = Math.random()
-      let nextLocation
-      let thinkTime = 1 + randI(this.thinkms)
-      if (nextMove < 0.15) {
-        // 15% chance of getting coffee
-        nextLocation = OutTakes
-        console.log(`Coffee time for ${this.name}`)
-      } else if (nextMove < 0.20) {
-        // 5% chance of lunchtime
-        nextLocation = Cafeteria
-        thinkTime = thinkTime * 2
-        console.log(`Lunch time for ${this.name}`)
-      } else {
-        nextLocation = randomOffice()
-        if (!await actors.Office[nextLocation].isEmpty()) {
-          thinkTime = thinkTime * 3
-          console.log(`${this.name} is heading to a meeting at ${nextLocation}`)
-        }
-      }
-
-      this.location = nextLocation
-      await this.checkpointState()
-      await actors.Office[this.location].enter(this.name)
-      if (verbose) console.log(`Researcher: ${this.name} starting reminder update`)
-      const deadline = new Date(Date.now() + thinkTime)
-      await this.sys.scheduleReminder('move', { id: 'move', deadline, data: deadline.getTime() })
-      if (verbose) console.log(`Researcher: ${this.name} completed reminder update`)
-    }
-    if (verbose) console.log(`Researcher: ${this.name} exited move`)
-  }
-}
-
-app.use(actorRuntime({ Site, Floor, Office, Researcher }))
-
-app.use(errorHandler) // enable kar error handling
-
+app.use(actorRuntime({ Company, Site, Office, Researcher }))
+app.use(errorHandler)
 const server = h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')
