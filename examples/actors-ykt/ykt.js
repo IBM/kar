@@ -44,6 +44,16 @@ class Company {
 
   get count () { return Object.keys(this.bluepages).length }
 
+  activeEmployees ({ site }) {
+    const ans = []
+    for (const sn in this.bluepages) {
+      if (this.bluepages[sn] === site) {
+        ans.push(sn)
+      }
+    }
+    return ans
+  }
+
   async hire ({ site = 'Yorktown', workers = 3, days = 1, steps = 20, thinkms = 10000 } = {}) {
     if (!this.sites.includes(site)) {
       this.sites.push(site)
@@ -76,13 +86,8 @@ class Company {
 // Sites update rapidly changing aggregate statistics by processing
 // the workerUpdate and retire messages from individual workers.
 // Rather than checkpointing this data on every change, we will instead
-// detect when a Site is being restored from a potentially outdated checkpoint
+// detect when a Site is being activated from a potentially outdated checkpoint
 // and recompute the summary.
-// TODO: This recovery is not yet implemented.
-// Most likely scheme is that Company reliably
-// tracks the names of all Researchers assigned to the site, so that a
-// recovery can be implemented by getting the state of each of them to
-// rebuild the workers object.
 class Site {
   get count () { return Object.keys(this.workers).length }
 
@@ -99,11 +104,16 @@ class Site {
     this.delayStats = state.delayStats || []
     this.workers = state.workers || {}
     this.company = state.company
+    await this.sys.set('cleanShutdown', false)
+    if (this.company !== undefined && state.cleanShutdown !== true) {
+      await actor.tell('Site', this.sys.id, 'rebuildWorkerState')
+    }
     if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
   }
 
   async deactivate () {
     await this.checkpoint()
+    await this.sys.set('cleanShutdown', true)
     if (debug) console.log(`deactivated Site ${this.sys.id}`)
   }
 
@@ -133,6 +143,13 @@ class Site {
   async workerUpdate ({ who, activity, office }) {
     if (this.workers[who] !== undefined) {
       this.workers[who] = activity
+    }
+  }
+
+  async rebuildWorkerState () {
+    const employees = await actor.call('Company', this.company, 'activeEmployees', { site: this.sys.id })
+    for (const sn of employees) {
+      this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
     }
   }
 
