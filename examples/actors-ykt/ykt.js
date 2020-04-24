@@ -1,6 +1,6 @@
 const express = require('express')
 
-const { logger, jsonParser, errorHandler, shutdown, actor, actors, actorRuntime, h2c } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actor, actorRuntime, h2c } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -295,7 +295,7 @@ class Researcher {
 
     if (this.location !== undefined) {
       const oldLocation = this.location
-      await actors.Office[oldLocation].leave(this.name)
+      await actor.call('Office', oldLocation, 'leave', { who: this.name })
     }
 
     // Figure out what this Researcher will do next
@@ -328,7 +328,7 @@ class Researcher {
       nextLocation = Office.randomOffice(this.site)
       nextActivity = States.WORKING
     }
-    if (nextLocation !== undefined && !await actors.Office[nextLocation].isEmpty()) {
+    if (nextLocation !== undefined && !await actor.call('Office', nextLocation, 'isEmpty')) {
       // If our nextLocation is non-empty, we will spend more time there.
       thinkTime = thinkTime * 2
     }
@@ -345,7 +345,7 @@ class Researcher {
     }
 
     if (this.location !== undefined) {
-      await actors.Office[this.location].enter(this.name)
+      await actor.call('Office', this.location, 'enter', { who: this.name })
     }
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
