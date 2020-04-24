@@ -85,9 +85,14 @@ class Company {
 
 // Sites update rapidly changing aggregate statistics by processing
 // the workerUpdate and retire messages from individual workers.
+//
+// These statistics are periodically reported via siteReport.
+//
 // Rather than checkpointing this data on every change, we will instead
-// detect when a Site is being activated from a potentially outdated checkpoint
-// and recompute the summary.
+// detect in `activate` when a Site is being loaded from a potentially
+// outdated checkpoint and take corrective actions by rebuilding the list
+// of employees currently assigned to the site and relying on workerUpdate
+// future workerUpdate messages to gradually recover a view on site activity.
 class Site {
   get count () { return Object.keys(this.workers).length }
 
@@ -106,7 +111,10 @@ class Site {
     this.company = state.company
     await this.sys.set('cleanShutdown', false)
     if (this.company !== undefined && state.cleanShutdown !== true) {
-      await actor.tell('Site', this.sys.id, 'rebuildWorkerState')
+      const employees = await actor.call('Company', this.company, 'activeEmployees', { site: this.sys.id })
+      for (const sn of employees) {
+        this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
+      }
     }
     if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
   }
@@ -134,6 +142,7 @@ class Site {
       const missedBucket = Math.floor(missedMS / delaysBucketMS)
       ds[missedBucket] = (ds[missedBucket] || 0) + 1
     })
+    this.sys.set('delayStats', this.delayStats)
 
     await actor.call('Company', this.company, 'retire', { who })
     delete this.workers[who]
@@ -143,13 +152,6 @@ class Site {
   async workerUpdate ({ who, activity, office }) {
     if (this.workers[who] !== undefined) {
       this.workers[who] = activity
-    }
-  }
-
-  async rebuildWorkerState () {
-    const employees = await actor.call('Company', this.company, 'activeEmployees', { site: this.sys.id })
-    for (const sn of employees) {
-      this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
     }
   }
 
