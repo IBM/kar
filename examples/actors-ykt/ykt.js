@@ -98,7 +98,7 @@ class Site {
 
   async checkpoint () {
     const state = {
-      delayStats: this.delayStats,
+      reminderDelays: this.reminderDelays,
       workers: this.workers
     }
     await this.sys.setMultiple(state)
@@ -106,7 +106,7 @@ class Site {
 
   async activate () {
     const state = await this.sys.getAll()
-    this.delayStats = state.delayStats || []
+    this.reminderDelays = state.reminderDelays || []
     this.workers = state.workers || {}
     this.company = state.company
     await this.sys.set('cleanShutdown', false)
@@ -137,12 +137,12 @@ class Site {
   }
 
   async retire ({ who, delays = [] }) {
-    const ds = this.delayStats
+    const ds = this.reminderDelays
     delays.forEach(function (missedMS, _) {
       const missedBucket = Math.floor(missedMS / delaysBucketMS)
       ds[missedBucket] = (ds[missedBucket] || 0) + 1
     })
-    this.sys.set('delayStats', this.delayStats)
+    this.sys.set('reminderDelays', this.reminderDelays)
 
     await actor.call('Company', this.company, 'retire', { who })
     delete this.workers[who]
@@ -159,6 +159,8 @@ class Site {
     const siteEmployees = this.count
     const time = new Date().toString()
     const status = { site: this.sys.id, siteEmployees, time }
+    status.delaysBucketMS = delaysBucketMS
+    status.reminderDelays = this.reminderDelays
     if (siteEmployees > 0) {
       for (const s in States) {
         status[States[s]] = 0
@@ -174,14 +176,14 @@ class Site {
   }
 
   delayReport () {
-    for (const i in this.delayStats) {
-      if (verbose) console.log(`${this.sys.id}: <${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.delayStats[i]}`)
+    for (const i in this.reminderDelays) {
+      if (verbose) console.log(`${this.sys.id}: <${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.reminderDelays[i]}`)
     }
-    return { site: this.sys.id, bucketSizeInMS: delaysBucketMS, delayHistogram: this.delayStats }
+    return { site: this.sys.id, bucketSizeInMS: delaysBucketMS, delayHistogram: this.reminderDelays }
   }
 
   resetDelayStats () {
-    this.delayStats = []
+    this.reminderDelays = []
   }
 }
 

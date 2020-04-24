@@ -24,6 +24,12 @@ async function testTermination (failure) {
   await shutdown()
 }
 
+function prettyPrintHistogram (header, bucketSizeInMS, histogram) {
+  console.log(header)
+  for (const i in histogram) {
+    console.log(`\t<${(parseInt(i) + 1) * bucketSizeInMS}ms\t${histogram[i] || 0}`)
+  }
+}
 async function main () {
   let failure = false
 
@@ -49,12 +55,16 @@ async function main () {
     if (employees === 0) {
       for (const site in researchDivision) {
         console.log(`Valiadating ${site}`)
-        const delays = await actor.call('Site', site, 'delayReport')
-        console.log(delays)
-        const count = delays.delayHistogram.reduce((x, y) => x + y, 0)
+        const sr = await actor.call('Site', site, 'siteReport')
+        if (sr.siteEmployees !== 0) {
+          console.log(`FAILURE: ${sr.siteEmployees} stranded employees at ${site}`)
+          failure = true
+        }
+        prettyPrintHistogram(`Reminder Delays for ${site}`, sr.delaysBucketMS, sr.reminderDelays)
+        const count = sr.reminderDelays.reduce((x, y) => x + y, 0)
         const expectedSteps = researchDivision[site].workers * researchDivision[site].steps * researchDivision[site].days
         if (count !== expectedSteps) {
-          console.log(`FAILURE: Expected ${expectedSteps} moves but got ${count}`)
+          console.log(`FAILURE: At ${site} expected ${expectedSteps} steps, but actual value is ${count}`)
           failure = true
         }
       }
