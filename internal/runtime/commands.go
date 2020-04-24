@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/events"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -319,8 +318,13 @@ func forwardToSidecar(ctx context.Context, msg map[string]string) error {
 
 // Process processes one incoming message
 func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
-	msg := message.Value
-	var err error
+	var msg map[string]string
+	err := json.Unmarshal(message.Value, &msg)
+	if err != nil {
+		logger.Error("failed to unmarshal message: %v", err)
+		message.Mark()
+		return
+	}
 	switch msg["protocol"] {
 	case "service":
 		if msg["service"] == config.ServiceName {
@@ -488,12 +492,12 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	done := make(chan struct{})
 	s := subscription{sub: make(chan subscriber, 1), cancel: cancel, done: done}
 	subscriptions.Store(id, s)
-	ch, err := events.Subscribe(c, topic, id, m["oldest"] != "")
+	ch, err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""})
 	if err != nil {
 		return "", err
 	}
 	ok := true
-	var msg events.Event
+	var msg pubsub.Message
 	go func() {
 		for ok {
 			select {

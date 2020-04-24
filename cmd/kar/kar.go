@@ -20,7 +20,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/events"
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/runtime"
 	"github.ibm.com/solsa/kar.git/internal/store"
@@ -551,7 +550,7 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Publish an event to a topic
 //
-// The event provived as the request body will be published on `topic`.
+// The event provided as the request body will be published on `topic`.
 // When the operation returns successfully, the event is guarenteed to
 // eventually be published to the targeted topic.
 //
@@ -564,7 +563,7 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// FIXME: https://github.ibm.com/solsa/kar/issues/30
 	//        Should return a 404 if topic doesn't exist.
 	buf, _ := ioutil.ReadAll(r.Body)
-	err := events.Publish(ps.ByName("topic"), buf)
+	err := pubsub.Publish(ps.ByName("topic"), buf)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusInternalServerError)
 	} else {
@@ -706,16 +705,18 @@ func main() {
 		logger.Fatal("listener failed: %v", err)
 	}
 
-	channel := pubsub.Dial(ctx)
+	if pubsub.Dial() != nil {
+		logger.Fatal("dial failed: %v", err)
+	}
 	defer pubsub.Close()
 
 	store.Dial()
 	defer store.Close()
 
-	if events.Dial() != nil {
-		logger.Fatal("dial failed %v: ", err)
+	channel, err := pubsub.Join(ctx)
+	if err != nil {
+		logger.Fatal("join failed: %v", err)
 	}
-	defer events.Close()
 
 	wg.Add(1)
 	go func() {

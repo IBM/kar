@@ -1,4 +1,4 @@
-package events
+package pubsub
 
 import (
 	"github.com/Shopify/sarama"
