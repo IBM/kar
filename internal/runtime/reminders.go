@@ -199,10 +199,10 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 			break
 		}
 		if fireTime.After(r.Deadline.Add(config.ActorReminderAcceptableDelay)) {
-			logger.Warning("ProcessReminders: LATE by %v in firing %v to %v[%v]/%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
+			logger.Warning("ProcessReminders: LATE by %v in firing %v to %v[%v]%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
 		}
 
-		logger.Debug("ProcessReminders: firing %v to %v[%v]/%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
+		logger.Debug("ProcessReminders: firing %v to %v[%v]%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
 		err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/json")
 		if err != nil {
 			logger.Error("ProcessReminders: firing %v raised error %v", r, err)
