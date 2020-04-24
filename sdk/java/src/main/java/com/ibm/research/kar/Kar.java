@@ -41,6 +41,11 @@ public class Kar {
 	public Response actorCall(String type, String id,  String path, Map<String,Object> params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, params);
 	}
+	
+	// migrate actor
+	public Response actorMigrate(String type, String id) throws ProcessingException {
+		return karClient.actorMigrate(type, id);
+	}
 
 	
 	/*
@@ -61,12 +66,6 @@ public class Kar {
 		return karClient.actorScheduleReminder(type, id, params);
 	}
 
-
-	// broadcast to all sidecars except for ours
-	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException {
-		return karClient.broadcast(path, params);
-	}
-	
 	/*
 	 * Actor State Operations
 	 */
@@ -88,5 +87,38 @@ public class Kar {
     public Response actorDeleteAllState(String type,  String id) throws ProcessingException {
     	return karClient.actorDeleteAllState(type, id);
     }
+    
+    // Events
+    public Response subscribe(String topic) throws ProcessingException {
+    	return karClient.subscribe(topic);
+    }
+    
+    public Response unsubscribe(String topic) throws ProcessingException {
+    	return karClient.unsubscribe(topic);
+    }
+    
+    public Response publish(String topic) throws ProcessingException {
+    	return karClient.publish(topic);
+    }
+    
+    
+    // System
+	// broadcast to all sidecars except for ours
+	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException {
+		return karClient.broadcast(path, params);
+	}
+	
+	public Response health() {
+		return karClient.health();
+	}
+	
+	public Response kill() {
+		return karClient.kill();
+	}
+	
+	public Response killAll() {
+		return karClient.killAll();
+	}
+	
 
 }
