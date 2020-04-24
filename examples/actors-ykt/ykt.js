@@ -175,13 +175,6 @@ class Site {
     return status
   }
 
-  delayReport () {
-    for (const i in this.reminderDelays) {
-      if (verbose) console.log(`${this.sys.id}: <${(parseInt(i) + 1) * delaysBucketMS}ms\t${this.reminderDelays[i]}`)
-    }
-    return { site: this.sys.id, bucketSizeInMS: delaysBucketMS, delayHistogram: this.reminderDelays }
-  }
-
   resetDelayStats () {
     this.reminderDelays = []
   }
