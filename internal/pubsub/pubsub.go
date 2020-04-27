@@ -59,7 +59,7 @@ func Dial() error {
 		return err
 	}
 
-	admin, err = sarama.NewClusterAdminFromClient(client)
+	admin, err = sarama.NewClusterAdmin(config.KafkaBrokers, conf)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
 		return err
@@ -82,6 +82,7 @@ func Close() {
 	wg.Wait() // wait for all consumer groups to finish
 	producer.Close()
 	admin.Close()
+	client.Close()
 }
 
 func newConfig() (*sarama.Config, error) {
