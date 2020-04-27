@@ -705,13 +705,15 @@ func main() {
 		logger.Fatal("listener failed: %v", err)
 	}
 
+	if store.Dial() != nil {
+		logger.Fatal("failed to connect to Redis: %v", err)
+	}
+	defer store.Close()
+
 	if pubsub.Dial() != nil {
 		logger.Fatal("dial failed: %v", err)
 	}
 	defer pubsub.Close()
-
-	store.Dial()
-	defer store.Close()
 
 	channel, err := pubsub.Join(ctx)
 	if err != nil {

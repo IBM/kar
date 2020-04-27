@@ -9,7 +9,6 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
@@ -163,7 +162,7 @@ func ZRemRangeByScore(key string, min, max int64) (int, error) {
 }
 
 // Dial establishes a connection to the store.
-func Dial() {
+func Dial() error {
 	redisOptions := []redis.DialOption{}
 	if config.RedisEnableTLS {
 		redisOptions = append(redisOptions, redis.DialUseTLS(true))
@@ -174,18 +173,13 @@ func Dial() {
 	}
 	var err error
 	conn, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
-	if err != nil {
-		logger.Fatal("failed to connect to Redis: %v", err)
-	}
+	return err
 }
 
 // Close closes the connection to the store.
-func Close() {
+func Close() error {
 	// forcefully closing the connection appears to correctly and immediately
 	// terminate pending requests as well as prevent new commands to be sent to
 	// redis so there is no need for synchronization here
-	err := conn.Close()
-	if err != nil {
-		logger.Error("failed to close connection to Redis: %v", err)
-	}
+	return conn.Close()
 }
