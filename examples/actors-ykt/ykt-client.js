@@ -25,9 +25,15 @@ async function testTermination (failure) {
 }
 
 function prettyPrintHistogram (header, bucketSizeInMS, histogram) {
+  const population = histogram.reduce((x, y) => x + y, 0)
   console.log(header)
+  console.log('Bucket\tCount\tPercent\tCumulative%')
+  let accumPercent = 0
   for (const i in histogram) {
-    console.log(`\t<${(parseInt(i) + 1) * bucketSizeInMS}ms\t${histogram[i] || 0}`)
+    const value = histogram[i] || 0
+    const percent = value / population * 100
+    accumPercent += percent
+    console.log(`\t<${(parseInt(i) + 1) * bucketSizeInMS}ms\t${value}\t${(percent).toFixed(2)}\t${(accumPercent).toFixed(2)}`)
   }
 }
 async function main () {
@@ -53,6 +59,8 @@ async function main () {
     const employees = await actor.call('Company', 'IBM', 'count')
     console.log(`Num employees is ${employees}`)
     if (employees === 0) {
+      const summary = { reminderDelays: [], tellLatencies: [] }
+      let bucketSizeInMS
       for (const site in researchDivision) {
         console.log(`Valiadating ${site}`)
         const sr = await actor.call('Site', site, 'siteReport')
@@ -60,14 +68,23 @@ async function main () {
           console.log(`FAILURE: ${sr.siteEmployees} stranded employees at ${site}`)
           failure = true
         }
-        prettyPrintHistogram(`Reminder Delays for ${site}`, sr.delaysBucketMS, sr.reminderDelays)
         const count = sr.reminderDelays.reduce((x, y) => x + y, 0)
         const expectedSteps = researchDivision[site].workers * researchDivision[site].steps * researchDivision[site].days
         if (count !== expectedSteps) {
           console.log(`FAILURE: At ${site} expected ${expectedSteps} steps, but actual value is ${count}`)
           failure = true
         }
+        bucketSizeInMS = sr.bucketSizeInMS
+        for (const idx in sr.reminderDelays) {
+          summary.reminderDelays[idx] = (sr.reminderDelays[idx] || 0) + (summary.reminderDelays[idx] || 0)
+        }
+        for (const idx in sr.workerUpdateLatency) {
+          summary.tellLatencies[idx] = (sr.workerUpdateLatency[idx] || 0) + (summary.tellLatencies[idx] || 0)
+        }
       }
+      prettyPrintHistogram('Reminder Delays', bucketSizeInMS, summary.reminderDelays)
+      prettyPrintHistogram('Tell Latency', bucketSizeInMS, summary.tellLatencies)
+
       break
     }
   }

@@ -19,7 +19,7 @@ const States = {
   LUNCH: 'lunch'
 }
 
-const delaysBucketMS = 100
+const bucketSizeInMS = 100
 
 class Company {
   async checkpoint () {
@@ -99,6 +99,7 @@ class Site {
   async checkpoint () {
     const state = {
       reminderDelays: this.reminderDelays,
+      workerUpdateLatency: this.workerUpdateLatency,
       workers: this.workers
     }
     await this.sys.setMultiple(state)
@@ -107,6 +108,7 @@ class Site {
   async activate () {
     const state = await this.sys.getAll()
     this.reminderDelays = state.reminderDelays || []
+    this.workerUpdateLatency = state.workerUpdateLatency || []
     this.workers = state.workers || {}
     this.company = state.company
     await this.sys.set('cleanShutdown', false)
@@ -139,7 +141,7 @@ class Site {
   async retire ({ who, delays = [] }) {
     const ds = this.reminderDelays
     delays.forEach(function (missedMS, _) {
-      const missedBucket = Math.floor(missedMS / delaysBucketMS)
+      const missedBucket = Math.floor(missedMS / bucketSizeInMS)
       ds[missedBucket] = (ds[missedBucket] || 0) + 1
     })
     this.sys.set('reminderDelays', this.reminderDelays)
@@ -149,9 +151,12 @@ class Site {
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
   }
 
-  async workerUpdate ({ who, activity, office }) {
+  async workerUpdate ({ who, activity, office, timestamp }) {
     if (this.workers[who] !== undefined) {
       this.workers[who] = activity
+      const lag = Date.now() - timestamp
+      const missedBucket = Math.floor(lag / bucketSizeInMS)
+      this.workerUpdateLatency[missedBucket] = (this.workerUpdateLatency[missedBucket] || 0) + 1
     }
   }
 
@@ -159,8 +164,9 @@ class Site {
     const siteEmployees = this.count
     const time = new Date().toString()
     const status = { site: this.sys.id, siteEmployees, time }
-    status.delaysBucketMS = delaysBucketMS
+    status.bucketSizeInMS = bucketSizeInMS
     status.reminderDelays = this.reminderDelays
+    status.workerUpdateLatency = this.workerUpdateLatency
     if (siteEmployees > 0) {
       for (const s in States) {
         status[States[s]] = 0
@@ -177,6 +183,7 @@ class Site {
 
   resetDelayStats () {
     this.reminderDelays = []
+    this.workerUpdateLatency = []
   }
 }
 
@@ -270,7 +277,8 @@ class Researcher {
   async updateActivity (newActivity, newLocation) {
     if (verbose) console.log(`${this.site}: ${this.name} is now ${newActivity} at ${newLocation || 'off-site'}`)
     if (this.activity !== newActivity) {
-      await actor.tell('Site', this.site, 'workerUpdate', { who: this.name, activity: newActivity, office: newLocation })
+      await actor.tell('Site', this.site, 'workerUpdate',
+        { who: this.name, activity: newActivity, office: newLocation, timestamp: Date.now() })
       this.activity = newActivity
     }
   }
