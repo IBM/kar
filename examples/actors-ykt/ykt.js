@@ -117,7 +117,6 @@ class Site {
       for (const sn of employees) {
         this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
       }
-      await actor.tell('Site', this.sys.id, 'validateRecoveredEmployees')
     }
     if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
   }
@@ -150,23 +149,6 @@ class Site {
     await actor.call('Company', this.company, 'retire', { who })
     delete this.workers[who]
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
-  }
-
-  // This logic should not be needed. KAR should not lose these reminders.
-  // Need to investigate and fix the actual bug.
-  async validateRecoveredEmployees () {
-    console.log('EXECXUTING VALIDATED RECOVEED EMPLOYEES')
-    for (const worker in this.workers) {
-      if (this.workers[worker] === States.ONBOARDING) {
-        const reminders = await actor.getReminder('Researcher', worker)
-        if (reminders.length === 0) {
-          console.log(`RECOVERY ERROR: ${worker} has no active reminders`)
-          await actor.tell('Researcher', worker, 'move', Date.now())
-        } else {
-          console.log(`OK for ${worker}`)
-        }
-      }
-    }
   }
 
   async workerUpdate ({ who, activity, office, timestamp }) {
