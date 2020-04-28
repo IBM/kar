@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"sync"
 
@@ -20,10 +21,11 @@ func mangle(topic string, partition int32) string {
 
 // data exchanged when setting up consumer group session for application topic
 type userData struct {
-	Sidecar string                       // id of this sidecar
-	Service string                       // name of this service
-	Actors  []string                     // types of actors implemented by this service
-	Offsets map[int32]map[int64]struct{} // live local offsets
+	Sidecar                 string   // id of this sidecar
+	Service                 string   // name of this service
+	Actors                  []string // types of actors implemented by this service
+	PartitionZeroIneligible bool
+	Offsets                 map[int32]map[int64]struct{} // live local offsets
 }
 
 // Options specifies the options for subscribing to a topic
@@ -87,10 +89,11 @@ func (h *handler) marshal() {
 	h.lock.Lock()
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
-			Sidecar: config.ID,
-			Service: config.ServiceName,
-			Actors:  config.ActorTypes,
-			Offsets: h.local,
+			Sidecar:                 config.ID,
+			Service:                 config.ServiceName,
+			Actors:                  config.ActorTypes,
+			PartitionZeroIneligible: config.PartitionZeroIneligible,
+			Offsets:                 h.local,
 		})
 	} else {
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(h.local) // exchange only local progress
@@ -265,7 +268,11 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 		wg.Done()
 		return nil, err
 	}
-	conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	if options.master {
+		conf.Consumer.Group.Rebalance.Strategy = &customStrategy{}
+	} else {
+		conf.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	}
 	if options.OffsetOldest {
 		conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
@@ -300,4 +307,49 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 
 	<-handler.ready // wait for first session setup
 	return handler.out, nil
+}
+
+type entry struct {
+	memberID string
+	avoid    bool
+}
+
+type customStrategy struct{}
+
+func (s *customStrategy) Name() string { return "custom" }
+
+func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
+	partitions := topics[topic]
+
+	entries := []entry{}
+	for memberID, m := range members {
+		var d userData
+		json.Unmarshal(m.UserData, &d)
+		entries = append(entries, entry{memberID: memberID, avoid: d.PartitionZeroIneligible})
+	}
+
+	for i, e := range entries {
+		if !e.avoid {
+			if i != 0 {
+				entries[i] = entries[0]
+				entries[0] = e
+			}
+			break
+		}
+	}
+
+	plan := make(sarama.BalanceStrategyPlan, len(members))
+	step := float64(len(partitions)) / float64(len(entries))
+
+	for i, e := range entries {
+		pos := float64(i)
+		min := int(math.Floor(pos*step + 0.5))
+		max := int(math.Floor((pos+1)*step + 0.5))
+		plan.Add(e.memberID, topic, partitions[min:max]...)
+	}
+	return plan, nil
+}
+
+func (s *customStrategy) AssignmentData(memberID string, topics map[string][]int32, generationID int32) ([]byte, error) {
+	return nil, nil
 }
