@@ -22,6 +22,7 @@ kar:
     sidecarImageTag: 'latest'
 
 global:
+  kafkaExternalHost: localhost
   kafkaNodePort: 31093
   redisNodePort: 31379
   clusterSubDomain: cluster.local
