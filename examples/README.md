@@ -15,5 +15,5 @@ charts.  See the README.md in each directory for instructions.
 + [Yorktown Simulation](./actors-ykt) demonstrates using KAR's agent
   model for virtual stateful services to implement a scalable simulation.
 
-+ (Unit Tests](./unit-tests) contains unit tests and scripts to
++ [Unit Tests](./unit-tests) contains unit tests and scripts to
   exeucte them.
