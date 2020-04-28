@@ -117,6 +117,7 @@ class Site {
       for (const sn of employees) {
         this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
       }
+      await actor.tell('Site', this.sys.id, 'validateRecoveredEmployees')
     }
     if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
   }
@@ -151,6 +152,23 @@ class Site {
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
   }
 
+  // This logic should not be needed. KAR should not lose these reminders.
+  // Need to investigate and fix the actual bug.
+  async validateRecoveredEmployees () {
+    console.log('EXECXUTING VALIDATED RECOVEED EMPLOYEES')
+    for (const worker in this.workers) {
+      if (this.workers[worker] === States.ONBOARDING) {
+        const reminders = await actor.getReminder('Researcher', worker)
+        if (reminders.length === 0) {
+          console.log(`RECOVERY ERROR: ${worker} has no active reminders`)
+          await actor.tell('Researcher', worker, 'move', Date.now())
+        } else {
+          console.log(`OK for ${worker}`)
+        }
+      }
+    }
+  }
+
   async workerUpdate ({ who, activity, office, timestamp }) {
     if (this.workers[who] !== undefined) {
       this.workers[who] = activity
@@ -181,9 +199,10 @@ class Site {
     return status
   }
 
-  resetDelayStats () {
+  async resetDelayStats () {
     this.reminderDelays = []
     this.workerUpdateLatency = []
+    await this.sys.setMultiple({ reminderDelays: [], workerUpdateLatency: [] })
   }
 }
 
@@ -247,6 +266,7 @@ class Researcher {
   // Checkpoint only saves the transitory state of the Researcher
   // Initialize-only fields are persisted in newHire.
   async checkpointState () {
+    if (this.retired) return
     const state = {
       days: this.days,
       steps: this.steps,
@@ -344,6 +364,7 @@ class Researcher {
       await this.sys.scheduleReminder(nextCallback, { id: 'step', deadline, data: deadline.getTime() })
       await this.checkpointState()
     } else {
+      this.retired = true
       await actor.call('Site', this.site, 'retire', { who: this.name, delays: this.delays })
     }
 
