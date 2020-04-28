@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 	v1 "k8s.io/api/admission/v1"
@@ -27,6 +28,9 @@ const (
 	sendPortAnnotation    = "kar.ibm.com/sendPort"
 	recvPortAnnotation    = "kar.ibm.com/recvPort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
+	extraArgsAnnotation   = "kar.ibm.com/extraArgs"
+
+	extraArgsSeparator = ","
 
 	defaultSendPort = "8080"
 	defaultRecvPort = "3500"
@@ -213,6 +217,11 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 
 	if verbose, ok := annotations[verboseAnnotation]; ok {
 		cmd = append(cmd, "-v", verbose)
+	}
+
+	if moreArgs, ok := annotations[extraArgsAnnotation]; ok {
+		theArgs := strings.Split(moreArgs, extraArgsSeparator)
+		cmd = append(cmd, theArgs...)
 	}
 
 	return cmd, appEnv, recvPort
