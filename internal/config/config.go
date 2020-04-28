@@ -42,6 +42,9 @@ var (
 	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
 	KubernetesMode bool
 
+	// PartitionZeroIneligible when true, Partition 0 will not be assigned to this sidecar
+	PartitionZeroIneligible bool
+
 	// KafkaBrokers is an array of Kafka brokers
 	KafkaBrokers []string
 
@@ -72,7 +75,7 @@ var (
 	// ID is the unique id of this sidecar instance
 	ID = uuid.New().String()
 
-	// Enable h2c
+	// H2C enables h2c to communicate with the app service
 	H2C bool
 )
 
@@ -88,6 +91,7 @@ func init() {
 	flag.IntVar(&ServicePort, "send", 8080, "The service port")
 	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
+	flag.BoolVar(&PartitionZeroIneligible, "partition_zero_ineligible", false, "Is this sidecar ineligible to host parition zero?")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
 	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
