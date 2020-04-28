@@ -86,6 +86,19 @@ async function main () {
       prettyPrintHistogram('Tell Latency', bucketSizeInMS, summary.tellLatencies)
 
       break
+    } else {
+      const summary = { onboarding: 0, home: 0, commuting: 0, working: 0, meeting: 0, coffee: 0, lunch: 0 }
+      for (const site in researchDivision) {
+        const sr = await actor.call('Site', site, 'siteReport')
+        summary.onboarding += sr.onboarding || 0
+        summary.home += sr.home || 0
+        summary.commuting += sr.commuting || 0
+        summary.working += sr.working || 0
+        summary.meeting += sr.meeting || 0
+        summary.coffee += sr.coffee || 0
+        summary.lunch += sr.lunch || 0
+      }
+      console.log(summary)
     }
   }
 
