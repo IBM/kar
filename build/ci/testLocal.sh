@@ -25,4 +25,4 @@ npm install
 
 ./deploy/runServerLocally.sh &
 sleep 1
-./deploy/runClientLocally.sh
+ONE_SHOT_SERVER=1 ./deploy/runClientLocally.sh

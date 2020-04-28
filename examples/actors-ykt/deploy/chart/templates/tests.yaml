@@ -19,5 +19,3 @@ spec:
     env:
     - name: MAIN
       value: ykt-client.js
-    - name: KUBERNETES_MODE
-      value: 'true'

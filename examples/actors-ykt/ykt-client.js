@@ -15,7 +15,7 @@ async function testTermination (failure) {
     process.exitCode = 0
   }
 
-  if (!truthy(process.env.KUBERNETES_MODE)) {
+  if (truthy(process.env.ONE_SHOT_SERVER)) {
     console.log('Requesting server shutdown')
     await broadcast('shutdown')
   }
