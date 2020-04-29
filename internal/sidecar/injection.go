@@ -25,15 +25,17 @@ const (
 	actorAnnotation       = "kar.ibm.com/actors"
 	appNameAnnotation     = "kar.ibm.com/app"
 	serviceNameAnnotation = "kar.ibm.com/service"
-	sendPortAnnotation    = "kar.ibm.com/sendPort"
-	recvPortAnnotation    = "kar.ibm.com/recvPort"
+	sendPortAnnotationOLD = "kar.ibm.com/sendPort" // FIXME: deprecated; eventually remove
+	appPortAnnotation     = "kar.ibm.com/appPort"
+	recvPortAnnotationOLD = "kar.ibm.com/recvPort" // FIXME: deprecated; eventually remove
+	runtimePortAnnotation = "kar.ibm.com/runtimePort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 	extraArgsAnnotation   = "kar.ibm.com/extraArgs"
 
 	extraArgsSeparator = ","
 
-	defaultSendPort = "8080"
-	defaultRecvPort = "3500"
+	defaultAppPort     = "8080"
+	defaultRuntimePort = "3500"
 
 	sidecarName        = "kar"
 	karImagePullSecret = "kar.ibm.com.image-pull"
@@ -107,8 +109,8 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
-		cmdLine, appEnv, karPortStr := processAnnotations(pod)
-		karPort, err := strconv.Atoi(karPortStr)
+		cmdLine, appEnv, runtimePortStr := processAnnotations(pod)
+		runtimePort, err := strconv.Atoi(runtimePortStr)
 
 		if len(appEnv) > 0 {
 			for index, container := range containers {
@@ -122,9 +124,9 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			Command:       []string{"/kar/kar"},
 			Args:          cmdLine,
 			Env:           []corev1.EnvVar{{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
-			Ports:         []corev1.ContainerPort{{ContainerPort: int32(karPort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
-			LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/health", Port: intstr.FromInt(karPort)}}},
-			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/kill", Port: intstr.FromInt(karPort)}}},
+			Ports:         []corev1.ContainerPort{{ContainerPort: int32(runtimePort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
+			LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/health", Port: intstr.FromInt(runtimePort)}}},
+			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/kill", Port: intstr.FromInt(runtimePort)}}},
 			VolumeMounts:  []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)
@@ -201,19 +203,25 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 		cmd = append(cmd, "-actors", actors)
 	}
 
-	var sendPort = defaultSendPort
-	if sp, ok := annotations[sendPortAnnotation]; ok {
-		sendPort = sp
+	var appPort = defaultAppPort
+	if p, ok := annotations[sendPortAnnotationOLD]; ok {
+		appPort = p
 	}
-	cmd = append(cmd, "-send", sendPort)
-	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: sendPort})
+	if p, ok := annotations[appPortAnnotation]; ok {
+		appPort = p
+	}
+	cmd = append(cmd, "-send", appPort)
+	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: appPort})
 
-	var recvPort = defaultRecvPort
-	if rp, ok := annotations[recvPortAnnotation]; ok {
-		recvPort = rp
+	var runtimePort = defaultRuntimePort
+	if p, ok := annotations[recvPortAnnotationOLD]; ok {
+		runtimePort = p
 	}
-	cmd = append(cmd, "-recv", recvPort)
-	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: recvPort})
+	if p, ok := annotations[runtimePortAnnotation]; ok {
+		runtimePort = p
+	}
+	cmd = append(cmd, "-recv", runtimePort)
+	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: runtimePort})
 
 	if verbose, ok := annotations[verboseAnnotation]; ok {
 		cmd = append(cmd, "-v", verbose)
@@ -224,7 +232,7 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 		cmd = append(cmd, theArgs...)
 	}
 
-	return cmd, appEnv, recvPort
+	return cmd, appEnv, runtimePort
 }
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {

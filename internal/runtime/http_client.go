@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	url    = fmt.Sprintf("http://127.0.0.1:%d", config.ServicePort)
+	url    = fmt.Sprintf("http://127.0.0.1:%d", config.AppPort)
 	client http.Client
 )
 

@@ -33,8 +33,8 @@ var (
 	// ActorReminderAcceptableDelay controls the threshold at which reminders are logged as being late
 	ActorReminderAcceptableDelay time.Duration
 
-	// ServicePort is the HTTP port the service will be listening on
-	ServicePort int
+	// AppPort is the HTTP port the application process will be listening on
+	AppPort int
 
 	// RuntimePort is the HTTP port the runtime will be listening on
 	RuntimePort int
@@ -88,8 +88,10 @@ func init() {
 	flag.StringVar(&actorTypes, "actors", "", "The actor types implemented by this service, as a comma separated list")
 	flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval (default 100ms)")
 	flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
-	flag.IntVar(&ServicePort, "send", 8080, "The service port")
-	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port")
+	flag.IntVar(&AppPort, "send", 8080, "The service port (deprecated - use user_port)")
+	flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
+	flag.IntVar(&RuntimePort, "recv", 0, "The runtime port (deprecated - use sidecar_port")
+	flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 	flag.BoolVar(&PartitionZeroIneligible, "partition_zero_ineligible", false, "Is this sidecar ineligible to host parition zero?")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
