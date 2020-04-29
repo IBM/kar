@@ -11,16 +11,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.math.BigDecimal;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.KarParams;
-
-import com.ibm.research.kar.example.client.IncrServer;
 
 @Path("client")
 @ApplicationScoped
