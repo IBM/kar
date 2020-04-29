@@ -25,9 +25,7 @@ const (
 	actorAnnotation       = "kar.ibm.com/actors"
 	appNameAnnotation     = "kar.ibm.com/app"
 	serviceNameAnnotation = "kar.ibm.com/service"
-	sendPortAnnotationOLD = "kar.ibm.com/sendPort" // FIXME: deprecated; eventually remove
 	appPortAnnotation     = "kar.ibm.com/appPort"
-	recvPortAnnotationOLD = "kar.ibm.com/recvPort" // FIXME: deprecated; eventually remove
 	runtimePortAnnotation = "kar.ibm.com/runtimePort"
 	verboseAnnotation     = "kar.ibm.com/verbose"
 	extraArgsAnnotation   = "kar.ibm.com/extraArgs"
@@ -204,23 +202,17 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 	}
 
 	var appPort = defaultAppPort
-	if p, ok := annotations[sendPortAnnotationOLD]; ok {
-		appPort = p
-	}
 	if p, ok := annotations[appPortAnnotation]; ok {
 		appPort = p
 	}
-	cmd = append(cmd, "-send", appPort)
+	cmd = append(cmd, "-app_port", appPort)
 	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: appPort})
 
 	var runtimePort = defaultRuntimePort
-	if p, ok := annotations[recvPortAnnotationOLD]; ok {
-		runtimePort = p
-	}
 	if p, ok := annotations[runtimePortAnnotation]; ok {
 		runtimePort = p
 	}
-	cmd = append(cmd, "-recv", runtimePort)
+	cmd = append(cmd, "-runtime_port", runtimePort)
 	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: runtimePort})
 
 	if verbose, ok := annotations[verboseAnnotation]; ok {

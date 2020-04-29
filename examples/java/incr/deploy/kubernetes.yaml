@@ -15,7 +15,7 @@ spec:
       annotations:
         kar.ibm.com/app: incr-example
         kar.ibm.com/service: incr
-        kar.ibm.com/sendPort: "9080"
+        kar.ibm.com/appPort: "9080"
     spec:
       containers:
       - name: kar-server-container
@@ -40,7 +40,7 @@ spec:
       annotations:
         kar.ibm.com/app: incr-example
         kar.ibm.com/service: client
-        kar.ibm.com/sendPort: "9090"
+        kar.ibm.com/appPort: "9090"
     spec:
       containers:
       - name: kar-client-container
