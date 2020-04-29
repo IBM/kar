@@ -10,8 +10,8 @@ if [ -z "$KAR_NS" ]; then
 fi
 
 # delete secrets
-kubectl -n $KAR_NS delete secret kar.ibm.com.image-pull
-kubectl -n $KAR_NS delete secret kar.ibm.com.runtime-config
+kubectl -n $KAR_NS delete secret kar.ibm.com.image-pull 2>/dev/null
+kubectl -n $KAR_NS delete secret kar.ibm.com.runtime-config 2>/dev/null
 
 # label namespace as not KAR-enabled
 kubectl label namespace $KAR_NS kar.ibm.com/enabled=false --overwrite

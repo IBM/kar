@@ -46,7 +46,7 @@ fi
 
 cd $ROOTDIR
 
-kubectl create namespace kar-system || true
+kubectl create namespace kar-system 2>/dev/null || true
 
 if [ -n "$apikey" ]; then
     kubectl --namespace kar-system create secret docker-registry kar.ibm.com.image-pull --docker-server=us.icr.io --docker-username=iamapikey --docker-email=kar@ibm.com --docker-password=$apikey

@@ -15,7 +15,9 @@ if ! kubectl get namespace $KAR_NS 2>/dev/null 1>/dev/null; then
 fi
 
 # copy secrets from kar-system
-kubectl get secret kar.ibm.com.image-pull -n kar-system -o yaml | sed "s/kar-system/$KAR_NS/g" | kubectl -n $KAR_NS create -f -
+if kubectl get secret kar.ibm.com.image-pull -n kar-system 2>/dev/null 1>/dev/null; then
+    kubectl get secret kar.ibm.com.image-pull -n kar-system -o yaml | sed "s/kar-system/$KAR_NS/g" | kubectl -n $KAR_NS create -f -
+fi
 
 kubectl get secret kar.ibm.com.runtime-config -n kar-system -o yaml | sed "s/kar-system/$KAR_NS/g" | kubectl -n $KAR_NS create -f -
 

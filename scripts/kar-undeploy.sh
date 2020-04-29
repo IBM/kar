@@ -2,9 +2,9 @@
 
 # Script to automate removal of KAR runtime from a Kubernetes cluster
 
-helm delete kar -n kar-system
+echo "Undeploying KAR; deleting namespace may take a little while..."
 
-kubectl delete secret kar.ibm.com.image-pull -n kar-system
+helm delete kar -n kar-system
 
 kubectl delete ns kar-system
 
