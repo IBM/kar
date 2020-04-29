@@ -18,5 +18,6 @@ public class PropertiesResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Properties getProperties() {
 		return System.getProperties();
+		
 	}
 }

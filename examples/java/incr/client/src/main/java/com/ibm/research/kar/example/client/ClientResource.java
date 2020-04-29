@@ -16,7 +16,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.ibm.research.kar.Kar;
-import com.ibm.research.kar.KarParams;
 
 @Path("client")
 @ApplicationScoped
