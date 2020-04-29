@@ -13,14 +13,14 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-@Path("/kar")
+@Path("/kar/v1")
 @ApplicationScoped
 public class KarResource {
 
 	NumberService numService = new NumberService();
 
 	@POST
-	@Path("/tell/{service}/{path}")
+	@Path("/service/{service}/tell/{path}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response tell(Map<String,Object> params,
@@ -52,7 +52,7 @@ public class KarResource {
 	}
 
 	@POST
-	@Path("/call/{service}/{path}")
+	@Path("/service/{service}/call/{path}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response call(Map<String,Object> params,

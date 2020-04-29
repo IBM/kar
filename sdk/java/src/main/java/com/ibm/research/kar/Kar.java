@@ -1,13 +1,17 @@
 package com.ibm.research.kar;
 
-import java.util.Map;
+import java.net.URI;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @ApplicationScoped // change as needed
@@ -16,6 +20,19 @@ public class Kar {
 	@Inject
 	@RestClient
 	private KarRest karClient;
+	
+	public static final String DEFAULT_URI = "http://localhost:3500/";
+	
+	/*
+	 * Generate REST client (used when injection not possible, e.g. tests)
+	 */
+	public void buildRestClient() {
+		URI baseURI = URI.create(Kar.DEFAULT_URI);
+		
+		karClient = RestClientBuilder.newBuilder()
+                .baseUri(baseURI)
+                .build(KarRest.class);
+	}
 
 	
 	/******************
@@ -23,22 +40,22 @@ public class Kar {
 	 ******************/
 
 	// asynchronous service invocation, returns "OK" immediately
-	public Response tell(String service, String path, Map<String,Object> params) throws ProcessingException {
+	public Response tell(String service, String path, JsonObject params) throws ProcessingException {
 		return karClient.tell(service, path, params);
 	}
 
 	// synchronous service invocation, returns invocation result
-	public Response call(String service, String path, Map<String,Object> params) throws ProcessingException {
+	public Response call(String service, String path, JsonObject params) throws ProcessingException {
 		return karClient.call(service, path, params);
 	}
 
 	// asynchronous actor invocation, returns "OK" immediately
-	public Response actorTell(String type, String id, String path, Map<String,Object> params) throws ProcessingException {
+	public Response actorTell(String type, String id, String path, JsonObject params) throws ProcessingException {
 		return karClient.actorTell(type, id, path, params);
 	}
 
 	// synchronous actor invocation: returns invocation result
-	public Response actorCall(String type, String id,  String path, Map<String,Object> params) throws ProcessingException {
+	public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, params);
 	}
 	
@@ -51,19 +68,26 @@ public class Kar {
 	/*
 	 * Reminder Operations
 	 */
-	public Response actorCancelReminder(String type, String id, Map<String,Object> params) throws ProcessingException {
+	public Response actorCancelReminder(String type, String id, JsonObject params) throws ProcessingException {
 		return karClient.actorCancelReminder(type, id, params);
 
 	}
 
-	public Response actorGetReminder(String type, String id, Map<String,Object> params) throws ProcessingException {
+	public Response actorGetReminder(String type, String id, JsonObject params) throws ProcessingException {
 		return karClient.actorGetReminder(type, id, params);
 
 	}
 
-	public Response actorScheduleReminder(String type, String id, String path, Map<String,Object> params) throws ProcessingException {
-		params.put("path", "/"+"path");
-		return karClient.actorScheduleReminder(type, id, params);
+	public Response actorScheduleReminder(String type, String id, String path, JsonObject params) throws ProcessingException {
+ 
+		JsonObjectBuilder builder = Json.createObjectBuilder();
+        
+		builder.add("path", path);
+        params.entrySet().
+                forEach(e -> builder.add(e.getKey(), e.getValue()));
+    
+        JsonObject paramsWithPath =  builder.build();
+		return karClient.actorScheduleReminder(type, id, paramsWithPath);
 	}
 
 	/*
@@ -73,7 +97,7 @@ public class Kar {
     	return karClient.actorGetState(type, id, key);
     }
 
-    public Response actorSetState(String type,  String id,  String key, Map<String,Object> params) throws ProcessingException {
+    public Response actorSetState(String type,  String id,  String key, JsonObject params) throws ProcessingException {
     	return karClient.actorSetState(type, id, key, params);
     }
 

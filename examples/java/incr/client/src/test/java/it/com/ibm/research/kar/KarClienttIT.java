@@ -3,9 +3,9 @@ package it.com.ibm.research.kar;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import java.util.HashMap;
-import java.util.Map;
 
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.ws.rs.core.Response;
 
 import org.junit.jupiter.api.Test;
@@ -13,8 +13,8 @@ import org.microshed.testing.SharedContainerConfig;
 import org.microshed.testing.jaxrs.RESTClient;
 import org.microshed.testing.jupiter.MicroShedTest;
 
-import com.ibm.research.kar.KarParams;
 import com.ibm.research.kar.example.client.ClientResource;
+import com.ibm.research.kar.example.client.KarParams;
 
 @MicroShedTest
 @SharedContainerConfig(AppDeploymentConfig.class)
@@ -52,10 +52,11 @@ public class KarClienttIT {
 	
 	private KarParams getKarParams(String incr) {
 		KarParams params = new KarParams();
-		Map<String,Object> numMap = new HashMap<String,Object>();
-		numMap.put("number", 41);
-		params.service = "number";
-		params.path = incr;
+		
+		JsonObject numMap = Json.createObjectBuilder()
+				.add("number", 41)
+				.build();
+		
 		params.params = numMap;
 		
 		return params;

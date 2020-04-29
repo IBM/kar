@@ -44,6 +44,7 @@
             <type>pom</type>
             <scope>provided</scope>
         </dependency>
+
         <!-- Java utility classes -->
         <dependency>
             <groupId>org.apache.commons</groupId>
