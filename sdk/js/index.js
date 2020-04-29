@@ -68,24 +68,82 @@ function del (api) {
 // check if string value is truthy
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
-// public methods
+/***************************************************
+ * public methods
+ ***************************************************/
 
-// asynchronous service invocation, returns "OK" immediately
+/**
+ * Asynchronous service invocation, returns "OK" immediately
+ * @param {string} service The service to invoke.
+ * @param {string} path The service endpoint to invoke.
+ * @param {any} params The arguments with which to invoke the service endpoint.
+ */
 const tell = (service, path, params) => post(`service/${service}/tell/${path}`, params)
 
-// synchronous service invocation, returns invocation result
+/**
+ * Synchronous service invocation, returns invocation result
+ * @param {string} service The service to invoke.
+ * @param {string} path The service endpoint to invoke.
+ * @param {any} params The arguments with which to invoke the service endpoint.
+ * @returns The result returned by the target service.
+ */
 const call = (service, path, params) => post(`service/${service}/call/${path}`, params)
 
-// asynchronous actor invocation, returns "OK" immediately
+/**
+ * Asynchronous actor invocation, returns "OK" immediately
+ * @param {string} type The type of the target Actor.
+ * @param {string} id The instance id of the target Actor.
+ * @param {string} path The actor method to invoke.
+ * @param {any} params The arguments with which to invoke the actor method.
+ */
 const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${path}`, params)
 
-// synchronous actor invocation: returns invocation result
+/**
+ * Synchronous actor invocation: returns invocation result
+ * @param {string} type The type of the target Actor.
+ * @param {string} id The instance id of the target Actor.
+ * @param {string} path The actor method to invoke.
+ * @param {any} params The arguments with which to invoke the actor method.
+ * @returns The result returned from the actor method
+ */
 const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${path}`, params)
+/**
+ * Synchronous actor invocation continuing the current session: returns invocation result
+ * @param {string} type The type of the target Actor.
+ * @param {string} id The instance id of the target Actor.
+ * @param {string} session The session in which to invoke the method.
+ * @param {string} path The actor method to invoke.
+ * @param {any} params The arguments with which to invoke the actor method.
+ * @returns The result returned from the actor method
+ */
+
 const actorCallInSession = (type, id, session, path, params) => post(`actor/${type}/${id}/call/${path}?session=${session}`, params)
 
-// reminder operations
+/**
+ * Cancel matching reminders for an Actor instance.
+ * @param {string} type The type of the target Actor.
+ * @param {string} id The instance id of the target Actor.
+ * @param params TODO: Document me
+ * @returns The number of reminders that were cancelled.
+ */
 const actorCancelReminder = (type, id, params = {}) => del(`actor/${type}/${id}/reminder`, params)
+
+/**
+ * Get matching reminders for an Actor instance.
+ * @param {string} type The type of the target Actor.
+ * @param {string} id  The instance id of the target Actor.
+ * @param params TODO: Document me
+ * @returns {array} An array of matching reminders
+ */
 const actorGetReminder = (type, id, params = {}) => get(`actor/${type}/${id}/reminder`, params)
+
+/**
+ * Schedule a reminder for an Actor instance.
+ * @param {string} type The type of the target Actor.
+ * @param {string} id The instance id of the target Actor.
+ * @param {string} path The actor method to invoke when the reminder fires.
+ * @param params TODO: Document me
+ */
 const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${id}/reminder`, Object.assign({ path: `/${path}` }, params))
 
 // actor state operations
@@ -140,7 +198,9 @@ const jsonParser = [
     }
   }]
 
-// express middleware to handle errors
+/**
+ * express middleware to handle errors
+ */
 const errorHandler = [
   (err, req, res, next) => Promise.resolve()
     .then(() => {
@@ -153,6 +213,11 @@ const errorHandler = [
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
+/**
+ * Bind the Actor system to a specific Actor instance
+ * @param {string} type
+ * @param {*} id
+ */
 const sys = (type, id) => ({
   id: id,
   tell: (method, params) => actorTell(type, id, method, params),
