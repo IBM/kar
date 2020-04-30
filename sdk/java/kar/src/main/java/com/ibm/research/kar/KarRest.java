@@ -1,8 +1,5 @@
 package com.ibm.research.kar;
 
-
-import java.util.Map;
-
 import javax.enterprise.inject.Default;
 import javax.json.JsonObject;
 import javax.ws.rs.Consumes;
@@ -22,8 +19,10 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 
 @Default
-@RegisterRestClient(configKey = "kar", baseUri = Kar.DEFAULT_URI)
-@Path("kar/v1")
+@RegisterRestClient(configKey = "kar")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
+@Path("/kar/v1")
 public interface KarRest extends AutoCloseable {
 	
 	int maxRetry = 10;
@@ -35,16 +34,12 @@ public interface KarRest extends AutoCloseable {
 	// asynchronous service invocation, returns "OK" immediately
 	@POST
 	@Path("service/{service}/tell/{path}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
 	@Retry(maxRetries = maxRetry)
 	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 	
 	// synchronous service invocation, returns invocation result
 	@POST
 	@Path("service/{service}/call/{path}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
 	@Retry(maxRetries = maxRetry)
 	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 

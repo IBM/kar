@@ -3,7 +3,6 @@ package com.ibm.research.kar;
 import java.net.URI;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
@@ -12,25 +11,42 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
-import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @ApplicationScoped // change as needed
 public class Kar {
 
-	@Inject
-	@RestClient
 	private KarRest karClient;
 	
-	public static final String DEFAULT_URI = "http://localhost:3500/";
+	public static final String DEFAULT_PORT = "3500";
+	
+	public Kar() {
+		karClient = buildRestClient();
+	}
 	
 	/*
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
-	public void buildRestClient() {
-		URI baseURI = URI.create(Kar.DEFAULT_URI);
+	public KarRest buildRestClient() {
 		
-		karClient = RestClientBuilder.newBuilder()
-                .baseUri(baseURI)
+		String baseURIStr = "http://localhost";
+		
+		String port =  System.getenv("KAR_RUNTIME_PORT");
+
+		System.out.println("Port is " + port);
+		
+		if (port != null && !port.trim().isEmpty()) {
+			baseURIStr = baseURIStr+":"+port+"/";
+		} else {
+			baseURIStr = baseURIStr+":"+DEFAULT_PORT+"/";
+		}
+		
+
+		System.out.println("Sidecar location is " + baseURIStr);
+		
+		URI baseURI = URI.create(baseURIStr);
+		
+		return  RestClientBuilder.newBuilder()
+				.baseUri(baseURI)
                 .build(KarRest.class);
 	}
 

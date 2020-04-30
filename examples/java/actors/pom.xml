@@ -6,15 +6,14 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ibm.research.kar.example.incr</groupId>
-    <artifactId>kar-example-incr</artifactId>
+    <groupId>com.ibm.research.kar.example.actors</groupId>
+    <artifactId>kar-example-actors</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
         <module>../../../sdk/java/kar</module>
         <module>../../../sdk/java/kar-actor</module>
-        <module>server</module>
-        <module>client</module>
+        <module>actor-runtime</module>
     </modules>
 </project>
