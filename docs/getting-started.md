@@ -1,13 +1,18 @@
 # Prerequisites
 
 1. You need a Kubernetes 1.16 (or newer) cluster.
-    1. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual
-       Kubernetes cluster using Docker on your development machine. Once
-       you have Docker installed, just run
-       [start-kind.sh](../build/ci/start-kind.sh) to create a virtual cluster.
-    2. You can use an IKS cluster provisioned on the IBM Public Cloud.
+    1. You can use an IKS cluster provisioned on the IBM Public Cloud.
+    2. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual
+       Kubernetes cluster using Docker on your development machine.
+       Using kind is only supported in KAR's "dev" mode where you will
+       be building your own docker images of the KAR system components
+       and push them into kind's local docker registry.
+       Once you have Docker installed, just run
+       [start-kind.sh](../build/ci/start-kind.sh) to create a virtual
+       cluster properly configured for running KAR.
 
-2. You will need the `kubectl` cli installed locally.
+2. You will need the `kubectl` cli installed locally and configured to
+   connect to your cluster.
 
 3. You will need the `helm` (Helm 3) cli installed locally.
 
@@ -23,19 +28,23 @@ cd kar
 
 ## Deploying KAR to the `kar-system` namespace
 
-You can deploy KAR using pre-built images from KAR project namespaces
-in the IBM container registry (kar-dev, kar-stage,
-kar-prod). Currently, you will have to ask Dave or Olivier for an
-apikey to access this namespace.  Use the apikey as an argument to
-`kar-deploy.sh`:
+### Deploying on IKS
+
+When deploying on IKS, you will use pre-built images from the KAR
+project namespaces in the IBM Cloud Container Registry.
+Assuming you have set your kubectl context and have done an
+`ibmcloud login` into the RIS IBM Research Shared account, you
+can deploy KAR into your cluster in a single command:
 ```script
-./scripts/kar-deploy.sh -a <KAR_CR_APIKEY>
+./scripts/kar-deploy.sh
 ```
 
-Alternatively, you can deploy in dev mode where KAR will use
-locally built images for all KAR runtime components and examples.
-Since it is bypassing the container registry, this mode is preferred
-for local development, but only works with `kind`, not IKS.
+### Deploying on kind
+
+When deploying on `kind` you will be using locally built images
+for all KAR runtime components and examples. You do not need
+access to the IBM Cloud Container Registry when using kind.
+
 First, build your docker images and push them to kind's internal
 docker registry with:
 ```shell
@@ -52,7 +61,7 @@ Next, deploy KAR in dev mode by doing:
   or any Kubernetes system namespace for KAR applications. Enabling
   KAR sidecar injection for these namespaces can cause instability.**
 
-Enabling a namespace for deploying KAR-based applications requires
+In either mode, enabling a namespace for deploying KAR-based applications requires
 copying configuration secrets from the `kar-system` namespace and
 labeling the namespace to enable KAR sidecar injection.  These steps
 are automated by

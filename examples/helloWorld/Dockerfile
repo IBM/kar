@@ -1,4 +1,4 @@
-ARG SDK_BASE=us.icr.io/kar-dev/sdk-nodejs-v12
+ARG SDK_BASE=us.icr.io/research/kar-dev/sdk-nodejs-v12
 
 FROM $SDK_BASE
 

@@ -44,7 +44,7 @@ const (
 func init() {
 	var ignored string
 	flag.StringVar(&ignored, "sidecar_image_registry", "", "DEPRECATED: WILL BE REMOVED")
-	flag.StringVar(&sidecarImage, "sidecar_image", "us.icr.io/kar-dev/kar", "docker image to use for kar sidecar")
+	flag.StringVar(&sidecarImage, "sidecar_image", "us.icr.io/research/kar-dev/kar", "docker image to use for kar sidecar")
 	flag.StringVar(&sidecarImageTag, "sidecar_image_tag", "latest", "docker image tag to use for kar sidecar")
 }
 
