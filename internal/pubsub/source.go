@@ -75,6 +75,7 @@ func (h *handler) mark(partition int32, offset int64) error {
 	logger.Debug("finishing work on topic %s, partition %d, offset %d", h.topic, partition, offset)
 	_, err := store.ZAdd(mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
 	if err != nil {
+		// TODO retry logic
 		logger.Debug("failed to mark message on topic %s, partition %d, offset %d: %v", err)
 		return err
 	}
@@ -220,6 +221,7 @@ func (h *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 // ConsumeClaim processes messages of consumer claim
 func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	store.ZRemRangeByScore(mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
+	// ok to ignore error in ZRemRangeByScore as this is just garbage collection
 	mark := true
 	for m := range claim.Messages() {
 		logger.Debug("received message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
@@ -304,8 +306,11 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 			}
 		}
 	}()
-
-	<-handler.ready // wait for first session setup
+	select {
+	case <-handler.ready: // wait for first session setup
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 	return handler.out, nil
 }
 
