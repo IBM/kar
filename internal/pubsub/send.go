@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"math/rand"
 	"strconv"
 
@@ -45,7 +44,7 @@ func routeToSidecar(sidecar string) (int32, error) {
 	mu.RUnlock()
 	if len(partitions) == 0 { // no partition matching this sidecar
 		logger.Debug("no partition for sidecar %s", sidecar)
-		return 0, errors.New("no partition for sidecar " + sidecar)
+		return 0, ErrUnknownSidecar
 	}
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }

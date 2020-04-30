@@ -168,26 +168,25 @@ func respond(ctx context.Context, msg map[string]string, reply Reply) error {
 		"statusCode":   strconv.Itoa(reply.StatusCode),
 		"content-type": reply.ContentType,
 		"payload":      reply.Payload})
-	if err != nil {
-		// TODO distinguish dead sidecar from other errors
-		logger.Debug("failed to answer request %s from sidecar %s: %v", msg["request"], msg["from"], err)
+	if err == pubsub.ErrUnknownSidecar {
+		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", msg["request"], msg["from"], err)
+		return nil
 	}
-	return nil
+	return err
 }
 
 func call(ctx context.Context, msg map[string]string) error {
 	var reply Reply
 	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
+		if err == ctx.Err() {
+			return err
 		}
-		logger.Warning("failed to post to %s: %v", msg["path"], err) // return error to caller
-		reply = Reply{StatusCode: http.StatusBadGateway, Payload: "Bad Gateway", ContentType: "text/plain"}
+		logger.Debug("call failed to post to %s: %v", msg["path"], err) // return error to caller
+		reply = Reply{StatusCode: http.StatusBadGateway, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
 		reply = Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}
 	}
-
 	return respond(ctx, msg, reply)
 }
 
@@ -249,17 +248,16 @@ func reminderSchedule(ctx context.Context, msg map[string]string) error {
 func tell(ctx context.Context, msg map[string]string) error {
 	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
+		if err == ctx.Err() {
+			return err
 		}
-		logger.Error("failed to post to %s: %v", msg["path"], err)
+		logger.Debug("tell failed to post to %s: %v", msg["path"], err) // return error to caller
+		return err
+	}
+	if res.StatusCode >= http.StatusBadRequest {
+		logger.Error("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
 	} else {
-		if res.StatusCode >= http.StatusBadRequest {
-			logger.Error("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
-		} else {
-			logger.Debug("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
-		}
-		discard(res.Body)
+		logger.Debug("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
 	}
 	return nil
 }
@@ -281,39 +279,18 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 	case "tell":
 		return tell(ctx, msg)
 	default:
-		logger.Error("unexpected command %s", msg["command"])
-	}
-	return nil
-}
-
-func forwardToService(ctx context.Context, msg map[string]string) error {
-	if err := pubsub.Send(ctx, msg); err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		logger.Error("failed to forward message to service %s: %v", msg["service"], err)
-	}
-	return nil
-}
-func forwardToActor(ctx context.Context, msg map[string]string) error {
-	if err := pubsub.Send(ctx, msg); err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		logger.Error("failed to forward message to actor %v: %v", Actor{Type: msg["type"], ID: msg["id"]}, err)
+		logger.Error("unexpected command %s", msg["command"]) // dropping message
 	}
 	return nil
 }
 
 func forwardToSidecar(ctx context.Context, msg map[string]string) error {
-	if err := pubsub.Send(ctx, msg); err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		// TODO distinguish dead sidecar from other errors
-		logger.Debug("failed to forward message to sidecar %s: %v", msg["sidecar"], err)
+	err := pubsub.Send(ctx, msg)
+	if err == pubsub.ErrUnknownSidecar {
+		logger.Debug("dropping message to dead sidecar %s: %v", msg["sidecar"], err)
+		return nil
 	}
-	return nil
+	return err
 }
 
 // Process processes one incoming message
@@ -330,7 +307,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if msg["service"] == config.ServiceName {
 			err = dispatch(ctx, cancel, msg)
 		} else {
-			err = forwardToService(ctx, msg)
+			err = pubsub.Send(ctx, msg)
 		}
 	case "sidecar":
 		if msg["sidecar"] == config.ID {
@@ -348,7 +325,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		}
 		e, fresh, _ := actor.acquire(ctx, session)
 		if e == nil && ctx.Err() == nil {
-			err = forwardToActor(ctx, msg)
+			err = pubsub.Send(ctx, msg)
 		} else {
 			defer e.release(ctx)
 			if fresh {

@@ -34,6 +34,9 @@ var (
 	wgQuit  bool
 
 	errTooFewPartitions = errors.New("too few partitions")
+
+	// ErrUnknownSidecar error
+	ErrUnknownSidecar = errors.New("unknown sidecar")
 )
 
 func partitioner(t string) sarama.Partitioner {
