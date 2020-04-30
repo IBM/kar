@@ -258,6 +258,10 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 
 // Subscribe joins a consumer group for a topic
 func Subscribe(ctx context.Context, topic, group string, options *Options) (<-chan Message, error) {
+	conf, err := newConfig()
+	if err != nil {
+		return nil, err
+	}
 	wgMutex.Lock()
 	if wgQuit {
 		wgMutex.Unlock()
@@ -265,11 +269,6 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 	}
 	wg.Add(1) // increment subscriber count
 	wgMutex.Unlock()
-	conf, err := newConfig()
-	if err != nil {
-		wg.Done()
-		return nil, err
-	}
 	if options.master {
 		conf.Consumer.Group.Rebalance.Strategy = &customStrategy{}
 	} else {
@@ -290,27 +289,21 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 	go func() {
 		defer wg.Done()
 		for {
-			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil { // abnormal termination
-				if err != errTooFewPartitions || !handler.options.master {
-					logger.Error("failed consumer for topic %s, group %s: %v", topic, group, err)
-					// TODO maybe emit an error message on output channel before closing
-					consumer.Close()
-					close(handler.out)
-					return
-				}
+			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil && err != errTooFewPartitions { // abnormal termination
+				logger.Error("failed consumer for topic %s, group %s: %v", topic, group, err)
+				// TODO maybe add an error channel
+				break
 			}
 			if ctx.Err() != nil { // normal termination
-				consumer.Close()
-				close(handler.out)
-				return
+				break
 			}
 		}
+		consumer.Close()
+		close(handler.out)
+		close(handler.ready) // in case we never finished first session setup
 	}()
-	select {
-	case <-handler.ready: // wait for first session setup
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
+
+	<-handler.ready // wait for first session setup or consumer error before that
 	return handler.out, nil
 }
 
