@@ -8,8 +8,6 @@ import (
 	"strconv"
 
 	"github.com/Shopify/sarama"
-	"github.com/cenkalti/backoff/v4"
-	"github.ibm.com/solsa/kar.git/internal/config"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -17,21 +15,27 @@ import (
 
 // routeToService maps a service to a partition (keep trying)
 func routeToService(ctx context.Context, service string) (partition int32, sidecar string, err error) {
-	err = backoff.Retry(func() error { // keep trying
+	for {
 		mu.RLock()
 		sidecars := replicas[service]
-		if len(sidecars) == 0 { // no sidecar matching this service
+		if len(sidecars) != 0 {
+			sidecar = sidecars[rand.Int31n(int32(len(sidecars)))]       // select random sidecar from list
+			partitions := routes[sidecar]                               // a live sidecar always has partitions
+			partition = partitions[rand.Int31n(int32(len(partitions)))] // select a random partition from list
 			mu.RUnlock()
-			logger.Info("no sidecar for service %s, retrying", service)
-			return errors.New("no sidecar for service " + service) // keep trying
+			return
 		}
-		sidecar = sidecars[rand.Int31n(int32(len(sidecars)))]       // select random sidecar from list
-		partitions := routes[sidecar]                               // a live sidecar always has partitions
-		partition = partitions[rand.Int31n(int32(len(partitions)))] // select a random partition from list
+		ch := tick
 		mu.RUnlock()
-		return nil
-	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
-	return
+		logger.Info("no sidecar for service %s, waiting for new session", service)
+		select {
+		case <-ch:
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		}
+		// TODO timeout
+	}
 }
 
 // routeToSidecar maps a sidecar to a partition (no retries)
@@ -46,7 +50,7 @@ func routeToSidecar(sidecar string) (int32, error) {
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }
 
-// routeToActor maps an actor to a stable sidecar to a random partition
+// routeToActor maps an actor to a stable sidecar to a random partition (keep trying)
 // only switching to a new sidecar if the existing sidecar has died
 func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
 	for { // keep trying
@@ -55,31 +59,32 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			return // store error
 		}
 		if sidecar != "" { // sidecar is already assigned
-			_, _, err = routeToService(ctx, config.ServiceName) // make sure routes have been initialized
-			if err != nil {
-				return // abort
-			}
 			partition, err = routeToSidecar(sidecar) // find partition for sidecar
 			if err == nil {
 				return // found sidecar and partition
 			}
 			logger.Debug("sidecar %s for actor type %s, id %s is no longer available", sidecar, t, id)
 		}
-		expected := sidecar
-		err = backoff.Retry(func() error { // keep trying
+		// assign new sidecar
+		expected := sidecar // remember current value for CAS
+		for {
 			mu.RLock()
 			sidecars := hosts[t]
-			if len(sidecars) == 0 { // no sidecar matching this actor type
+			if len(sidecars) != 0 {
+				sidecar = sidecars[rand.Int31n(int32(len(sidecars)))] // select random sidecar from list
 				mu.RUnlock()
-				logger.Info("no sidecar for actor type %s, retrying", t)
-				return errors.New("no sidecar for actor type " + t)
+				break
 			}
-			sidecar = sidecars[rand.Int31n(int32(len(sidecars)))] // select random sidecar from list
+			ch := tick
 			mu.RUnlock()
-			return nil
-		}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
-		if err != nil {
-			return // abort
+			logger.Info("no sidecar for actor type %s, waiting for new session", t)
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				err = ctx.Err()
+				return
+			}
+			// TODO timeout
 		}
 		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)
 		_, err = CompareAndSetSidecar(t, id, expected, sidecar) // try saving sidecar
@@ -92,25 +97,26 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 
 // Send sends message to receiver
 func Send(ctx context.Context, msg map[string]string) error {
+	select { // make sure we have joined
+	case <-joined:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	var partition int32
 	var err error
 	switch msg["protocol"] {
 	case "service": // route to service
-		var sidecar string
-		partition, sidecar, err = routeToService(ctx, msg["service"])
+		partition, msg["sidecar"], err = routeToService(ctx, msg["service"])
 		if err != nil {
 			logger.Debug("failed to route to service %s: %v", msg["service"], err)
 			return err
 		}
-		msg["sidecar"] = sidecar // add selected sidecar id to message
 	case "actor": // route to actor
-		var sidecar string
-		partition, sidecar, err = routeToActor(ctx, msg["type"], msg["id"])
+		partition, msg["sidecar"], err = routeToActor(ctx, msg["type"], msg["id"])
 		if err != nil {
-			logger.Debug("failed to route to actor type %s, id $s %v: %v", msg["type"], msg["id"], err)
+			logger.Debug("failed to route to actor type %s, id %s: %v", msg["type"], msg["id"], err)
 			return err
 		}
-		msg["sidecar"] = sidecar // add selected sidecar id to message
 	case "sidecar": // route to sidecar
 		partition, err = routeToSidecar(msg["sidecar"])
 		if err != nil {
@@ -118,16 +124,12 @@ func Send(ctx context.Context, msg map[string]string) error {
 			return err
 		}
 	case "partition": // route to partition
-		p64, err := strconv.ParseInt(msg["partition"], 10, 32)
+		p, err := strconv.ParseInt(msg["partition"], 10, 32)
 		if err != nil {
 			logger.Debug("failed to route to partition %s: %v", msg["partition"], err)
 			return err
 		}
-		partition = int32(p64)
-		_, _, err = routeToService(ctx, config.ServiceName) // make sure routes have been initialized
-		if err != nil {
-			return err // abort
-		}
+		partition = int32(p)
 	}
 	m, err := json.Marshal(msg)
 	if err != nil {

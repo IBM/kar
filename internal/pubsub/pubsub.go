@@ -23,7 +23,10 @@ var (
 	hosts    map[string][]string // map actor types to sidecars
 	routes   map[string][]int32  // map sidecards to partitions
 	tick     = make(chan struct{})
+	joined   = tick
 	mu       sync.RWMutex
+
+	manualPartitioner = sarama.NewManualPartitioner(topic)
 
 	// termination
 	wg      sync.WaitGroup
@@ -35,7 +38,7 @@ var (
 
 func partitioner(t string) sarama.Partitioner {
 	if t == topic {
-		return sarama.NewManualPartitioner(t)
+		return manualPartitioner
 	}
 	return sarama.NewRandomPartitioner(t)
 }
@@ -112,10 +115,10 @@ func newConfig() (*sarama.Config, error) {
 
 // Partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
 func Partitions() ([]int32, <-chan struct{}) {
-	mu.Lock()
+	mu.RLock()
 	t := tick
 	r := routes[config.ID]
-	mu.Unlock()
+	mu.RUnlock()
 	return r, t
 }
 
