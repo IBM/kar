@@ -128,7 +128,7 @@ public class Kar {
     
     // System
 	// broadcast to all sidecars except for ours
-	public Response broadcast(@PathParam("path") String path, Map<String,Object> params) throws ProcessingException {
+	public Response broadcast(@PathParam("path") String path, JsonObject params) throws ProcessingException {
 		return karClient.broadcast(path, params);
 	}
 	
