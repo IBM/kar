@@ -114,7 +114,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 
 // Reminders sends a reminder command (cancel, get, schedule) to a reminder's assigned sidecar and waits for a reply
 func Reminders(ctx context.Context, actor Actor, action, payload, contentType, accept string) (*Reply, error) {
-	target := reminderParition(actor)
+	target := reminderPartition(actor)
 	msg := map[string]string{
 		"protocol":     "partition",
 		"partition":    strconv.Itoa(int(target)),
@@ -422,7 +422,7 @@ func ProcessReminders(ctx context.Context) {
 }
 
 // ManageReminderPartitions handles updating this sidecar's in-memory reminder data structures after
-// rebalancing operations to reflect the new assignment of paritions.
+// rebalancing operations to reflect the new assignment of partitions.
 func ManageReminderPartitions(ctx context.Context) {
 	var priorPartitions = make([]int32, 0)
 	for {

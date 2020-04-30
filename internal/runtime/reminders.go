@@ -54,23 +54,23 @@ type scheduleReminderPayload struct {
 	// to compute a new Deadline for the next invocation of the reminder.
 	// Example: 30s
 	Period string `json:"period,omitempty"`
-	// An optional parameter containing an arbitray JSON value that will be provided as the
+	// An optional parameter containing an arbitrary JSON value that will be provided as the
 	// payload when the `path` is invoked on the actor instance.
 	// Example: { msg: "Hello Friend!" }
 	Data interface{} `json:"data,omitempty"`
 }
 
-// reminderParition returns the partition that is reponsible for all reminder processing for the argument actor.
+// reminderPartition returns the partition that is responsible for all reminder processing for the argument actor.
 // This assignment is stable.
-func reminderParition(a Actor) int32 {
-	// TODO: Implement a non-trivial yet stable assigment.
+func reminderPartition(a Actor) int32 {
+	// TODO: Implement a non-trivial yet stable assignment.
 	//       when we do this, we must update rebalanceReminders
 	return 0
 }
 
-// reminderKey returns a key suffix of the form: reminders_PARITION_ACTORTYPE_ACTORID_REMIDNERID
+// reminderKey returns a key suffix of the form: reminders_PARTITION_ACTORTYPE_ACTORID_REMINDERID
 func reminderKey(a Actor, reminderID string) string {
-	partition := strconv.Itoa(int(reminderParition(a)))
+	partition := strconv.Itoa(int(reminderPartition(a)))
 	return "reminders" + config.Separator + partition + config.Separator + a.Type + config.Separator + a.ID + config.Separator + reminderID
 }
 
@@ -230,7 +230,7 @@ func containsZero(p []int32) bool {
 	return false
 }
 
-// rebalanceReminders is invoked asycnrhonously after a rebalancing operations to
+// rebalanceReminders is invoked asynchronously after a rebalancing operations to
 // update this sidecar's reminderQueue to reflect the partitions it has been assigned
 // by the rebalance operation.
 func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartitions []int32) {

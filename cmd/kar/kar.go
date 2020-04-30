@@ -57,7 +57,7 @@ var (
 //
 // tell
 //
-// ### Asynchronosuly invoke an actor method
+// ### Asynchronously invoke an actor method
 //
 // Tell asynchronously executes a `POST` to the `path` endpoint of
 // the actor instance indicated by `actorType` and `actorId`.
@@ -98,7 +98,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Broadcast asynchronously executes a `POST` on the `path` endpoint
 // of all other KAR runtimes that are currently part of the application.
-// The runtime initiating the broadcast is not included as a receipient.
+// The runtime initiating the broadcast is not included as a recipient.
 // A `200` response indicates that the request to send the broadcast
 // has been accepted and the POST will eventually be delivered to all targeted
 // runtime processes.
@@ -453,7 +453,7 @@ func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	for i, v := range updates {
 		s, err := json.Marshal(v)
 		if err != nil {
-			logger.Error("setMultiple: %v[%v] = %v failued due to %v", sk, i, v, err)
+			logger.Error("setMultiple: %v[%v] = %v failed due to %v", sk, i, v, err)
 			http.Error(w, fmt.Sprintf("Unable to re-serialize value %v", v), http.StatusInternalServerError)
 			return
 		}
@@ -551,7 +551,7 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // ### Publish an event to a topic
 //
 // The event provided as the request body will be published on `topic`.
-// When the operation returns successfully, the event is guarenteed to
+// When the operation returns successfully, the event is guaranteed to
 // eventually be published to the targeted topic.
 //
 //     Schemes: http
@@ -604,9 +604,9 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Unsubscribe from a topic
 //
-// Unsubscribe an appliction endpoint described by the request body from `topic`.
-// The operation may return before the unsubscription actually completes, but upon
-// successful it is guarenteed that the endpoint will eventually stop receive
+// Unsubscribe an application endpoint described by the request body from `topic`.
+// The operation may return before it actually completes, but upon
+// success it is guaranteed that the endpoint will eventually stop receive
 // events from the topic.
 //
 //     Schemes: http

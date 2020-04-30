@@ -5,7 +5,7 @@
 // the main code they are documenting, but go-swagger uses
 // a collection of additional structs to generate the documentation
 // of request parameters and request/response bodies for endpoint IDs.
-// Since these structs are not othewise used by the KAR runtime,
+// Since these structs are not otherwise used by the KAR runtime,
 // we define them as non-exported types in this file.
 //
 // For documentation of the comment format for go-swagger
@@ -90,7 +90,7 @@ type topicParam struct {
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path
-	// Example: an/arbitray/valid/pathSegment
+	// Example: an/arbitrary/valid/pathSegment
 	Path string `json:"path"`
 }
 
@@ -165,7 +165,7 @@ type cloudeventWrapper struct {
 	// Describes the subject of the event in the context of the event producer
 	// required: false
 	Subject string `json:"subject"`
-	// Time when the event occured
+	// Time when the event occurred
 	// required:false
 	Time time.Time `json:"time"`
 	// The event payload
@@ -185,7 +185,7 @@ type eventSubscribeRequestWrapper struct {
 	Body eventSubscribeRequestBody
 }
 type eventSubscribeRequestBody struct {
-	// A optional unique id to use for this subscribtion.
+	// A optional unique id to use for this subscrition.
 	// If not id is provided, the `topic` will be used as the id.
 	// required:false
 	ID string `json:"id"`
@@ -199,7 +199,7 @@ type eventSubscribeRequestBody struct {
 	// required:false
 	Service string `json:"service"`
 	// The target endpoint to which events will be delivered
-	// Example: an/arbitray/valid/pathSegment
+	// Example: an/arbitrary/valid/pathSegment
 	// required:true
 	Path string `json:"path"`
 	// Should the subscription start with the oldest available event or
