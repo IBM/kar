@@ -154,7 +154,7 @@ const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${
  * @param {string} key The key to get from the instance's state
  * @returns The value associated with `key`
  */
-const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}`)
+const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}?nilOnAbsent=true`)
 
 /**
  * Set one value from an Actor instance's state

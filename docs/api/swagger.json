@@ -466,7 +466,7 @@
     },
     "/actor/{actorType}/{actorId}/state/{key}": {
       "get": {
-        "description": "### Get a single entry of an actor's state\n\nThe `key` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry in the actor instandce's state for `key` the operation will\nby default return a `200` status with a nil response body. If the boolean query parameter\n`errorOnAbsent` is set to `true`, the operation will instead return a `404` status if\nthere is no entry for `key`.",
+        "description": "### Get a single entry of an actor's state\n\nThe `key` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry for `key` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`,\nin which case a `200` reponse with a `nil` response body will be returned.",
         "schemes": [
           "http"
         ],
@@ -495,8 +495,8 @@
           {
             "type": "boolean",
             "x-go-name": "ErrorOnAbsent",
-            "description": "Controls response when key is absent; if true an absent key will result in a `404` response, otherwise a `200` response with a nil value will be returned.",
-            "name": "errorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
             "in": "query"
           }
         ],

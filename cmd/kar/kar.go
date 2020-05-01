@@ -354,10 +354,9 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // The `key` entry of the state of the actor instance indicated by `actorType` and `actorId`
 // will be returned as the response body.
-// If there is no entry in the actor instandce's state for `key` the operation will
-// by default return a `200` status with a nil response body. If the boolean query parameter
-// `errorOnAbsent` is set to `true`, the operation will instead return a `404` status if
-// there is no entry for `key`.
+// If there is no entry for `key` a `404` response will be returned
+// unless the boolean query parameter `nilOnAbsent` is set to `true`,
+// in which case a `200` reponse with a `nil` response body will be returned.
 //
 //     Produces: application/json
 //     Schemes: http
@@ -368,10 +367,10 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
-		if eoa := r.FormValue("errorOnAbsent"); eoa == "true" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-		} else {
+		if noa := r.FormValue("nilOnAbsent"); noa == "true" {
 			fmt.Fprint(w, reply)
+		} else {
+			http.Error(w, "Not Found", http.StatusNotFound)
 		}
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)

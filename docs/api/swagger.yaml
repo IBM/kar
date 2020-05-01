@@ -594,10 +594,9 @@ paths:
 
         The `key` entry of the state of the actor instance indicated by `actorType` and `actorId`
         will be returned as the response body.
-        If there is no entry in the actor instandce's state for `key` the operation will
-        by default return a `200` status with a nil response body. If the boolean query parameter
-        `errorOnAbsent` is set to `true`, the operation will instead return a `404` status if
-        there is no entry for `key`.
+        If there is no entry for `key` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`,
+        in which case a `200` reponse with a `nil` response body will be returned.
       operationId: idActorStateGet
       parameters:
       - description: The actor type
@@ -612,11 +611,10 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: Controls response when key is absent; if true an absent key will
-          result in a `404` response, otherwise a `200` response with a nil value
-          will be returned.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
-        name: errorOnAbsent
+        name: nilOnAbsent
         type: boolean
         x-go-name: ErrorOnAbsent
       responses:

@@ -133,10 +133,10 @@ type endpointRequestBody struct {
 
 // swagger:parameters idActorStateGet
 type actorStateGetParamWrapper struct {
-	// Controls response when key is absent; if true an absent key will result in a `404` response, otherwise a `200` response with a nil value will be returned.
+	// Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
 	// in:query
 	// required: false
-	ErrorOnAbsent bool `json:"errorOnAbsent"`
+	ErrorOnAbsent bool `json:"nilOnAbsent"`
 }
 
 type cloudeventWrapper struct {
