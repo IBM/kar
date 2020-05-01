@@ -77,7 +77,7 @@ $ ./deploy/runClientLocally.sh
 2020/04/24 16:51:26 [INFO] increasing partition count for topic kar_ykt to 2
 2020/04/24 16:51:26 [INFO] cleanup session for topic kar_ykt, generation 2
 2020/04/24 16:51:28 [INFO] setup session for topic kar_ykt, generation 3, claims [1]
-2020/04/24 16:51:28 [INFO] KAR_PORT=30666 KAR_APP_PORT=8080
+2020/04/24 16:51:28 [INFO] KAR_RUNTIME_PORT=30666 KAR_APP_PORT=8080
 2020/04/24 16:51:28 [INFO] launching service...
 2020/04/24 16:51:28 [INFO] rebalanceReminders: responsibility unchanged (responsible = false)
 2020/04/24 16:51:30 [STDOUT] Starting simulation: {"Yorktown":{"workers":20,"thinkms":2000,"steps":10,"days":2},"Cambridge":{"workers":10,"thinkms":1000,"steps":40,"days":1},"Almaden":{"workers":15,"thinkms":500,"steps":10,"days":5}}
@@ -150,7 +150,7 @@ $ ./deploy/runServerLocally.sh
 Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh 
 2020/04/24 16:51:09 [WARNING] starting...
 2020/04/24 16:51:11 [INFO] setup session for topic kar_ykt, generation 1, claims [0]
-2020/04/24 16:51:11 [INFO] KAR_PORT=58417 KAR_APP_PORT=8080
+2020/04/24 16:51:11 [INFO] KAR_RUNTIME_PORT=58417 KAR_APP_PORT=8080
 2020/04/24 16:51:11 [INFO] launching service...
 2020/04/24 16:51:11 [INFO] rebalanceReminders: change in role: prior = false current = true
 2020/04/24 16:51:11 [INFO] rebalanceReminders: found 0 persisted reminders

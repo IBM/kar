@@ -746,7 +746,7 @@ func main() {
 		runtime.ManageReminderPartitions(ctx)
 	}()
 
-	port1 := fmt.Sprintf("KAR_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
+	port1 := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	port2 := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
 	logger.Info("%s %s", port1, port2)
 

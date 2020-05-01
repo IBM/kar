@@ -4,7 +4,7 @@ const parser = require('body-parser') // for parsing http requests
 const morgan = require('morgan') // for logging http requests and responses
 const spdy = require('spdy')
 
-const agent = http2.connect(`http://localhost:${process.env.KAR_PORT || 3500}`)
+const agent = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT || 3500}`)
 
 function rawFetch (path, options) {
   const obj = { ':path': path }

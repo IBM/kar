@@ -213,7 +213,7 @@ func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 		runtimePort = p
 	}
 	cmd = append(cmd, "-runtime_port", runtimePort)
-	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_PORT", Value: runtimePort})
+	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_RUNTIME_PORT", Value: runtimePort})
 
 	if verbose, ok := annotations[verboseAnnotation]; ok {
 		cmd = append(cmd, "-v", verbose)
