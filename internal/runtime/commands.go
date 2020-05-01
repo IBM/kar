@@ -326,10 +326,19 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			err = pubsub.Send(ctx, msg) // forward
 		} else if err == nil {
 			defer e.release()
+			var reply *Reply
 			if fresh {
-				err = activate(ctx, actor)
+				reply, err = activate(ctx, actor)
 			}
-			if err == nil {
+			if reply != nil {
+				if msg["command"] == "call" {
+					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg["path"])
+					err = respond(ctx, msg, *reply) // return activation error to caller
+				} else {
+					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg["path"])
+					err = nil // not to be retried
+				}
+			} else if err == nil {
 				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 				err = dispatch(ctx, cancel, msg)
 			}
@@ -343,20 +352,19 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 // actors
 
 // activate an actor
-func activate(ctx context.Context, actor Actor) error {
+func activate(ctx context.Context, actor Actor) (*Reply, error) {
 	res, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("activate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
 		}
-		return err
+		return nil, err
 	}
 	if res.StatusCode >= http.StatusBadRequest && res.StatusCode != http.StatusNotFound {
-		logger.Error("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
-	} else {
-		logger.Debug("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+		return &Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}, nil
 	}
-	return nil
+	logger.Debug("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	return nil, nil
 }
 
 // deactivate an actor (but retains placement)
