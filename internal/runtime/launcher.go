@@ -38,7 +38,7 @@ func Run(ctx context.Context, args, env []string) (exitCode int) {
 		logger.Fatal("failed to start service: %v", err)
 	}
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -60,7 +60,7 @@ func Run(ctx context.Context, args, env []string) (exitCode int) {
 				exitCode = v.ExitCode()
 			}
 		} else {
-			logger.Fatal("error waiting for service: %v", err)
+			logger.Error("error waiting for service: %v", err)
 		}
 	} else {
 		logger.Info("service exited normally")
