@@ -31,7 +31,6 @@ var (
 	ctx9, cancel9 = context.WithCancel(context.Background()) // preemptive: kill subprocess
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
-	finished      = make(chan struct{})                      // wait for http server to complete shutdown
 )
 
 // swagger:route POST /service/{service}/tell/{path} services idServiceTell
@@ -488,10 +487,9 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200
 //
 func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fmt.Fprint(w, "OK")
 	logger.Info("Invoking cancel() in response to kill request")
 	cancel()
-	wg.Wait()
-	fmt.Fprint(w, "OK")
 }
 
 // swagger:route POST /system/killall system idSystemKillAll
@@ -509,6 +507,7 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.KillAll(ctx)
 	fmt.Fprint(w, "OK")
+	logger.Info("Invoking cancel() in response to killall request")
 	cancel()
 }
 
@@ -656,11 +655,12 @@ func server(listener net.Listener) {
 		}
 	}()
 
+	wg.Add(1)
 	go func() {
-		defer close(finished)
+		defer wg.Done()
 		<-ctx.Done() // wait
 		if err := srv.Shutdown(context.Background()); err != nil {
-			logger.Fatal("failed to shutdown HTTP server: %v", err)
+			logger.Error("failed to shutdown HTTP server: %v", err)
 		}
 	}()
 }
@@ -746,20 +746,18 @@ func main() {
 		runtime.ManageReminderPartitions(ctx)
 	}()
 
-	port1 := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
-	port2 := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
-	logger.Info("%s %s", port1, port2)
+	runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
+	appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
+	logger.Info("%s %s", runtimePort, appPort)
 
 	args := flag.Args()
 
 	if len(args) > 0 {
-		exitCode = runtime.Run(ctx9, args, append(os.Environ(), port1, port2))
+		exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort))
 		cancel()
 	}
 
 	wg.Wait()
-
-	<-finished
 
 	logger.Warning("exiting...")
 }

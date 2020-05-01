@@ -24,13 +24,13 @@ var (
 	routes   map[string][]int32  // map sidecards to partitions
 	tick     = make(chan struct{})
 	joined   = tick
-	mu       sync.RWMutex
+	mu       = &sync.RWMutex{}
 
 	manualPartitioner = sarama.NewManualPartitioner(topic)
 
 	// termination
-	wg      sync.WaitGroup
-	wgMutex sync.Mutex
+	wg      = &sync.WaitGroup{}
+	wgMutex = &sync.Mutex{}
 	wgQuit  bool
 
 	errTooFewPartitions = errors.New("too few partitions")
