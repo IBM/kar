@@ -37,7 +37,7 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 	e.lock <- struct{}{} // lock entry
 	for {
 		if v, loaded := actorTable.LoadOrStore(actor, e); loaded {
-			e = v.(*actorEntry)  // existing entry
+			e := v.(*actorEntry) // found existing entry, := is required here!
 			e.lock <- struct{}{} // lock entry
 			if e.valid {
 				if e.session == session && session != "runtime" { // reenter existing session
