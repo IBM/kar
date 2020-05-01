@@ -43,12 +43,6 @@ func ReadAll(r io.ReadCloser) string {
 	return string(buf)
 }
 
-// discard discards a response body
-func discard(r io.ReadCloser) {
-	io.Copy(ioutil.Discard, r)
-	r.Close()
-}
-
 // invoke sends an HTTP request to the service and returns the response
 func invoke(ctx context.Context, method string, msg map[string]string) (*http.Response, error) {
 	req, err := http.NewRequest(method, url+msg["path"], strings.NewReader(msg["payload"]))
@@ -63,7 +57,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*http.Re
 	}
 	var res *http.Response
 	err = backoff.Retry(func() error {
-		res, err = client.Do(req)
+		res, err = client.Do(req) // TODO adjust timeout
 		return err
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
 	return res, err

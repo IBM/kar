@@ -176,17 +176,14 @@ func respond(ctx context.Context, msg map[string]string, reply Reply) error {
 }
 
 func call(ctx context.Context, msg map[string]string) error {
-	var reply Reply
 	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
-		if err == ctx.Err() {
-			return err
+		if err != ctx.Err() {
+			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
 		}
-		logger.Debug("call failed to post to %s: %v", msg["path"], err) // return error to caller
-		reply = Reply{StatusCode: http.StatusBadGateway, Payload: err.Error(), ContentType: "text/plain"}
-	} else {
-		reply = Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}
+		return err
 	}
+	reply := Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}
 	return respond(ctx, msg, reply)
 }
 
@@ -248,10 +245,9 @@ func reminderSchedule(ctx context.Context, msg map[string]string) error {
 func tell(ctx context.Context, msg map[string]string) error {
 	res, err := invoke(ctx, "POST", msg)
 	if err != nil {
-		if err == ctx.Err() {
-			return err
+		if err != ctx.Err() {
+			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
 		}
-		logger.Debug("tell failed to post to %s: %v", msg["path"], err) // return error to caller
 		return err
 	}
 	if res.StatusCode >= http.StatusBadRequest {
@@ -323,16 +319,20 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if session == "" {
 			session = uuid.New().String() // start new session
 		}
-		e, fresh, _ := actor.acquire(ctx, session)
-		if e == nil && ctx.Err() == nil {
-			err = pubsub.Send(ctx, msg)
-		} else {
-			defer e.release(ctx)
+		var e *actorEntry
+		var fresh bool
+		e, fresh, err = actor.acquire(ctx, session)
+		if err == errActorHasMoved {
+			err = pubsub.Send(ctx, msg) // forward
+		} else if err == nil {
+			defer e.release()
 			if fresh {
-				activate(ctx, actor)
+				err = activate(ctx, actor)
 			}
-			msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
-			err = dispatch(ctx, cancel, msg)
+			if err == nil {
+				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+				err = dispatch(ctx, cancel, msg)
+			}
 		}
 	}
 	if err == nil {
@@ -343,29 +343,37 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 // actors
 
 // activate an actor
-func activate(ctx context.Context, actor Actor) {
-	logger.Debug("activating actor %v", actor)
+func activate(ctx context.Context, actor Actor) error {
 	res, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
-		logger.Error("failed to activate actor %v: %v", actor, err)
-	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to activate actor %v: %s", actor, ReadAll(res.Body))
-	} else {
-		discard(res.Body)
+		if err != ctx.Err() {
+			logger.Debug("activate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
+		}
+		return err
 	}
+	if res.StatusCode >= http.StatusBadRequest && res.StatusCode != http.StatusNotFound {
+		logger.Error("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	} else {
+		logger.Debug("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	}
+	return nil
 }
 
 // deactivate an actor (but retains placement)
-func deactivate(ctx context.Context, actor Actor) {
-	logger.Debug("deactivating actor %v", actor)
+func deactivate(ctx context.Context, actor Actor) error {
 	res, err := invoke(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
-		logger.Error("failed to deactivate actor %v: %v", actor, err)
-	} else if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNotFound {
-		logger.Error("failed to deactivate actor %v: %s", actor, ReadAll(res.Body))
-	} else {
-		discard(res.Body)
+		if err != ctx.Err() {
+			logger.Debug("deactivate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
+		}
+		return err
 	}
+	if res.StatusCode >= http.StatusBadRequest && res.StatusCode != http.StatusNotFound {
+		logger.Error("deactivate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	} else {
+		logger.Debug("deactivate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	}
+	return nil
 }
 
 // Collect periodically collect actors with no recent usage (but retains placement)

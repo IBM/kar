@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -17,34 +18,34 @@ type Actor struct {
 
 type actorEntry struct {
 	time    time.Time     // last release time
-	lock    chan struct{} // entry lock
+	lock    chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
 	valid   bool          // false iff entry has been removed from table
 	session string        // current session or "" if none
 	depth   int           // session depth
 	busy    chan struct{} // close to notify end of session
 }
 
-var actorTable = sync.Map{} // actor table: Actor -> *actorEntry
+var (
+	actorTable       = sync.Map{} // actor table: Actor -> *actorEntry
+	errActorHasMoved = errors.New("actor has moved")
+)
 
-// acquire locks the actor
-// acquire returns nil if actor is mapped to another sidecar or context is cancelled
+// acquire locks the actor, session must be not be ""
 // acquire returns true if actor requires activation
 func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bool, error) {
 	e := &actorEntry{lock: make(chan struct{}, 1)}
+	e.lock <- struct{}{} // lock entry
 	for {
 		if v, loaded := actorTable.LoadOrStore(actor, e); loaded {
-			e = v.(*actorEntry) // existing entry
-			select {
-			case e.lock <- struct{}{}: // lock entry
-			case <-ctx.Done():
-				return nil, false, ctx.Err()
-			}
+			e = v.(*actorEntry)  // existing entry
+			e.lock <- struct{}{} // lock entry
 			if e.valid {
-				if e.session == session { // session is already in progress
+				if e.session == session && session != "runtime" { // reenter existing session
 					e.depth++
 					<-e.lock
 					return e, false, nil
-				} else if e.session == "" { // start new session
+				}
+				if e.session == "" { // start new session
 					e.session = session
 					e.depth = 1
 					e.busy = make(chan struct{})
@@ -67,7 +68,6 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// no fairness issue trying to reacquire because this entry is dead
 			}
 		} else { // new entry
-			e.lock <- struct{}{} // lock entry
 			sidecar, err := pubsub.GetSidecar(actor.Type, actor.ID)
 			if err != nil {
 				<-e.lock
@@ -82,25 +82,21 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				return e, true, nil
 			}
 			actorTable.Delete(actor)
-			<-e.lock // actor has been moved
-			return nil, false, nil
+			<-e.lock // actor has moved
+			return nil, false, errActorHasMoved
 		}
 	}
 }
 
 // release updates the timestamp and releases the actor lock
-func (e *actorEntry) release(ctx context.Context) {
-	select {
-	case e.lock <- struct{}{}: // lock entry
-	case <-ctx.Done():
-		return
-	}
+func (e *actorEntry) release() {
+	e.lock <- struct{}{} // lock entry
 	e.depth--
-	if e.depth == 0 { // end session
+	e.time = time.Now() // update last release time
+	if e.depth == 0 {   // end session
 		e.session = ""
 		close(e.busy)
 	}
-	e.time = time.Now() // update last release time
 	<-e.lock
 }
 
@@ -109,15 +105,23 @@ func collect(ctx context.Context, time time.Time) error {
 	actorTable.Range(func(actor, v interface{}) bool {
 		e := v.(*actorEntry)
 		select {
-		case e.lock <- struct{}{}:
+		case e.lock <- struct{}{}: // try acquire
 			if e.valid && e.session == "" && e.time.Before(time) {
-				deactivate(ctx, actor.(Actor))
-				e.valid = false
+				e.depth = 1
+				e.session = "runtime"
+				e.busy = make(chan struct{})
 				<-e.lock
-				actorTable.Delete(actor)
-			} else {
-				<-e.lock
+				err := deactivate(ctx, actor.(Actor))
+				e.lock <- struct{}{}
+				e.depth--
+				e.session = ""
+				if err == nil {
+					e.valid = false
+					actorTable.Delete(actor)
+				}
+				close(e.busy)
 			}
+			<-e.lock
 		default:
 		}
 		return ctx.Err() == nil // stop collection if cancelled
@@ -127,25 +131,22 @@ func collect(ctx context.Context, time time.Time) error {
 
 // Migrate deactivates actor if active and deletes placement if local
 func Migrate(ctx context.Context, actor Actor) error {
-	e, fresh, err := actor.acquire(ctx, "migration")
+	e, fresh, err := actor.acquire(ctx, "runtime")
 	if err != nil {
 		return err
 	}
-	if e == nil {
-		return nil
-	}
 	if !fresh {
-		deactivate(ctx, actor)
+		err = deactivate(ctx, actor)
 	}
-	select {
-	case e.lock <- struct{}{}:
-	case <-ctx.Done():
-		return ctx.Err()
+	e.lock <- struct{}{}
+	e.depth--
+	e.session = ""
+	if err == nil {
+		e.valid = false
+		actorTable.Delete(actor)
+		_, err = pubsub.CompareAndSetSidecar(actor.Type, actor.ID, config.ID, "") // delete placement if local
 	}
 	close(e.busy)
-	e.valid = false
-	_, err = pubsub.CompareAndSetSidecar(actor.Type, actor.ID, config.ID, "") // delete placement if local
-	actorTable.Delete(actor)
 	<-e.lock
 	return err
 }
