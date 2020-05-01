@@ -47,8 +47,10 @@ import "time"
 // swagger:parameters idActorCall
 // swagger:parameters idActorMigrate
 // swagger:parameters idActorReminderGet
+// swagger:parameters idActorReminderGetAll
 // swagger:parameters idActorReminderSchedule
 // swagger:parameters idActorReminderCancel
+// swagger:parameters idActorReminderCancelAll
 // swagger:parameters idActorStateDelete
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
@@ -103,13 +105,12 @@ type sessionParam struct {
 	Session string `json:"session"`
 }
 
-// swagger:parameters idActorReminderCancel
 // swagger:parameters idActorReminderGet
-type reminderFilterParamWrapper struct {
-	// The request body is an optional filter
-	// used to select a subset of an actor's reminders.
-	// in:body
-	Body reminderFilter
+// swagger:parameters idActorReminderCancel
+type reminderIDParam struct {
+	// The id of the specific reminder being targeted
+	// in:path
+	ReminderID string `json:"reminderId"`
 }
 
 // swagger:parameters idActorReminderSchedule

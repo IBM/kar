@@ -28,11 +28,11 @@ class Company {
       sites: this.sites,
       bluepages: this.bluepages
     }
-    await this.sys.setMultiple(state)
+    await this.kar.setMultiple(state)
   }
 
   async activate () {
-    const state = await this.sys.getAll()
+    const state = await this.kar.getAll()
     this.nextSerialNumber = state.nextSerialNumber || 0
     this.sites = state.sites || []
     this.bluepages = state.bluepages || {}
@@ -57,28 +57,28 @@ class Company {
   async hire ({ site = 'Yorktown', workers = 3, days = 1, steps = 20, thinkms = 10000 } = {}) {
     if (!this.sites.includes(site)) {
       this.sites.push(site)
-      await actor.call('Site', site, 'joinCompany', { company: this.sys.id })
+      await this.kar.call('Site', site, 'joinCompany', { company: this.kar.id })
       await actor.scheduleReminder('Site', site, 'siteReport', { id: 'aisle14', deadline: new Date(Date.now() + 1000), period: '5s' })
-      await this.sys.set('sites', this.sites)
+      await this.kar.set('sites', this.sites)
     }
 
     console.log(`${workers} hired to perform ${steps} tasks/day for ${days} days at ${site}`)
 
     const sn = this.nextSerialNumber
     this.nextSerialNumber = sn + workers
-    await this.sys.set('nextSerialNumber', this.nextSerialNumber)
+    await this.kar.set('nextSerialNumber', this.nextSerialNumber)
 
     for (var i = 0; i < workers; i++) {
       const name = sn + i
       this.bluepages[name] = site
-      await actor.tell('Site', site, 'newHire', { who: name, days, steps, thinkms })
+      await this.kar.tell('Site', site, 'newHire', { who: name, days, steps, thinkms })
     }
-    await this.sys.set('bluepages', this.bluepages)
+    await this.kar.set('bluepages', this.bluepages)
   }
 
   async retire ({ who }) {
     delete this.bluepages[who]
-    await this.sys.set('bluepages', this.bluepages)
+    await this.kar.set('bluepages', this.bluepages)
     await actor.state.deleteAll('Researcher', who)
   }
 }
@@ -102,40 +102,40 @@ class Site {
       workerUpdateLatency: this.workerUpdateLatency,
       workers: this.workers
     }
-    await this.sys.setMultiple(state)
+    await this.kar.setMultiple(state)
   }
 
   async activate () {
-    const state = await this.sys.getAll()
+    const state = await this.kar.getAll()
     this.reminderDelays = state.reminderDelays || []
     this.workerUpdateLatency = state.workerUpdateLatency || []
     this.workers = state.workers || {}
     this.company = state.company
-    await this.sys.set('cleanShutdown', false)
+    await this.kar.set('cleanShutdown', false)
     if (this.company !== undefined && state.cleanShutdown !== true) {
-      const employees = await actor.call('Company', this.company, 'activeEmployees', { site: this.sys.id })
+      const employees = await actor.call('Company', this.company, 'activeEmployees', { site: this.kar.id })
       for (const sn of employees) {
         this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
       }
     }
-    if (debug) console.log(`activated Site ${this.sys.id} with occupants ${state.workers}`)
+    if (debug) console.log(`activated Site ${this.kar.id} with occupants ${state.workers}`)
   }
 
   async deactivate () {
     await this.checkpoint()
-    await this.sys.set('cleanShutdown', true)
-    if (debug) console.log(`deactivated Site ${this.sys.id}`)
+    await this.kar.set('cleanShutdown', true)
+    if (debug) console.log(`deactivated Site ${this.kar.id}`)
   }
 
   async joinCompany ({ company }) {
     this.company = company
-    await this.sys.set('company', company)
-    if (debug) console.log(`Site ${this.sys.id} joined Company ${this.company}`)
+    await this.kar.set('company', company)
+    if (debug) console.log(`Site ${this.kar.id} joined Company ${this.company}`)
   }
 
   async newHire ({ who, days, steps, thinkms }) {
     this.workers[who] = States.ONBOARDING
-    await actor.tell('Researcher', who, 'newHire', { site: this.sys.id, days, steps, thinkms })
+    await actor.tell('Researcher', who, 'newHire', { site: this.kar.id, days, steps, thinkms })
   }
 
   async retire ({ who, delays = [] }) {
@@ -144,9 +144,9 @@ class Site {
       const missedBucket = Math.floor(missedMS / bucketSizeInMS)
       ds[missedBucket] = (ds[missedBucket] || 0) + 1
     })
-    this.sys.set('reminderDelays', this.reminderDelays)
+    this.kar.set('reminderDelays', this.reminderDelays)
 
-    await actor.call('Company', this.company, 'retire', { who })
+    await this.kar.call('Company', this.company, 'retire', { who })
     delete this.workers[who]
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
   }
@@ -163,7 +163,7 @@ class Site {
   async siteReport () {
     const siteEmployees = this.count
     const time = new Date().toString()
-    const status = { site: this.sys.id, siteEmployees, time }
+    const status = { site: this.kar.id, siteEmployees, time }
     status.bucketSizeInMS = bucketSizeInMS
     status.reminderDelays = this.reminderDelays
     status.workerUpdateLatency = this.workerUpdateLatency
@@ -184,7 +184,7 @@ class Site {
   async resetDelayStats () {
     this.reminderDelays = []
     this.workerUpdateLatency = []
-    await this.sys.setMultiple({ reminderDelays: [], workerUpdateLatency: [] })
+    await this.kar.setMultiple({ reminderDelays: [], workerUpdateLatency: [] })
   }
 }
 
@@ -204,18 +204,18 @@ class Office {
   get count () { return this.occupants.size }
 
   async checkpoint () {
-    await this.sys.set('occupants', Array.from(this.occupants))
+    await this.kar.set('occupants', Array.from(this.occupants))
   }
 
   async activate () {
-    const so = await this.sys.get('occupants') || []
+    const so = await this.kar.get('occupants') || []
     this.occupants = new Set(so)
-    if (debug) console.log(`activated Office ${this.sys.id} with occupancy ${this.count}`)
+    if (debug) console.log(`activated Office ${this.kar.id} with occupancy ${this.count}`)
   }
 
   async deactivate () {
     await this.checkpoint()
-    if (debug) console.log(`deactivated Office ${this.sys.id}`)
+    if (debug) console.log(`deactivated Office ${this.kar.id}`)
   }
 
   async enter ({ who, checkpoint = true }) {
@@ -223,7 +223,7 @@ class Office {
     if (checkpoint) {
       await this.checkpoint()
     }
-    if (debug) console.log(`${who} entered Office ${this.sys.id} occupancy is now ${this.count}`)
+    if (debug) console.log(`${who} entered Office ${this.kar.id} occupancy is now ${this.count}`)
   }
 
   async leave ({ who, checkpoint = true }) {
@@ -231,17 +231,17 @@ class Office {
     if (checkpoint) {
       await this.checkpoint()
     }
-    if (debug) console.log(`${who} left Office ${this.sys.id} occupancy is now ${this.count}`)
+    if (debug) console.log(`${who} left Office ${this.kar.id} occupancy is now ${this.count}`)
   }
 }
 
 class Researcher {
-  get name () { return this.sys.id }
+  get name () { return this.kar.id }
 
   async newHire ({ site, days, steps, thinkms }) {
     const initialState = { site, days, workdaySteps: steps, thinkms, activity: States.ONBOARDING }
     Object.assign(this, initialState)
-    await this.sys.setMultiple(initialState)
+    await this.kar.setMultiple(initialState)
     await this.startWorkDay()
   }
 
@@ -256,11 +256,11 @@ class Researcher {
       location: this.location,
       delays: this.delays
     }
-    await this.sys.setMultiple(state)
+    await this.kar.setMultiple(state)
   }
 
   async activate () {
-    Object.assign(this, await this.sys.getAll())
+    Object.assign(this, await this.kar.getAll())
     if (debug) console.log(`activated Researcher ${this.name} with state `, this)
   }
 
@@ -290,7 +290,7 @@ class Researcher {
     this.steps = this.workdaySteps
     const commuteTime = 1 + randI(2 * this.thinkms)
     const deadline = new Date(Date.now() + commuteTime)
-    await this.sys.scheduleReminder('move', { id: 'step', deadline, data: deadline.getTime() })
+    await this.kar.scheduleReminder('move', { id: 'step', deadline, data: deadline.getTime() })
     await this.checkpointState()
   }
 
@@ -300,7 +300,7 @@ class Researcher {
 
     if (this.location !== undefined) {
       const oldLocation = this.location
-      await actor.call('Office', oldLocation, 'leave', { who: this.name })
+      await this.kar.call('Office', oldLocation, 'leave', { who: this.name })
     }
 
     // Figure out what this Researcher will do next
@@ -333,7 +333,7 @@ class Researcher {
       nextLocation = Office.randomOffice(this.site)
       nextActivity = States.WORKING
     }
-    if (nextLocation !== undefined && !await actor.call('Office', nextLocation, 'isEmpty')) {
+    if (nextLocation !== undefined && !await this.kar.call('Office', nextLocation, 'isEmpty')) {
       // If our nextLocation is non-empty, we will spend more time there.
       thinkTime = thinkTime * 2
     }
@@ -343,15 +343,15 @@ class Researcher {
     this.location = nextLocation
     if (this.days > 0) {
       const deadline = new Date(Date.now() + thinkTime)
-      await this.sys.scheduleReminder(nextCallback, { id: 'step', deadline, data: deadline.getTime() })
+      await this.kar.scheduleReminder(nextCallback, { id: 'step', deadline, data: deadline.getTime() })
       await this.checkpointState()
     } else {
       this.retired = true
-      await actor.call('Site', this.site, 'retire', { who: this.name, delays: this.delays })
+      await this.kar.call('Site', this.site, 'retire', { who: this.name, delays: this.delays })
     }
 
     if (this.location !== undefined) {
-      await actor.call('Office', this.location, 'enter', { who: this.name })
+      await this.kar.call('Office', this.location, 'enter', { who: this.name })
     }
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)

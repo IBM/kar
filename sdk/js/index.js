@@ -60,7 +60,7 @@ function get (api) {
   return fetch(url + api, { headers, agent }).then(parse)
 }
 
-// http get: parse response body
+// http del: parse response body
 function del (api) {
   return fetch(url + api, { method: 'DELETE', headers, agent }).then(parse)
 }
@@ -76,7 +76,7 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
  * Asynchronous service invocation; returns "OK" immediately
  * @param {string} service The service to invoke.
  * @param {string} path The service endpoint to invoke.
- * @param {any} [params={}] The argument with which to invoke the service endpoint.
+ * @param {any} [params] The argument with which to invoke the service endpoint.
  */
 const tell = (service, path, params) => post(`service/${service}/tell/${path}`, params)
 
@@ -84,7 +84,7 @@ const tell = (service, path, params) => post(`service/${service}/tell/${path}`, 
  * Synchronous service invocation; returns invocation result
  * @param {string} service The service to invoke.
  * @param {string} path The service endpoint to invoke.
- * @param {any} [params={}] The argument with which to invoke the service endpoint.
+ * @param {any} [params] The argument with which to invoke the service endpoint.
  * @returns The result returned by the target service.
  */
 const call = (service, path, params) => post(`service/${service}/call/${path}`, params)
@@ -94,7 +94,7 @@ const call = (service, path, params) => post(`service/${service}/call/${path}`, 
  * @param {string} type The type of the target Actor.
  * @param {string} id The instance id of the target Actor.
  * @param {string} path The actor method to invoke.
- * @param {any} [params={}] The argument with which to invoke the actor method.
+ * @param {any} [params] The argument with which to invoke the actor method.
  */
 const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${path}`, params)
 
@@ -103,7 +103,7 @@ const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${p
  * @param {string} type The type of the target Actor.
  * @param {string} id The instance id of the target Actor.
  * @param {string} path The actor method to invoke.
- * @param {any} [params={}] The arguments with which to invoke the actor method.
+ * @param {any} [params] The arguments with which to invoke the actor method.
  * @returns The result returned from the actor method
  */
 const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${path}`, params)
@@ -114,7 +114,7 @@ const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${p
  * @param {string} id The instance id of the target Actor.
  * @param {string} session The session in which to invoke the method.
  * @param {string} path The actor method to invoke.
- * @param {any} [params={}] The arguments with which to invoke the actor method.
+ * @param {any} [params] The arguments with which to invoke the actor method.
  * @returns The result returned from the actor method
  */
 
@@ -124,19 +124,19 @@ const actorCallInSession = (type, id, session, path, params) => post(`actor/${ty
  * Cancel matching reminders for an Actor instance.
  * @param {string} type The type of the target Actor.
  * @param {string} id The instance id of the target Actor.
- * @param {{id:string}} [params] The id of a specific reminder to cancel
+ * @param {string} [reminderId] The id of a specific reminder to cancel
  * @returns The number of reminders that were cancelled.
  */
-const actorCancelReminder = (type, id, params = {}) => del(`actor/${type}/${id}/reminder`, params)
+const actorCancelReminder = (type, id, reminderId) => reminderId ? del(`actor/${type}/${id}/reminder/${reminderId}`) : del(`actor/${type}/${id}/reminder`)
 
 /**
  * Get matching reminders for an Actor instance.
  * @param {string} type The type of the target Actor.
  * @param {string} id  The instance id of the target Actor.
- * @param {{id:string}} [params] The id of a specific reminder to cancel
+ * @param {string} [reminderId] The id of a specific reminder to cancel
  * @returns {array} An array of matching reminders
  */
-const actorGetReminder = (type, id, params = {}) => get(`actor/${type}/${id}/reminder`, params)
+const actorGetReminder = (type, id, reminderId) => reminderId ? get(`actor/${type}/${id}/reminder/${reminderId}`) : get(`actor/${type}/${id}/reminder`)
 
 /**
  * Schedule a reminder for an Actor instance.
@@ -292,20 +292,24 @@ const errorHandler = [
 
 /**
  * Bind the Actor system to a specific Actor instance
+ * @param {{kar:{session:string}}} actor The Actor instance being bound
  * @param {string} type The type of the Actor instance being bound
  * @param {string} id The id of the Actor instance being bound
  */
-const sys = (type, id) => ({
+const kar = (actor, type, id) => ({
   id: id,
-  tell: (method, params) => actorTell(type, id, method, params),
+  tell: actorTell,
+  tellSelf: (path, params) => actorTell(type, id, path, params),
+  call: (type, id, path, params) => actorCallInSession(type, id, actor.kar.session, path, params),
+  callSelf: (path, params) => actorCallInSession(type, id, actor.kar.session, path, params),
   get: key => actorGetState(type, id, key),
   set: (key, params) => actorSetState(type, id, key, params),
   setMultiple: (params) => actorSetStateMultiple(type, id, params),
   delete: key => actorDeleteState(type, id, key),
   getAll: () => actorGetAllState(type, id),
   deleteAll: () => actorDeleteAllState(type, id),
-  cancelReminder: params => actorCancelReminder(type, id, params),
-  getReminder: params => actorGetReminder(type, id, params),
+  cancelReminder: (reminderId) => actorCancelReminder(type, id, reminderId),
+  getReminder: (reminderId) => actorGetReminder(type, id, reminderId),
   scheduleReminder: (path, params) => actorScheduleReminder(type, id, path, params)
 })
 
@@ -320,8 +324,9 @@ function actorRuntime (actors) {
   router.get('/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => {
       table[req.params.type] = table[req.params.type] || {}
-      table[req.params.type][req.params.id] = new (actors[req.params.type])(req.params.id)
-      table[req.params.type][req.params.id].sys = sys(req.params.type, req.params.id)
+      const actor = new (actors[req.params.type])(req.params.id)
+      table[req.params.type][req.params.id] = actor
+      table[req.params.type][req.params.id].kar = kar(actor, req.params.type, req.params.id)
     }) // instantiate actor and add to index
     .then(_ => { // run optional activate callback
       if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
@@ -343,19 +348,7 @@ function actorRuntime (actors) {
     .then(_ => {
       const session = req.params.session
       const actor = table[req.params.type][req.params.id]
-      actor.actors = new Proxy({}, {
-        get: function (_, type) {
-          return new Proxy({}, {
-            get: function (_, id) {
-              return new Proxy({}, {
-                get: function (_, method) {
-                  return params => actorCallInSession(type, id, session, method, params)
-                }
-              })
-            }
-          })
-        }
-      })
+      actor.kar.session = session
       if (req.params.method in actor) {
         if (typeof actor[req.params.method] === 'function') {
           return actor[req.params.method](req.body)
@@ -371,24 +364,6 @@ function actorRuntime (actors) {
 
   return router
 }
-
-const actors = new Proxy({}, {
-  get: function (_, type) {
-    return new Proxy({}, {
-      get: function (_, id) {
-        return new Proxy({}, {
-          get: function (_, method) {
-            if (method === 'sys') {
-              return sys(type, id)
-            } else {
-              return params => actorCall(type, id, method, params)
-            }
-          }
-        })
-      }
-    })
-  }
-})
 
 // h2c protocol wrapper
 const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
@@ -417,7 +392,7 @@ module.exports = {
       deleteAll: actorDeleteAllState
     }
   },
-  actors,
+  actorProxy: function (type, id) { const proxy = {}; proxy.kar = kar(proxy, type, id); return proxy },
   actorRuntime,
   broadcast,
   shutdown,

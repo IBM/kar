@@ -113,13 +113,14 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 }
 
 // Reminders sends a reminder command (cancel, get, schedule) to a reminder's assigned sidecar and waits for a reply
-func Reminders(ctx context.Context, actor Actor, action, payload, contentType, accept string) (*Reply, error) {
+func Reminders(ctx context.Context, actor Actor, reminderID, action, payload, contentType, accept string) (*Reply, error) {
 	target := reminderPartition(actor)
 	msg := map[string]string{
 		"protocol":     "partition",
 		"partition":    strconv.Itoa(int(target)),
 		"type":         actor.Type,
 		"id":           actor.ID,
+		"reminderId":   reminderID,
 		"command":      "reminder:" + action,
 		"content-type": contentType,
 		"accept":       accept,
@@ -201,30 +202,21 @@ func callback(ctx context.Context, msg map[string]string) error {
 }
 
 func reminderCancel(ctx context.Context, msg map[string]string) error {
-	var reply Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found, err := CancelReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
-	if err != nil {
-		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
-	} else {
-		reply = Reply{StatusCode: http.StatusOK, Payload: fmt.Sprintf("%v", found), ContentType: "text/plain"}
-	}
+	found := CancelReminders(actor, msg["reminderId"], msg["payload"], msg["content-type"], msg["accepts"])
+	reply := Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
 	return respond(ctx, msg, reply)
 }
 
 func reminderGet(ctx context.Context, msg map[string]string) error {
 	var reply Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found, err := GetReminders(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	found := GetReminders(actor, msg["reminderId"], msg["payload"], msg["content-type"], msg["accepts"])
+	blob, err := json.Marshal(found)
 	if err != nil {
-		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		blob, err := json.Marshal(found)
-		if err != nil {
-			reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
-		} else {
-			reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
-		}
+		reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
 	}
 	return respond(ctx, msg, reply)
 }

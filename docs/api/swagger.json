@@ -46,7 +46,7 @@
           },
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -124,7 +124,7 @@
     },
     "/actor/{actorType}/{actorId}/reminder": {
       "get": {
-        "description": "### Get all matching reminders\n\nThis operatation returns all reminders for the actor instance specified in the path.\nIf a reminder id is provided in the request body, only a reminder that\nhas that id will be returned.",
+        "description": "### Get all reminders\n\nThis operation returns all reminders for the actor instance specified in the path.",
         "schemes": [
           "http"
         ],
@@ -132,7 +132,7 @@
           "actors"
         ],
         "summary": "reminder",
-        "operationId": "idActorReminderGet",
+        "operationId": "idActorReminderGetAll",
         "parameters": [
           {
             "type": "string",
@@ -149,14 +149,6 @@
             "name": "actorId",
             "in": "path",
             "required": true
-          },
-          {
-            "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
-            "name": "Body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/reminderFilter"
-            }
           }
         ],
         "responses": {
@@ -172,7 +164,7 @@
         }
       },
       "post": {
-        "description": "### Schedule a reminder\n\nThis operatation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
+        "description": "### Schedule a reminder\n\nThis operation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
         "schemes": [
           "http"
         ],
@@ -220,7 +212,7 @@
         }
       },
       "delete": {
-        "description": "### Cancel all matching reminders\n\nThis operation cancels reminders for the actor instance specified in the path.\nIf a reminder id is provided in the request body, only the reminder whose id\nmatches that id will be cancelled. If no id is provided, all\nof the specified actor's reminders will be cancelled.  The number of reminders\nactually cancelled is returned as the result of the operation.",
+        "description": "### Cancel all reminders\n\nThis operation cancels all reminders for the actor instance specified in the path.\nThe number of reminders cancelled is returned as the result of the operation.",
         "schemes": [
           "http"
         ],
@@ -228,6 +220,96 @@
           "actors"
         ],
         "summary": "reminder",
+        "operationId": "idActorReminderCancelAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderCancelResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/actor/{actorType}/{actorId}/reminder/{reminderId}": {
+      "get": {
+        "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "reminder/id",
+        "operationId": "idActorReminderGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderGetResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Cancel a reminders\n\nThis operation cancels a reminder for the actor instance specified in the path.\nThe number of reminders cancelled is returned as the result of the operation.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "reminder/id",
         "operationId": "idActorReminderCancel",
         "parameters": [
           {
@@ -247,12 +329,12 @@
             "required": true
           },
           {
-            "description": "The request body is an optional filter\nused to select a subset of an actor's reminders.",
-            "name": "Body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/reminderFilter"
-            }
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
@@ -507,7 +589,7 @@
     },
     "/actor/{actorType}/{actorId}/tell/{path}": {
       "post": {
-        "description": "### Asynchronosuly invoke an actor method\n\nTell asynchronously executes a `POST` to the `path` endpoint of\nthe actor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted actor method.",
+        "description": "### Asynchronously invoke an actor method\n\nTell asynchronously executes a `POST` to the `path` endpoint of\nthe actor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted actor method.",
         "schemes": [
           "http"
         ],
@@ -535,7 +617,7 @@
           },
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -566,7 +648,7 @@
     },
     "/event/{topic}/publish": {
       "post": {
-        "description": "### Publish an event to a topic\n\nThe event provived as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guarenteed to\neventually be published to the targeted topic.",
+        "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
         "schemes": [
           "http"
         ],
@@ -625,7 +707,7 @@
           },
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -652,7 +734,7 @@
     },
     "/event/{topic}/unsubscribe": {
       "post": {
-        "description": "### Unsubscribe from a topic\n\nUnsubscribe an appliction endpoint described by the request body from `topic`.\nThe operation may return before the unsubscription actually completes, but upon\nsuccessful it is guarenteed that the endpoint will eventually stop receive\nevents from the topic.",
+        "description": "### Unsubscribe from a topic\n\nUnsubscribe an application endpoint described by the request body from `topic`.\nThe operation may return before it actually completes, but upon\nsuccess it is guaranteed that the endpoint will eventually stop receive\nevents from the topic.",
         "schemes": [
           "http"
         ],
@@ -710,7 +792,7 @@
           },
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -764,7 +846,7 @@
           },
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -795,7 +877,7 @@
     },
     "/system/broadcast/{path}": {
       "post": {
-        "description": "### Asynchronously broadcast a message to the KAR runtime\n\nBroadcast asynchronously executes a `POST` on the `path` endpoint\nof all other KAR runtimes that are currently part of the application.\nThe runtime initiating the broadcast is not included as a receipient.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all targeted\nruntime processes.",
+        "description": "### Asynchronously broadcast a message to the KAR runtime\n\nBroadcast asynchronously executes a `POST` on the `path` endpoint\nof all other KAR runtimes that are currently part of the application.\nThe runtime initiating the broadcast is not included as a recipient.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all targeted\nruntime processes.",
         "schemes": [
           "http"
         ],
@@ -807,7 +889,7 @@
         "parameters": [
           {
             "type": "string",
-            "example": "an/arbitray/valid/pathSegment",
+            "example": "an/arbitrary/valid/pathSegment",
             "x-go-name": "Path",
             "description": "The target endpoint to be invoked by the operation",
             "name": "path",
@@ -984,7 +1066,7 @@
           "x-go-name": "Subject"
         },
         "time": {
-          "description": "Time when the event occured",
+          "description": "Time when the event occurred",
           "type": "string",
           "format": "date-time",
           "x-go-name": "Time"
@@ -1015,7 +1097,7 @@
           "x-go-name": "ActorType"
         },
         "id": {
-          "description": "A optional unique id to use for this subscribtion.\nIf not id is provided, the `topic` will be used as the id.",
+          "description": "A optional unique id to use for this subscrition.\nIf not id is provided, the `topic` will be used as the id.",
           "type": "string",
           "x-go-name": "ID"
         },
@@ -1028,7 +1110,7 @@
           "description": "The target endpoint to which events will be delivered",
           "type": "string",
           "x-go-name": "Path",
-          "example": "an/arbitray/valid/pathSegment"
+          "example": "an/arbitrary/valid/pathSegment"
         },
         "service": {
           "description": "The subscribing service name",
@@ -1049,23 +1131,12 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
     },
-    "reminderFilter": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "description": "An optional reminder ID",
-          "type": "string",
-          "x-go-name": "ID"
-        }
-      },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
-    },
     "scheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
       "type": "object",
       "properties": {
         "data": {
-          "description": "An optional parameter containing an arbitray JSON value that will be provided as the\npayload when the `path` is invoked on the actor instance.",
+          "description": "An optional parameter containing an arbitrary JSON value that will be provided as the\npayload when the `path` is invoked on the actor instance.",
           "type": "object",
           "x-go-name": "Data",
           "example": "{ msg: \"Hello Friend!\" }"

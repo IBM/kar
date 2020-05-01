@@ -89,17 +89,17 @@ class Foo {
 
   set ({ key, value }) {
     console.log('actor', this.id, 'set', key, value)
-    this.sys.set(key, value)
+    this.kar.set(key, value)
     return 'OK'
   }
 
   get ({ key }) {
     console.log('actor', this.id, 'get', key)
-    return this.sys.get(key)
+    return this.kar.get(key)
   }
 
   reenter (params) {
-    return this.actors.Foo[this.sys.id].incrQuiet(params)
+    return this.kar.callSelf('incrQuiet', params)
   }
 
   deactivate () {

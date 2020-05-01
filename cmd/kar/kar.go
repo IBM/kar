@@ -197,17 +197,14 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idActorReminderCancel
+// swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idActorReminderCancelAll
 //
 // reminder
 //
-// ### Cancel all matching reminders
+// ### Cancel all reminders
 //
-// This operation cancels reminders for the actor instance specified in the path.
-// If a reminder id is provided in the request body, only the reminder whose id
-// matches that id will be cancelled. If no id is provided, all
-// of the specified actor's reminders will be cancelled.  The number of reminders
-// actually cancelled is returned as the result of the operation.
+// This operation cancels all reminders for the actor instance specified in the path.
+// The number of reminders cancelled is returned as the result of the operation.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -218,15 +215,48 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route GET /actor/{actorType}/{actorId}/reminder actors idActorReminderGet
+// swagger:route DELETE /actor/{actorType}/{actorId}/reminder/{reminderId} actors idActorReminderCancel
+//
+// reminder/id
+//
+// ### Cancel a reminders
+//
+// This operation cancels a reminder for the actor instance specified in the path.
+// The number of reminders cancelled is returned as the result of the operation.
+//
+//     Consumes: application/json
+//     Produces: application/json
+//     Schemes: http
+//     Responses:
+//       200: response200ReminderCancelResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /actor/{actorType}/{actorId}/reminder actors idActorReminderGetAll
 //
 // reminder
 //
-// ### Get all matching reminders
+// ### Get all reminders
 //
-// This operatation returns all reminders for the actor instance specified in the path.
-// If a reminder id is provided in the request body, only a reminder that
-// has that id will be returned.
+// This operation returns all reminders for the actor instance specified in the path.
+//
+//     Consumes: application/json
+//     Produces: application/json
+//     Schemes: http
+//     Responses:
+//       200: response200ReminderGetResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /actor/{actorType}/{actorId}/reminder/{reminderId} actors idActorReminderGet
+//
+// reminder/id
+//
+// ### Get a reminder
+//
+// This operation returns the reminder for the actor instance specified in the path.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -243,7 +273,7 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Schedule a reminder
 //
-// This operatation schedules a reminder for the actor instance specified in the path
+// This operation schedules a reminder for the actor instance specified in the path
 // as described by the data provided in the request body.
 // If there is already a reminder for the target actor instance with the same reminderId,
 // that existing reminder's schedule will be updated based on the request body.
@@ -259,18 +289,20 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var action string
+	body := ""
 	switch r.Method {
 	case "GET":
 		action = "get"
 	case "POST":
 		action = "schedule"
+		body = runtime.ReadAll(r.Body)
 	case "DELETE":
 		action = "cancel"
 	default:
 		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
 		return
 	}
-	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("reminderId"), action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -623,8 +655,10 @@ func server(listener net.Listener) {
 	//
 	router.POST(base+"/actor/:type/:id/migrate", migrate)
 	//
+	router.GET(base+"/actor/:type/:id/reminder/:reminderId", reminder)
 	router.GET(base+"/actor/:type/:id/reminder", reminder)
 	router.POST(base+"/actor/:type/:id/reminder", reminder)
+	router.DELETE(base+"/actor/:type/:id/reminder/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminder", reminder)
 	//
 	router.GET(base+"/actor/:type/:id/state/:key", get)

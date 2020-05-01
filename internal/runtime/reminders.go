@@ -34,11 +34,6 @@ type Reminder struct {
 	EncodedData string        `json:"encodedData,omitempty"`
 }
 
-type reminderFilter struct {
-	// An optional reminder ID
-	ID string `json:"id,omitempty"`
-}
-
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
 type scheduleReminderPayload struct {
 	// The ID to use for this reminder
@@ -123,36 +118,26 @@ func loadReminder(rk string) (Reminder, error) {
 	return r, nil
 }
 
-// CancelReminders cancels all reminders that match the provided filter
-func CancelReminders(actor Actor, payload string, contentType string, accepts string) (int, error) {
-	var f reminderFilter
-	if err := json.Unmarshal([]byte(payload), &f); err != nil {
-		return 0, err
-	}
-
+// CancelReminders cancels all reminders that match reminderID ("" means match all)
+func CancelReminders(actor Actor, reminderID string, payload string, contentType string, accepts string) int {
 	arMutex.Lock()
-	found := activeReminders.cancelMatchingReminders(actor, f.ID)
+	found := activeReminders.cancelMatchingReminders(actor, reminderID)
 	for _, cancelledReminder := range found {
 		store.Del(cancelledReminder.key)
 	}
-	logger.Debug("Cancelled %v reminders matching (%v, %v)", found, actor, f.ID)
+	logger.Debug("Cancelled %v reminders matching (%v, %v)", found, actor, reminderID)
 	arMutex.Unlock()
 
-	return len(found), nil
+	return len(found)
 }
 
-// GetReminders returns all reminders that match the provided filter
-func GetReminders(actor Actor, payload string, contentType string, accepts string) ([]Reminder, error) {
-	var f reminderFilter
-	if err := json.Unmarshal([]byte(payload), &f); err != nil {
-		return nil, err
-	}
-
+// GetReminders returns all reminders that match reminderID ("" means match all)
+func GetReminders(actor Actor, reminderID string, payload string, contentType string, accepts string) []Reminder {
 	arMutex.Lock()
-	found := activeReminders.findMatchingReminders(actor, f.ID)
+	found := activeReminders.findMatchingReminders(actor, reminderID)
 	arMutex.Unlock()
 
-	return found, nil
+	return found
 }
 
 // ScheduleReminder schedules a reminder
