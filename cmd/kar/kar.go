@@ -728,6 +728,11 @@ func main() {
 		cancel9()
 	}()
 
+	go func() {
+		<-ctx.Done()
+		runtime.CloseIdleConnections()
+	}()
+
 	var listenHost string
 	if config.KubernetesMode {
 		listenHost = fmt.Sprintf(":%d", config.RuntimePort)
@@ -792,6 +797,8 @@ func main() {
 	}
 
 	wg.Wait()
+
+	cancel9()
 
 	logger.Warning("exiting...")
 }

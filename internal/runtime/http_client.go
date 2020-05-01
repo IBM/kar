@@ -46,7 +46,12 @@ func ReadAll(r io.ReadCloser) string {
 
 // invoke sends an HTTP request to the service and returns the response
 func invoke(ctx context.Context, method string, msg map[string]string) (*http.Response, error) {
-	req, err := http.NewRequest(method, url+msg["path"], strings.NewReader(msg["payload"]))
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	req, err := http.NewRequestWithContext(ctx, method, url+msg["path"], strings.NewReader(msg["payload"]))
 	if err != nil {
 		return nil, err
 	}
@@ -61,8 +66,19 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*http.Re
 		res, err = client.Do(req) // TODO adjust timeout
 		if err != nil {
 			logger.Debug("failed to invoke %s: %v", msg["path"], err)
+			if err == ctx.Err() {
+				return backoff.Permanent(err)
+			}
 		}
 		return err
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
+	if ctx.Err() != nil {
+		CloseIdleConnections() // don't keep connection alive once ctx is cancelled
+	}
 	return res, err
+}
+
+// CloseIdleConnections closes idle connections
+func CloseIdleConnections() {
+	client.CloseIdleConnections()
 }
