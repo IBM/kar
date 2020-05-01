@@ -118,8 +118,8 @@ func loadReminder(rk string) (Reminder, error) {
 	return r, nil
 }
 
-// CancelReminders cancels all reminders that match reminderID ("" means match all)
-func CancelReminders(actor Actor, reminderID string, payload string, contentType string, accepts string) int {
+// CancelReminders cancels all reminders for actor that match reminderID ("" means match all)
+func CancelReminders(actor Actor, reminderID string, contentType string, accepts string) int {
 	arMutex.Lock()
 	found := activeReminders.cancelMatchingReminders(actor, reminderID)
 	for _, cancelledReminder := range found {
@@ -131,8 +131,8 @@ func CancelReminders(actor Actor, reminderID string, payload string, contentType
 	return len(found)
 }
 
-// GetReminders returns all reminders that match reminderID ("" means match all)
-func GetReminders(actor Actor, reminderID string, payload string, contentType string, accepts string) []Reminder {
+// GetReminders returns all reminders for actor that match reminderID ("" means match all)
+func GetReminders(actor Actor, reminderID string, contentType string, accepts string) []Reminder {
 	arMutex.Lock()
 	found := activeReminders.findMatchingReminders(actor, reminderID)
 	arMutex.Unlock()

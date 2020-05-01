@@ -127,7 +127,7 @@ const actorCallInSession = (type, id, session, path, params) => post(`actor/${ty
  * @param {string} [reminderId] The id of a specific reminder to cancel
  * @returns The number of reminders that were cancelled.
  */
-const actorCancelReminder = (type, id, reminderId) => reminderId ? del(`actor/${type}/${id}/reminder/${reminderId}`) : del(`actor/${type}/${id}/reminder`)
+const actorCancelReminder = (type, id, reminderId) => reminderId ? del(`actor/${type}/${id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${type}/${id}/reminders`)
 
 /**
  * Get matching reminders for an Actor instance.
@@ -136,7 +136,7 @@ const actorCancelReminder = (type, id, reminderId) => reminderId ? del(`actor/${
  * @param {string} [reminderId] The id of a specific reminder to cancel
  * @returns {array} An array of matching reminders
  */
-const actorGetReminder = (type, id, reminderId) => reminderId ? get(`actor/${type}/${id}/reminder/${reminderId}`) : get(`actor/${type}/${id}/reminder`)
+const actorGetReminder = (type, id, reminderId) => reminderId ? get(`actor/${type}/${id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${type}/${id}/reminders`)
 
 /**
  * Schedule a reminder for an Actor instance.
@@ -145,7 +145,7 @@ const actorGetReminder = (type, id, reminderId) => reminderId ? get(`actor/${typ
  * @param {string} path The actor method to invoke when the reminder fires.
  * @param {{data?:any, deadline:Date, id:string, path:string, period?:string}} params A description of the desired reminder
  */
-const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${id}/reminder`, Object.assign({ path: `/${path}` }, params))
+const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${id}/reminders`, Object.assign({ path: `/${path}` }, params))
 
 /**
  * Get one value from an Actor instance's state

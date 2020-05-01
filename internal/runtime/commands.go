@@ -113,7 +113,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 }
 
 // Reminders sends a reminder command (cancel, get, schedule) to a reminder's assigned sidecar and waits for a reply
-func Reminders(ctx context.Context, actor Actor, reminderID, action, payload, contentType, accept string) (*Reply, error) {
+func Reminders(ctx context.Context, actor Actor, reminderID, nilOnAbsent, action, payload, contentType, accept string) (*Reply, error) {
 	target := reminderPartition(actor)
 	msg := map[string]string{
 		"protocol":     "partition",
@@ -122,6 +122,7 @@ func Reminders(ctx context.Context, actor Actor, reminderID, action, payload, co
 		"id":           actor.ID,
 		"reminderId":   reminderID,
 		"command":      "reminder:" + action,
+		"nilOnAbsent":  nilOnAbsent,
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
@@ -202,17 +203,34 @@ func callback(ctx context.Context, msg map[string]string) error {
 }
 
 func reminderCancel(ctx context.Context, msg map[string]string) error {
+	var reply Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := CancelReminders(actor, msg["reminderId"], msg["payload"], msg["content-type"], msg["accepts"])
-	reply := Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
+	found := CancelReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
+	if found == 0 && msg["reminderId"] != "" && msg["nilOnAbsent"] != "true" {
+		reply = Reply{StatusCode: http.StatusNotFound}
+	} else {
+		reply = Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
+	}
 	return respond(ctx, msg, reply)
 }
 
 func reminderGet(ctx context.Context, msg map[string]string) error {
 	var reply Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := GetReminders(actor, msg["reminderId"], msg["payload"], msg["content-type"], msg["accepts"])
-	blob, err := json.Marshal(found)
+	found := GetReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
+	var responseBody interface{} = found
+	if msg["reminderId"] != "" {
+		if len(found) == 0 {
+			if msg["nilOnAbsent"] != "true" {
+				reply = Reply{StatusCode: http.StatusNotFound}
+				return respond(ctx, msg, reply)
+			}
+			responseBody = nil
+		} else {
+			responseBody = found[0]
+		}
+	}
+	blob, err := json.Marshal(responseBody)
 	if err != nil {
 		reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
 	} else {

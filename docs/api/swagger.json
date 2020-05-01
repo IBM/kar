@@ -122,7 +122,7 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/reminder": {
+    "/actor/{actorType}/{actorId}/reminders": {
       "get": {
         "description": "### Get all reminders\n\nThis operation returns all reminders for the actor instance specified in the path.",
         "schemes": [
@@ -131,7 +131,7 @@
         "tags": [
           "actors"
         ],
-        "summary": "reminder",
+        "summary": "reminders",
         "operationId": "idActorReminderGetAll",
         "parameters": [
           {
@@ -153,7 +153,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/response200ReminderGetResult"
+            "$ref": "#/responses/response200ReminderGetAllResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -171,7 +171,7 @@
         "tags": [
           "actors"
         ],
-        "summary": "reminder",
+        "summary": "reminders",
         "operationId": "idActorReminderSchedule",
         "parameters": [
           {
@@ -219,7 +219,7 @@
         "tags": [
           "actors"
         ],
-        "summary": "reminder",
+        "summary": "reminders",
         "operationId": "idActorReminderCancelAll",
         "parameters": [
           {
@@ -241,7 +241,7 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/response200ReminderCancelResult"
+            "$ref": "#/responses/response200ReminderCancelAllResult"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -252,16 +252,16 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/reminder/{reminderId}": {
+    "/actor/{actorType}/{actorId}/reminders/{reminderId}": {
       "get": {
-        "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.",
+        "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.\nIf there is no reminder with the id `reminderId` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`.\nIf `nilOnAbsent` is true the `404` response will be replaced with\na `200` response with a `nil` response body.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "reminder/id",
+        "summary": "reminders/id",
         "operationId": "idActorReminderGet",
         "parameters": [
           {
@@ -287,11 +287,21 @@
             "name": "reminderId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200ReminderGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -302,14 +312,14 @@
         }
       },
       "delete": {
-        "description": "### Cancel a reminders\n\nThis operation cancels a reminder for the actor instance specified in the path.\nThe number of reminders cancelled is returned as the result of the operation.",
+        "description": "### Cancel a reminder\n\nThis operation cancels the reminder for the actor instance specified in the path.\nIf the reminder is successfully cancelled a `200` response with a body of `1` will be returned.\nIf the reminder is not found, a `404` response will be returned unless\nthe boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`\nis sent to true the `404` response will instead be a `200` with a body containing `0`.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actors"
         ],
-        "summary": "reminder/id",
+        "summary": "reminders/id",
         "operationId": "idActorReminderCancel",
         "parameters": [
           {
@@ -335,11 +345,21 @@
             "name": "reminderId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200ReminderCancelResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1191,7 +1211,7 @@
         }
       }
     },
-    "response200ReminderCancelResult": {
+    "response200ReminderCancelAllResult": {
       "headers": {
         "NumberCancelled": {
           "type": "integer",
@@ -1201,7 +1221,16 @@
         }
       }
     },
-    "response200ReminderGetResult": {
+    "response200ReminderCancelResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true"
+        }
+      }
+    },
+    "response200ReminderGetAllResult": {
       "headers": {
         "Body": {
           "type": "array",
@@ -1210,6 +1239,17 @@
           },
           "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', deadline: '2020-04-14T14:20:00Z', encodedData: '{\"msg\":\"carpe diem\"}' }]",
           "description": "An array containing all matching reminders"
+        }
+      }
+    },
+    "response200ReminderGetResult": {
+      "schema": {
+        "$ref": "#/definitions/Reminder"
+      },
+      "headers": {
+        "Body": {
+          "example": "{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }",
+          "description": "The reminder"
         }
       }
     },

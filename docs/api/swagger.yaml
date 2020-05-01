@@ -281,7 +281,7 @@ paths:
       summary: migrate
       tags:
       - actors
-  /actor/{actorType}/{actorId}/reminder:
+  /actor/{actorType}/{actorId}/reminders:
     delete:
       description: |-
         ### Cancel all reminders
@@ -304,14 +304,14 @@ paths:
         x-go-name: ActorID
       responses:
         "200":
-          $ref: '#/responses/response200ReminderCancelResult'
+          $ref: '#/responses/response200ReminderCancelAllResult'
         "500":
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: reminder
+      summary: reminders
       tags:
       - actors
     get:
@@ -335,14 +335,14 @@ paths:
         x-go-name: ActorID
       responses:
         "200":
-          $ref: '#/responses/response200ReminderGetResult'
+          $ref: '#/responses/response200ReminderGetAllResult'
         "500":
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: reminder
+      summary: reminders
       tags:
       - actors
     post:
@@ -382,16 +382,19 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: reminder
+      summary: reminders
       tags:
       - actors
-  /actor/{actorType}/{actorId}/reminder/{reminderId}:
+  /actor/{actorType}/{actorId}/reminders/{reminderId}:
     delete:
       description: |-
-        ### Cancel a reminders
+        ### Cancel a reminder
 
-        This operation cancels a reminder for the actor instance specified in the path.
-        The number of reminders cancelled is returned as the result of the operation.
+        This operation cancels the reminder for the actor instance specified in the path.
+        If the reminder is successfully cancelled a `200` response with a body of `1` will be returned.
+        If the reminder is not found, a `404` response will be returned unless
+        the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+        is sent to true the `404` response will instead be a `200` with a body containing `0`.
       operationId: idActorReminderCancel
       parameters:
       - description: The actor type
@@ -412,16 +415,24 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
       responses:
         "200":
           $ref: '#/responses/response200ReminderCancelResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: reminder/id
+      summary: reminders/id
       tags:
       - actors
     get:
@@ -429,6 +440,10 @@ paths:
         ### Get a reminder
 
         This operation returns the reminder for the actor instance specified in the path.
+        If there is no reminder with the id `reminderId` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`.
+        If `nilOnAbsent` is true the `404` response will be replaced with
+        a `200` response with a `nil` response body.
       operationId: idActorReminderGet
       parameters:
       - description: The actor type
@@ -449,16 +464,24 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
       responses:
         "200":
           $ref: '#/responses/response200ReminderGetResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: reminder/id
+      summary: reminders/id
       tags:
       - actors
   /actor/{actorType}/{actorId}/state:
@@ -990,14 +1013,21 @@ responses:
         description: The response body returned by the invoked endpoint
     schema:
       type: object
-  response200ReminderCancelResult:
+  response200ReminderCancelAllResult:
     headers:
       NumberCancelled:
         description: The number of reminders that were actually cancelled
         example: 3
         format: int64
         type: integer
-  response200ReminderGetResult:
+  response200ReminderCancelResult:
+    headers:
+      NumberCancelled:
+        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError`
+          was true
+        format: int64
+        type: integer
+  response200ReminderGetAllResult:
     headers:
       Body:
         description: An array containing all matching reminders
@@ -1009,6 +1039,15 @@ responses:
         items:
           $ref: '#/definitions/Reminder'
         type: array
+  response200ReminderGetResult:
+    headers:
+      Body:
+        description: The reminder
+        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          deadline: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }'
+    schema:
+      $ref: '#/definitions/Reminder'
   response200StateDeleteResult:
     headers:
       NumberDeleted:

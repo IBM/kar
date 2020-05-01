@@ -132,6 +132,8 @@ type endpointRequestBody struct {
 }
 
 // swagger:parameters idActorStateGet
+// swagger:parameters idActorReminderCancel
+// swagger:parameters idActorReminderGet
 type actorStateGetParamWrapper struct {
 	// Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
 	// in:query
@@ -249,6 +251,12 @@ type response200CallResult struct {
 
 // swagger:response response200ReminderCancelResult
 type response200ReminderCancelResult struct {
+	// Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true
+	NumberCancelled int
+}
+
+// swagger:response response200ReminderCancelAllResult
+type response200ReminderCancelAllResult struct {
 	// The number of reminders that were actually cancelled
 	// Example: 3
 	NumberCancelled int
@@ -256,6 +264,13 @@ type response200ReminderCancelResult struct {
 
 // swagger:response response200ReminderGetResult
 type response200ReminderGetResult struct {
+	// The reminder
+	// Example: { Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }
+	Body Reminder
+}
+
+// swagger:response response200ReminderGetAllResult
+type response200ReminderGetAllResult struct {
 	// An array containing all matching reminders
 	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', deadline: '2020-04-14T14:20:00Z', encodedData: '{"msg":"carpe diem"}' }]
 	Body []Reminder
