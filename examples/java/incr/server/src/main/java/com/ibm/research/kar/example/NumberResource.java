@@ -24,6 +24,7 @@ public class NumberResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Number incrNumber(Number num) {
 
+		System.out.println("****** INCREMENTING NUMBER");
 		int oldNum = num.getNumber();
 		num.setNumber(numService.incr(oldNum));
 

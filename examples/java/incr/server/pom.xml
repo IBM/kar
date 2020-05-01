@@ -21,8 +21,8 @@
 		<version.maven-surefire-plugin>2.22.2</version.maven-surefire-plugin>
 		<version.maven-war-plugin>3.2.3</version.maven-war-plugin>
 		<!-- Liberty configuration -->
-		<liberty.var.default.http.port>9080</liberty.var.default.http.port>
-		<liberty.var.default.https.port>9443</liberty.var.default.https.port>
+		<liberty.var.default.http.port>8080</liberty.var.default.http.port>
+		<liberty.var.default.https.port>8443</liberty.var.default.https.port>
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
 	</properties>
 

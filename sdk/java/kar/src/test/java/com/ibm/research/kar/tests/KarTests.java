@@ -1,4 +1,4 @@
-package kar;
+package com.ibm.research.kar.tests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,13 +22,12 @@ public class KarTests {
 	@Test
 	void testCall() {
 		Kar kar = new Kar();
-		kar.buildRestClient();
-
 		JsonObject params = Json.createObjectBuilder()
 				.add("number", 5)
 				.build();
 
-		Response resp = kar.call("number", "incr", params);
+		System.out.println("Call test invoking KAR");
+		Response resp = kar.call("number", "number/incr", params);
 
 		String replyString = resp.readEntity(String.class);
 		JsonReader jsonReader = Json.createReader(new StringReader(replyString));
