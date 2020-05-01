@@ -218,14 +218,14 @@ func containsZero(p []int32) bool {
 // rebalanceReminders is invoked asynchronously after a rebalancing operations to
 // update this sidecar's reminderQueue to reflect the partitions it has been assigned
 // by the rebalance operation.
-func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartitions []int32) {
+func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartitions []int32) error {
 	prior := containsZero(priorPartitions)
 	current := containsZero(newPartitions)
 
 	// If nothing has changed, we can short-circuit without acquiring the mutex
 	if prior == current {
 		logger.Info("rebalanceReminders: responsibility unchanged (responsible = %v)", prior)
-		return
+		return nil
 	}
 
 	// Assignments have changed; acquire the mutex and update data structures
@@ -240,7 +240,8 @@ func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartiti
 		// Get the keys for all persisted reminders for this application
 		rkeys, err := store.Keys("reminders" + config.Separator + "*")
 		if err != nil {
-			logger.Fatal("rebalanceReminders: Failure getting reminder keys: %v", err)
+			arMutex.Unlock()
+			return err
 		}
 		logger.Info("rebalanceReminders: found %v persisted reminders", len(rkeys))
 
@@ -257,4 +258,6 @@ func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartiti
 
 	logger.Info("rebalanceReminders: operation completed")
 	arMutex.Unlock()
+
+	return nil
 }

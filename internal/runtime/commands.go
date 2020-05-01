@@ -417,7 +417,10 @@ func ManageReminderPartitions(ctx context.Context) {
 	var priorPartitions = make([]int32, 0)
 	for {
 		newPartitions, rebalance := pubsub.Partitions()
-		rebalanceReminders(ctx, priorPartitions, newPartitions)
+		if err := rebalanceReminders(ctx, priorPartitions, newPartitions); err != nil {
+			// TODO: This should trigger a more orderly shutdown of the sidecar.
+			logger.Fatal("Error when rebalancing reminders %v", err)
+		}
 		priorPartitions = newPartitions
 		select {
 		case <-rebalance:
