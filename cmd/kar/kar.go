@@ -80,7 +80,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
 	}
 	if err != nil {
-		if ctx.Err() != nil {
+		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
@@ -164,7 +164,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"), session)
 	}
 	if err != nil {
-		if ctx.Err() != nil {
+		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
@@ -194,24 +194,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200
 //
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
+	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}) // TODO handle errors
 	fmt.Fprint(w, "OK")
-}
-
-// process incoming messages in parallel
-func process(m pubsub.Message) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		runtime.Process(ctx, cancel, m)
-	}()
-}
-
-// subscriber handles incoming messages
-func subscriber(channel <-chan pubsub.Message) {
-	for m := range channel {
-		process(m)
-	}
 }
 
 // swagger:route DELETE /actor/{actorType}/{actorId}/reminder actors idActorReminderCancel
@@ -289,7 +273,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, action, runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
-		if ctx.Err() != nil {
+		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		} else {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
@@ -679,6 +663,22 @@ func server(listener net.Listener) {
 			logger.Fatal("failed to shutdown HTTP server: %v", err)
 		}
 	}()
+}
+
+// process incoming messages in parallel
+func process(m pubsub.Message) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		runtime.Process(ctx, cancel, m)
+	}()
+}
+
+// subscriber handles incoming messages
+func subscriber(channel <-chan pubsub.Message) {
+	for m := range channel {
+		process(m)
+	}
 }
 
 func main() {

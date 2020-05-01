@@ -156,7 +156,6 @@ func KillAll(ctx context.Context) {
 }
 
 // helper methods to handle incoming messages
-// return either nil or ctx.Err() if cancelled
 // log ignored errors to logger.Error
 
 func respond(ctx context.Context, msg map[string]string, reply Reply) error {
