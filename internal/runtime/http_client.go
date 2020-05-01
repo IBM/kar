@@ -12,6 +12,7 @@ import (
 
 	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/pkg/logger"
 	"golang.org/x/net/http2"
 )
 
@@ -58,6 +59,9 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*http.Re
 	var res *http.Response
 	err = backoff.Retry(func() error {
 		res, err = client.Do(req) // TODO adjust timeout
+		if err != nil {
+			logger.Debug("failed to invoke %s: %v", msg["path"], err)
+		}
 		return err
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
 	return res, err
