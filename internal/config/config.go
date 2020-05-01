@@ -27,6 +27,9 @@ var (
 	// ActorTypes are the actor types implemented by this service
 	ActorTypes []string
 
+	// ActorCollectorInterval is the interval at which unused actors are collected
+	ActorCollectorInterval time.Duration
+
 	// ActorReminderInterval is the interval at which reminders are processed
 	ActorReminderInterval time.Duration
 
@@ -80,18 +83,19 @@ var (
 )
 
 func init() {
-	var kafkaBrokers, verbosity, configDir, actorTypes, remindInterval, remindDelay string
+	var kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
 	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
 	flag.StringVar(&actorTypes, "actors", "", "The actor types implemented by this service, as a comma separated list")
-	flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval (default 100ms)")
+	flag.StringVar(&collectInterval, "actor_collector_interval", "10s", "Actor collector interval")
+	flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval")
 	flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
 	flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
 	flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
-	flag.BoolVar(&PartitionZeroIneligible, "partition_zero_ineligible", false, "Is this sidecar ineligible to host parition zero?")
+	flag.BoolVar(&PartitionZeroIneligible, "partition_zero_ineligible", false, "Is this sidecar ineligible to host partition zero?")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
 	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
@@ -121,6 +125,11 @@ func init() {
 		ActorTypes = []string{}
 	} else {
 		ActorTypes = strings.Split(actorTypes, ",")
+	}
+
+	ActorCollectorInterval, err = time.ParseDuration(collectInterval)
+	if err != nil {
+		logger.Fatal("error parsing actor_collector_interval %s", collectInterval)
 	}
 
 	ActorReminderInterval, err = time.ParseDuration(remindInterval)

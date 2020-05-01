@@ -386,13 +386,19 @@ func deactivate(ctx context.Context, actor Actor) error {
 
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
-	ticker := time.NewTicker(10 * time.Second)
+	lock := make(chan struct{}, 1) // trylock
+	ticker := time.NewTicker(config.ActorCollectorInterval)
 	for {
 		select {
 		case now := <-ticker.C:
-			logger.Debug("starting collection")
-			collect(ctx, now.Add(-10*time.Second))
-			logger.Debug("finishing collection")
+			select {
+			case lock <- struct{}{}:
+				logger.Debug("starting collection")
+				collect(ctx, now.Add(-config.ActorCollectorInterval))
+				logger.Debug("finishing collection")
+				<-lock
+			default: // skip this collection if collection is already in progress
+			}
 		case <-ctx.Done():
 			ticker.Stop()
 			return
