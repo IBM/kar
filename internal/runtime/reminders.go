@@ -188,9 +188,11 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		}
 
 		logger.Debug("ProcessReminders: firing %v to %v[%v]%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
-		err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/json")
-		if err != nil {
-			logger.Error("ProcessReminders: firing %v raised error %v", r, err)
+		if err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/json"); err != nil {
+			logger.Debug("ProcessReminders: firing %v raised error %v", r, err)
+			logger.Debug("ProcessReminders: ending this round; putting reminder back in queue to retry in next round")
+			activeReminders.addReminder(r)
+			break
 		}
 
 		if r.Period > 0 {
