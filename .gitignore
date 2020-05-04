@@ -18,6 +18,7 @@
 .settings
 .classpath
 .project
+.vscode
 
 node_modules/
 dist/
