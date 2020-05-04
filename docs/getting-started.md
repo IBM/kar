@@ -157,7 +157,7 @@ In a second window:
 ```shell
 . scripts/kar-kind-env.sh
 cd examples/helloWorld
-kar -app helloWorld -service client node client.js
+kar -app helloWorld node client.js
 ```
 
 You should see output like shown below in both windows:
@@ -177,7 +177,7 @@ For example, run the server in the cluster and the client locally.
 ```shell
 $ kubectl apply -f deploy/server-dev.yaml
 pod/hello-server created
-$ kar -app helloWorld -service client node client.js
+$ kar -app helloWorld node client.js
 2020/04/02 18:02:19 [STDOUT] Hello John Doe!
 $ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted

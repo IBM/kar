@@ -15,7 +15,7 @@ npm install
 
 kar -app myApp -service myService -actors Foo node server.js &
 sleep 1
-kar -app myApp -service myService node test-harness.js
+kar -app myApp node test-harness.js
 
 # Run actors-ykt locally
 echo "*** Executing actors-ykt/ykt-client.js ***"

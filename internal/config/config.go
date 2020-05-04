@@ -87,8 +87,8 @@ func init() {
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
-	flag.StringVar(&ServiceName, "service", "", "The name of the service being joined to the application")
-	flag.StringVar(&actorTypes, "actors", "", "The actor types implemented by this service, as a comma separated list")
+	flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
+	flag.StringVar(&actorTypes, "actors", "", "The actor types provided by this process, as a comma separated list")
 	flag.StringVar(&collectInterval, "actor_collector_interval", "10s", "Actor collector interval")
 	flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval")
 	flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
@@ -118,7 +118,7 @@ func init() {
 	}
 
 	if ServiceName == "" {
-		logger.Fatal("service name is required")
+		ServiceName = "kar.none"
 	}
 
 	if actorTypes == "" {

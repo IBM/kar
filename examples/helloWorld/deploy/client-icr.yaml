@@ -9,7 +9,6 @@ spec:
     metadata:
       annotations:
         kar.ibm.com/app: helloWorld
-        kar.ibm.com/service: client
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:

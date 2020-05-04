@@ -8,7 +8,6 @@ metadata:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded
     kar.ibm.com/app: ykt
-    kar.ibm.com/service: client
     kar.ibm.com/verbose: {{ .Values.verbose }}
     kar.ibm.com/extraArgs: "-partition_zero_ineligible"
 spec:

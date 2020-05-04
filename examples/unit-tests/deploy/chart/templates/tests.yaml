@@ -8,7 +8,6 @@ metadata:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded
     kar.ibm.com/app: myApp
-    kar.ibm.com/service: myClient
     kar.ibm.com/verbose: info
 spec:
   restartPolicy: Never

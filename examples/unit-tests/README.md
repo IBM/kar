@@ -9,10 +9,10 @@ npm install
 kar -app myApp -service myService -actors Foo node server.js &
 
 # run a trivial client
-kar -app myApp -service myClient1 node client.js
+kar -app myApp node client.js
 
-# run the test suite
-kar -app myApp -service tester node test-harness.js
+# run the test suite client
+kar -app myApp node test-harness.js
 ```
 
 ### Running on Kubernetes
