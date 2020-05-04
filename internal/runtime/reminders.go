@@ -221,23 +221,16 @@ func containsZero(p []int32) bool {
 // update this sidecar's reminderQueue to reflect the partitions it has been assigned
 // by the rebalance operation.
 func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartitions []int32) error {
-	prior := containsZero(priorPartitions)
-	current := containsZero(newPartitions)
-
-	// If nothing has changed, we can short-circuit without acquiring the mutex
-	if prior == current {
-		logger.Info("rebalanceReminders: responsibility unchanged (responsible = %v)", prior)
-		return nil
-	}
-
-	// Assignments have changed; acquire the mutex and update data structures
 	arMutex.Lock()
-	logger.Info("rebalanceReminders: change in role: prior = %v current = %v", prior, current)
 
-	// clear any prior assignment
+	current := containsZero(newPartitions)
+	logger.Info("rebalanceReminders: current role = %v", current)
+
+	// Clear in memory data strucure from previous partitions
 	activeReminders = make(reminderQueue, 0)
 	heap.Init(&activeReminders)
 
+	// If currently responsible for reminder processing, rebuild the in memory data structure.
 	if current {
 		// Get the keys for all persisted reminders for this application
 		rkeys, err := store.Keys("reminders" + config.Separator + "*")
