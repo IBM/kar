@@ -74,9 +74,9 @@ var (
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -109,7 +109,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200
 //
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"))
+	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
 }
 
@@ -157,10 +157,10 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
-		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	} else {
 		session := r.FormValue("session")
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r.Body), r.Header.Get("Content-Type"), r.Header.Get("Accept"), session)
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), session)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -306,7 +306,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		noa = r.FormValue("nilOnAbsent")
 	case "POST":
 		action = "schedule"
-		body = runtime.ReadAll(r.Body)
+		body = runtime.ReadAll(r)
 	case "DELETE":
 		action = "cancel"
 		noa = r.FormValue("nilOnAbsent")
@@ -351,7 +351,7 @@ func stateKey(t, id string) string {
 //       500: response500
 //
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r.Body)); err != nil {
+	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -470,7 +470,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var updates map[string]interface{}
-	if err := json.Unmarshal([]byte(runtime.ReadAll(r.Body)), &updates); err != nil {
+	if err := json.Unmarshal([]byte(runtime.ReadAll(r)), &updates); err != nil {
 		http.Error(w, "Request body was not a map[string, interface{}]", http.StatusBadRequest)
 		return
 	}
@@ -616,7 +616,7 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// FIXME: https://github.ibm.com/solsa/kar/issues/31
 	//        Should return a 404 if topic doesn't exist.
-	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
+	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
 	} else {
@@ -644,7 +644,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// FIXME: https://github.ibm.com/solsa/kar/issues/31
 	//        Should return a 404 if topic doesn't exist.
-	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r.Body))
+	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("unsubscribe error: %v", err), http.StatusInternalServerError)
 	} else {

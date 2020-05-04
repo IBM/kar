@@ -3,11 +3,12 @@ package runtime
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/cenkalti/backoff/v4"
@@ -37,15 +38,14 @@ func init() {
 	client = http.Client{Transport: transport} // TODO adjust timeout
 }
 
-// ReadAll converts a request or response body to a string
-func ReadAll(r io.ReadCloser) string {
-	buf, _ := ioutil.ReadAll(r) // TODO size limit?
-	r.Close()
+// ReadAll converts the body of a request to a string
+func ReadAll(r *http.Request) string {
+	buf, _ := ioutil.ReadAll(r.Body) // TODO size limit?
 	return string(buf)
 }
 
 // invoke sends an HTTP request to the service and returns the response
-func invoke(ctx context.Context, method string, msg map[string]string) (*http.Response, error) {
+func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -61,21 +61,30 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*http.Re
 	if msg["accept"] != "" {
 		req.Header.Set("Accept", msg["accept"])
 	}
-	var res *http.Response
+	var reply *Reply
 	err = backoff.Retry(func() error {
+		var res *http.Response
 		res, err = client.Do(req) // TODO adjust timeout
 		if err != nil {
-			logger.Debug("failed to invoke %s: %v", msg["path"], err)
+			logger.Warning("failed to invoke %s: %v", msg["path"], err)
 			if err == ctx.Err() {
 				return backoff.Permanent(err)
 			}
+			return err
 		}
-		return err
+		buf, _ := ioutil.ReadAll(res.Body) // TODO size limit?
+		res.Body.Close()
+		if length, err := strconv.Atoi(res.Header.Get("Content-Length")); err == nil && len(buf) != length {
+			logger.Warning("failed to invoke %s: unexpected content length (%d != %d)", msg["path"], length, len(buf))
+			return errors.New("unexpected content length")
+		}
+		reply = &Reply{StatusCode: res.StatusCode, Payload: string(buf), ContentType: res.Header.Get("Content-Type")}
+		return nil
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
 	if ctx.Err() != nil {
 		CloseIdleConnections() // don't keep connection alive once ctx is cancelled
 	}
-	return res, err
+	return reply, err
 }
 
 // CloseIdleConnections closes idle connections

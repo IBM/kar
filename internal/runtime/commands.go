@@ -67,7 +67,7 @@ type Reply struct {
 // callHelper makes a call via pubsub to a sidecar and waits for a reply
 func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	request := uuid.New().String()
-	ch := make(chan Reply)
+	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	msg["from"] = config.ID // this sidecar
@@ -78,7 +78,7 @@ func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	}
 	select {
 	case r := <-ch:
-		return &r, nil
+		return r, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -160,7 +160,7 @@ func KillAll(ctx context.Context) {
 // helper methods to handle incoming messages
 // log ignored errors to logger.Error
 
-func respond(ctx context.Context, msg map[string]string, reply Reply) error {
+func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
 	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "sidecar",
 		"sidecar":      msg["from"],
@@ -177,14 +177,13 @@ func respond(ctx context.Context, msg map[string]string, reply Reply) error {
 }
 
 func call(ctx context.Context, msg map[string]string) error {
-	res, err := invoke(ctx, "POST", msg)
+	reply, err := invoke(ctx, "POST", msg)
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
 		}
 		return err
 	}
-	reply := Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}
 	return respond(ctx, msg, reply)
 }
 
@@ -194,7 +193,7 @@ func callback(ctx context.Context, msg map[string]string) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case ch.(chan Reply) <- Reply{StatusCode: statusCode, ContentType: msg["content-type"], Payload: msg["payload"]}:
+		case ch.(chan *Reply) <- &Reply{StatusCode: statusCode, ContentType: msg["content-type"], Payload: msg["payload"]}:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", msg["request"])
@@ -203,26 +202,26 @@ func callback(ctx context.Context, msg map[string]string) error {
 }
 
 func reminderCancel(ctx context.Context, msg map[string]string) error {
-	var reply Reply
+	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	found := CancelReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
 	if found == 0 && msg["reminderId"] != "" && msg["nilOnAbsent"] != "true" {
-		reply = Reply{StatusCode: http.StatusNotFound}
+		reply = &Reply{StatusCode: http.StatusNotFound}
 	} else {
-		reply = Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
+		reply = &Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
 	}
 	return respond(ctx, msg, reply)
 }
 
 func reminderGet(ctx context.Context, msg map[string]string) error {
-	var reply Reply
+	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	found := GetReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
 	var responseBody interface{} = found
 	if msg["reminderId"] != "" {
 		if len(found) == 0 {
 			if msg["nilOnAbsent"] != "true" {
-				reply = Reply{StatusCode: http.StatusNotFound}
+				reply = &Reply{StatusCode: http.StatusNotFound}
 				return respond(ctx, msg, reply)
 			}
 			responseBody = nil
@@ -232,37 +231,37 @@ func reminderGet(ctx context.Context, msg map[string]string) error {
 	}
 	blob, err := json.Marshal(responseBody)
 	if err != nil {
-		reply = Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
+		reply = &Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
+		reply = &Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
 	}
 	return respond(ctx, msg, reply)
 }
 
 func reminderSchedule(ctx context.Context, msg map[string]string) error {
-	var reply Reply
+	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	err := ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
 	if err != nil {
-		reply = Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		reply = &Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
+		reply = &Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
 	}
 	return respond(ctx, msg, reply)
 }
 
 func tell(ctx context.Context, msg map[string]string) error {
-	res, err := invoke(ctx, "POST", msg)
+	reply, err := invoke(ctx, "POST", msg)
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
 		}
 		return err
 	}
-	if res.StatusCode >= http.StatusBadRequest {
-		logger.Error("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+	if reply.StatusCode >= http.StatusBadRequest {
+		logger.Error("tell returned status %v with body %s", reply.StatusCode, reply.Payload)
 	} else {
-		logger.Debug("tell returned status %v with body %s", res.StatusCode, ReadAll(res.Body))
+		logger.Debug("tell returned status %v with body %s", reply.StatusCode, reply.Payload)
 	}
 	return nil
 }
@@ -342,7 +341,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			if reply != nil {
 				if msg["command"] == "call" {
 					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg["path"])
-					err = respond(ctx, msg, *reply) // return activation error to caller
+					err = respond(ctx, msg, reply) // return activation error to caller
 				} else {
 					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg["path"])
 					err = nil // not to be retried
@@ -362,33 +361,33 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 // activate an actor
 func activate(ctx context.Context, actor Actor) (*Reply, error) {
-	res, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("activate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
 		}
 		return nil, err
 	}
-	if res.StatusCode >= http.StatusBadRequest && res.StatusCode != http.StatusNotFound {
-		return &Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body), ContentType: res.Header.Get("Content-Type")}, nil
+	if reply.StatusCode >= http.StatusBadRequest && reply.StatusCode != http.StatusNotFound {
+		return reply, nil
 	}
-	logger.Debug("activate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	logger.Debug("activate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	return nil, nil
 }
 
 // deactivate an actor (but retains placement)
 func deactivate(ctx context.Context, actor Actor) error {
-	res, err := invoke(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("deactivate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
 		}
 		return err
 	}
-	if res.StatusCode >= http.StatusBadRequest && res.StatusCode != http.StatusNotFound {
-		logger.Error("deactivate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+	if reply.StatusCode >= http.StatusBadRequest && reply.StatusCode != http.StatusNotFound {
+		logger.Error("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	} else {
-		logger.Debug("deactivate %v returned status %v with body %s", actor, res.StatusCode, ReadAll(res.Body))
+		logger.Debug("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	}
 	return nil
 }
@@ -519,11 +518,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 					if sub.actor != nil {
 						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), "text/plain", "", "")
 					} else {
-						var res *http.Response
-						res, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": "text/plain"})
-						if res != nil {
-							reply = &Reply{StatusCode: res.StatusCode, Payload: ReadAll(res.Body)}
-						}
+						reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": "text/plain"})
 					}
 					msg.Mark()
 					if err != nil {
