@@ -4,7 +4,7 @@
 # controller on it.  This enables services running on the cluster to be
 # exposed by creating Ingress instances.
 
-TRAVIS_KUBE_VERSION=v1.16.4
+TRAVIS_KUBE_VERSION=v1.16.9
 
 set -eu
 
