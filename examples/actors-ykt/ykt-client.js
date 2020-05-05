@@ -36,42 +36,43 @@ function prettyPrintHistogram (header, bucketSizeInMS, histogram) {
     console.log(`\t<${(parseInt(i) + 1) * bucketSizeInMS}ms\t${value}\t${(percent).toFixed(2)}\t${(accumPercent).toFixed(2)}`)
   }
 }
+
 async function main () {
   let failure = false
 
-  const company = 'IBM'
-  const researchDivision = {
-    Yorktown: { workers: 20, thinkms: 2000, steps: 10, days: 2 },
-    Cambridge: { workers: 10, thinkms: 1000, steps: 40, days: 1 },
-    Almaden: { workers: 15, thinkms: 500, steps: 10, days: 5 }
-  }
+  const ibm = actor.proxy('Company', 'IBM')
+  const researchDivision = [
+    { proxy: actor.proxy('Site', 'Yorktown'), params: { workers: 20, thinkms: 2000, steps: 10, days: 2 } },
+    { proxy: actor.proxy('Site', 'Cambridge'), params: { workers: 10, thinkms: 1000, steps: 40, days: 1 } },
+    { proxy: actor.proxy('Site', 'Almaden'), params: { workers: 15, thinkms: 500, steps: 10, days: 5 } }
+  ]
 
   console.log(`Starting simulation: ${JSON.stringify(researchDivision)}`)
 
-  for (const site in researchDivision) {
-    await actor.call('Site', site, 'resetDelayStats')
-    await actor.call('Site', site, 'siteReport')
-    await actor.call('Company', company, 'hire', Object.assign({ site }, researchDivision[site]))
+  for (const site of researchDivision) {
+    await actor.call(site.proxy, 'resetDelayStats')
+    await actor.call(site.proxy, 'siteReport')
+    await actor.call(ibm, 'hire', Object.assign({ site: site.proxy.kar.id }, site.params))
   }
 
   while (true) {
     await sleep(5000)
-    const employees = await actor.call('Company', 'IBM', 'count')
+    const employees = await actor.call(ibm, 'count')
     console.log(`Num employees is ${employees}`)
     if (employees === 0) {
       const summary = { reminderDelays: [], tellLatencies: [] }
       let bucketSizeInMS
-      for (const site in researchDivision) {
-        console.log(`Valiadating ${site}`)
-        const sr = await actor.call('Site', site, 'siteReport')
+      for (const site of researchDivision) {
+        console.log(`Valiadating ${site.proxy.kar.id}`)
+        const sr = await actor.call(site.proxy, 'siteReport')
         if (sr.siteEmployees !== 0) {
-          console.log(`FAILURE: ${sr.siteEmployees} stranded employees at ${site}`)
+          console.log(`FAILURE: ${sr.siteEmployees} stranded employees at ${site.proxy.kar.id}`)
           failure = true
         }
         const count = sr.reminderDelays.reduce((x, y) => x + y, 0)
-        const expectedSteps = researchDivision[site].workers * researchDivision[site].steps * researchDivision[site].days
+        const expectedSteps = site.params.workers * site.params.steps * site.params.days
         if (count !== expectedSteps) {
-          console.log(`FAILURE: At ${site} expected ${expectedSteps} steps, but actual value is ${count}`)
+          console.log(`FAILURE: At ${site.proxy.kar.id} expected ${expectedSteps} steps, but actual value is ${count}`)
           failure = true
         }
         bucketSizeInMS = sr.bucketSizeInMS
@@ -88,8 +89,8 @@ async function main () {
       break
     } else {
       const summary = { onboarding: 0, home: 0, commuting: 0, working: 0, meeting: 0, coffee: 0, lunch: 0 }
-      for (const site in researchDivision) {
-        const sr = await actor.call('Site', site, 'siteReport')
+      for (const site of researchDivision) {
+        const sr = await actor.call(site.proxy, 'siteReport')
         summary.onboarding += sr.onboarding || 0
         summary.home += sr.home || 0
         summary.commuting += sr.commuting || 0

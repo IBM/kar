@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
+const { logger, jsonParser, errorHandler, shutdown, actor, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
 
 const app = express()
 
@@ -89,17 +89,17 @@ class Foo {
 
   set ({ key, value }) {
     console.log('actor', this.id, 'set', key, value)
-    this.kar.set(key, value)
+    actor.state.set(this, key, value)
     return 'OK'
   }
 
   get ({ key }) {
     console.log('actor', this.id, 'get', key)
-    return this.kar.get(key)
+    return actor.state.get(this, key)
   }
 
   reenter (params) {
-    return this.kar.callSelf('incrQuiet', params)
+    return actor.call(this, this, 'incrQuiet', params)
   }
 
   deactivate () {

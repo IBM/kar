@@ -70,149 +70,58 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
 /***************************************************
  * public methods
+ * API Documentation is located in index.d.ts
  ***************************************************/
 
-/**
- * Asynchronous service invocation; returns "OK" immediately
- * @param {string} service The service to invoke.
- * @param {string} path The service endpoint to invoke.
- * @param {any} [params] The argument with which to invoke the service endpoint.
- */
 const tell = (service, path, params) => post(`service/${service}/tell/${path}`, params)
 
-/**
- * Synchronous service invocation; returns invocation result
- * @param {string} service The service to invoke.
- * @param {string} path The service endpoint to invoke.
- * @param {any} [params] The argument with which to invoke the service endpoint.
- * @returns The result returned by the target service.
- */
 const call = (service, path, params) => post(`service/${service}/call/${path}`, params)
 
-/**
- * Asynchronous actor invocation; returns "OK" immediately
- * @param {string} type The type of the target Actor.
- * @param {string} id The instance id of the target Actor.
- * @param {string} path The actor method to invoke.
- * @param {any} [params] The argument with which to invoke the actor method.
- */
-const actorTell = (type, id, path, params) => post(`actor/${type}/${id}/tell/${path}`, params)
+function actorProxy (type, id) { return { kar: { type, id } } }
 
-/**
- * Synchronous actor invocation; returns invocation result
- * @param {string} type The type of the target Actor.
- * @param {string} id The instance id of the target Actor.
- * @param {string} path The actor method to invoke.
- * @param {any} [params] The arguments with which to invoke the actor method.
- * @returns The result returned from the actor method
- */
-const actorCall = (type, id, path, params) => post(`actor/${type}/${id}/call/${path}`, params)
+const actorTell = (actor, path, params) => post(`actor/${actor.kar.type}/${actor.kar.id}/tell/${path}`, params)
 
-/**
- * Synchronous actor invocation continuing the current session; returns invocation result
- * @param {string} type The type of the target Actor.
- * @param {string} id The instance id of the target Actor.
- * @param {string} session The session in which to invoke the method.
- * @param {string} path The actor method to invoke.
- * @param {any} [params] The arguments with which to invoke the actor method.
- * @returns The result returned from the actor method
- */
+function actorCall (...args) {
+  if (typeof args[1] === 'string') {
+    // call (callee:Actor, path:string, params:any):Promise<any>;
+    const type = args[0].kar.type
+    const id = args[0].kar.id
+    const path = args[1]
+    const params = args[2]
+    return post(`actor/${type}/${id}/call/${path}`, params)
+  } else {
+    //  export function call (from:Actor, callee:Actor, path:string, params:any):Promise<any>;
+    const session = args[0].kar.session
+    const type = args[1].kar.type
+    const id = args[1].kar.id
+    const path = args[2]
+    const params = args[3]
+    return post(`actor/${type}/${id}/call/${path}?session=${session}`, params)
+  }
+}
 
-const actorCallInSession = (type, id, session, path, params) => post(`actor/${type}/${id}/call/${path}?session=${session}`, params)
+const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
 
-/**
- * Cancel matching reminders for an Actor instance.
- * @param {string} type The type of the target Actor.
- * @param {string} id The instance id of the target Actor.
- * @param {string} [reminderId] The id of a specific reminder to cancel
- * @returns The number of reminders that were cancelled.
- */
-const actorCancelReminder = (type, id, reminderId) => reminderId ? del(`actor/${type}/${id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${type}/${id}/reminders`)
+const actorGetReminder = (actor, reminderId) => reminderId ? get(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
 
-/**
- * Get matching reminders for an Actor instance.
- * @param {string} type The type of the target Actor.
- * @param {string} id  The instance id of the target Actor.
- * @param {string} [reminderId] The id of a specific reminder to cancel
- * @returns {array} An array of matching reminders
- */
-const actorGetReminder = (type, id, reminderId) => reminderId ? get(`actor/${type}/${id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${type}/${id}/reminders`)
+const actorScheduleReminder = (actor, path, params) => post(`actor/${actor.kar.type}/${actor.kar.id}/reminders`, Object.assign({ path: `/${path}` }, params))
 
-/**
- * Schedule a reminder for an Actor instance.
- * @param {string} type The type of the target Actor.
- * @param {string} id The instance id of the target Actor.
- * @param {string} path The actor method to invoke when the reminder fires.
- * @param {{data?:any, deadline:Date, id:string, path:string, period?:string}} params A description of the desired reminder
- */
-const actorScheduleReminder = (type, id, path, params) => post(`actor/${type}/${id}/reminders`, Object.assign({ path: `/${path}` }, params))
+const actorGetState = (actor, key) => get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
 
-/**
- * Get one value from an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- * @param {string} key The key to get from the instance's state
- * @returns The value associated with `key`
- */
-const actorGetState = (type, id, key) => get(`actor/${type}/${id}/state/${key}?nilOnAbsent=true`)
+const actorSetState = (actor, key, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, value)
 
-/**
- * Set one value from an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- * @param {string} key The key to set in the instance's state
- * @param {any} [value={}] The value to store
- */
-const actorSetState = (type, id, key, value = {}) => put(`actor/${type}/${id}/state/${key}`, value)
+const actorRemoveState = (actor, key) => del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
 
-/**
- * Delete a value from an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- * @param {string} key The key to delete from the instance's state
- */
-const actorDeleteState = (type, id, key) => del(`actor/${type}/${id}/state/${key}`)
+const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-/**
- * Get all key/value pairs in an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- * @returns The state of the Actor
- */
-const actorGetAllState = (type, id) => get(`actor/${type}/${id}/state`)
+const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, state)
 
-/**
- * Set multiple key/value pairs in an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- * @param {Object.<string, any>} [state={}] The key/value pairs to store in the Actor's state
- * @returns The state of the Actor
- */
-const actorSetStateMultiple = (type, id, state = {}) => post(`actor/${type}/${id}/state`, state)
+const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-/**
- * Delete all key/value pairs in an Actor instance's state
- * @param {string} type The type of the Actor
- * @param {string} id The instance of of the Actor
- */
-const actorDeleteAllState = (type, id) => del(`actor/${type}/${id}/state`)
-
-/**
- * Broadcast a message to all sidecars except for ours.
- * @param {string} path the path to invoke in each sidecar.
- * @param {any} params the parameters to pass to `path` when invoking it.
- */
 const broadcast = (path, params) => post(`system/broadcast/${path}`, params)
 
-/**
- * Kill this sidecar
- */
 const shutdown = () => post('system/kill').then(() => agent.close())
 
-/**
- * Publish a CloudEvent to a topic
- * @param {*} TODO: Document this API when it stabalizes
- */
 function publish ({ topic, data, datacontenttype, dataschema, id, source, specversion = '1.0', subject, time, type }) {
   if (typeof topic === 'undefined') throw new Error('publish: must define "topic"')
   if (typeof id === 'undefined') throw new Error('publish: must define "id"')
@@ -221,39 +130,14 @@ function publish ({ topic, data, datacontenttype, dataschema, id, source, specve
   return post(`event/${topic}/publish`, { data, datacontenttype, dataschema, id, source, specversion, subject, time, type })
 }
 
-/**
- * Subscribe a Service endpoint to a topic.
- * @param {string} topic The topic to which to subscribe
- * @param {string} path The endpoint to invoke for each event received on the topic
- * @param {*} params TODO: Document expected structure
- */
 const subscribe = (topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, params))
 
-/**
- * Unsubscribe from a topic.
- * @param {string} topic The topic to which to subscribe
- * @param {*} params TODO: Document expected structure
- */
 const unsubscribe = (topic, params) => post(`event/${topic}/unsubscribe`, params)
 
-/**
- * Subscribe an Actor instance method to a topic.
- * @param {string} type The Actor type
- * @param {string} id The Actor instance id
- * @param {string} topic The topic to which to subscribe
- * @param {string} path The endpoint to invoke for each event received on the topic
- * @param {*} params TODO: Document expected structure
- */
-const actorSubscribe = (type, id, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: type, actorId: id }, params))
+const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: actor.kar.type, actorId: actor.kar.id }, params))
 
-/**
- * express middleware to log requests and responses if KAR_VERBOSE env variable is truthy
- */
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
 
-/**
- * express middleware to parse request bodies to json (non-strict, map empty body to undefined)
- */
 const jsonParser = [
   parser.text({ type: '*/*' }), // parse to string first irrespective of content-type
   (req, _res, next) => {
@@ -275,9 +159,6 @@ const jsonParser = [
     }
   }]
 
-/**
- * express middleware to handle errors
- */
 const errorHandler = [
   (err, req, res, next) => Promise.resolve()
     .then(() => {
@@ -289,29 +170,6 @@ const errorHandler = [
       return res.status(500).json(body) // return error
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
-
-/**
- * Bind the Actor system to a specific Actor instance
- * @param {{kar:{session:string}}} actor The Actor instance being bound
- * @param {string} type The type of the Actor instance being bound
- * @param {string} id The id of the Actor instance being bound
- */
-const kar = (actor, type, id) => ({
-  id: id,
-  tell: actorTell,
-  tellSelf: (path, params) => actorTell(type, id, path, params),
-  call: (type, id, path, params) => actorCallInSession(type, id, actor.kar.session, path, params),
-  callSelf: (path, params) => actorCallInSession(type, id, actor.kar.session, path, params),
-  get: key => actorGetState(type, id, key),
-  set: (key, params) => actorSetState(type, id, key, params),
-  setMultiple: (params) => actorSetStateMultiple(type, id, params),
-  delete: key => actorDeleteState(type, id, key),
-  getAll: () => actorGetAllState(type, id),
-  deleteAll: () => actorDeleteAllState(type, id),
-  cancelReminder: (reminderId) => actorCancelReminder(type, id, reminderId),
-  getReminder: (reminderId) => actorGetReminder(type, id, reminderId),
-  scheduleReminder: (path, params) => actorScheduleReminder(type, id, path, params)
-})
 
 const table = {} // live actor instances: table[actorType][actorId]
 
@@ -326,7 +184,7 @@ function actorRuntime (actors) {
       table[req.params.type] = table[req.params.type] || {}
       const actor = new (actors[req.params.type])(req.params.id)
       table[req.params.type][req.params.id] = actor
-      table[req.params.type][req.params.id].kar = kar(actor, req.params.type, req.params.id)
+      table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id }
     }) // instantiate actor and add to index
     .then(_ => { // run optional activate callback
       if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
@@ -337,7 +195,9 @@ function actorRuntime (actors) {
   // actor deactivation route
   router.delete('/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => { // run optional deactivate callback
-      if (typeof table[req.params.type][req.params.id].deactivate === 'function') return table[req.params.type][req.params.id].deactivate()
+      const actor = table[req.params.type][req.params.id]
+      actor.kar.session = undefined
+      if (typeof actor.deactivate === 'function') return actor.deactivate()
     })
     .then(_ => delete table[req.params.type][req.params.id]) // remove actor from index
     .then(_ => res.sendStatus(200)) // OK
@@ -346,10 +206,9 @@ function actorRuntime (actors) {
   // method invocation route
   router.post('/actor/:type/:id/:session/:method', (req, res, next) => Promise.resolve()
     .then(_ => {
-      const session = req.params.session
       const actor = table[req.params.type][req.params.id]
-      actor.kar.session = session
       if (req.params.method in actor) {
+        actor.kar.session = req.params.session // NOTE: intentionally not cleared before return (could be nested call in same session)
         if (typeof actor[req.params.method] === 'function') {
           return actor[req.params.method](req.body)
         }
@@ -377,22 +236,25 @@ module.exports = {
   subscribe,
   unsubscribe,
   actor: {
+    proxy: actorProxy,
     tell: actorTell,
     call: actorCall,
     subscribe: actorSubscribe,
-    cancelReminder: actorCancelReminder,
-    getReminder: actorGetReminder,
-    scheduleReminder: actorScheduleReminder,
+    // proxy: actorCreateProxy,
+    reminders: {
+      cancel: actorCancelReminder,
+      get: actorGetReminder,
+      schedule: actorScheduleReminder
+    },
     state: {
       get: actorGetState,
       set: actorSetState,
       setMultiple: actorSetStateMultiple,
-      delete: actorDeleteState,
+      remove: actorRemoveState,
       getAll: actorGetAllState,
-      deleteAll: actorDeleteAllState
+      removeAll: actorRemoveAllState
     }
   },
-  actorProxy: function (type, id) { const proxy = {}; proxy.kar = kar(proxy, type, id); return proxy },
   actorRuntime,
   broadcast,
   shutdown,
