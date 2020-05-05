@@ -133,24 +133,26 @@ class Site {
   async joinCompany ({ company }) {
     this.company = company
     await actor.state.set(this, 'company', company)
-    if (debug) console.log(`Site ${this.name} joined Company ${this.company}`)
   }
 
   async newHire ({ who, days, steps, thinkms }) {
     this.workers[who] = States.ONBOARDING
+    await actor.state.set(this, 'workers', this.workers)
     await actor.tell(actor.proxy('Researcher', who), 'newHire', { site: this.name, days, steps, thinkms })
   }
 
   async retire ({ who, delays = [] }) {
-    const ds = this.reminderDelays
-    delays.forEach(function (missedMS, _) {
-      const missedBucket = Math.floor(missedMS / bucketSizeInMS)
-      ds[missedBucket] = (ds[missedBucket] || 0) + 1
-    })
-    await actor.state.set(this, 'reminderDelays', this.reminderDelays)
+    if (this.workers[who]) {
+      const ds = this.reminderDelays
+      delays.forEach(function (missedMS, _) {
+        const missedBucket = Math.floor(missedMS / bucketSizeInMS)
+        ds[missedBucket] = (ds[missedBucket] || 0) + 1
+      })
+      delete this.workers[who]
+      await actor.state.setMultiple(this, { workers: this.workers, reminderDelays: this.reminderDelays })
+    }
 
     await actor.call(this, actor.proxy('Company', this.company), 'retire', { who })
-    delete this.workers[who]
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
   }
 
@@ -244,19 +246,19 @@ class Researcher {
   get name () { return this.kar.id }
 
   async newHire ({ site, days, steps, thinkms }) {
-    const initialState = { site, days, workdaySteps: steps, thinkms, activity: States.ONBOARDING }
+    const initialState = { site, career: days * steps, workday: steps, thinkms, activity: States.ONBOARDING, delays: [] }
     Object.assign(this, initialState)
     await actor.state.setMultiple(this, initialState)
-    await this.startWorkDay()
+
+    const deadline = new Date(Date.now() + thinkms)
+    await actor.reminders.schedule(this, 'move', { id: 'step', deadline, data: deadline.getTime() })
   }
 
   // Checkpoint only saves the transitory state of the Researcher
-  // Initialize-only fields are persisted in newHire.
+  // All initialize-only fields are persisted in newHire.
   async checkpointState () {
     if (this.retired) return
     const state = {
-      days: this.days,
-      steps: this.steps,
       activity: this.activity,
       location: this.location,
       delays: this.delays
@@ -274,67 +276,56 @@ class Researcher {
     if (debug) console.log(`deactivated Researcher ${this.name}`)
   }
 
-  recordJitter (ms) {
-    if (this.delays === undefined) {
-      this.delays = []
-    }
-    this.delays.push(ms)
-  }
-
-  async updateActivity (newActivity, newLocation) {
-    if (verbose) console.log(`${this.site}: ${this.name} is now ${newActivity} at ${newLocation || 'off-site'}`)
-    if (this.activity !== newActivity) {
-      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate',
-        { who: this.name, activity: newActivity, office: newLocation, timestamp: Date.now() })
-      this.activity = newActivity
-    }
-  }
-
-  async startWorkDay () {
-    await this.updateActivity(States.COMMUTING)
-    this.steps = this.workdaySteps
-    const commuteTime = 1 + randI(2 * this.thinkms)
-    const deadline = new Date(Date.now() + commuteTime)
-    await actor.reminders.schedule(this, 'move', { id: 'step', deadline, data: deadline.getTime() })
-    await this.checkpointState()
-  }
-
   async move (targetTime) {
-    if (debug) console.log(`${this.site}: Researcher ${this.name} entered move`)
-    this.recordJitter(Math.abs(Date.now() - targetTime))
+    const observedDelay = Date.now() - targetTime
 
+    if (debug) console.log(`${this.site}: Researcher ${this.name} entered move with delay ${observedDelay}`)
+
+    // Clear derived simulation state (idempotent)
     if (this.location !== undefined) {
       const oldLocation = this.location
       await actor.call(this, actor.proxy('Office', oldLocation), 'leave', { who: this.name })
     }
 
-    // Figure out what this Researcher will do next
-    let nextCallback = 'move'
+    // Is it time to retire?
+    if (this.delays.length === this.career) {
+      this.retired = true
+      await actor.call(this, actor.proxy('Site', this.site), 'retire', { who: this.name, delays: this.delays })
+      return
+    }
+
+    // Still an active Researcher. What to do next?
+    const stepNumber = this.delays.length
+    const diceRoll = Math.random()
     let nextLocation
     let nextActivity
     let thinkTime = 1 + randI(this.thinkms)
-    const diceRoll = Math.random()
-    this.steps = this.steps - 1
-    if (this.steps <= 0) {
-      this.days = this.days - 1
-      nextActivity = States.HOME
-      nextCallback = 'startWorkDay'
-      thinkTime = thinkTime + (5 * this.thinkms)
-    } else if (this.steps === 1) {
+    if (stepNumber % this.workday === 0) {
+      // Morning rush hour.
       nextActivity = States.COMMUTING
+      thinkTime = thinkTime * 3
+    } else if ((stepNumber + 2) % this.workday === 0) {
+      // Evening rush hour.
+      nextActivity = States.COMMUTING
+      thinkTime = thinkTime * 2
+    } else if ((stepNumber + 1) % this.workday === 0) {
+      // Time to relax
+      nextActivity = States.HOME
+      thinkTime = thinkTime * 5
     } else if (diceRoll < 0.10) {
       // 10% chance of getting coffee
       nextLocation = Office.coffeeShop(this.site)
       nextActivity = States.COFFEE
     } else if (diceRoll < 0.15) {
       // 5% chance of lunchtime
-      nextLocation = Office.cafeteria(this.site, nextLocation)
+      nextLocation = Office.cafeteria(this.site)
       nextActivity = States.LUNCH
     } else if (diceRoll < 0.40) {
       // 25% chance of going to a meeting
       nextLocation = Office.randomOffice(this.site)
       nextActivity = States.MEETING
     } else {
+      // If all else fails, we will work ;)
       nextLocation = Office.randomOffice(this.site)
       nextActivity = States.WORKING
     }
@@ -343,21 +334,28 @@ class Researcher {
       thinkTime = thinkTime * 2
     }
 
-    // Act on the decision. Trigger notifications, checkpoint state, schedule next step
-    await this.updateActivity(nextActivity, nextLocation)
-    this.location = nextLocation
-    if (this.days > 0) {
-      const deadline = new Date(Date.now() + thinkTime)
-      await actor.reminders.schedule(this, nextCallback, { id: 'step', deadline, data: deadline.getTime() })
-      await this.checkpointState()
-    } else {
-      this.retired = true
-      await actor.call(this, actor.proxy('Site', this.site), 'retire', { who: this.name, delays: this.delays })
+    // Report our intent; this tell is non-definitive if there is a failure before we commit.
+    if (verbose) console.log(`${this.site}: ${this.name} will be doing ${nextActivity} at ${nextLocation || 'off-site'}`)
+    if (this.activity !== nextActivity) {
+      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate',
+        { who: this.name, activity: nextActivity, office: nextLocation, timestamp: Date.now() })
     }
 
+    // Commit the decision by checkpointing our state.
+    this.activity = nextActivity
+    this.delays.push(observedDelay)
+    this.location = nextLocation
+    await this.checkpointState()
+
+    // Update derived simulation state. Must happen after checkpoint to ensure
+    // that even if we suffer a failure we will always call leave on the office before we retire.
     if (this.location !== undefined) {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', { who: this.name })
     }
+
+    // Schedule next step
+    const deadline = new Date(Date.now() + thinkTime)
+    await actor.reminders.schedule(this, 'move', { id: 'step', deadline, data: deadline.getTime() })
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
   }
