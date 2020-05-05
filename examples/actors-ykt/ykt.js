@@ -194,11 +194,17 @@ class Site {
 }
 
 // An Office's Actor ID is of the form Site:Office
+//
+// Offices are an example of an actor with non-essential state
+// that is intentionally not preserved across failures.
+// State is only checkpointed in deactivate and the enter/leave
+// operations are implemented to ignore non-sensical updates
+// (eg a Reseeacher leaving an office that are not in)
 class Office {
   static coffeeShop (site) { return `${site}:OutTakes` }
   static cafeteria (site) { return `${site}:Cafeteria` }
   static randomOffice (site) {
-    // TODO: Introduce site-specific office numbering patterns just for fun.
+    // TODO: Introduce accurate site-specific office numbering patterns just for fun.
     const floor = randI(3)
     const aisle = 1 + randI(40)
     const office = 1 + randI(64)
@@ -210,10 +216,6 @@ class Office {
   isEmpty () { return this.occupants.size === 0 }
   get count () { return this.occupants.size }
 
-  async checkpoint () {
-    await actor.state.set(this, 'occupants', Array.from(this.occupants))
-  }
-
   async activate () {
     const so = await actor.state.get(this, 'occupants') || []
     this.occupants = new Set(so)
@@ -221,23 +223,17 @@ class Office {
   }
 
   async deactivate () {
-    await this.checkpoint()
+    await actor.state.set(this, 'occupants', Array.from(this.occupants))
     if (debug) console.log(`deactivated Office ${this.name}`)
   }
 
-  async enter ({ who, checkpoint = true }) {
+  async enter (who) {
     this.occupants.add(who)
-    if (checkpoint) {
-      await this.checkpoint()
-    }
     if (debug) console.log(`${who} entered Office ${this.name} occupancy is now ${this.count}`)
   }
 
-  async leave ({ who, checkpoint = true }) {
+  async leave (who) {
     this.occupants.delete(who)
-    if (checkpoint) {
-      await this.checkpoint()
-    }
     if (debug) console.log(`${who} left Office ${this.name} occupancy is now ${this.count}`)
   }
 }
@@ -284,7 +280,7 @@ class Researcher {
     // Clear derived simulation state (idempotent)
     if (this.location !== undefined) {
       const oldLocation = this.location
-      await actor.call(this, actor.proxy('Office', oldLocation), 'leave', { who: this.name })
+      await actor.call(this, actor.proxy('Office', oldLocation), 'leave', this.name)
     }
 
     // Is it time to retire?
@@ -350,7 +346,7 @@ class Researcher {
     // Update derived simulation state. Must happen after checkpoint to ensure
     // that even if we suffer a failure we will always call leave on the office before we retire.
     if (this.location !== undefined) {
-      await actor.call(this, actor.proxy('Office', this.location), 'enter', { who: this.name })
+      await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
     }
 
     // Schedule next step
