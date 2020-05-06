@@ -238,6 +238,25 @@ class Office {
   }
 }
 
+// Researchers are the active entities in this simulation.
+//
+// The class illustrates how to optimize actor checkpointing
+// operation by separating the management of initialize-only state
+// from other properties of the object.
+//
+// The `move` method is triggered by a one-shot reminder
+// (time triggered event).  It illustrates a general pattern
+// fault-tolerance pattern of performing idempotent global
+// actions + local computation, then committing a check point,
+// then performing non-idempotent (but potentially lost) global
+// operations.
+//
+// One subtle point is that if there is a failure in move after the
+// checkpoint but before the next reminder is scheduled, the runtime
+// system will actually re-execute the `move` method by replaying
+// the delivery of the previous reminder to a new Researcher instance
+// whose state will be restored from the checkpoint. This will result
+// in the `jitter` stat being computed using the prior target deadline.
 class Researcher {
   get name () { return this.kar.id }
 
@@ -277,76 +296,74 @@ class Researcher {
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} entered move with delay ${observedDelay}`)
 
-    // Clear derived simulation state (idempotent)
+    // Clear secondary simulation state from previous step (idempotent)
     if (this.location !== undefined) {
-      const oldLocation = this.location
-      await actor.call(this, actor.proxy('Office', oldLocation), 'leave', this.name)
+      await actor.call(this, actor.proxy('Office', this.location), 'leave', this.name)
     }
 
+    // Remember what we were doing before we start updating our in-memory state
+    const stepNumber = this.delays.length
+    const priorActivity = this.activity
+
+    this.delays.push(observedDelay)
+
     // Is it time to retire?
-    if (this.delays.length === this.career) {
+    if (stepNumber === this.career) {
       this.retired = true
       await actor.call(this, actor.proxy('Site', this.site), 'retire', { who: this.name, delays: this.delays })
       return
     }
 
     // Still an active Researcher. What to do next?
-    const stepNumber = this.delays.length
     const diceRoll = Math.random()
-    let nextLocation
-    let nextActivity
     let thinkTime = 1 + randI(this.thinkms)
     if (stepNumber % this.workday === 0) {
       // Morning rush hour.
-      nextActivity = States.COMMUTING
+      this.activity = States.COMMUTING
       thinkTime = thinkTime * 3
     } else if ((stepNumber + 2) % this.workday === 0) {
       // Evening rush hour.
-      nextActivity = States.COMMUTING
+      this.activity = States.COMMUTING
       thinkTime = thinkTime * 2
     } else if ((stepNumber + 1) % this.workday === 0) {
       // Time to relax
-      nextActivity = States.HOME
+      this.activity = States.HOME
       thinkTime = thinkTime * 5
     } else if (diceRoll < 0.10) {
       // 10% chance of getting coffee
-      nextLocation = Office.coffeeShop(this.site)
-      nextActivity = States.COFFEE
+      this.location = Office.coffeeShop(this.site)
+      this.activity = States.COFFEE
     } else if (diceRoll < 0.15) {
       // 5% chance of lunchtime
-      nextLocation = Office.cafeteria(this.site)
-      nextActivity = States.LUNCH
+      this.location = Office.cafeteria(this.site)
+      this.activity = States.LUNCH
     } else if (diceRoll < 0.40) {
       // 25% chance of going to a meeting
-      nextLocation = Office.randomOffice(this.site)
-      nextActivity = States.MEETING
+      this.location = Office.randomOffice(this.site)
+      this.activity = States.MEETING
     } else {
       // If all else fails, we will work ;)
-      nextLocation = Office.randomOffice(this.site)
-      nextActivity = States.WORKING
+      this.location = Office.randomOffice(this.site)
+      this.activity = States.WORKING
     }
-    if (nextLocation !== undefined && !await actor.call(this, actor.proxy('Office', nextLocation), 'isEmpty')) {
-      // If our nextLocation is non-empty, we will spend more time there.
+    if (this.location !== undefined && !await actor.call(this, actor.proxy('Office', this.location), 'isEmpty')) {
+      // If the office we are going to next is non-empty, we will spend more time there.
       thinkTime = thinkTime * 2
     }
 
-    // Report our intent; this tell is non-definitive if there is a failure before we commit.
-    if (verbose) console.log(`${this.site}: ${this.name} will be doing ${nextActivity} at ${nextLocation || 'off-site'}`)
-    if (this.activity !== nextActivity) {
-      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate',
-        { who: this.name, activity: nextActivity, office: nextLocation, timestamp: Date.now() })
-    }
-
-    // Commit the decision by checkpointing our state.
-    this.activity = nextActivity
-    this.delays.push(observedDelay)
-    this.location = nextLocation
+    // Commit the decision by checkpointing updated state.
     await this.checkpointState()
+    if (verbose) console.log(`${this.site}: ${this.name} will be doing ${this.activity} at ${this.location || 'off-site'} for ${thinkTime}ms`)
 
-    // Update derived simulation state. Must happen after checkpoint to ensure
-    // that even if we suffer a failure we will always call leave on the office before we retire.
+    // Update derived simulation state by informing other actors of our next action.
+    // The simulation logic must be prepared for these updates to get lost if there is a failure
+    // after the above commit point but before these interactions are completed.
     if (this.location !== undefined) {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
+    }
+    if (this.activity !== priorActivity) {
+      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate',
+        { who: this.name, activity: this.activity, office: this.location, timestamp: Date.now() })
     }
 
     // Schedule next step

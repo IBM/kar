@@ -70,7 +70,7 @@ async function main () {
           failure = true
         }
         const count = sr.reminderDelays.reduce((x, y) => x + y, 0)
-        const expectedSteps = site.params.workers * site.params.steps * site.params.days
+        const expectedSteps = site.params.workers * (site.params.steps * site.params.days + 1)
         if (count !== expectedSteps) {
           console.log(`FAILURE: At ${site.proxy.kar.id} expected ${expectedSteps} steps, but actual value is ${count}`)
           failure = true
