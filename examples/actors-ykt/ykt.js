@@ -46,7 +46,7 @@ class Company {
 
   get count () { return Object.keys(this.bluepages).length }
 
-  activeEmployees ({ site }) {
+  activeEmployees (site) {
     const ans = []
     for (const sn in this.bluepages) {
       if (this.bluepages[sn] === site) {
@@ -59,8 +59,8 @@ class Company {
   async hire ({ site = 'Yorktown', workers = 3, days = 1, steps = 20, thinkms = 10000 } = {}) {
     if (!this.sites.includes(site)) {
       this.sites.push(site)
-      await actor.call(this, actor.proxy('Site', site), 'joinCompany', { company: this.name })
-      await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport', { id: 'aisle14', deadline: new Date(Date.now() + 1000), period: '5s' })
+      await actor.call(this, actor.proxy('Site', site), 'joinCompany', this.name)
+      await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport', 'aisle14', new Date(Date.now() + 1000), '5s')
       await actor.state.set(this, 'sites', this.sites)
     }
 
@@ -73,12 +73,12 @@ class Company {
     for (var i = 0; i < workers; i++) {
       const name = sn + i
       this.bluepages[name] = site
-      await actor.tell(actor.proxy('Site', site), 'newHire', { who: name, days, steps, thinkms })
+      await actor.tell(actor.proxy('Site', site), 'newHire', name, days, steps, thinkms)
     }
     await actor.state.set(this, 'bluepages', this.bluepages)
   }
 
-  async retire ({ who }) {
+  async retire (who) {
     delete this.bluepages[who]
     await actor.state.set(this, 'bluepages', this.bluepages)
     await actor.state.removeAll(actor.proxy('Researcher', who))
@@ -116,7 +116,7 @@ class Site {
     this.company = state.company
     await actor.state.set(this, 'cleanShutdown', false)
     if (this.company !== undefined && state.cleanShutdown !== true) {
-      const employees = await actor.call(actor.proxy('Company', this.company), 'activeEmployees', { site: this.name })
+      const employees = await actor.call(actor.proxy('Company', this.company), 'activeEmployees', this.name)
       for (const sn of employees) {
         this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
       }
@@ -130,18 +130,18 @@ class Site {
     if (debug) console.log(`deactivated Site ${this.name}`)
   }
 
-  async joinCompany ({ company }) {
+  async joinCompany (company) {
     this.company = company
     await actor.state.set(this, 'company', company)
   }
 
-  async newHire ({ who, days, steps, thinkms }) {
+  async newHire (who, days, steps, thinkms) {
     this.workers[who] = States.ONBOARDING
     await actor.state.set(this, 'workers', this.workers)
-    await actor.tell(actor.proxy('Researcher', who), 'newHire', { site: this.name, days, steps, thinkms })
+    await actor.tell(actor.proxy('Researcher', who), 'newHire', this.name, days, steps, thinkms)
   }
 
-  async retire ({ who, delays = [] }) {
+  async retire (who, delays = []) {
     if (this.workers[who]) {
       const ds = this.reminderDelays
       delays.forEach(function (missedMS, _) {
@@ -152,11 +152,11 @@ class Site {
       await actor.state.setMultiple(this, { workers: this.workers, reminderDelays: this.reminderDelays })
     }
 
-    await actor.call(this, actor.proxy('Company', this.company), 'retire', { who })
+    await actor.call(this, actor.proxy('Company', this.company), 'retire', who)
     if (verbose) console.log(`Researcher ${who} has retired. Site employee count is now ${this.count}`)
   }
 
-  async workerUpdate ({ who, activity, office, timestamp }) {
+  async workerUpdate (who, activity, timestamp) {
     if (this.workers[who] !== undefined) {
       this.workers[who] = activity
       const lag = Date.now() - timestamp
@@ -255,18 +255,17 @@ class Office {
 // checkpoint but before the next reminder is scheduled, the runtime
 // system will actually re-execute the `move` method by replaying
 // the delivery of the previous reminder to a new Researcher instance
-// whose state will be restored from the checkpoint. This will result
-// in the `jitter` stat being computed using the prior target deadline.
+// whose state will be restored from the checkpoint.
 class Researcher {
   get name () { return this.kar.id }
 
-  async newHire ({ site, days, steps, thinkms }) {
+  async newHire (site, days, steps, thinkms) {
     const initialState = { site, career: days * steps, workday: steps, thinkms, activity: States.ONBOARDING, delays: [] }
     Object.assign(this, initialState)
     await actor.state.setMultiple(this, initialState)
 
-    const deadline = new Date(Date.now() + thinkms)
-    await actor.reminders.schedule(this, 'move', { id: 'step', deadline, data: deadline.getTime() })
+    const when = new Date(Date.now() + thinkms)
+    await actor.reminders.schedule(this, 'move', 'step', when, undefined, when.getTime())
   }
 
   // Checkpoint only saves the transitory state of the Researcher
@@ -310,7 +309,7 @@ class Researcher {
     // Is it time to retire?
     if (stepNumber === this.career) {
       this.retired = true
-      await actor.call(this, actor.proxy('Site', this.site), 'retire', { who: this.name, delays: this.delays })
+      await actor.call(this, actor.proxy('Site', this.site), 'retire', this.name, this.delays)
       return
     }
 
@@ -362,13 +361,12 @@ class Researcher {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
     }
     if (this.activity !== priorActivity) {
-      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate',
-        { who: this.name, activity: this.activity, office: this.location, timestamp: Date.now() })
+      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate', this.name, this.activity, Date.now())
     }
 
     // Schedule next step
-    const deadline = new Date(Date.now() + thinkTime)
-    await actor.reminders.schedule(this, 'move', { id: 'step', deadline, data: deadline.getTime() })
+    const when = new Date(Date.now() + thinkTime)
+    await actor.reminders.schedule(this, 'move', 'step', when, undefined, when.getTime())
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
   }

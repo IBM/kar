@@ -73,30 +73,28 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
  * API Documentation is located in index.d.ts
  ***************************************************/
 
-const tell = (service, path, params) => post(`service/${service}/tell/${path}`, params)
+const tell = (service, path, body) => post(`service/${service}/tell/${path}`, body)
 
-const call = (service, path, params) => post(`service/${service}/call/${path}`, params)
+const call = (service, path, body) => post(`service/${service}/call/${path}`, body)
 
 function actorProxy (type, id) { return { kar: { type, id } } }
 
-const actorTell = (actor, path, params) => post(`actor/${actor.kar.type}/${actor.kar.id}/tell/${path}`, params)
+const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/tell/${path}`, args.length === 0 ? undefined : args)
 
 function actorCall (...args) {
   if (typeof args[1] === 'string') {
-    // call (callee:Actor, path:string, params:any):Promise<any>;
-    const type = args[0].kar.type
-    const id = args[0].kar.id
-    const path = args[1]
-    const params = args[2]
-    return post(`actor/${type}/${id}/call/${path}`, params)
+    // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const ta = args.shift()
+    const path = args.shift()
+    const rest = args.length === 0 ? undefined : args
+    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, rest)
   } else {
-    //  export function call (from:Actor, callee:Actor, path:string, params:any):Promise<any>;
-    const session = args[0].kar.session
-    const type = args[1].kar.type
-    const id = args[1].kar.id
-    const path = args[2]
-    const params = args[3]
-    return post(`actor/${type}/${id}/call/${path}?session=${session}`, params)
+    //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const sa = args.shift()
+    const ta = args.shift()
+    const path = args.shift()
+    const rest = args.length === 0 ? undefined : args
+    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, rest)
   }
 }
 
@@ -104,7 +102,10 @@ const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${act
 
 const actorGetReminder = (actor, reminderId) => reminderId ? get(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
 
-const actorScheduleReminder = (actor, path, params) => post(`actor/${actor.kar.type}/${actor.kar.id}/reminders`, Object.assign({ path: `/${path}` }, params))
+function actorScheduleReminder (actor, path, id, targetTime, period, ...args) {
+  const opts = { id, period, path: `/${path}`, deadline: targetTime, data: args.length === 0 ? undefined : args }
+  return post(`actor/${actor.kar.type}/${actor.kar.id}/reminders`, opts)
+}
 
 const actorGetState = (actor, key) => get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
 
@@ -118,7 +119,7 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const broadcast = (path, params) => post(`system/broadcast/${path}`, params)
+const broadcast = (path, args) => post(`system/broadcast/${path}`, args)
 
 const shutdown = () => post('system/kill').then(() => agent.close())
 
@@ -130,9 +131,9 @@ function publish ({ topic, data, datacontenttype, dataschema, id, source, specve
   return post(`event/${topic}/publish`, { data, datacontenttype, dataschema, id, source, specversion, subject, time, type })
 }
 
-const subscribe = (topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, params))
+const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, opts))
 
-const unsubscribe = (topic, params) => post(`event/${topic}/unsubscribe`, params)
+const unsubscribe = (topic, opts) => post(`event/${topic}/unsubscribe`, opts)
 
 const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: actor.kar.type, actorId: actor.kar.id }, params))
 
@@ -210,7 +211,7 @@ function actorRuntime (actors) {
       if (req.params.method in actor) {
         actor.kar.session = req.params.session // NOTE: intentionally not cleared before return (could be nested call in same session)
         if (typeof actor[req.params.method] === 'function') {
-          return actor[req.params.method](req.body)
+          return req.body ? actor[req.params.method](...req.body) : actor[req.params.method]()
         }
         return actor[req.params.method]
       }

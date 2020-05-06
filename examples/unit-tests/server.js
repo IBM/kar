@@ -78,28 +78,30 @@ class Foo {
     return v + 1
   }
 
-  echo (body) {
-    if (body && body.msg) {
-      console.log(`actor ${this.id} says "${body.msg}"`)
+  echo (...msgs) {
+    if (msgs.length > 0) {
+      for (const msg of msgs) {
+        console.log(`actor ${this.id} says "${msg}"`)
+      }
     } else {
       console.log(`actor ${this.id} has nothing to say`)
     }
     return 'OK'
   }
 
-  set ({ key, value }) {
+  set (key, value) {
     console.log('actor', this.id, 'set', key, value)
     actor.state.set(this, key, value)
     return 'OK'
   }
 
-  get ({ key }) {
+  get (key) {
     console.log('actor', this.id, 'get', key)
     return actor.state.get(this, key)
   }
 
-  reenter (params) {
-    return actor.call(this, this, 'incrQuiet', params)
+  reenter (v) {
+    return actor.call(this, this, 'incrQuiet', v)
   }
 
   deactivate () {

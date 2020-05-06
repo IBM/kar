@@ -39,18 +39,18 @@ export interface Reminder {
  * Asynchronous service invocation; returns "OK" immediately
  * @param service The service to invoke.
  * @param path The service endpoint to invoke.
- * @param params The argument with which to invoke the service endpoint.
+ * @param body The request body with which to invoke the service endpoint.
  */
-export function tell (service:string, path:string, params?:any):Promise<any>;
+export function tell (service:string, path:string, body:any):Promise<any>;
 
 /**
  * Synchronous service invocation; returns invocation result
- * @param {string} service The service to invoke.
- * @param {string} path The service endpoint to invoke.
- * @param {any} [params] The argument with which to invoke the service endpoint.
+ * @param service The service to invoke.
+ * @param path The service endpoint to invoke.
+ * @param body The request body with which to invoke the service endpoint.
  * @returns The result returned by the target service.
  */
-export function call (service:string, path:string, params?:any):Promise<any>;
+export function call (service:string, path:string, body:any):Promise<any>;
 
 /**
  * Publish a CloudEvent to a topic
@@ -62,23 +62,23 @@ export function publish ();
  * Subscribe a Service endpoint to a topic.
  * @param topic The topic to which to subscribe
  * @param path The endpoint to invoke for each event received on the topic
- * @param params TODO: Document expected structure
+ * @param opts TODO: Document expected structure
  */
-export function subscribe (topic:string, path:string, params:any):Promise<any>;
+export function subscribe (topic:string, path:string, opts:any):Promise<any>;
 
 /**
  * Unsubscribe from a topic.
  * @param topic The topic to which to subscribe
- * @param params TODO: Document expected structure
+ * @param opts TODO: Document expected structure
  */
-export function unsubscribe (topic:string, params:any):Promise<any>;
+export function unsubscribe (topic:string, opts:any):Promise<any>;
 
 /**
  * Broadcast a message to all sidecars except for ours.
- * @param path the path to invoke in each sidecar.
- * @param params the parameters to pass to `path` when invoking it.
+ * @param path the endpoint to invoke in each sidecar.
+ * @param body the request body to pass to `path` when invoking it.
  */
-export function broadcast(path:string, params:any):Promise<void>;
+export function broadcast(path:string, body:any):Promise<void>;
 
 /**
  * Kill this sidecar
@@ -99,35 +99,35 @@ export namespace actor {
    * Asynchronous actor invocation; returns "OK" immediately
    * @param actor The target actor.
    * @param path The actor method to invoke.
-   * @param params The argument with which to invoke the actor method.
+   * @param args The arguments with which to invoke the actor method.
    */
-  export function tell (callee:Actor, path:string, params?:any):Promise<any>;
+  export function tell (callee:Actor, path:string, ...args?:any[]):Promise<any>;
 
   /**
    * Synchronous actor invocation propagating current session; returns the result of the invoked Actor method.
    * @param from The actor making the call
    * @param callee The target actor.
    * @param path The actor method to invoke.
-   * @param params The argument with which to invoke the actor method.
+   * @param args The arguments with which to invoke the actor method.
    */
-  export function call (from:Actor, callee:Actor, path:string, params?:any):Promise<any>;
+  export function call (from:Actor, callee:Actor, path:string, ...args?:any[]):Promise<any>;
 
   /**
    *  Synchronous actor invocation creating a new session; returns the result of the invoked Actor method.
    * @param callee The target Actor.
    * @param path The actor method to invoke.
-   * @param params The argument with which to invoke the actor method.
+   * @param args The arguments with which to invoke the actor method.
    */
-  export function call (callee:Actor, path:string, params?:any):Promise<any>;
+  export function call (callee:Actor, path:string, ...args?:any[]):Promise<any>;
 
   /**
    * Subscribe an Actor instance method to a topic.
    * @param actor The Actor instance to subscribe
    * @param topic The topic to which to subscribe
    * @param path The endpoint to invoke for each event received on the topic
-   * @param params TODO: Document expected structure
+   * @param opts TODO: Document expected structure
    */
-  export function subscribe (actor:Actor, topic:string, path:string, params:any):Promise<any>
+  export function subscribe (actor:Actor, topic:string, path:string, opts:any):Promise<any>
 
   namespace reminders {
     /**
@@ -150,9 +150,12 @@ export namespace actor {
      * Schedule a reminder for an Actor instance.
      * @param actor The Actor instance.
      * @param path The actor method to invoke when the reminder fires.
-     * @param opts A description of the desired reminder.
+     * @param id The id of the reminder being scheduled
+     * @param targetTime The earliest time at which the reminder should be delivered
+     * @param period A string encoding a Duration representing the reminder's period; one-shot reminders should pass `undefined`
+     * @param args The arguments with which to invoke the actor method.
      */
-    export function schedule(actor:Actor, path:string, opts:{ id:string, deadline:Date, path:string, data?:any, period?:string}):Promise<any>;
+    export function schedule(actor:Actor, path:string, id:string, targetTime:Date, period:string, ...args?:any[]):Promise<any>;
   }
 
   namespace state {

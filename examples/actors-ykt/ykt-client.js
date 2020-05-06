@@ -47,7 +47,10 @@ async function main () {
     { proxy: actor.proxy('Site', 'Almaden'), params: { workers: 15, thinkms: 500, steps: 10, days: 5 } }
   ]
 
-  console.log(`Starting simulation: ${JSON.stringify(researchDivision)}`)
+  console.log('Starting simulation:')
+  for (const site of researchDivision) {
+    console.log(`  ${site.proxy.kar.id}: ${JSON.stringify(site.params)}`)
+  }
 
   for (const site of researchDivision) {
     await actor.call(site.proxy, 'resetDelayStats')
