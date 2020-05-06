@@ -26,7 +26,7 @@ export interface Reminder {
   /** The id of this reminder */
   id:string;
   /** The time at which the reminder is eligible for delivery */
-  deadline:Date;
+  targetTime:Date;
   /** The actor method to be invoked */
   path:string;
   /** An optional argument with which to invoke the target method */

@@ -1014,11 +1014,6 @@
         "Actor": {
           "$ref": "#/definitions/Actor"
         },
-        "deadline": {
-          "type": "string",
-          "format": "date-time",
-          "x-go-name": "Deadline"
-        },
         "encodedData": {
           "type": "string",
           "x-go-name": "EncodedData"
@@ -1033,6 +1028,11 @@
         },
         "period": {
           "$ref": "#/definitions/Duration"
+        },
+        "targetTime": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "TargetTime"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
@@ -1161,12 +1161,6 @@
           "x-go-name": "Data",
           "example": "{ msg: \"Hello Friend!\" }"
         },
-        "deadline": {
-          "description": "The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format",
-          "type": "string",
-          "format": "date-time",
-          "x-go-name": "Deadline"
-        },
         "id": {
           "description": "The ID to use for this reminder",
           "type": "string",
@@ -1180,10 +1174,16 @@
           "example": "sayHello"
         },
         "period": {
-          "description": "The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.\nIf a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time\nto compute a new Deadline for the next invocation of the reminder.",
+          "description": "The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.\nIf a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time\nto compute a new TargetTime for the next invocation of the reminder.",
           "type": "string",
           "x-go-name": "Period",
           "example": "30s"
+        },
+        "targetTime": {
+          "description": "The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "TargetTime"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
@@ -1237,7 +1237,7 @@
           "items": {
             "$ref": "#/definitions/Reminder"
           },
-          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', deadline: '2020-04-14T14:20:00Z', encodedData: '{\"msg\":\"carpe diem\"}' }]",
+          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', targetTime: '2020-04-14T14:20:00Z', encodedData: '{\"msg\":\"carpe diem\"}' }]",
           "description": "An array containing all matching reminders"
         }
       }
@@ -1248,7 +1248,7 @@
       },
       "headers": {
         "Body": {
-          "example": "{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', deadline: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }",
+          "example": "{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }",
           "description": "The reminder"
         }
       }

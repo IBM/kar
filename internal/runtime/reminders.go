@@ -29,7 +29,7 @@ type Reminder struct {
 	ID          string        `json:"id"`
 	key         string        // Implementation detail, do not serialize
 	Path        string        `json:"path"`
-	Deadline    time.Time     `json:"deadline"`
+	TargetTime  time.Time     `json:"targetTime"`
 	Period      time.Duration `json:"period,omitempty"` // 0 for one-shot reminders
 	EncodedData string        `json:"encodedData,omitempty"`
 }
@@ -43,10 +43,10 @@ type scheduleReminderPayload struct {
 	// Example: sayHello
 	Path string `json:"path"`
 	// The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
-	Deadline time.Time `json:"deadline"`
+	TargetTime time.Time `json:"targetTime"`
 	// The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.
 	// If a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time
-	// to compute a new Deadline for the next invocation of the reminder.
+	// to compute a new TargetTime for the next invocation of the reminder.
 	// Example: 30s
 	Period string `json:"period,omitempty"`
 	// An optional parameter containing an arbitrary JSON value that will be provided as the
@@ -70,12 +70,12 @@ func reminderKey(a Actor, reminderID string) string {
 }
 
 func persistReminder(r Reminder) {
-	ts, _ := r.Deadline.MarshalText()
+	ts, _ := r.TargetTime.MarshalText()
 	rMap := make(map[string]string, 6)
 	rMap["actorType"] = r.Actor.Type
 	rMap["actorId"] = r.Actor.ID
 	rMap["path"] = r.Path
-	rMap["deadline"] = string(ts)
+	rMap["targetTime"] = string(ts)
 	if r.Period > 0 {
 		rMap["period"] = r.Period.String()
 	}
@@ -85,9 +85,9 @@ func persistReminder(r Reminder) {
 	store.HSetMultiple(r.key, rMap)
 }
 
-func persistNewDeadline(key string, deadline time.Time) {
-	ts, _ := deadline.MarshalText()
-	store.HSet(key, "deadline", string(ts))
+func persistTargetTime(key string, targetTime time.Time) {
+	ts, _ := targetTime.MarshalText()
+	store.HSet(key, "targetTime", string(ts))
 }
 
 func loadReminder(rk string) (Reminder, error) {
@@ -96,8 +96,8 @@ func loadReminder(rk string) (Reminder, error) {
 		return Reminder{}, err
 	}
 	logger.Debug("loadReminder: %v => %v", rk, rMap)
-	var deadline time.Time
-	err = deadline.UnmarshalText([]byte(rMap["deadline"]))
+	var targetTime time.Time
+	err = targetTime.UnmarshalText([]byte(rMap["targetTime"]))
 	if err != nil {
 		return Reminder{}, err
 	}
@@ -111,7 +111,7 @@ func loadReminder(rk string) (Reminder, error) {
 	r := Reminder{Actor: Actor{Type: rMap["actorType"], ID: rMap["actorId"]},
 		key:         rk,
 		Path:        rMap["path"],
-		Deadline:    deadline,
+		TargetTime:  targetTime,
 		Period:      period,
 		EncodedData: rMap["encodedData"],
 	}
@@ -147,7 +147,7 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 		return err
 	}
 	rk := reminderKey(actor, data.ID)
-	r := Reminder{Actor: actor, ID: data.ID, key: rk, Path: data.Path, Deadline: data.Deadline}
+	r := Reminder{Actor: actor, ID: data.ID, key: rk, Path: data.Path, TargetTime: data.TargetTime}
 	if data.Period != "" {
 		period, err := time.ParseDuration(data.Period)
 		if err != nil {
@@ -173,7 +173,7 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 	return nil
 }
 
-// ProcessReminders causes all reminders with a deadline before fireTime to be scheduled for execution.
+// ProcessReminders causes all reminders with a targetTime before fireTime to be scheduled for execution.
 func processReminders(ctx context.Context, fireTime time.Time) {
 	arMutex.Lock()
 	logger.Debug("ProcessReminders: begin for time %v", fireTime)
@@ -183,11 +183,11 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		if !valid {
 			break
 		}
-		if fireTime.After(r.Deadline.Add(config.ActorReminderAcceptableDelay)) {
-			logger.Warning("ProcessReminders: LATE by %v in firing %v to %v[%v]%v", fireTime.Sub(r.Deadline), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
+		if fireTime.After(r.TargetTime.Add(config.ActorReminderAcceptableDelay)) {
+			logger.Warning("ProcessReminders: LATE by %v in firing %v to %v[%v]%v", fireTime.Sub(r.TargetTime), r.ID, r.Actor.Type, r.Actor.ID, r.Path)
 		}
 
-		logger.Debug("ProcessReminders: firing %v to %v[%v]%v (deadline %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.Deadline)
+		logger.Debug("ProcessReminders: firing %v to %v[%v]%v (targetTime %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.TargetTime)
 		if err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/json"); err != nil {
 			logger.Debug("ProcessReminders: firing %v raised error %v", r, err)
 			logger.Debug("ProcessReminders: ending this round; putting reminder back in queue to retry in next round")
@@ -196,9 +196,9 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		}
 
 		if r.Period > 0 {
-			r.Deadline = fireTime.Add(r.Period)
+			r.TargetTime = fireTime.Add(r.Period)
 			activeReminders.addReminder(r)
-			persistNewDeadline(r.key, r.Deadline)
+			persistTargetTime(r.key, r.TargetTime)
 		} else {
 			store.Del(r.key)
 		}

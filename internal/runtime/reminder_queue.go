@@ -16,8 +16,8 @@ type reminderQueue []*reminderEntry
 func (rq reminderQueue) Len() int { return len(rq) }
 
 func (rq reminderQueue) Less(i, j int) bool {
-	// Deadlines further in the future have lower priority
-	return rq[i].r.Deadline.Before(rq[j].r.Deadline)
+	// targetTimes further in the future have lower priority
+	return rq[i].r.TargetTime.Before(rq[j].r.TargetTime)
 }
 
 func (rq reminderQueue) Swap(i, j int) {
@@ -68,7 +68,7 @@ func (rq *reminderQueue) findMatchingReminders(actor Actor, ID string) []Reminde
 }
 
 func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {
-	for len(*rq) > 0 && (*rq)[0].r.Deadline.Before(t) {
+	for len(*rq) > 0 && (*rq)[0].r.TargetTime.Before(t) {
 		re := heap.Pop(rq).(*reminderEntry)
 		if !re.cancelled {
 			return re.r, true

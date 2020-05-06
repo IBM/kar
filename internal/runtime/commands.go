@@ -414,7 +414,7 @@ func Collect(ctx context.Context) {
 	}
 }
 
-// ProcessReminders runs periodically and schedules delivery of all reminders whose deadline has passed
+// ProcessReminders runs periodically and schedules delivery of all reminders whose targetTime has passed
 func ProcessReminders(ctx context.Context) {
 	ticker := time.NewTicker(config.ActorReminderInterval)
 	for {
