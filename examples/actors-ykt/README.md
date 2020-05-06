@@ -18,14 +18,16 @@ The entities in the simulation are:
      To support load testing and performance analysis, the application
      collects statistics on the delay between the time a reminder
      was scheduled to be fired and when it was actually delivered to
-     its target actor.
+     its target actor. Each Researcher is expected to complete a
+     known number of moves during the "career"; these numbers can be
+     externally verified to test KAR's ability to support fault-tolerance.
    + The Researcher's `move` method is also a good summary of how to use
      the various pieces of the KAR actor model.  It uses both the
      synchronous `call` and asynchronous `tell` APIs to interact with
-     other actors.  It uses `scheduleReminder` to re-invoke itself for
+     other actors.  It uses `schedule` to re-invoke itself for
      the next step of the simulation. It uses `setMultiple` to checkpoint
      its own state at an application-chosen point to enable the simulation
-     to recover from failures with a consistient view of its progress.
+     to recover from failures with a consistent view of its progress.
 + Office
    + Each Office represents a physical office in a Site.
    + Offices keep track of their current occupants, which is used by the
@@ -39,7 +41,7 @@ The entities in the simulation are:
 + Site
    + A Site represents a physical location that contains Offices.
    + There are a small number of Site instances in the simulation.
-   + On every `move` operation, every Researcher uses `tell` to
+   + Every time a Researcher changes their activity, they use `tell` to
      report what they did to their Site. Thus, as the number of 
      Researchers is ramped up, the statistics gathered by the
      Site on the observed latency of the delivery of these messages
