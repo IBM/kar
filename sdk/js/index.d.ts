@@ -2,7 +2,7 @@
 // Project:[KAR:Kubernetes Application Runtime]
 
 import { Server } from "spdy";
-import { App, Router } from "express";
+import { Application, Router } from "express";
 
 export interface ActorImpl {
   /** The type of this Actor instance */
@@ -95,7 +95,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function tell (callee: Actor, path: string, ...args?: any[]): Promise<any>;
+  export function tell (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**
    * Synchronous actor invocation propagating current session; returns the result of the invoked Actor method.
@@ -104,7 +104,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function call (from: Actor, callee: Actor, path: string, ...args?: any[]): Promise<any>;
+  export function call (from: Actor, callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**
    *  Synchronous actor invocation creating a new session; returns the result of the invoked Actor method.
@@ -112,7 +112,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function call (callee: Actor, path: string, ...args?: any[]): Promise<any>;
+  export function call (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**
    * Subscribe an Actor instance method to a topic.
@@ -149,7 +149,7 @@ export namespace actor {
      * @param period A string encoding a Duration representing the reminder's period; one-shot reminders should pass `undefined`
      * @param args The arguments with which to invoke the actor method.
      */
-    export function schedule (actor: Actor, path: string, id: string, targetTime: Date, period: string, ...args?: any[]): Promise<any>;
+    export function schedule (actor: Actor, path: string, id: string, targetTime: Date, period: string, ...args: any[]): Promise<any>;
   }
 
   namespace state {
@@ -201,7 +201,7 @@ export namespace actor {
 /**
  * Application configuration and system operations
  */
-namespace sys {
+export namespace sys {
   /**
    * Instantiate an actor runtime for this application process by
    * providing it a collection of classes that implement Actor types.
@@ -215,7 +215,7 @@ namespace sys {
    * @param app An Express App
    * @returns a Server
    */
-  export function h2c (app: App): Server;
+  export function h2c (app: Application): Server;
 
   /**
    * Logging middleware
