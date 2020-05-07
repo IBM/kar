@@ -1,4 +1,4 @@
-const { actor, broadcast, shutdown, call } = require('kar')
+const { actor, call, sys } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -199,11 +199,11 @@ async function testTermination (failure) {
 
   if (!truthy(process.env.KUBERNETES_MODE)) {
     console.log('Requesting server shutdown')
-    await broadcast('shutdown')
+    await sys.broadcast('shutdown')
   }
 
   console.log('Terminating sidecar')
-  await shutdown()
+  await sys.shutdown()
 }
 
 async function main () {

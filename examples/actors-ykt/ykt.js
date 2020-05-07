@@ -1,6 +1,6 @@
 const express = require('express')
 
-const { logger, jsonParser, errorHandler, shutdown, actor, actorRuntime, h2c } = require('kar')
+const { actor, sys } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -378,15 +378,15 @@ class Researcher {
 
 const app = express()
 
-app.use(logger, jsonParser) // enable kar logging and parsing
+app.use(sys.logger, sys.jsonParser) // enable kar logging and parsing
 
 app.post('/shutdown', async (_reg, res) => {
   console.log('Shutting down service')
   res.sendStatus(200)
-  await shutdown()
+  await sys.shutdown()
   server.close(() => process.exit())
 })
 
-app.use(actorRuntime({ Company, Site, Office, Researcher }))
-app.use(errorHandler)
-const server = h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')
+app.use(sys.actorRuntime({ Company, Site, Office, Researcher }))
+app.use(sys.errorHandler)
+const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')

@@ -1,10 +1,10 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler } = require('kar')
+const { sys } = require('kar')
 
 const app = express()
 
-app.use(logger, jsonParser) // enable kar logging and parsing
-app.use(errorHandler) // enable kar error handling
+app.use(sys.logger, sys.jsonParser) // enable kar logging and parsing
+app.use(sys.errorHandler) // enable kar error handling
 
 // Define the route this service provides
 app.post('/hello', (req, res) => {

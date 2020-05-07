@@ -1,5 +1,5 @@
 const express = require('express')
-const { logger, jsonParser, errorHandler, shutdown, actor, actorRuntime, publish, subscribe, unsubscribe } = require('kar')
+const { actor, publish, subscribe, unsubscribe, sys } = require('kar')
 
 const app = express()
 
@@ -7,7 +7,7 @@ const app = express()
 let success
 let count = 0
 
-app.use(logger, jsonParser) // enable kar logging and parsing
+app.use(sys.logger, sys.jsonParser) // enable kar logging and parsing
 
 app.post('/incr', (req, res) => {
   console.log('incr', req.body)
@@ -21,7 +21,7 @@ app.post('/incrQuiet', (req, res) => {
 app.post('/shutdown', async (_reg, res) => {
   console.log('Shutting down service')
   res.sendStatus(200)
-  await shutdown()
+  await sys.shutdown()
   server.close(() => process.exit())
 })
 
@@ -109,8 +109,8 @@ class Foo {
   }
 }
 
-app.use(actorRuntime({ Foo }))
+app.use(sys.actorRuntime({ Foo }))
 
-app.use(errorHandler) // enable kar error handling
+app.use(sys.errorHandler) // enable kar error handling
 
 const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

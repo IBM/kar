@@ -69,7 +69,7 @@ function del (api) {
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 
 /***************************************************
- * public methods
+ * public methods intended for application programming
  * API Documentation is located in index.d.ts
  ***************************************************/
 
@@ -137,6 +137,10 @@ const unsubscribe = (topic, opts) => post(`event/${topic}/unsubscribe`, opts)
 
 const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: actor.kar.type, actorId: actor.kar.id }, params))
 
+/***************************************************
+ * End of public methods intended for application programming
+ **************************************************/
+
 const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
 
 const jsonParser = [
@@ -171,6 +175,13 @@ const errorHandler = [
       return res.status(500).json(body) // return error
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
+
+// h2c protocol wrapper
+const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
+
+/***************************************************
+ * Start of Actor runtime implementation
+ ***************************************************/
 
 const table = {} // live actor instances: table[actorType][actorId]
 
@@ -225,12 +236,12 @@ function actorRuntime (actors) {
   return router
 }
 
-// h2c protocol wrapper
-const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
+/***************************************************
+ * End of Actor runtime implementation
+ ***************************************************/
 
 // exports
 module.exports = {
-  h2c,
   tell,
   call,
   publish,
@@ -241,7 +252,6 @@ module.exports = {
     tell: actorTell,
     call: actorCall,
     subscribe: actorSubscribe,
-    // proxy: actorCreateProxy,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,
@@ -256,10 +266,13 @@ module.exports = {
       removeAll: actorRemoveAllState
     }
   },
-  actorRuntime,
-  broadcast,
-  shutdown,
-  logger,
-  jsonParser,
-  errorHandler
+  sys: {
+    actorRuntime,
+    broadcast,
+    shutdown,
+    h2c,
+    logger,
+    jsonParser,
+    errorHandler
+  }
 }

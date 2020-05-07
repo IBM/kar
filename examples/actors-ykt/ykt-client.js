@@ -1,4 +1,4 @@
-const { actor, shutdown, broadcast } = require('kar')
+const { actor, sys } = require('kar')
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
@@ -17,11 +17,11 @@ async function testTermination (failure) {
 
   if (truthy(process.env.ONE_SHOT_SERVER)) {
     console.log('Requesting server shutdown')
-    await broadcast('shutdown')
+    await sys.broadcast('shutdown')
   }
 
   console.log('Terminating sidecar')
-  await shutdown()
+  await sys.shutdown()
 }
 
 function prettyPrintHistogram (header, bucketSizeInMS, histogram) {

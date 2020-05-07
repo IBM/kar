@@ -1,13 +1,16 @@
 // Type definitions for [KAR] [0.1.0]
 // Project:[KAR:Kubernetes Application Runtime]
 
+import { Server } from "spdy";
+import { App } from "express";
+
 export interface ActorImpl {
   /** The type of this Actor instance */
-  type:string;
+  type: string;
   /** The id of this Actor instance */
-  id:string;
+  id: string;
   /** The session of the active invocation */
-  session?:string;
+  session?: string;
 }
 
 /**
@@ -22,17 +25,17 @@ export interface Actor {
  */
 export interface Reminder {
   /** The actor to be reminded */
-  actor:ActorImpl;
+  actor: ActorImpl;
   /** The id of this reminder */
-  id:string;
+  id: string;
   /** The time at which the reminder is eligible for delivery */
-  targetTime:Date;
+  targetTime: Date;
   /** The actor method to be invoked */
-  path:string;
+  path: string;
   /** An optional argument with which to invoke the target method */
-  data?:any;
+  data?: any;
   /** Period at which the reminder should recur in nanoseconds. A value of 0 indicates a non-recurring reminder */
-  period:number;
+  period: number;
 }
 
 /**
@@ -41,7 +44,7 @@ export interface Reminder {
  * @param path The service endpoint to invoke.
  * @param body The request body with which to invoke the service endpoint.
  */
-export function tell (service:string, path:string, body:any):Promise<any>;
+export function tell (service: string, path: string, body: any): Promise<any>;
 
 /**
  * Synchronous service invocation; returns invocation result
@@ -50,7 +53,7 @@ export function tell (service:string, path:string, body:any):Promise<any>;
  * @param body The request body with which to invoke the service endpoint.
  * @returns The result returned by the target service.
  */
-export function call (service:string, path:string, body:any):Promise<any>;
+export function call (service: string, path: string, body: any): Promise<any>;
 
 /**
  * Publish a CloudEvent to a topic
@@ -64,36 +67,27 @@ export function publish ();
  * @param path The endpoint to invoke for each event received on the topic
  * @param opts TODO: Document expected structure
  */
-export function subscribe (topic:string, path:string, opts:any):Promise<any>;
+export function subscribe (topic: string, path: string, opts: any): Promise<any>;
 
 /**
  * Unsubscribe from a topic.
  * @param topic The topic to which to subscribe
  * @param opts TODO: Document expected structure
  */
-export function unsubscribe (topic:string, opts:any):Promise<any>;
+export function unsubscribe (topic: string, opts: any): Promise<any>;
 
 /**
- * Broadcast a message to all sidecars except for ours.
- * @param path the endpoint to invoke in each sidecar.
- * @param body the request body to pass to `path` when invoking it.
+ * Actor operations
  */
-export function broadcast(path:string, body:any):Promise<void>;
-
-/**
- * Kill this sidecar
- */
-export function shutdown():Promise<void>;
-
 export namespace actor {
 
   /**
-   * Construct a proxy object to represent an Actor instance.
+   * Construct a proxy object that represents an Actor instance.
    * @param type The type of the Actor instance
    * @param id The instance id of the Actor instance
    * @returns A proxy object representing the Actor instance.
    */
-  export function proxy(type:string, id:string):Actor;
+  export function proxy (type: string, id: string): Actor;
 
   /**
    * Asynchronous actor invocation; returns "OK" immediately
@@ -101,7 +95,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function tell (callee:Actor, path:string, ...args?:any[]):Promise<any>;
+  export function tell (callee: Actor, path: string, ...args?: any[]): Promise<any>;
 
   /**
    * Synchronous actor invocation propagating current session; returns the result of the invoked Actor method.
@@ -110,7 +104,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function call (from:Actor, callee:Actor, path:string, ...args?:any[]):Promise<any>;
+  export function call (from: Actor, callee: Actor, path: string, ...args?: any[]): Promise<any>;
 
   /**
    *  Synchronous actor invocation creating a new session; returns the result of the invoked Actor method.
@@ -118,7 +112,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function call (callee:Actor, path:string, ...args?:any[]):Promise<any>;
+  export function call (callee: Actor, path: string, ...args?: any[]): Promise<any>;
 
   /**
    * Subscribe an Actor instance method to a topic.
@@ -127,7 +121,7 @@ export namespace actor {
    * @param path The endpoint to invoke for each event received on the topic
    * @param opts TODO: Document expected structure
    */
-  export function subscribe (actor:Actor, topic:string, path:string, opts:any):Promise<any>
+  export function subscribe (actor: Actor, topic: string, path: string, opts: any): Promise<any>
 
   namespace reminders {
     /**
@@ -136,7 +130,7 @@ export namespace actor {
      * @param reminderId The id of a specific reminder to cancel
      * @returns The number of reminders that were cancelled.
      */
-    export function cancel (actor:Actor, reminderId?:string):Promise<number>;
+    export function cancel (actor: Actor, reminderId?: string): Promise<number>;
 
     /**
      * Get matching reminders for an Actor instance.
@@ -144,7 +138,7 @@ export namespace actor {
      * @param reminderId The id of a specific reminder to cancel
      * @returns An array of matching reminders
      */
-    export function get (actor:Actor, reminderId?:string):Promise<Reminder|Array<Reminder>>;
+    export function get (actor: Actor, reminderId?: string): Promise<Reminder | Array<Reminder>>;
 
     /**
      * Schedule a reminder for an Actor instance.
@@ -155,7 +149,7 @@ export namespace actor {
      * @param period A string encoding a Duration representing the reminder's period; one-shot reminders should pass `undefined`
      * @param args The arguments with which to invoke the actor method.
      */
-    export function schedule(actor:Actor, path:string, id:string, targetTime:Date, period:string, ...args?:any[]):Promise<any>;
+    export function schedule (actor: Actor, path: string, id: string, targetTime: Date, period: string, ...args?: any[]): Promise<any>;
   }
 
   namespace state {
@@ -165,7 +159,7 @@ export namespace actor {
      * @param key The key to get from the instance's state
      * @returns The value associated with `key`
      */
-    export function get(actor:Actor, key:string):Promise<any>;
+    export function get (actor: Actor, key: string): Promise<any>;
 
     /**
      * Store one value to an Actor's state
@@ -173,33 +167,84 @@ export namespace actor {
      * @param key The key to get from the instance's state
      * @param value The value to store
      */
-    export function set(actor:Actor, key:string, value:any):Promise<void>;
+    export function set (actor: Actor, key: string, value: any): Promise<void>;
 
     /**
      * Store multiple values to an Actor's state
      * @param actor The Actor instance.
      * @param updates The updates to make
      */
-    export function setMultiple(actor:Actor, updates:Map<string, any>):Promise<void>;
+    export function setMultiple (actor: Actor, updates: Map<string, any>): Promise<void>;
 
     /**
      * Remove one value from an Actor's state
      * @param actor The Actor instance.
      * @param key The key to delete
      */
-    export function remove(actor:Actor, key:string):Promise<void>;
+    export function remove (actor: Actor, key: string): Promise<void>;
 
     /**
      * Get all the key value pairs from an Actor's state
      * @param actor The Actor instance.
      * @returns A map representing the Actor's state
      */
-    export function getAll(actor:Actor):Promise<Map<string,any>>;
+    export function getAll (actor: Actor): Promise<Map<string, any>>;
 
     /**
      * Remove all key value pairs from an Actor's state
      * @param actor The Actor instance.
      */
-    export function removeAll(actor:Actor):Promise<void>;
+    export function removeAll (actor: Actor): Promise<void>;
   }
+}
+
+/**
+ * Application configuration and system operations
+ */
+namespace sys {
+  /**
+   * Instantiate an actor runtime for this application process by
+   * providing it a collection of classes that implement Actor types.
+   * @param actors The actor types implemented by this application component.
+   * @returns a Router that can be used to serve the actor runtime
+   * TODO: what is the typescript type for a class constructor???
+   */
+  export function actorRuntime (actors: Map<string, any>): Router;
+
+  /**
+   * Wrap an Express App in an http/2 server.
+   * @param app An Express App
+   * @returns a Server
+   */
+  export function h2c (app: App): Server;
+
+  /**
+   * Logging middleware
+   * TODO: proper type & documentation
+   */
+  export const logger: any;
+
+  /**
+   * Error handling middleware
+   * TODO: proper type & documentation
+   */
+  export const errorHandler: any;
+
+  /**
+   * JSON parser
+   * TODO: proper type & documentation
+   */
+  export const jsonParser: any;
+
+  /**
+  * Broadcast a message to all sidecars except for ours.
+  * @param path the endpoint to invoke in each sidecar.
+  * @param body the request body to pass to `path` when invoking it.
+  */
+  export function broadcast (path: string, body: any): Promise<void>;
+
+  /**
+   * Kill this sidecar
+   */
+  export function shutdown (): Promise<void>;
 }
