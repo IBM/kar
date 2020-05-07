@@ -20,7 +20,7 @@ public class ActorTest {
 				.add("number", 5)
 				.build();
 		
-		Response resp = kar.actorCall("dummy", "dummyid", "name", params);
+		Response resp = kar.actorCall("dummy", "dummyid", "canBeInvoked", params);
 		assertNotNull(resp);
 	}
 
