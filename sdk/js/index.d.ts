@@ -2,7 +2,7 @@
 // Project:[KAR:Kubernetes Application Runtime]
 
 import { Server } from "spdy";
-import { App } from "express";
+import { App, Router } from "express";
 
 export interface ActorImpl {
   /** The type of this Actor instance */
@@ -206,10 +206,9 @@ namespace sys {
    * Instantiate an actor runtime for this application process by
    * providing it a collection of classes that implement Actor types.
    * @param actors The actor types implemented by this application component.
-   * @returns a Router that can be used to serve the actor runtime
-   * TODO: what is the typescript type for a class constructor???
+   * @returns Router that will serve routes designated for the actor runtime
    */
-  export function actorRuntime (actors: Map<string, any>): Router;
+  export function actorRuntime (actors:  { [k:string]: ()=>Object }): Router;
 
   /**
    * Wrap an Express App in an http/2 server.
