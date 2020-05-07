@@ -71,26 +71,40 @@ public class Kar {
 	}
 
 	// synchronous actor invocation: returns invocation result
-	public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
-		return karClient.actorCall(type, id, path, params);
+	public Response actorCall(String type, String id,  String path, String session, JsonObject params) throws ProcessingException {
+		return karClient.actorCall(type, id, path, session, params);
+  }
+
+  public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
+		return karClient.actorCall(type, id, path, null, params);
 	}
-	
+
 	// migrate actor
 	public Response actorMigrate(String type, String id) throws ProcessingException {
 		return karClient.actorMigrate(type, id);
-	}
+  }
 
-	
+
 	/*
 	 * Reminder Operations
 	 */
-	public Response actorCancelReminder(String type, String id, JsonObject params) throws ProcessingException {
-		return karClient.actorCancelReminder(type, id, params);
+	public Response actorCancelReminders(String type, String id) throws ProcessingException {
+		return karClient.actorCancelReminders(type, id);
 
-	}
+  }
 
-	public Response actorGetReminder(String type, String id, JsonObject params) throws ProcessingException {
-		return karClient.actorGetReminder(type, id, params);
+  public Response actorCancelReminder(String type, String id, String reminderId) throws ProcessingException {
+		return karClient.actorCancelReminder(type, id, reminderId, true);
+
+  }
+
+	public Response actorGetReminders(String type, String id) throws ProcessingException {
+		return karClient.actorGetReminders(type, id);
+
+  }
+
+  public Response actorGetReminder(String type, String id, String reminderId) throws ProcessingException {
+		return karClient.actorGetReminder(type, id, reminderId, true);
 
 	}
 
@@ -110,7 +124,7 @@ public class Kar {
 	 * Actor State Operations
 	 */
     public Response actorGetState( String type,  String id,  String key) throws ProcessingException {
-    	return karClient.actorGetState(type, id, key);
+      return karClient.actorGetState(type, id, key, true);
     }
 
     public Response actorSetState(String type,  String id,  String key, JsonObject params) throws ProcessingException {
@@ -118,7 +132,7 @@ public class Kar {
     }
 
     public Response actorDeleteState(String type,  String id,  String key) throws ProcessingException {
-    	return karClient.actorDeleteState(type, id, key);
+      return karClient.actorDeleteState(type, id, key, true);
     }
     public Response actorGetAllState(String type,  String id) throws ProcessingException {
     	return karClient.actorGetAllState(type, id);
