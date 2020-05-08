@@ -71,6 +71,15 @@ spec:
           containerPort: {{ .Values.kafka.portInternal }}
         - name: kafka-external
           containerPort: {{ .Values.kafka.portExternal }}
+        readinessProbe:
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          periodSeconds: 15
+          exec:
+            command:
+            - /opt/kafka/bin/kafka-topics.sh
+            - localhost:{{ .Values.kafka.portInternal }}
+            - --version
         env:
         - name: HOSTNAME_COMMAND
           value: hostname -f
