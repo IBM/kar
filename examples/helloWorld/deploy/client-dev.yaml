@@ -13,7 +13,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: client
-        image: example-hello-world:dev
+        image: examples-js:dev
         env:
         - name: MAIN
-          value: client.js
+          value: helloWorld/client.js

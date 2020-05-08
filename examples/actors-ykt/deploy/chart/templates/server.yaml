@@ -24,4 +24,4 @@ spec:
         image: {{ .Values.image }}
         env:
         - name: MAIN
-          value: ykt.js
+          value: actors-ykt/ykt.js

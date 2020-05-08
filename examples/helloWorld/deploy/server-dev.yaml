@@ -8,7 +8,7 @@ metadata:
 spec:
   containers:
   - name: server
-    image: example-hello-world:dev
+    image: examples-js:dev
     env:
     - name: MAIN
-      value: server.js
+      value: helloWorld/server.js

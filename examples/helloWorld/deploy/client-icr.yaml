@@ -15,7 +15,7 @@ spec:
       - name: kar.ibm.com.image-pull
       containers:
       - name: client
-        image: us.icr.io/research/kar-dev/example-hello-world:latest
+        image: us.icr.io/research/kar-dev/examples-js:latest
         env:
         - name: MAIN
-          value: client.js
+          value: helloWorld/client.js

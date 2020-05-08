@@ -18,7 +18,7 @@ kar -app myApp node test-harness.js
 ### Running on Kubernetes
 
 ```shell
-$ helm install ut ./deploy/chart --set image=example-unit-tests:dev
+$ helm install ut ./deploy/chart --set image=example-js:dev
 NAME: ut
 LAST DEPLOYED: Fri Apr  3 16:34:15 2020
 NAMESPACE: default

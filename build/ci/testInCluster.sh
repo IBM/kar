@@ -6,7 +6,7 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."
 
 echo "*** Running in-cluster unit tests ***"
-helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=example-unit-tests:dev
+helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=examples-js:dev
 
 if helm test ut; then
     echo "PASSED! In cluster unit-tests passed."
@@ -22,7 +22,7 @@ fi
 
 echo "*** Running in-cluster actors-ykt ***"
 
-helm install ykt $ROOTDIR/examples/actors-ykt/deploy/chart --set image=example-ykt:dev
+helm install ykt $ROOTDIR/examples/actors-ykt/deploy/chart --set image=examples-js:dev
 
 if helm test ykt; then
     echo "PASSED! In cluster actors-ykt passed."

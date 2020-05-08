@@ -1,1 +1,1 @@
-image: us.icr.io/research/kar-dev/example-unit-tests:latest
+image: us.icr.io/research/kar-dev/examples-js:latest
