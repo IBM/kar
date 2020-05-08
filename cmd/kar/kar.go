@@ -191,10 +191,20 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Schemes: http
 //     Responses:
 //       200: response200
+//       500: response500
+//       503: response503
 //
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}) // TODO handle errors
-	fmt.Fprint(w, "OK")
+	err := runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, "")
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to migrate actor: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		fmt.Fprint(w, "OK")
+	}
 }
 
 // swagger:route DELETE /actor/{actorType}/{actorId}/reminders actors idActorReminderCancelAll

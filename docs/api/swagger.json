@@ -118,6 +118,12 @@
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
           }
         }
       }

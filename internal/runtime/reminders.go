@@ -4,11 +4,14 @@ import (
 	"container/heap"
 	"context"
 	"encoding/json"
+	"math/rand"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/internal/store"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -55,17 +58,8 @@ type scheduleReminderPayload struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
-// reminderPartition returns the partition that is responsible for all reminder processing for the argument actor.
-// This assignment is stable.
-func reminderPartition(a Actor) int32 {
-	// TODO: Implement a non-trivial yet stable assignment.
-	//       when we do this, we must update rebalanceReminders
-	return 0
-}
-
 // reminderKey returns a key suffix of the form: reminders_PARTITION_ACTORTYPE_ACTORID_REMINDERID
-func reminderKey(a Actor, reminderID string) string {
-	partition := strconv.Itoa(int(reminderPartition(a)))
+func reminderKey(a Actor, reminderID string, partition string) string {
 	return "reminders" + config.Separator + partition + config.Separator + a.Type + config.Separator + a.ID + config.Separator + reminderID
 }
 
@@ -90,22 +84,35 @@ func persistTargetTime(key string, targetTime time.Time) {
 	store.HSet(key, "targetTime", string(ts))
 }
 
-func loadReminder(rk string) (Reminder, error) {
+func loadReminder(actor Actor, rk string) error {
+	arMutex.Lock()
+	found := activeReminders.findMatchingReminders(actor, strings.Split(rk, config.Separator)[4])
+	if len(found) > 0 { // reminder is already loaded
+		arMutex.Unlock()
+		return nil
+	}
 	rMap, err := store.HGetAll(rk)
 	if err != nil {
-		return Reminder{}, err
+		arMutex.Unlock()
+		return err
+	}
+	if len(rMap) == 0 { // reminder no longer exists
+		arMutex.Unlock()
+		return err
 	}
 	logger.Debug("loadReminder: %v => %v", rk, rMap)
 	var targetTime time.Time
 	err = targetTime.UnmarshalText([]byte(rMap["targetTime"]))
 	if err != nil {
-		return Reminder{}, err
+		arMutex.Unlock()
+		return err
 	}
 	var period time.Duration
 	if ps, present := rMap["period"]; present {
 		period, err = time.ParseDuration(ps)
 		if err != nil {
-			return Reminder{}, err
+			arMutex.Unlock()
+			return err
 		}
 	}
 	r := Reminder{Actor: Actor{Type: rMap["actorType"], ID: rMap["actorId"]},
@@ -115,7 +122,25 @@ func loadReminder(rk string) (Reminder, error) {
 		Period:      period,
 		EncodedData: rMap["encodedData"],
 	}
-	return r, nil
+	activeReminders.addReminder(r)
+	arMutex.Unlock()
+	logger.Debug("scheduled persisted reminder %v", r)
+	return nil
+}
+
+func migrateReminders(ctx context.Context, actor Actor) {
+	arMutex.Lock()
+	found := activeReminders.cancelMatchingReminders(actor, "")
+	arMutex.Unlock()
+	for _, r := range found {
+		err := tellReminder(ctx, r.Actor, r.key)
+		if err != nil {
+			if err != ctx.Err() {
+				logger.Error("tell reminder %s failed: %v", r.key, err)
+			}
+			break
+		}
+	}
 }
 
 // CancelReminders cancels all reminders for actor that match reminderID ("" means match all)
@@ -146,8 +171,7 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
 		return err
 	}
-	rk := reminderKey(actor, data.ID)
-	r := Reminder{Actor: actor, ID: data.ID, key: rk, Path: data.Path, TargetTime: data.TargetTime}
+	r := Reminder{Actor: actor, ID: data.ID, Path: data.Path, TargetTime: data.TargetTime}
 	if data.Period != "" {
 		period, err := time.ParseDuration(data.Period)
 		if err != nil {
@@ -162,8 +186,15 @@ func ScheduleReminder(actor Actor, payload string, contentType string, accepts s
 		}
 		r.EncodedData = string(buf)
 	}
-
 	arMutex.Lock()
+	keys, _ := store.Keys(reminderKey(actor, data.ID, "*"))
+	if len(keys) > 0 { // reuse existing key
+		r.key = keys[0]
+	} else { // new key with random partition
+		ps, _ := pubsub.Partitions()
+		p := ps[rand.Int31n(int32(len(ps)))]
+		r.key = reminderKey(actor, data.ID, strconv.Itoa(int(p)))
+	}
 	logger.Debug("ScheduleReminder: %v", r)
 	activeReminders.cancelMatchingReminders(actor, r.ID) // FIXME: cancel is currently an O(# reminder) operation that is only needed if this reminder already exists.
 	activeReminders.addReminder(r)
@@ -208,51 +239,37 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 	arMutex.Unlock()
 }
 
-func containsZero(p []int32) bool {
-	for _, v := range p {
-		if v == 0 {
-			return true
-		}
-	}
-	return false
-}
-
 // rebalanceReminders is invoked asynchronously after a rebalancing operations to
-// update this sidecar's reminderQueue to reflect the partitions it has been assigned
-// by the rebalance operation.
-func rebalanceReminders(ctx context.Context, priorPartitions []int32, newPartitions []int32) error {
-	arMutex.Lock()
+// scan reminders mapped to the partitions associated with this sidecar and
+// ensure these reminders are loaded by their respective sidecars
+func rebalanceReminders(ctx context.Context, partitions []int32) error {
+	logger.Info("rebalanceReminders")
 
-	current := containsZero(newPartitions)
-	logger.Info("rebalanceReminders: current role = %v", current)
-
-	// Clear in memory data strucure from previous partitions
-	activeReminders = make(reminderQueue, 0)
-	heap.Init(&activeReminders)
-
-	// If currently responsible for reminder processing, rebuild the in memory data structure.
-	if current {
-		// Get the keys for all persisted reminders for this application
-		rkeys, err := store.Keys("reminders" + config.Separator + "*")
+	for _, p := range partitions {
+		// Get the keys for all persisted reminders for this partition
+		rkeys, err := store.Keys("reminders" + config.Separator + strconv.Itoa(int(p)) + config.Separator + "*")
 		if err != nil {
-			arMutex.Unlock()
 			return err
 		}
-		logger.Info("rebalanceReminders: found %v persisted reminders", len(rkeys))
+		logger.Info("rebalanceReminders: found %v persisted reminders for partition %d", len(rkeys), p)
 
-		// For each key, load the persisted reminder and add to activeReminders
+		// For each key, ping actor
 		for _, key := range rkeys {
-			if r, err := loadReminder(key); err == nil {
-				activeReminders.addReminder(r)
-				logger.Info("scheduled persisted reminder %v", r)
-			} else {
-				logger.Error("rebalanceReminders: failed to schedule reminder with key %v due to %v", key, err)
+			parts := strings.Split(key, config.Separator)
+			actor := Actor{Type: parts[2], ID: parts[3]}
+			logger.Info("notifying %s", key)
+			err := tellReminder(ctx, actor, key)
+			if err != nil {
+				if err != ctx.Err() {
+					logger.Error("tell reminder %s failed: %v", key, err)
+					logger.Error("rebalanceReminders: aborting")
+				}
+				return nil
 			}
 		}
 	}
 
 	logger.Info("rebalanceReminders: operation completed")
-	arMutex.Unlock()
 
 	return nil
 }

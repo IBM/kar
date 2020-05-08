@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -55,6 +56,16 @@ func TellActor(ctx context.Context, actor Actor, path, payload, contentType stri
 		"path":         path,
 		"content-type": contentType,
 		"payload":      payload})
+}
+
+// tell sidecar for actor to load reminder
+func tellReminder(ctx context.Context, actor Actor, key string) error {
+	return pubsub.Send(ctx, map[string]string{
+		"protocol": "actor",
+		"type":     actor.Type,
+		"id":       actor.ID,
+		"command":  "reminder:tell",
+		"key":      key})
 }
 
 // Reply represents the return value of a call
@@ -114,10 +125,8 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 
 // Reminders sends a reminder command (cancel, get, schedule) to a reminder's assigned sidecar and waits for a reply
 func Reminders(ctx context.Context, actor Actor, reminderID, nilOnAbsent, action, payload, contentType, accept string) (*Reply, error) {
-	target := reminderPartition(actor)
 	msg := map[string]string{
-		"protocol":     "partition",
-		"partition":    strconv.Itoa(int(target)),
+		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
 		"reminderId":   reminderID,
@@ -250,6 +259,17 @@ func reminderSchedule(ctx context.Context, msg map[string]string) error {
 	return respond(ctx, msg, reply)
 }
 
+func reminderTell(ctx context.Context, msg map[string]string) error {
+	actor := Actor{Type: msg["type"], ID: msg["id"]}
+	err := loadReminder(actor, msg["key"])
+	if err != nil {
+		if err != ctx.Err() {
+			logger.Error("load reminder %s failed: %v", msg["key"], err)
+		}
+	}
+	return nil
+}
+
 func tell(ctx context.Context, msg map[string]string) error {
 	reply, err := invoke(ctx, "POST", msg)
 	if err != nil {
@@ -280,6 +300,8 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 		return reminderGet(ctx, msg)
 	case "reminder:schedule":
 		return reminderSchedule(ctx, msg)
+	case "reminder:tell":
+		return reminderTell(ctx, msg)
 	case "tell":
 		return tell(ctx, msg)
 	default:
@@ -325,7 +347,11 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		actor := Actor{Type: msg["type"], ID: msg["id"]}
 		session := msg["session"]
 		if session == "" {
-			session = uuid.New().String() // start new session
+			if strings.HasPrefix(msg["command"], "reminder:") {
+				session = "reminder"
+			} else {
+				session = uuid.New().String() // start new session
+			}
 		}
 		var e *actorEntry
 		var fresh bool
@@ -333,7 +359,11 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if err == errActorHasMoved {
 			err = pubsub.Send(ctx, msg) // forward
 		} else if err == nil {
-			defer e.release()
+			defer e.release(session)
+			if session == "reminder" { // do not activate actor
+				err = dispatch(ctx, cancel, msg)
+				break
+			}
 			var reply *Reply
 			if fresh {
 				reply, err = activate(ctx, actor)
@@ -431,14 +461,12 @@ func ProcessReminders(ctx context.Context) {
 // ManageReminderPartitions handles updating this sidecar's in-memory reminder data structures after
 // rebalancing operations to reflect the new assignment of partitions.
 func ManageReminderPartitions(ctx context.Context) {
-	var priorPartitions = make([]int32, 0)
 	for {
-		newPartitions, rebalance := pubsub.Partitions()
-		if err := rebalanceReminders(ctx, priorPartitions, newPartitions); err != nil {
+		partitions, rebalance := pubsub.Partitions()
+		if err := rebalanceReminders(ctx, partitions); err != nil {
 			// TODO: This should trigger a more orderly shutdown of the sidecar.
 			logger.Fatal("Error when rebalancing reminders %v", err)
 		}
-		priorPartitions = newPartitions
 		select {
 		case <-rebalance:
 		case <-ctx.Done():
@@ -537,4 +565,24 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 		close(done)
 	}()
 	return "OK", nil
+}
+
+// Migrate migrates an actor and associated reminders to a new sidecar
+func Migrate(ctx context.Context, actor Actor, sidecar string) error {
+	e, fresh, err := actor.acquire(ctx, "exclusive")
+	if err != nil {
+		return err
+	}
+	if !fresh {
+		err = deactivate(ctx, actor)
+		if err != nil {
+			logger.Error("failed to deactivate actor %v before migration: %v", actor, err)
+		}
+	}
+	err = e.migrate(sidecar)
+	if err != nil {
+		return err
+	}
+	migrateReminders(ctx, actor)
+	return nil
 }

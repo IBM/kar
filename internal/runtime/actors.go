@@ -17,6 +17,7 @@ type Actor struct {
 }
 
 type actorEntry struct {
+	actor   Actor
 	time    time.Time     // last release time
 	lock    chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
 	valid   bool          // false iff entry has been removed from table
@@ -31,24 +32,25 @@ var (
 )
 
 // acquire locks the actor, session must be not be ""
-// acquire returns true if actor requires activation
+// "exclusive" and "reminder" are reserved session names
+// acquire returns true if actor requires activation before invocation
 func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bool, error) {
-	e := &actorEntry{lock: make(chan struct{}, 1)}
+	e := &actorEntry{actor: actor, lock: make(chan struct{}, 1)}
 	e.lock <- struct{}{} // lock entry
 	for {
 		if v, loaded := actorTable.LoadOrStore(actor, e); loaded {
 			e := v.(*actorEntry) // found existing entry, := is required here!
 			e.lock <- struct{}{} // lock entry
 			if e.valid {
-				if e.session == session && session != "runtime" { // reenter existing session
-					e.depth++
-					<-e.lock
-					return e, false, nil
-				}
 				if e.session == "" { // start new session
 					e.session = session
 					e.depth = 1
 					e.busy = make(chan struct{})
+					<-e.lock
+					return e, false, nil
+				}
+				if session == "reminder" || session != "exclusive" && session == e.session { // reenter existing session
+					e.depth++
 					<-e.lock
 					return e, false, nil
 				}
@@ -88,12 +90,19 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 	}
 }
 
-// release updates the timestamp and releases the actor lock
-func (e *actorEntry) release() {
+// release releases the actor lock
+// release updates the timestamp if session is not "reminder"
+func (e *actorEntry) release(session string) {
 	e.lock <- struct{}{} // lock entry
 	e.depth--
-	e.time = time.Now() // update last release time
-	if e.depth == 0 {   // end session
+	if session != "reminder" {
+		e.time = time.Now() // update last release time
+	}
+	if e.depth == 0 { // end session
+		if e.session == "reminder" { // actor was never activated
+			e.valid = false
+			actorTable.Delete(e.actor)
+		}
 		e.session = ""
 		close(e.busy)
 	}
@@ -108,7 +117,7 @@ func collect(ctx context.Context, time time.Time) error {
 		case e.lock <- struct{}{}: // try acquire
 			if e.valid && e.session == "" && e.time.Before(time) {
 				e.depth = 1
-				e.session = "runtime"
+				e.session = "exclusive"
 				e.busy = make(chan struct{})
 				<-e.lock
 				err := deactivate(ctx, actor.(Actor))
@@ -129,23 +138,15 @@ func collect(ctx context.Context, time time.Time) error {
 	return ctx.Err()
 }
 
-// Migrate deactivates actor if active and deletes placement if local
-func Migrate(ctx context.Context, actor Actor) error {
-	e, fresh, err := actor.acquire(ctx, "runtime")
-	if err != nil {
-		return err
-	}
-	if !fresh {
-		err = deactivate(ctx, actor)
-	}
+// migrate releases the actor lock and updates the sidecar for the actor
+// the lock cannot be held multiple times
+func (e *actorEntry) migrate(sidecar string) error {
 	e.lock <- struct{}{}
 	e.depth--
 	e.session = ""
-	if err == nil {
-		e.valid = false
-		actorTable.Delete(actor)
-		_, err = pubsub.CompareAndSetSidecar(actor.Type, actor.ID, config.ID, "") // delete placement if local
-	}
+	e.valid = false
+	actorTable.Delete(e.actor)
+	_, err := pubsub.CompareAndSetSidecar(e.actor.Type, e.actor.ID, config.ID, sidecar)
 	close(e.busy)
 	<-e.lock
 	return err
