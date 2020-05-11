@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stock-price-server
+  annotations:
+    kar.ibm.com/app: stockPriceEvents
+    kar.ibm.com/service: price-printer
+    kar.ibm.com/verbose: info
+spec:
+  containers:
+  - name: stock-server
+    image: examples-js:dev
+    env:
+    - name: MAIN
+      value: stockPriceEvents/stock-server.js

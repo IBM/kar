@@ -22,6 +22,11 @@ WORKDIR /kar/examples/unit-tests
 COPY unit-tests/*.js unit-tests/*.json ./
 RUN npm install --prod
 
+# Example: stockPriceEvents
+WORKDIR /kar/examples/stockPriceEvents
+COPY stockPriceEvents/*.js stockPriceEvents/*.json ./
+RUN npm install --prod
+
 WORKDIR /kar/examples
 
 CMD node "$MAIN"

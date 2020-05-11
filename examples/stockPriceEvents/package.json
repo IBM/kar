@@ -1,0 +1,17 @@
+{
+  "name": "kar-stocks",
+  "version": "0.0.1",
+  "scripts": {
+    "test": "standard"
+  },
+  "dependencies": {
+    "cloudevents-sdk": "^1.0.0",
+    "express": "^4.17.1",
+    "kar": "../../sdk/js"
+  },
+  "devDependencies": {
+    "mocha": "^7.1.1",
+    "pre-commit": "^1.2.2",
+    "standard": "^14.3.3"
+  }
+}

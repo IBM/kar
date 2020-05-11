@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: stock-price-client
+  labels:
+    name: stock-price-client
+spec:
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: stockPriceEvents
+        kar.ibm.com/service: stock-client
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: stock-client
+        image: examples-js:dev
+        env:
+        - name: MAIN
+          value: stockPriceEvents/stock-client.js

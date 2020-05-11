@@ -517,6 +517,10 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	path := m["path"]
 	actorType := m["actorType"]
 	actorID := m["actorId"]
+	contentType := m["contentType"]
+	if contentType == "" {
+		contentType = "text/plain"
+	}
 	var sub = subscriber{path: path}
 	if actorType != "" {
 		sub.actor = &Actor{Type: actorType, ID: actorID}
@@ -546,7 +550,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 					if sub.actor != nil {
 						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), "text/plain", "", "")
 					} else {
-						reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": "text/plain"})
+						reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": contentType})
 					}
 					msg.Mark()
 					if err != nil {
