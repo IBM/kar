@@ -3,7 +3,7 @@ const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
 
 // request url for a given KAR service and method on that service
 function url (service, method) {
-  return `http://localhost:${process.env.KAR_RUNTIME_PORT}/kar/v1/service/${service}/call/${method}`
+  return `http://127.0.0.1:${process.env.KAR_RUNTIME_PORT}/kar/v1/service/${service}/call/${method}`
 }
 
 // main method
