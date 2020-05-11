@@ -161,7 +161,7 @@ const table = {} // live actor instances: table[actorType][actorId]
 function actorRuntime (actors) {
   const router = express.Router()
 
-  router.use(express.json({ type: 'application/kar+json' }))
+  router.use(express.json({ type: '*/*' })) // unconditionally parse request bodies to json
 
   // actor activation route
   router.get('/actor/:type/:id', (req, res, next) => Promise.resolve()
