@@ -9,7 +9,7 @@ function url (service, route) {
 // main method
 async function main () {
   // an http request with text/plain content type
-  const res1 = await fetch(url('greeter', '/helloText'), {
+  const res1 = await fetch(url('greeter', 'helloText'), {
     method: 'POST',
     body: 'John Doe',
     headers: { 'Content-Type': 'text/plain' }
@@ -20,7 +20,7 @@ async function main () {
   console.log(text)
 
   // an http request with application/json content type
-  const res2 = await fetch(url('greeter', '/helloJson'), {
+  const res2 = await fetch(url('greeter', 'helloJson'), {
     method: 'POST',
     body: JSON.stringify({ name: 'Jane Doe' }),
     headers: { 'Content-Type': 'application/json' }
