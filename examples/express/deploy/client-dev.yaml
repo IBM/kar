@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: express-client
+  labels:
+    name: express-client
+spec:
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: express
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: client
+        image: examples-js:dev
+        env:
+        - name: MAIN
+          value: express/client.js
