@@ -8,7 +8,7 @@
        be building your own docker images of the KAR system components
        and push them into kind's local docker registry.
        Once you have Docker installed, just run
-       [start-kind.sh](../build/ci/start-kind.sh) to create a virtual
+       [start-kind.sh](../scripts/start-kind.sh) to create a virtual
        cluster properly configured for running KAR.
 
 2. You will need the `kubectl` cli installed locally and configured to

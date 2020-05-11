@@ -7,12 +7,13 @@ set -e
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-. $ROOTDIR/build/ci/kube-helpers.sh
+. $SCRIPTDIR/lib/kube-helpers.sh
 
 help=""
 args=""
 parse=true
 icr="enabled"
+kartag="latest"
 helmargs=""
 while [ -n "$1" ]; do
     if [ -z "$parse" ]; then
@@ -23,11 +24,13 @@ while [ -n "$1" ]; do
     case "$1" in
         -h|-help|--help) help="1"; break;;
         -d|-dev|--dev)
-            helmargs="$helmargs -f $ROOTDIR/build/ci/kar-dev.yaml"
+            kartag="dev"
+            helmargs="$helmargs --set kar.injector.imageName=kar-injector --set kar.injector.sidecarImageName=kar"
             icr="disabled"
             ;;
         -f|-file|--file) shift; helmargs="$helmargs -f $1";;
         -s|-set|--set) shift; helmargs="$helmargs --set $1";;
+        -r|-release|--release) shift; kartag="$1";;
         --) parse=;;
         *) args="$args '$1'";;
     esac
@@ -41,9 +44,12 @@ where [options] includes:
     -f -file <config.yaml>    pass `-f <config.yaml>` to `helm install kar`
     -s -set key=value         pass `--set key=value to `helm install kar`
     -d -dev                   pass `-f kar-dev.yaml` to helm install kar`
+    -r -release <version>     deploy a specific version of kar
 EOF
     exit 0
 fi
+
+helmargs="--set kar.injector.imageTag=$kartag --set kar.injector.sidecarImageTag=$kartag $helmargs"
 
 cd $ROOTDIR
 

@@ -17,7 +17,7 @@ KIND_NODE_TAG=${KIND_NODE_TAG:="v1.16.9@sha256:7175872357bc85847ec4b1aba46ed1d12
 set -eu
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../.."
+ROOTDIR="$SCRIPTDIR/.."
 
 # Validate kind version is as expected
 KIND_ACTUAL_VERSION=$(kind version | awk '/ /{print $2}')
@@ -27,14 +27,14 @@ if [ "$KIND_ACTUAL_VERSION" != "$KIND_EXPECTED_VERSION" ]; then
 fi
 
 # Boot cluster
-kind create cluster --config ${SCRIPTDIR}/kind-cluster.yaml --name kind --image kindest/node:${KIND_NODE_TAG} --wait 10m || exit 1
+kind create cluster --config ${SCRIPTDIR}/kind/kind-cluster.yaml --name kind --image kindest/node:${KIND_NODE_TAG} --wait 10m || exit 1
 
 echo "KIND cluster is running and reachable"
 kubectl get nodes
 
 # Deploy nginx-ingress controller
-kubectl apply -f ${SCRIPTDIR}/ingress-nginx/mandatory.yaml
-kubectl apply -f ${SCRIPTDIR}/ingress-nginx/service-nodeport.yaml
+kubectl apply -f ${SCRIPTDIR}/kind/ingress-nginx/mandatory.yaml
+kubectl apply -f ${SCRIPTDIR}/kind/ingress-nginx/service-nodeport.yaml
 
 echo "Ingress controller deployed"
 kubectl get all -n ingress-nginx

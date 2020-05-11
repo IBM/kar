@@ -7,7 +7,7 @@ go:
   - 1.13
 
 before_install:
-  - ./build/ci/setup.sh && ./build/ci/start-kind.sh
+  - ./build/ci/setup.sh && ./scripts/start-kind.sh
 
 script:
   - (./build/ci/build.sh && ./build/ci/start-kar.sh) || travis_terminate 1
