@@ -378,8 +378,6 @@ class Researcher {
 
 const app = express()
 
-app.use(sys.logger, sys.jsonParser) // enable kar logging and parsing
-
 app.post('/shutdown', async (_reg, res) => {
   console.log('Shutting down service')
   res.sendStatus(200)
@@ -388,5 +386,5 @@ app.post('/shutdown', async (_reg, res) => {
 })
 
 app.use(sys.actorRuntime({ Company, Site, Office, Researcher }))
-app.use(sys.errorHandler)
+
 const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')

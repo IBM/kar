@@ -12,7 +12,8 @@ const topic = 'historical-prices'
 // An option was added to specify the expected content type.
 subscribe(topic, 'print-historical-prices', { contentType: 'application/cloudevents+json' })
 
-app.use(sys.logger, sys.jsonParser)
+app.use(express.json({ strict: false }))
+app.use(express.json({ type: 'application/cloudevents+json' }))
 
 const HTTPCloudEventReceiver = new cloudevents.StructuredHTTPReceiver()
 

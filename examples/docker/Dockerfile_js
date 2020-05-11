@@ -2,11 +2,6 @@ ARG SDK_BASE=us.icr.io/research/kar-dev/sdk-nodejs-v12
 
 FROM $SDK_BASE
 
-# Example: express
-WORKDIR /kar/examples/express
-COPY express/*.js express/*.json ./
-RUN npm install --prod
-
 # Example: actors-ykt
 WORKDIR /kar/examples/actors-ykt
 COPY actors-ykt/*.js actors-ykt/*.json ./

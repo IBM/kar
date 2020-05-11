@@ -7,7 +7,11 @@ const app = express()
 let success
 let count = 0
 
-app.use(sys.logger, sys.jsonParser) // enable kar logging and parsing
+// parse arguments of service invocations
+app.use(express.json({ strict: false }))
+
+// parse events
+app.use(express.json({ type: 'application/cloudevents+json' }))
 
 app.post('/incr', (req, res) => {
   console.log('incr', req.body)
@@ -30,7 +34,7 @@ app.post('/pubsub', async (req, res) => {
   const source = 'numServer'
   const type = 'number'
   const promise = new Promise(resolve => { success = resolve })
-  await subscribe(topic, 'accumulate') // subscribe service to topic
+  await subscribe(topic, 'accumulate', { contentType: 'application/cloudevents+json' }) // subscribe service to topic
   await publish({ topic, source, type, id: 1, data: 1 })
   await publish({ topic, source, type, id: 2, data: 2 })
   await publish({ topic, source, type, id: 3, data: 3 })
@@ -110,7 +114,5 @@ class Foo {
 }
 
 app.use(sys.actorRuntime({ Foo }))
-
-app.use(sys.errorHandler) // enable kar error handling
 
 const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

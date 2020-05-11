@@ -7,8 +7,8 @@ const v1 = require('cloudevents-sdk/v1')
 
 const app = express()
 
-// Enable kar logging and parsing
-app.use(sys.logger, sys.jsonParser)
+app.use(express.json({ strict: false }))
+app.use(express.json({ type: 'application/cloudevents+json' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(path.join(__dirname, 'public')))
 
