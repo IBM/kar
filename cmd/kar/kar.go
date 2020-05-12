@@ -35,44 +35,6 @@ var (
 	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
 )
 
-// swagger:route POST /service/{service}/tell/{path} services idServiceTell
-//
-// tell
-//
-// ### Asynchronously invoke a service endpoint
-//
-// Tell asynchronously executes a `POST` to the `path` endpoint of `service`.
-// The JSON request body is passed through to the target endpoint.
-// A `200` response indicates that the request has been accepted by the
-// runtime and will eventually be delivered to the targeted service endpoint.
-//
-//     Consumes: application/json
-//     Schemes: http
-//     Responses:
-//       200: response200
-//       500: response500
-//       503: response503
-//
-
-// swagger:route POST /actor/{actorType}/{actorId}/tell/{path} actors idActorTell
-//
-// tell
-//
-// ### Asynchronously invoke an actor method
-//
-// Tell asynchronously executes a `POST` to the `path` endpoint of
-// the actor instance indicated by `actorType` and `actorId`.
-// The JSON request body is passed through to the target endpoint.
-// A `200` response indicates that the request has been accepted by the
-// runtime and will eventually be delivered to the targeted actor method.
-//
-//     Consumes: application/json
-//     Schemes: http
-//     Responses:
-//       200: response200
-//       500: response500
-//       503: response503
-//
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
@@ -678,11 +640,9 @@ func server(listener net.Listener) {
 	router := httprouter.New()
 	// service invocation
 	router.POST(base+"/service/:service/call/*path", call)
-	router.POST(base+"/service/:service/tell/*path", tell)
 
 	//actor invocation
 	router.POST(base+"/actor/:type/:id/call/*path", call)
-	router.POST(base+"/actor/:type/:id/tell/*path", tell)
 	//
 	router.POST(base+"/actor/:type/:id/migrate", migrate)
 	//

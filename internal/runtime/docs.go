@@ -56,7 +56,6 @@ import "time"
 // swagger:parameters idActorStateSet
 // swagger:parameters idActorStateGetAll
 // swagger:parameters idActorStateDeleteAll
-// swagger:parameters idActorTell
 type actorParam struct {
 	// The actor type
 	// in:path
@@ -67,7 +66,6 @@ type actorParam struct {
 }
 
 // swagger:parameters idServiceCall
-// swagger:parameters idServiceTell
 type serviceParam struct {
 	// The service name
 	// in:path
@@ -93,9 +91,7 @@ type topicParam struct {
 }
 
 // swagger:parameters idActorCall
-// swagger:parameters idActorTell
 // swagger:parameters idServiceCall
-// swagger:parameters idServiceTell
 // swagger:parameters idEventSubscribe
 // swagger:parameters idSystemBroadcast
 type pathParam struct {
@@ -130,9 +126,7 @@ type reminderScheduleParamWrapper struct {
 }
 
 // swagger:parameters idActorCall
-// swagger:parameters idActorTell
 // swagger:parameters idServiceCall
-// swagger:parameters idServiceTell
 // swagger:parameters idSystemBroadcast
 type endpointRequestBody struct {
 	// An arbitrary JSON value to be passed through unchanged to the target endpoint

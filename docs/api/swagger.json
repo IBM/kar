@@ -619,65 +619,6 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/tell/{path}": {
-      "post": {
-        "description": "### Asynchronously invoke an actor method\n\nTell asynchronously executes a `POST` to the `path` endpoint of\nthe actor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted actor method.",
-        "schemes": [
-          "http"
-        ],
-        "tags": [
-          "actors"
-        ],
-        "summary": "tell",
-        "operationId": "idActorTell",
-        "parameters": [
-          {
-            "type": "string",
-            "x-go-name": "ActorType",
-            "description": "The actor type",
-            "name": "actorType",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "x-go-name": "ActorID",
-            "description": "The actor instance id",
-            "name": "actorId",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "example": "an/arbitrary/valid/pathSegment",
-            "x-go-name": "Path",
-            "description": "The target endpoint to be invoked by the operation",
-            "name": "path",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
-            "in": "body",
-            "schema": {
-              "type": "object"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
-          },
-          "500": {
-            "$ref": "#/responses/response500"
-          },
-          "503": {
-            "$ref": "#/responses/response503"
-          }
-        }
-      }
-    },
     "/event/{topic}/publish": {
       "post": {
         "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
@@ -858,57 +799,6 @@
           },
           "default": {
             "$ref": "#/responses/responseGenericEndpointError"
-          }
-        }
-      }
-    },
-    "/service/{service}/tell/{path}": {
-      "post": {
-        "description": "### Asynchronously invoke a service endpoint\n\nTell asynchronously executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nA `200` response indicates that the request has been accepted by the\nruntime and will eventually be delivered to the targeted service endpoint.",
-        "schemes": [
-          "http"
-        ],
-        "tags": [
-          "services"
-        ],
-        "summary": "tell",
-        "operationId": "idServiceTell",
-        "parameters": [
-          {
-            "type": "string",
-            "x-go-name": "Service",
-            "description": "The service name",
-            "name": "service",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "example": "an/arbitrary/valid/pathSegment",
-            "x-go-name": "Path",
-            "description": "The target endpoint to be invoked by the operation",
-            "name": "path",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
-            "in": "body",
-            "schema": {
-              "type": "object"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
-          },
-          "500": {
-            "$ref": "#/responses/response500"
-          },
-          "503": {
-            "$ref": "#/responses/response503"
           }
         }
       }

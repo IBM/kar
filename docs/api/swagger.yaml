@@ -694,55 +694,6 @@ paths:
       summary: state/key
       tags:
       - actors
-  /actor/{actorType}/{actorId}/tell/{path}:
-    post:
-      description: |-
-        ### Asynchronously invoke an actor method
-
-        Tell asynchronously executes a `POST` to the `path` endpoint of
-        the actor instance indicated by `actorType` and `actorId`.
-        The JSON request body is passed through to the target endpoint.
-        A `200` response indicates that the request has been accepted by the
-        runtime and will eventually be delivered to the targeted actor method.
-      operationId: idActorTell
-      parameters:
-      - description: The actor type
-        in: path
-        name: actorType
-        required: true
-        type: string
-        x-go-name: ActorType
-      - description: The actor instance id
-        in: path
-        name: actorId
-        required: true
-        type: string
-        x-go-name: ActorID
-      - description: The target endpoint to be invoked by the operation
-        example: an/arbitrary/valid/pathSegment
-        in: path
-        name: path
-        required: true
-        type: string
-        x-go-name: Path
-      - description: An arbitrary JSON value to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      responses:
-        "200":
-          $ref: '#/responses/response200'
-        "500":
-          $ref: '#/responses/response500'
-        "503":
-          $ref: '#/responses/response503'
-      schemes:
-      - http
-      summary: tell
-      tags:
-      - actors
   /event/{topic}/publish:
     post:
       description: |-
@@ -889,48 +840,6 @@ paths:
       schemes:
       - http
       summary: call
-      tags:
-      - services
-  /service/{service}/tell/{path}:
-    post:
-      description: |-
-        ### Asynchronously invoke a service endpoint
-
-        Tell asynchronously executes a `POST` to the `path` endpoint of `service`.
-        The JSON request body is passed through to the target endpoint.
-        A `200` response indicates that the request has been accepted by the
-        runtime and will eventually be delivered to the targeted service endpoint.
-      operationId: idServiceTell
-      parameters:
-      - description: The service name
-        in: path
-        name: service
-        required: true
-        type: string
-        x-go-name: Service
-      - description: The target endpoint to be invoked by the operation
-        example: an/arbitrary/valid/pathSegment
-        in: path
-        name: path
-        required: true
-        type: string
-        x-go-name: Path
-      - description: An arbitrary JSON value to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      responses:
-        "200":
-          $ref: '#/responses/response200'
-        "500":
-          $ref: '#/responses/response500'
-        "503":
-          $ref: '#/responses/response503'
-      schemes:
-      - http
-      summary: tell
       tags:
       - services
   /system/broadcast/{path}:
