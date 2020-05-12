@@ -54,7 +54,8 @@ public class Kar {
 	/******************
 	 * Public methods
 	 ******************/
-
+	
+	@Deprecated
 	// asynchronous service invocation, returns "OK" immediately
 	public Response tell(String service, String path, JsonObject params) throws ProcessingException {
 		return karClient.tell(service, path, params);
@@ -65,6 +66,7 @@ public class Kar {
 		return karClient.call(service, path, params);
 	}
 
+	@Deprecated
 	// asynchronous actor invocation, returns "OK" immediately
 	public Response actorTell(String type, String id, String path, JsonObject params) throws ProcessingException {
 		return karClient.actorTell(type, id, path, params);
