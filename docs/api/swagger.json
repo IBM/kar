@@ -18,7 +18,7 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke an actor method\n\nCall synchronously executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method.",
+        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -43,6 +43,12 @@
             "name": "actorId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.",
+            "name": "Pragma",
+            "in": "header"
           },
           {
             "type": "string",
@@ -798,7 +804,7 @@
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "### Synchronously invoke a service endpoint\n\nCall synchronously executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint.",
+        "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -815,6 +821,12 @@
             "name": "service",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.",
+            "name": "Pragma",
+            "in": "header"
           },
           {
             "type": "string",

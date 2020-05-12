@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -117,11 +118,12 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // call
 //
-// ### Synchronously invoke a service endpoint
+// ### Invoke a service endpoint
 //
-// Call synchronously executes a `POST` to the `path` endpoint of `service`.
+// Call executes a `POST` to the `path` endpoint of `service`.
 // The JSON request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target service endpoint.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` pragma header is specified.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -137,12 +139,13 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // call
 //
-// ### Synchronously invoke an actor method
+// ### Invoke an actor method
 //
-// Call synchronously executes a `POST` to the `path` endpoint of the
+// Call executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId`.
 // The JSON request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target actor method.
+// The result of the call is the result of invoking the target actor method
+// unless the `async` pragma header is specified.
 //
 //     Consumes: application/json
 //     Produces: application/json
@@ -154,6 +157,12 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	for _, pragma := range r.Header.Values("Pragma") {
+		if strings.ToLower(pragma) == "async" {
+			tell(w, r, ps)
+			return
+		}
+	}
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {

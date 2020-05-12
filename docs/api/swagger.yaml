@@ -194,12 +194,13 @@ paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
       description: |-
-        ### Synchronously invoke an actor method
+        ### Invoke an actor method
 
-        Call synchronously executes a `POST` to the `path` endpoint of the
+        Call executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId`.
         The JSON request body is passed through to the target endpoint.
-        The result of the call is the result of invoking the target actor method.
+        The result of the call is the result of invoking the target actor method
+        unless the `async` pragma header is specified.
       operationId: idActorCall
       parameters:
       - description: The actor type
@@ -214,6 +215,11 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      - description: Optionally specify the `async` pragma to make a non-blocking
+          call.
+        in: header
+        name: Pragma
+        type: string
       - description: The target endpoint to be invoked by the operation
         example: an/arbitrary/valid/pathSegment
         in: path
@@ -839,11 +845,12 @@ paths:
   /service/{service}/call/{path}:
     post:
       description: |-
-        ### Synchronously invoke a service endpoint
+        ### Invoke a service endpoint
 
-        Call synchronously executes a `POST` to the `path` endpoint of `service`.
+        Call executes a `POST` to the `path` endpoint of `service`.
         The JSON request body is passed through to the target endpoint.
-        The result of the call is the result of invoking the target service endpoint.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` pragma header is specified.
       operationId: idServiceCall
       parameters:
       - description: The service name
@@ -852,6 +859,11 @@ paths:
         required: true
         type: string
         x-go-name: Service
+      - description: Optionally specify the `async` pragma to make a non-blocking
+          call.
+        in: header
+        name: Pragma
+        type: string
       - description: The target endpoint to be invoked by the operation
         example: an/arbitrary/valid/pathSegment
         in: path

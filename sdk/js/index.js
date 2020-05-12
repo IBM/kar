@@ -69,13 +69,13 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
  * API Documentation is located in index.d.ts
  ***************************************************/
 
-const tell = (service, path, body) => post(`service/${service}/tell/${path}`, body, { 'Content-Type': 'application/json' })
+const tell = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json', Pragma: 'async' })
 
 const call = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json' })
 
 function actorProxy (type, id) { return { kar: { type, id } } }
 
-const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/tell/${path}`, args, { 'Content-Type': 'application/kar+json' })
+const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'async' })
 
 function actorCall (...args) {
   if (typeof args[1] === 'string') {

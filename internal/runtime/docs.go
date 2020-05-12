@@ -74,6 +74,15 @@ type serviceParam struct {
 	Service string `json:"service"`
 }
 
+// swagger:parameters idActorCall
+// swagger:parameters idServiceCall
+type asyncParam struct {
+	// Optionally specify the `async` pragma to make a non-blocking call.
+	// in:header
+	// required:false
+	Pragma string `json:"Pragma"`
+}
+
 // swagger:parameters idEventPublish
 // swagger:parameters idEventSubscribe
 // swagger:parameters idEventUnsubscribe
