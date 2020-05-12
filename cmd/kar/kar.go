@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/textproto"
 	"os"
 	"os/signal"
 	"strings"
@@ -157,7 +158,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	for _, pragma := range r.Header.Values("Pragma") {
+	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "async" {
 			tell(w, r, ps)
 			return
