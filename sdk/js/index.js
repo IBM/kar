@@ -117,12 +117,25 @@ const broadcast = (path, args) => post(`system/broadcast/${path}`, args, { 'Cont
 
 const shutdown = () => post('system/kill').then(() => agent.close())
 
-function publish ({ topic, data, datacontenttype, dataschema, id, source, specversion = '1.0', subject, time, type }) {
+function publish (topic, event) {
+  // Ensure event is of the correct type.
+  if (typeof event !== 'object') throw new Error('publish: event must be of type "object"')
+  if (typeof event.spec !== 'object') throw new Error('publish: event.spec must be of type "object"')
+  if (typeof event.spec.payload !== 'object') throw new Error('publish: event.spec.payload must be of type "object"')
+
+  // Construct POST request from input Cloudevent.
+  const payload = event.spec.payload
+
+  // Check mandatory fields for a Cloudevent are present.
   if (typeof topic === 'undefined') throw new Error('publish: must define "topic"')
-  if (typeof id === 'undefined') throw new Error('publish: must define "id"')
-  if (typeof source === 'undefined') throw new Error('publish: must define "source"')
-  if (typeof type === 'undefined') throw new Error('publish: must define "type"')
-  return post(`event/${topic}/publish`, { data, datacontenttype, dataschema, id, source, specversion, subject, time, type })
+  if (typeof payload.id === 'undefined') throw new Error('publish: must define "id"')
+  if (typeof payload.source === 'undefined') throw new Error('publish: must define "source"')
+  if (typeof payload.type === 'undefined') throw new Error('publish: must define "type"')
+
+  // Set specversion if not set.
+  if (typeof payload.specversion === 'undefined') payload.specversion = '1.0'
+
+  return post(`event/${topic}/publish`, payload)
 }
 
 const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, opts))

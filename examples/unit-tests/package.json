@@ -5,8 +5,9 @@
     "test": "standard"
   },
   "dependencies": {
-    "kar": "../../sdk/js",
-    "express": "^4.17.1"
+    "cloudevents-sdk": "^1.0.0",
+    "express": "^4.17.1",
+    "kar": "../../sdk/js"
   },
   "devDependencies": {
     "mocha": "^7.1.1",

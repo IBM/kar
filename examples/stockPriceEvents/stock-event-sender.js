@@ -48,9 +48,8 @@ app.post('/stockprice/:stock_name', (req, res) => {
       // Set data of cloud event to stock data.
       stockEvent.data(openPrices.toString())
 
-      // Send CloudEvent.
-      stockEvent.spec.payload.topic = 'historical-prices'
-      publish(stockEvent.spec.payload)
+      // Send CloudEvent on the 'historical-prices' topic.
+      publish('historical-prices', stockEvent)
 
       res.send(msg)
     })

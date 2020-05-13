@@ -1,5 +1,6 @@
 const express = require('express')
 const { actor, publish, subscribe, unsubscribe, sys } = require('kar')
+const cloudevents = require('cloudevents-sdk/v1')
 
 const app = express()
 
@@ -34,10 +35,33 @@ app.post('/pubsub', async (req, res) => {
   const source = 'numServer'
   const type = 'number'
   const promise = new Promise(resolve => { success = resolve })
+
   await subscribe(topic, 'accumulate', { contentType: 'application/cloudevents+json' }) // subscribe service to topic
-  await publish({ topic, source, type, id: 1, data: 1 })
-  await publish({ topic, source, type, id: 2, data: 2 })
-  await publish({ topic, source, type, id: 3, data: 3 })
+
+  // Create event 1:
+  const e1 = cloudevents.event()
+    .type(type)
+    .source(source)
+    .id(1)
+    .data(1)
+  await publish(topic, e1)
+
+  // Create event 2:
+  const e2 = cloudevents.event()
+    .type(type)
+    .source(source)
+    .id(2)
+    .data(2)
+  await publish(topic, e2)
+
+  // Create event 3:
+  const e3 = cloudevents.event()
+    .type(type)
+    .source(source)
+    .id(3)
+    .data(3)
+  await publish(topic, e3)
+
   await promise
   await unsubscribe(req.body)
   res.sendStatus(200)
