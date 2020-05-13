@@ -1,6 +1,4 @@
 basePath: /kar/v1
-consumes:
-- application/json
 definitions:
   Actor:
     properties:
@@ -193,6 +191,8 @@ info:
 paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
+      consumes:
+      - application/json
       description: |-
         ### Invoke an actor method
 
@@ -240,6 +240,8 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
@@ -293,6 +295,8 @@ paths:
       - actors
   /actor/{actorType}/{actorId}/reminders:
     delete:
+      consumes:
+      - application/json
       description: |-
         ### Cancel all reminders
 
@@ -312,6 +316,8 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200ReminderCancelAllResult'
@@ -325,6 +331,8 @@ paths:
       tags:
       - actors
     get:
+      consumes:
+      - application/json
       description: |-
         ### Get all reminders
 
@@ -343,6 +351,8 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200ReminderGetAllResult'
@@ -356,6 +366,8 @@ paths:
       tags:
       - actors
     post:
+      consumes:
+      - application/json
       description: |-
         ### Schedule a reminder
 
@@ -383,6 +395,8 @@ paths:
         name: Body
         schema:
           $ref: '#/definitions/scheduleReminderPayload'
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -397,6 +411,8 @@ paths:
       - actors
   /actor/{actorType}/{actorId}/reminders/{reminderId}:
     delete:
+      consumes:
+      - application/json
       description: |-
         ### Cancel a reminder
 
@@ -431,6 +447,8 @@ paths:
         name: nilOnAbsent
         type: boolean
         x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200ReminderCancelResult'
@@ -446,6 +464,8 @@ paths:
       tags:
       - actors
     get:
+      consumes:
+      - application/json
       description: |-
         ### Get a reminder
 
@@ -480,6 +500,8 @@ paths:
         name: nilOnAbsent
         type: boolean
         x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200ReminderGetResult'
@@ -547,6 +569,8 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200StateGetAllResult'
@@ -558,6 +582,8 @@ paths:
       tags:
       - actors
     post:
+      consumes:
+      - application/json
       description: |-
         ### Update multiple entries of an actor's state
 
@@ -575,6 +601,8 @@ paths:
           additionalProperties:
             type: object
           type: object
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200StateSetMultipleResult'
@@ -650,6 +678,8 @@ paths:
         name: nilOnAbsent
         type: boolean
         x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200StateGetResult'
@@ -663,6 +693,8 @@ paths:
       tags:
       - actors
     put:
+      consumes:
+      - application/json
       description: |-
         ### Update a single entry of an actor's state
 
@@ -684,6 +716,8 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200StateSetResult'
@@ -727,6 +761,8 @@ paths:
       - events
   /event/{topic}/subscribe:
     post:
+      consumes:
+      - application/json
       description: |-
         ### Subscribe to a topic
 
@@ -764,6 +800,8 @@ paths:
       - events
   /event/{topic}/unsubscribe:
     post:
+      consumes:
+      - application/json
       description: |-
         ### Unsubscribe from a topic
 
@@ -795,6 +833,8 @@ paths:
       - events
   /service/{service}/call/{path}:
     post:
+      consumes:
+      - application/json
       description: |-
         ### Invoke a service endpoint
 
@@ -828,6 +868,8 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
@@ -844,6 +886,8 @@ paths:
       - services
   /system/broadcast/{path}:
     post:
+      consumes:
+      - application/json
       description: |-
         ### Asynchronously broadcast a message to the KAR runtime
 
@@ -868,6 +912,8 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
+      produces:
+      - application/json
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -921,8 +967,6 @@ paths:
       summary: killall
       tags:
       - system
-produces:
-- application/json
 responses:
   response200:
     description: A success message.

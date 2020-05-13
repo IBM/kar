@@ -30,10 +30,6 @@
 //     Schemes: http
 //     BasePath: /kar/v1
 //     Version: v1
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
 //
 // swagger:meta
 package runtime

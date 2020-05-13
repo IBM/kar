@@ -66,8 +66,10 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // has been accepted and the POST will eventually be delivered to all targeted
 // runtime processes.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200
@@ -88,8 +90,10 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // The result of the call is the result of invoking the target service endpoint
 // unless the `async` pragma header is specified.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
@@ -110,8 +114,10 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // The result of the call is the result of invoking the target actor method
 // unless the `async` pragma header is specified.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
@@ -188,8 +194,10 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // This operation cancels all reminders for the actor instance specified in the path.
 // The number of reminders cancelled is returned as the result of the operation.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderCancelAllResult
@@ -209,8 +217,10 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
 // is sent to true the `404` response will instead be a `200` with a body containing `0`.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderCancelResult
@@ -227,8 +237,10 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // This operation returns all reminders for the actor instance specified in the path.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderGetAllResult
@@ -248,8 +260,10 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // If `nilOnAbsent` is true the `404` response will be replaced with
 // a `200` response with a `nil` response body.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderGetResult
@@ -270,8 +284,10 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // that existing reminder's schedule will be updated based on the request body.
 // The operation will not return until after the reminder is scheduled.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200
@@ -325,8 +341,10 @@ func stateKey(t, id string) string {
 // The operation will not return until the state has been updated.
 // The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200StateSetResult
@@ -352,7 +370,8 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // unless the boolean query parameter `nilOnAbsent` is set to `true`,
 // in which case a `200` reponse with a `nil` response body will be returned.
 //
-//     Produces: application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200StateGetResult
@@ -407,7 +426,8 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // The state of the actor instance indicated by `actorType` and `actorId`
 // will be returned as the response body.
 //
-//     Produces: application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200StateGetAllResult
@@ -442,8 +462,10 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // The operation will not return until the state has been updated.
 // The result of the operation is the number of new entires that were created.
 //
-//     Consumes: application/json
-//     Produces: application/json
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
 //     Schemes: http
 //     Responses:
 //       200: response200StateSetMultipleResult
@@ -590,7 +612,8 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // may be either a service endpoint or an actor method.
 //
 //     Schemes: http
-//     Consumes: application/json
+//     Consumes:
+//     - application/json
 //     Responses:
 //       200: response200
 //       500: response500
@@ -618,7 +641,8 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // events from the topic.
 //
 //     Schemes: http
-//     Consumes: application/json
+//     Consumes:
+//     - application/json
 //     Responses:
 //       200: response200
 //       500: response500
