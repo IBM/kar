@@ -2,25 +2,45 @@ ARG SDK_BASE=us.icr.io/research/kar-dev/sdk-nodejs-v12
 
 FROM $SDK_BASE
 
+# first copy package*.json and run npm install --prod on all tests
+
 # Example: actors-ykt
 WORKDIR /kar/examples/actors-ykt
-COPY actors-ykt/*.js actors-ykt/*.json ./
+COPY actors-ykt/*.json ./
 RUN npm install --prod
 
 # Example: helloWorld
 WORKDIR /kar/examples/helloWorld
-COPY helloWorld/*.js helloWorld/*.json ./
+COPY helloWorld/*.json ./
 RUN npm install --prod
 
 # Example: unit-tests
 WORKDIR /kar/examples/unit-tests
-COPY unit-tests/*.js unit-tests/*.json ./
+COPY unit-tests/*.json ./
 RUN npm install --prod
 
 # Example: stockPriceEvents
 WORKDIR /kar/examples/stockPriceEvents
-COPY stockPriceEvents/*.js stockPriceEvents/*.json ./
+COPY stockPriceEvents/*.json ./
 RUN npm install --prod
+
+# copy JavasScript code
+
+# Example: actors-ykt
+WORKDIR /kar/examples/actors-ykt
+COPY actors-ykt/*.js ./
+
+# Example: helloWorld
+WORKDIR /kar/examples/helloWorld
+COPY helloWorld/*.js ./
+
+# Example: unit-tests
+WORKDIR /kar/examples/unit-tests
+COPY unit-tests/*.js ./
+
+# Example: stockPriceEvents
+WORKDIR /kar/examples/stockPriceEvents
+COPY stockPriceEvents/*.js ./
 
 WORKDIR /kar/examples
 
