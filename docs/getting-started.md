@@ -6,7 +6,7 @@
        Kubernetes cluster using Docker on your development machine.
        Using kind is only supported in KAR's "dev" mode where you will
        be building your own docker images of the KAR system components
-       and push them into kind's local docker registry.
+       and pushing them into kind's local docker registry.
        Once you have Docker installed, just run
        [start-kind.sh](../scripts/start-kind.sh) to create a virtual
        cluster properly configured for running KAR.
@@ -118,7 +118,9 @@ $ kubectl apply -f deploy/client-dev.yaml
 job.batch/hello-client created
 $ kubectl logs jobs/hello-client -c client
 Hello John Doe!
+Hello John Doe!
 $ kubectl logs hello-server -c server
+Hello John Doe!
 Hello John Doe!
 $ kubectl delete -f deploy/client-dev.yaml
 job.batch "hello-client" deleted
@@ -163,6 +165,7 @@ kar -app helloWorld node client.js
 You should see output like shown below in both windows:
 ```
 2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
 ```
 The client process will exit, while the server remains running. You
 can send another request, or exit the server with a Control-C.
@@ -178,6 +181,7 @@ For example, run the server in the cluster and the client locally.
 $ kubectl apply -f deploy/server-dev.yaml
 pod/hello-server created
 $ kar -app helloWorld node client.js
+2020/04/02 18:02:19 [STDOUT] Hello John Doe!
 2020/04/02 18:02:19 [STDOUT] Hello John Doe!
 $ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted
