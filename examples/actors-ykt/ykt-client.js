@@ -4,8 +4,6 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
-
 async function testTermination (failure) {
   if (failure) {
     console.log('FAILED; setting non-zero exit code')
@@ -13,11 +11,6 @@ async function testTermination (failure) {
   } else {
     console.log('SUCCESS')
     process.exitCode = 0
-  }
-
-  if (truthy(process.env.ONE_SHOT_SERVER)) {
-    console.log('Requesting server shutdown')
-    await sys.broadcast('shutdown')
   }
 
   console.log('Terminating sidecar')

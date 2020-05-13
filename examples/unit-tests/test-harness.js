@@ -197,11 +197,6 @@ async function testTermination (failure) {
     process.exitCode = 0
   }
 
-  if (!truthy(process.env.KUBERNETES_MODE)) {
-    console.log('Requesting server shutdown')
-    await sys.broadcast('shutdown')
-  }
-
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

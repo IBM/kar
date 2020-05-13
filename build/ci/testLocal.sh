@@ -1,6 +1,17 @@
 #!/bin/bash
 
-set -eu
+set -meu
+
+# run background_services_gpid test_command
+run () {
+    PID=$1
+    shift
+    CODE=0
+    "$@" || CODE=$?
+    kill -- -$PID || true
+    sleep 1
+    return $CODE
+}
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/../.."
@@ -14,8 +25,7 @@ cd $ROOTDIR/examples/unit-tests
 npm install
 
 kar -app myApp -service myService -actors Foo node server.js &
-sleep 1
-kar -app myApp node test-harness.js
+run $! kar -app myApp node test-harness.js
 
 # Run actors-ykt locally
 echo "*** Executing actors-ykt/ykt-client.js ***"
@@ -24,5 +34,4 @@ cd $ROOTDIR/examples/actors-ykt
 npm install
 
 ./deploy/runServerLocally.sh &
-sleep 1
-ONE_SHOT_SERVER=1 ./deploy/runClientLocally.sh
+run $! ./deploy/runClientLocally.sh

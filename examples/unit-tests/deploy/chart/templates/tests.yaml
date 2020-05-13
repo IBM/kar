@@ -17,5 +17,3 @@ spec:
     env:
     - name: MAIN
       value: unit-tests/test-harness.js
-    - name: KUBERNETES_MODE
-      value: 'true'
