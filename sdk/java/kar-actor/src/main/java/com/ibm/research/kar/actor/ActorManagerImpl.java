@@ -14,48 +14,50 @@ import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Lock;
 import javax.ejb.LockType;
 import javax.ejb.Singleton;
-import javax.enterprise.context.ApplicationScoped;
-import javax.servlet.ServletContext;
-import javax.ws.rs.core.Context;
 
+import javax.enterprise.context.ApplicationScoped;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Singleton
-@ConcurrencyManagement(ConcurrencyManagementType.CONTAINER)
 @ApplicationScoped
+@ConcurrencyManagement(ConcurrencyManagementType.CONTAINER)
 public class ActorManagerImpl implements ActorManager {
 
-	@Context ServletContext ctx;
+	private final static String LOG_PREFIX = "ActorManagerImpl.";
 
-	private Map<String, ActorReference> actorMap;
-	private Map<String, ActorReference> actorInstanceMap;
+	private Map<String, ActorModel> actorMap;
 
 	@PostConstruct
 	public void initialize() {
+		System.out.println(LOG_PREFIX+"initialize: Intializing Actor map");
+		this.actorMap = new HashMap<String, ActorModel>();
 
-		System.out.println("ActorManagerImpl.initialize: Initializing the Actor Map");
-		actorMap = new HashMap<String, ActorReference>();
-		actorInstanceMap = new HashMap<String, ActorReference>();
+		System.out.println(LOG_PREFIX+"initialize: Got init params " + ActorRuntimeContextListener.actorClassStr + ":"+ ActorRuntimeContextListener.actorTypeNameStr);
 
-		String actorClassStr = ActorRuntimeContextListener.actorClassStr;
-		String actorTypeNameStr = ActorRuntimeContextListener.actorTypeNameStr;
+		// ensure that we have non-null class and kar type strings from web.xml
+		if ((ActorRuntimeContextListener.actorClassStr != null) && (ActorRuntimeContextListener.actorTypeNameStr != null)) {
+			List<String> classList = Arrays.asList(ActorRuntimeContextListener.actorClassStr.split("\\s*,\\s*"));
+			List<String> nameList = Arrays.asList(ActorRuntimeContextListener.actorTypeNameStr.split("\\s*,\\s*"));
 
-		System.out.println("ActorManagerImpl.initialize: Got init params " + actorClassStr + ":"+ actorTypeNameStr);
 
-		if ((actorClassStr != null) && (actorTypeNameStr != null)) {
-			System.out.println("Parsing list");
-			List<String> classList = Arrays.asList(actorClassStr.split("\\s*,\\s*"));
-			List<String> nameList = Arrays.asList(actorTypeNameStr.split("\\s*,\\s*"));
-
-			System.out.println("ActorManagerImpl.initialize: class size:" + classList.size() + " nameList.size:"+ nameList.size());
+			// lists should be same size
 			if (classList.size() == nameList.size()) {
+
+				// Create ActorModel for each class
 				for (String actorClassName : classList) {
+
+					// class should be annotated with @Actor, otherwise reject
 					try {
 						Class<?> cls = Class.forName(actorClassName);
 						Annotation annotation = cls.getAnnotation(Actor.class);
+
+						// if annotation is present, get annotated methods for
+						// 1. remote 
+						// 2. activate
+						// 3. deactivate
 						if (annotation != null) {
 
 							Method[] methods = cls.getMethods();
@@ -65,118 +67,120 @@ public class ActorManagerImpl implements ActorManager {
 
 							for (Method method : methods) {
 								if (method.isAnnotationPresent(Remote.class)) {
+									System.out.print(LOG_PREFIX+"initialize: adding method " + method.getName() + " to remote methods");
 									remoteMethods.put(method.getName(),method);
 								} else if (method.isAnnotationPresent(Activate.class)) {
 									activateMethod = method;
 								} else if (method.isAnnotationPresent(Deactivate.class)) {
 									deactivateMethod = method;
 								}
-								
+
 							}
+							// create new ActorModel
+							ActorModel actorRef = new ActorModel();
 
-							// only add actor to map if it can be activated and deactivated
-							if ((activateMethod != null) && (deactivateMethod != null)) {
+							String karTypeName = nameList.get(classList.indexOf(actorClassName));
 
-								ActorReference actorRef = new ActorReference();
+							// add kar type and class name for future (?) bookeeping
+							actorRef.setType(karTypeName);
+							actorRef.setClassName(actorClassName);
 
-								String karTypeName = nameList.get(classList.indexOf(actorClassName));
-								actorRef.setType(karTypeName);
-								actorRef.setCls(cls);
-								actorRef.setClassName(actorClassName);
+							// add methods so we don't have to look them up later
+							actorRef.setActivateMethod(activateMethod); // ok to be null
+							actorRef.setDeactivateMethod(deactivateMethod); // ok to be null
+							actorRef.setRemoteMethods(remoteMethods); // ok to be empty
 
-								actorRef.setActivateMethod(activateMethod);
-								actorRef.setDeactivateMethod(deactivateMethod);
-
-								actorRef.setRemoteMethods(remoteMethods);
-
-								actorMap.put(karTypeName, actorRef);
-							} else {
-								System.out.println("ActorManagerImpl.initialize: Actor class " + actorClassName + " not added to runtime because it does not contain required initialization or de-initialization methods");
-							}
+							// put new ActorModel in ActorMap with KAR type as key
+							actorMap.put(karTypeName, actorRef);		
 						}
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
+						System.out.print(LOG_PREFIX+"initialize: Cannot log class " + actorClassName);
 					}
 				}
-			}
-		}
 
-		System.out.println("ActorManagerImpl.initialize: initialized with " + actorMap.size() + "actor references");
+			}
+
+			System.out.println(LOG_PREFIX + "initialize: actor map initialized with " + actorMap.size() + " entries");
+		}
 	}
 
+
 	@Lock(LockType.WRITE)
-	public ActorReference createActor(String type, String id) {
-		ActorReference actorRef = actorMap.get(type);
+	public Object createActor(String type, String id) {
+		System.out.println(LOG_PREFIX + "createActor ActorManager");
+
+
+		ActorModel actorRef = actorMap.get(type);
+		Object actorObj = null;
 
 		if (actorRef != null) {
-			Class<?> cls = actorRef.getCls();
+			Class<?> actorClass = actorRef.getActorClass();
+
 			try {
-				Object actorObj = cls.getConstructor().newInstance();
+				actorObj = actorClass.getConstructor().newInstance();
 
-				ActorReference inst = new ActorReference();
-				inst.setClassName(actorRef.getClassName());
-				inst.setType(type);
-				inst.setId(id);
-				inst.setActorInstance(actorObj);
-				inst.setRemoteMethods(actorRef.getRemoteMethods());
-				inst.setActivateMethod(actorRef.getActivateMethod());
-				inst.setDeactivateMethod(actorRef.getDeactivateMethod());
-				
+				// initialize actor instance
 				Method activate = actorRef.getActivateMethod();
-				activate.invoke(actorObj);
 
-				actorInstanceMap.put(type+":"+id, inst);
+				if (activate != null) {
+					activate.invoke(actorObj);
+				}
 
-			} catch (InstantiationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalAccessException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (NoSuchMethodException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (SecurityException e) {
-				// TODO Auto-generated catch block
+				// put reference to actorObj in the ActorModel
+				actorRef.getActorInstances().put(id, actorObj);
+
+
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
 				e.printStackTrace();
 			}
-		}
-		return actorRef;
+		} 
+
+		return actorObj;
 	}
 
 	@Lock(LockType.WRITE)
 	public void deleteActor(String type, String id) {
-		ActorReference actorRef = actorInstanceMap.get(type+":"+id);
-		Object actorObj = actorRef.getActorInstance();
-		Method deactivateMethod = actorRef.getDeactivateMethod();
-		
-		System.out.println("ActorManagerImpl.deleteActor: actor object is " + actorObj);
+		System.out.println(LOG_PREFIX + "deleteActor: deleting " + type + " actor " + id);
+		ActorModel actorRef = this.actorMap.get(type);
 
-		System.out.println("ActorManagerImpl.deleteActor: deactivate method is " + deactivateMethod);
-		
-		try {
-			deactivateMethod.invoke(actorObj);
-		} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		if (actorRef != null) {
+			Object actorObj = actorRef.getActorInstances().get(id);
+
+			if (actorObj != null) {
+				Method deactivateMethod = actorRef.getDeactivateMethod();
+				if (deactivateMethod != null) {
+					try {
+						deactivateMethod.invoke(actorObj);
+					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						System.out.println(LOG_PREFIX + "deleteActor: error executing actor deactivate method");
+					}
+				}
+				actorRef.getActorInstances().remove(actorObj);
+			} else {
+				System.out.println(LOG_PREFIX + "deleteActor: warning, no instance found for actor " + id);
+			}
+		} else {
+			System.out.println(LOG_PREFIX + "deleteActor: warning, no model found for " + type + " actor");
 		}
-		
-		actorInstanceMap.remove(type+":"+id);
 	}
 
 	@Lock(LockType.READ) 
-	public ActorReference getActor(String type, String id) {
-		ActorReference actorRef = actorInstanceMap.get(type+":"+id);
-		if (actorRef == null) {
-			actorRef = createActor(type,id);
+	public Object getActor(String type, String id) {
+
+		System.out.println(LOG_PREFIX+"getActor: Retrieving actor instance");  
+
+		ActorModel model = this.actorMap.get(type);
+		Object actorObj = null;
+
+		if (model != null) {
+			actorObj = model.getActorInstances().get(id);
 		}
-		return actorRef;
+
+		return actorObj;
 	}
 
 	@Lock(LockType.READ) 
@@ -186,10 +190,32 @@ public class ActorManagerImpl implements ActorManager {
 		if (actorMap != null) {
 			return actorMap.size();
 		} else {
-			System.out.println("ActorManagerImpl.getNumActors: no map instance found");
+			System.out.println(LOG_PREFIX + "getNumActors: no map instance found");
 			return 0;
 		}
 	}
+
+
+	@Override
+	public Method getActorMethod(String type, String name) {
+		System.out.println(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
+		ActorModel model = this.actorMap.get(type);
+
+		System.out.println(LOG_PREFIX + "getactorMethod: found actor model " + model);
+
+		Method method = null;
+
+
+		if (model != null) {
+			method = model.getRemoteMethods().get(name);
+		} else {
+			System.out.println(LOG_PREFIX+"getActorMethod: Warning, no model of type " + type + " found");
+		}
+
+		return method; 
+	}
+
+
 
 
 }

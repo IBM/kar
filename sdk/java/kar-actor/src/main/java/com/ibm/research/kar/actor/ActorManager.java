@@ -1,8 +1,17 @@
 package com.ibm.research.kar.actor;
 
+import java.lang.reflect.Method;
+
 public interface ActorManager {
-	public ActorReference createActor(String type, String id);
+	// create actor instance
+	public Object createActor(String type, String id);
+	
+	// delete actor instance
 	public void deleteActor(String type, String id);
-	public ActorReference getActor(String type, String id);
-	public int getNumActors();
+	
+	// get existing or create new actor instance
+	public Object getActor(String type, String id);
+	
+	public Method getActorMethod(String type, String name);
+	
 }

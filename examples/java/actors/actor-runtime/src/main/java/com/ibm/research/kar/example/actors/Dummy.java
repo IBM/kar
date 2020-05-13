@@ -21,10 +21,14 @@ public class Dummy {
 	}
 	
 	@Remote
-	public String canBeInvoked() {
+	public String canBeInvoked(JsonObject json) {
+		
+		int number = json.getInt("number");
+		
+		number++;
 		
 		JsonObject params = Json.createObjectBuilder()
-				.add("number",205)
+				.add("number",number)
 				.build();
 		
 		Response resp = kar.actorCall("dummy2", "dummy2id", "canBeInvoked", params);

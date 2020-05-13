@@ -17,7 +17,7 @@ public class ActorTest {
 		Kar kar = new Kar();
 		
 		JsonObject params = Json.createObjectBuilder()
-				.add("number", 5)
+				.add("number", 1)
 				.build();
 		
 		Response resp = kar.actorCall("dummy", "dummyid", "canBeInvoked", params);

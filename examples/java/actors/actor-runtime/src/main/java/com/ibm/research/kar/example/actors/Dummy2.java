@@ -17,12 +17,18 @@ public class Dummy2 {
 	}
 	
 	@Remote
-	public String canBeInvoked() {
+	public JsonObject canBeInvoked(JsonObject json) {
+		
+		int number = json.getInt("number");
+		
+		number++;
+		
 		JsonObject params = Json.createObjectBuilder()
-				.add("number",100)
+				.add("number", number)
 				.build();
 		
-		return params.toString();
+
+		return params;
 	}
 	
 	public void cannotBeInvoked() {
