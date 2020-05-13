@@ -115,7 +115,7 @@ const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.
 
 const broadcast = (path, args) => post(`system/broadcast/${path}`, args, { 'Content-Type': 'application/json' })
 
-const shutdown = () => post('system/kill').then(() => agent.close())
+const shutdown = () => post('system/shutdown').then(() => agent.close())
 
 function publish (topic, event) {
   // Ensure event is of the correct type.

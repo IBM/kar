@@ -42,8 +42,6 @@ const (
 )
 
 func init() {
-	var ignored string
-	flag.StringVar(&ignored, "sidecar_image_registry", "", "DEPRECATED: WILL BE REMOVED")
 	flag.StringVar(&sidecarImage, "sidecar_image", "us.icr.io/research/kar-dev/kar", "docker image to use for kar sidecar")
 	flag.StringVar(&sidecarImageTag, "sidecar_image_tag", "latest", "docker image tag to use for kar sidecar")
 }
@@ -124,7 +122,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			Env:           []corev1.EnvVar{{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
 			Ports:         []corev1.ContainerPort{{ContainerPort: int32(runtimePort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
 			LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/health", Port: intstr.FromInt(runtimePort)}}},
-			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/kill", Port: intstr.FromInt(runtimePort)}}},
+			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/shutdown", Port: intstr.FromInt(runtimePort)}}},
 			VolumeMounts:  []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
 		}}
 		containers = append(sidecar, containers...)

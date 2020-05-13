@@ -940,37 +940,19 @@ paths:
       summary: health
       tags:
       - system
-  /system/kill:
+  /system/shutdown:
     post:
       description: |-
         ### Shutdown a single KAR runtime
 
         Initiate an orderly shutdown of the target KAR runtime process.
-      operationId: idSystemKill
+      operationId: idSystemShutdown
       responses:
         "200":
           $ref: '#/responses/response200'
       schemes:
       - http
-      summary: kill
-      tags:
-      - system
-  /system/killall:
-    post:
-      deprecated: true
-      description: |-
-        ### Shutdown the KAR runtime mesh for an application
-
-        Initiate an orderly shutdown of all KAR runtime processes.
-
-        This route is Deprecated and slated for removal from the API.
-      operationId: idSystemKillAll
-      responses:
-        "200":
-          $ref: '#/responses/response200'
-      schemes:
-      - http
-      summary: killall
+      summary: shutdown
       tags:
       - system
 responses:

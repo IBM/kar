@@ -524,9 +524,9 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /system/kill system idSystemKill
+// swagger:route POST /system/shutdown system idSystemShutdown
 //
-// kill
+// shutdown
 //
 // ### Shutdown a single KAR runtime
 //
@@ -536,31 +536,9 @@ func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Responses:
 //       200: response200
 //
-func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func shutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
-	logger.Info("Invoking cancel() in response to kill request")
-	cancel()
-}
-
-// swagger:route POST /system/killall system idSystemKillAll
-//
-// killall
-//
-// ### Shutdown the KAR runtime mesh for an application
-//
-// Initiate an orderly shutdown of all KAR runtime processes.
-//
-// This route is Deprecated and slated for removal from the API.
-//
-//     Deprecated: true
-//     Schemes: http
-//     Responses:
-//       200: response200
-//
-func killall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.KillAll(ctx)
-	fmt.Fprint(w, "OK")
-	logger.Info("Invoking cancel() in response to killall request")
+	logger.Info("Invoking cancel() in response to shutdown request")
 	cancel()
 }
 
@@ -692,8 +670,7 @@ func server(listener net.Listener) {
 	// kar system methods
 	router.POST(base+"/system/broadcast/*path", broadcast)
 	router.GET(base+"/system/health", health)
-	router.POST(base+"/system/kill", kill)
-	router.POST(base+"/system/killall", killall)
+	router.POST(base+"/system/shutdown", shutdown)
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)

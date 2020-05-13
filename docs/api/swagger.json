@@ -925,7 +925,7 @@
         }
       }
     },
-    "/system/kill": {
+    "/system/shutdown": {
       "post": {
         "description": "### Shutdown a single KAR runtime\n\nInitiate an orderly shutdown of the target KAR runtime process.",
         "schemes": [
@@ -934,27 +934,8 @@
         "tags": [
           "system"
         ],
-        "summary": "kill",
-        "operationId": "idSystemKill",
-        "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
-          }
-        }
-      }
-    },
-    "/system/killall": {
-      "post": {
-        "description": "### Shutdown the KAR runtime mesh for an application\n\nInitiate an orderly shutdown of all KAR runtime processes.\n\nThis route is Deprecated and slated for removal from the API.",
-        "schemes": [
-          "http"
-        ],
-        "tags": [
-          "system"
-        ],
-        "summary": "killall",
-        "operationId": "idSystemKillAll",
-        "deprecated": true,
+        "summary": "shutdown",
+        "operationId": "idSystemShutdown",
         "responses": {
           "200": {
             "$ref": "#/responses/response200"

@@ -153,19 +153,6 @@ func Broadcast(ctx context.Context, path, payload, contentType string) {
 	}
 }
 
-// KillAll sends the cancel command to all sidecars except for this one
-func KillAll(ctx context.Context) {
-	for _, sidecar := range pubsub.Sidecars() {
-		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(ctx, map[string]string{ // TODO log errors
-				"protocol": "sidecar",
-				"sidecar":  sidecar,
-				"command":  "cancel",
-			})
-		}
-	}
-}
-
 // helper methods to handle incoming messages
 // log ignored errors to logger.Error
 
