@@ -888,6 +888,7 @@ paths:
     post:
       consumes:
       - application/json
+      deprecated: true
       description: |-
         ### Asynchronously broadcast a message to the KAR runtime
 
@@ -897,6 +898,8 @@ paths:
         A `200` response indicates that the request to send the broadcast
         has been accepted and the POST will eventually be delivered to all targeted
         runtime processes.
+
+        This route is Deprecated and slated for removal from the API.
       operationId: idSystemBroadcast
       parameters:
       - description: The target endpoint to be invoked by the operation
@@ -954,10 +957,13 @@ paths:
       - system
   /system/killall:
     post:
+      deprecated: true
       description: |-
         ### Shutdown the KAR runtime mesh for an application
 
         Initiate an orderly shutdown of all KAR runtime processes.
+
+        This route is Deprecated and slated for removal from the API.
       operationId: idSystemKillAll
       responses:
         "200":

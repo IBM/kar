@@ -865,7 +865,7 @@
     },
     "/system/broadcast/{path}": {
       "post": {
-        "description": "### Asynchronously broadcast a message to the KAR runtime\n\nBroadcast asynchronously executes a `POST` on the `path` endpoint\nof all other KAR runtimes that are currently part of the application.\nThe runtime initiating the broadcast is not included as a recipient.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all targeted\nruntime processes.",
+        "description": "### Asynchronously broadcast a message to the KAR runtime\n\nBroadcast asynchronously executes a `POST` on the `path` endpoint\nof all other KAR runtimes that are currently part of the application.\nThe runtime initiating the broadcast is not included as a recipient.\nA `200` response indicates that the request to send the broadcast\nhas been accepted and the POST will eventually be delivered to all targeted\nruntime processes.\n\nThis route is Deprecated and slated for removal from the API.",
         "consumes": [
           "application/json"
         ],
@@ -880,6 +880,7 @@
         ],
         "summary": "broadcast",
         "operationId": "idSystemBroadcast",
+        "deprecated": true,
         "parameters": [
           {
             "type": "string",
@@ -944,7 +945,7 @@
     },
     "/system/killall": {
       "post": {
-        "description": "### Shutdown the KAR runtime mesh for an application\n\nInitiate an orderly shutdown of all KAR runtime processes.",
+        "description": "### Shutdown the KAR runtime mesh for an application\n\nInitiate an orderly shutdown of all KAR runtime processes.\n\nThis route is Deprecated and slated for removal from the API.",
         "schemes": [
           "http"
         ],
@@ -953,6 +954,7 @@
         ],
         "summary": "killall",
         "operationId": "idSystemKillAll",
+        "deprecated": true,
         "responses": {
           "200": {
             "$ref": "#/responses/response200"

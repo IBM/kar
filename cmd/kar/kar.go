@@ -66,6 +66,9 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // has been accepted and the POST will eventually be delivered to all targeted
 // runtime processes.
 //
+// This route is Deprecated and slated for removal from the API.
+//
+//     Deprecated: true
 //     Consumes:
 //     - application/json
 //     Produces:
@@ -547,6 +550,9 @@ func kill(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Initiate an orderly shutdown of all KAR runtime processes.
 //
+// This route is Deprecated and slated for removal from the API.
+//
+//     Deprecated: true
 //     Schemes: http
 //     Responses:
 //       200: response200
