@@ -22,7 +22,7 @@ ROOTDIR="$SCRIPTDIR/../.."
 echo "*** Executing unit-tests/test-harness.js ***"
 
 cd $ROOTDIR/examples/unit-tests
-npm install
+npm install --prod
 
 kar -app myApp -service myService -actors Foo node server.js &
 run $! kar -app myApp node test-harness.js
@@ -31,7 +31,7 @@ run $! kar -app myApp node test-harness.js
 echo "*** Executing actors-ykt/ykt-client.js ***"
 
 cd $ROOTDIR/examples/actors-ykt
-npm install
+npm install --prod
 
 ./deploy/runServerLocally.sh &
 run $! ./deploy/runClientLocally.sh
