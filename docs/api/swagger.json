@@ -68,7 +68,7 @@
             "in": "query"
           },
           {
-            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
             "name": "TargetRequestBody",
             "in": "body",
             "schema": {
@@ -745,7 +745,43 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/eventSubscribeRequestBody"
+              "type": "object",
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "actorId": {
+                  "description": "The subscribing actor instance id",
+                  "type": "string",
+                  "x-go-name": "ActorID"
+                },
+                "actorType": {
+                  "description": "The subscribing actor type",
+                  "type": "string",
+                  "x-go-name": "ActorType"
+                },
+                "id": {
+                  "description": "A optional unique id to use for this subscrition.\nIf not id is provided, the `topic` will be used as the id.",
+                  "type": "string",
+                  "x-go-name": "ID"
+                },
+                "oldest": {
+                  "description": "Should the subscription start with the oldest available event or\nonly include events published after the subscription operation?",
+                  "type": "boolean",
+                  "x-go-name": "Oldest"
+                },
+                "path": {
+                  "description": "The target endpoint to which events will be delivered",
+                  "type": "string",
+                  "x-go-name": "Path",
+                  "example": "an/arbitrary/valid/pathSegment"
+                },
+                "service": {
+                  "description": "The subscribing service name",
+                  "type": "string",
+                  "x-go-name": "Service"
+                }
+              }
             }
           }
         ],
@@ -786,7 +822,14 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/eventUnsubscribeRequestBody"
+              "type": "object",
+              "properties": {
+                "id": {
+                  "description": "The id of the subscription to be removed.\nIf not id is provided, the `topic` will be used as the id.",
+                  "type": "string",
+                  "x-go-name": "ID"
+                }
+              }
             }
           }
         ],
@@ -842,7 +885,7 @@
             "required": true
           },
           {
-            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
             "name": "TargetRequestBody",
             "in": "body",
             "schema": {
@@ -898,7 +941,7 @@
             "required": true
           },
           {
-            "description": "An arbitrary JSON value to be passed through unchanged to the target endpoint",
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
             "name": "TargetRequestBody",
             "in": "body",
             "schema": {
@@ -1059,57 +1102,6 @@
           "type": "string",
           "x-go-name": "Type",
           "example": "com.github.pull.create"
-        }
-      },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
-    },
-    "eventSubscribeRequestBody": {
-      "type": "object",
-      "required": [
-        "path"
-      ],
-      "properties": {
-        "actorId": {
-          "description": "The subscribing actor instance id",
-          "type": "string",
-          "x-go-name": "ActorID"
-        },
-        "actorType": {
-          "description": "The subscribing actor type",
-          "type": "string",
-          "x-go-name": "ActorType"
-        },
-        "id": {
-          "description": "A optional unique id to use for this subscrition.\nIf not id is provided, the `topic` will be used as the id.",
-          "type": "string",
-          "x-go-name": "ID"
-        },
-        "oldest": {
-          "description": "Should the subscription start with the oldest available event or\nonly include events published after the subscription operation?",
-          "type": "boolean",
-          "x-go-name": "Oldest"
-        },
-        "path": {
-          "description": "The target endpoint to which events will be delivered",
-          "type": "string",
-          "x-go-name": "Path",
-          "example": "an/arbitrary/valid/pathSegment"
-        },
-        "service": {
-          "description": "The subscribing service name",
-          "type": "string",
-          "x-go-name": "Service"
-        }
-      },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
-    },
-    "eventUnsubscribeRequestBody": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "description": "The id of the subscription to be removed.\nIf not id is provided, the `topic` will be used as the id.",
-          "type": "string",
-          "x-go-name": "ID"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"

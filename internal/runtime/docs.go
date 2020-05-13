@@ -125,7 +125,7 @@ type reminderScheduleParamWrapper struct {
 // swagger:parameters idServiceCall
 // swagger:parameters idSystemBroadcast
 type endpointRequestBody struct {
-	// An arbitrary JSON value to be passed through unchanged to the target endpoint
+	// An arbitrary request body to be passed through unchanged to the target endpoint
 	// in:body
 	TargetRequestBody interface{}
 }
@@ -184,42 +184,40 @@ type eventPublishRequestWrapper struct {
 // swagger:parameters idEventSubscribe
 type eventSubscribeRequestWrapper struct {
 	// in:body
-	Body eventSubscribeRequestBody
-}
-type eventSubscribeRequestBody struct {
-	// A optional unique id to use for this subscrition.
-	// If not id is provided, the `topic` will be used as the id.
-	// required:false
-	ID string `json:"id"`
-	// The subscribing actor type
-	// required:false
-	ActorType string `json:"actorType"`
-	// The subscribing actor instance id
-	// required:false
-	ActorID string `json:"actorId"`
-	// The subscribing service name
-	// required:false
-	Service string `json:"service"`
-	// The target endpoint to which events will be delivered
-	// Example: an/arbitrary/valid/pathSegment
-	// required:true
-	Path string `json:"path"`
-	// Should the subscription start with the oldest available event or
-	// only include events published after the subscription operation?
-	// required:false
-	Oldest bool `json:"oldest"`
+	Body struct {
+		// A optional unique id to use for this subscrition.
+		// If not id is provided, the `topic` will be used as the id.
+		// required:false
+		ID string `json:"id"`
+		// The subscribing actor type
+		// required:false
+		ActorType string `json:"actorType"`
+		// The subscribing actor instance id
+		// required:false
+		ActorID string `json:"actorId"`
+		// The subscribing service name
+		// required:false
+		Service string `json:"service"`
+		// The target endpoint to which events will be delivered
+		// Example: an/arbitrary/valid/pathSegment
+		// required:true
+		Path string `json:"path"`
+		// Should the subscription start with the oldest available event or
+		// only include events published after the subscription operation?
+		// required:false
+		Oldest bool `json:"oldest"`
+	}
 }
 
 // swagger:parameters idEventUnsubscribe
 type eventUnsubscribeRequestWrapper struct {
 	// in:body
-	Body eventUnsubscribeRequestBody
-}
-type eventUnsubscribeRequestBody struct {
-	// The id of the subscription to be removed.
-	// If not id is provided, the `topic` will be used as the id.
-	// required: false
-	ID string `json:"id"`
+	Body struct {
+		// The id of the subscription to be removed.
+		// If not id is provided, the `topic` will be used as the id.
+		// required: false
+		ID string `json:"id"`
+	}
 }
 
 // swagger:parameters idActorStateSetMultiple

@@ -92,51 +92,6 @@ definitions:
     - type
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
-  eventSubscribeRequestBody:
-    properties:
-      actorId:
-        description: The subscribing actor instance id
-        type: string
-        x-go-name: ActorID
-      actorType:
-        description: The subscribing actor type
-        type: string
-        x-go-name: ActorType
-      id:
-        description: |-
-          A optional unique id to use for this subscrition.
-          If not id is provided, the `topic` will be used as the id.
-        type: string
-        x-go-name: ID
-      oldest:
-        description: |-
-          Should the subscription start with the oldest available event or
-          only include events published after the subscription operation?
-        type: boolean
-        x-go-name: Oldest
-      path:
-        description: The target endpoint to which events will be delivered
-        example: an/arbitrary/valid/pathSegment
-        type: string
-        x-go-name: Path
-      service:
-        description: The subscribing service name
-        type: string
-        x-go-name: Service
-    required:
-    - path
-    type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
-  eventUnsubscribeRequestBody:
-    properties:
-      id:
-        description: |-
-          The id of the subscription to be removed.
-          If not id is provided, the `topic` will be used as the id.
-        type: string
-        x-go-name: ID
-    type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a
       new reminder
@@ -234,7 +189,7 @@ paths:
         name: session
         type: string
         x-go-name: Session
-      - description: An arbitrary JSON value to be passed through unchanged to the
+      - description: An arbitrary request body to be passed through unchanged to the
           target endpoint
         in: body
         name: TargetRequestBody
@@ -789,7 +744,39 @@ paths:
       - in: body
         name: Body
         schema:
-          $ref: '#/definitions/eventSubscribeRequestBody'
+          properties:
+            actorId:
+              description: The subscribing actor instance id
+              type: string
+              x-go-name: ActorID
+            actorType:
+              description: The subscribing actor type
+              type: string
+              x-go-name: ActorType
+            id:
+              description: |-
+                A optional unique id to use for this subscrition.
+                If not id is provided, the `topic` will be used as the id.
+              type: string
+              x-go-name: ID
+            oldest:
+              description: |-
+                Should the subscription start with the oldest available event or
+                only include events published after the subscription operation?
+              type: boolean
+              x-go-name: Oldest
+            path:
+              description: The target endpoint to which events will be delivered
+              example: an/arbitrary/valid/pathSegment
+              type: string
+              x-go-name: Path
+            service:
+              description: The subscribing service name
+              type: string
+              x-go-name: Service
+          required:
+          - path
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -822,7 +809,14 @@ paths:
       - in: body
         name: Body
         schema:
-          $ref: '#/definitions/eventUnsubscribeRequestBody'
+          properties:
+            id:
+              description: |-
+                The id of the subscription to be removed.
+                If not id is provided, the `topic` will be used as the id.
+              type: string
+              x-go-name: ID
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -864,7 +858,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary JSON value to be passed through unchanged to the
+      - description: An arbitrary request body to be passed through unchanged to the
           target endpoint
         in: body
         name: TargetRequestBody
@@ -913,7 +907,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary JSON value to be passed through unchanged to the
+      - description: An arbitrary request body to be passed through unchanged to the
           target endpoint
         in: body
         name: TargetRequestBody
