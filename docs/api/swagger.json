@@ -80,6 +80,9 @@
           "200": {
             "$ref": "#/responses/response200CallResult"
           },
+          "202": {
+            "$ref": "#/responses/response202CallResult"
+          },
           "500": {
             "$ref": "#/responses/response500"
           },
@@ -851,6 +854,9 @@
           "200": {
             "$ref": "#/responses/response200CallResult"
           },
+          "202": {
+            "$ref": "#/responses/response202CallResult"
+          },
           "500": {
             "$ref": "#/responses/response500"
           },
@@ -1260,6 +1266,9 @@
           "description": "Returns 0 if an existing entry was updated and 1 if a new entry was created"
         }
       }
+    },
+    "response202CallResult": {
+      "description": "Indicates that a non-blocking call has been accepted for eventual execution"
     },
     "response400": {
       "description": "Response indicating a bad request",

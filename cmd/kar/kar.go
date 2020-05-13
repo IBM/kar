@@ -49,6 +49,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		}
 	} else {
+		w.WriteHeader(http.StatusAccepted)
 		fmt.Fprint(w, "OK")
 	}
 }
@@ -100,6 +101,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
+//       202: response202CallResult
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
@@ -124,6 +126,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
+//       202: response202CallResult
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError

@@ -245,6 +245,8 @@ paths:
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -873,6 +875,8 @@ paths:
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1039,6 +1043,9 @@ responses:
           was created
         format: int64
         type: integer
+  response202CallResult:
+    description: Indicates that a non-blocking call has been accepted for eventual
+      execution
   response400:
     description: Response indicating a bad request
     headers:

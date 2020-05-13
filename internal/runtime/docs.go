@@ -307,6 +307,11 @@ type response200StateSetMultipleResult struct {
 	NumberCreated int
 }
 
+// Indicates that a non-blocking call has been accepted for eventual execution
+// swagger:response response202CallResult
+type response202CallResult struct {
+}
+
 // Response indicating a bad request
 // swagger:response response400
 type error400 struct {
