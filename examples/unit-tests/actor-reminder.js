@@ -6,15 +6,15 @@ const sleep = (milliseconds) => {
 
 async function main () {
   const now = Date.now()
-  const when = new Date(now + 3 * 1000)
+  const targetTime = new Date(now + 3 * 1000)
   const period = '5s'
   const a22 = actor.proxy('Foo', '22')
   const a23 = actor.proxy('Foo', '23')
   const a2112 = actor.proxy('Foo', '2112')
-  await actor.reminders.schedule(a22, 'echo', 'ticker', when, period, 'hello', 'my friend', 'my foe')
-  await actor.reminders.schedule(a23, 'echo', 'ticker', when, period)
-  await actor.reminders.schedule(a2112, 'echo', 'ticker', when, period, 'Syrinx')
-  await actor.reminders.schedule(a22, 'echo', 'once', when, undefined, 'carpe diem')
+  await actor.reminders.schedule(a22, 'echo', { id: 'ticker', targetTime, period }, 'hello', 'my friend', 'my foe')
+  await actor.reminders.schedule(a23, 'echo', { id: 'ticker', targetTime, period })
+  await actor.reminders.schedule(a2112, 'echo', { id: 'ticker', targetTime, period }, 'Syrinx')
+  await actor.reminders.schedule(a22, 'echo', { id: 'once', targetTime }, 'carpe diem')
   console.log(await actor.reminders.get(a23))
   console.log(await actor.reminders.get(a22, 'noone'))
   console.log(await actor.reminders.get(a22, ''))

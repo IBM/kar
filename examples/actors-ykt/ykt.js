@@ -60,7 +60,8 @@ class Company {
     if (!this.sites.includes(site)) {
       this.sites.push(site)
       await actor.call(this, actor.proxy('Site', site), 'joinCompany', this.name)
-      await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport', 'aisle14', new Date(Date.now() + 1000), '5s')
+      await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport',
+        { id: 'aisle14', targetTime: new Date(Date.now() + 1000) }, '5s')
       await actor.state.set(this, 'sites', this.sites)
     }
 
@@ -265,7 +266,7 @@ class Researcher {
     await actor.state.setMultiple(this, initialState)
 
     const when = new Date(Date.now() + thinkms)
-    await actor.reminders.schedule(this, 'move', 'step', when, undefined, when.getTime())
+    await actor.reminders.schedule(this, 'move', { id: 'step', targetTime: when }, when.getTime())
   }
 
   // Checkpoint only saves the transitory state of the Researcher
@@ -366,7 +367,7 @@ class Researcher {
 
     // Schedule next step
     const when = new Date(Date.now() + thinkTime)
-    await actor.reminders.schedule(this, 'move', 'step', when, undefined, when.getTime())
+    await actor.reminders.schedule(this, 'move', { id: 'step', targetTime: when }, when.getTime())
 
     if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
   }

@@ -96,8 +96,8 @@ const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${act
 
 const actorGetReminder = (actor, reminderId) => reminderId ? get(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
 
-function actorScheduleReminder (actor, path, id, targetTime, period, ...args) {
-  const opts = { id, period, path: `/${path}`, targetTime, data: args }
+function actorScheduleReminder (actor, path, options, ...args) {
+  const opts = { id: options.id, path: `/${path}`, targetTime: options.targetTime, period: options.period, data: args }
   return post(`actor/${actor.kar.type}/${actor.kar.id}/reminders`, opts)
 }
 

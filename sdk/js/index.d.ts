@@ -32,10 +32,19 @@ export interface Reminder {
   targetTime: Date;
   /** The actor method to be invoked */
   path: string;
-  /** An optional argument with which to invoke the target method */
-  data?: any;
+  /** An array of arguments with which to invoke the target method */
+  data?: any[];
   /** Period at which the reminder should recur in nanoseconds. A value of 0 indicates a non-recurring reminder */
   period: number;
+}
+
+export interface ScheduleReminderOptions {
+  /** The id of the reminder being scheduled */
+  id: string;
+  /** The earliest time at which the reminder should be delivered */
+  targetTime: Date
+  /**  For periodic reminders, a string encoding a Duration representing the desired gap between successive reminders */
+  period?: string
 }
 
 /**
@@ -144,12 +153,12 @@ export namespace actor {
      * Schedule a reminder for an Actor instance.
      * @param actor The Actor instance.
      * @param path The actor method to invoke when the reminder fires.
-     * @param id The id of the reminder being scheduled
-     * @param targetTime The earliest time at which the reminder should be delivered
-     * @param period A string encoding a Duration representing the reminder's period; one-shot reminders should pass `undefined`
+     * @param options.id The id of the reminder being scheduled
+     * @param options.targetTime The earliest time at which the reminder should be delivered
+     * @param options.period For periodic reminders, a string encoding a Duration representing the desired gap between successive reminders
      * @param args The arguments with which to invoke the actor method.
      */
-    export function schedule (actor: Actor, path: string, id: string, targetTime: Date, period: string, ...args: any[]): Promise<any>;
+    export function schedule (actor: Actor, path: string, options: ScheduleReminderOptions, ...args: any[]): Promise<any>;
   }
 
   namespace state {
