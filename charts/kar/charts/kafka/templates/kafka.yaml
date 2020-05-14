@@ -93,6 +93,8 @@ spec:
           value: INCLUSTER
         - name: KAFKA_ZOOKEEPER_CONNECT
           value: {{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.port }}
+        - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+          value: "false"
 ---
 apiVersion: apps/v1
 kind: Deployment
