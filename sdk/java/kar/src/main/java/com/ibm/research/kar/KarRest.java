@@ -37,13 +37,13 @@ public interface KarRest extends AutoCloseable {
 	@Deprecated
 	@POST
 	@Path("service/{service}/tell/{path}")
+	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 
 	// synchronous service invocation, returns invocation result
 	@POST
 	@Path("service/{service}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 
@@ -56,13 +56,13 @@ public interface KarRest extends AutoCloseable {
 	@Deprecated
 	@POST
 	@Path("actor/{type}/{id}/tell/{path}")
+	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 
 	// synchronous actor invocation: returns invocation result
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonObject params) throws ProcessingException;
 
