@@ -1,14 +1,12 @@
 package com.ibm.research.kar.actor;
 
-import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.logging.Logger;
 
 import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.json.JsonObject;
 import javax.ws.rs.Consumes;
@@ -76,17 +74,31 @@ public class ActorRuntimeResource {
 		System.out.println(LOG_PREFIX + "invokeActorMethod: invoking " + type + "actor " + id + " method " + path + " with params " + params);
 
 		Object actorObj = this.actorManager.getActor(type, id);
-		Method method = this.actorManager.getActorMethod(type, path);
-		
-		System.out.println(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + method);
+		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
+
+		System.out.println(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
 		Object result = null;
 
 
-		if ((actorObj != null) && (method != null)) {
+		if ((actorObj != null) && (methodType != null)) {
+			Type[] interfaces = actorObj.getClass().getGenericInterfaces();
+
+			// give object sessionId if it is listening for it
+			for (Type t: interfaces) {
+				if (t.getTypeName() == KarSessionListener.class.getTypeName()) {
+					synchronized(actorObj) {
+						((KarSessionListener)actorObj).setSessionId(sessionid);
+					}
+				}
+			}
+
 			ActorTask task = new ActorTask();
 			task.setActorObj(actorObj);
-			task.setActorMethod(method);
+			task.setActorMethod(methodType.getMethod());
+			task.setLockPolicy(methodType.getLockPolicy());
 			task.setParams(params);
+
+
 
 			// execute task asynchronously
 			Future<Object> futureResult = managedExecutorService.submit(task);
