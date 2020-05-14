@@ -113,7 +113,7 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const broadcast = (path, args) => post(`system/broadcast/${path}`, args, { 'Content-Type': 'application/json' })
+// const broadcast = (path, args) => post(`system/broadcast/${path}`, args, { 'Content-Type': 'application/json' })
 
 const shutdown = () => post('system/shutdown').then(() => agent.close())
 
@@ -148,9 +148,7 @@ const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subs
  * End of public methods intended for application programming
  **************************************************/
 
-const logger = truthy(process.env.KAR_VERBOSE) ? [morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')] : []
-
-const errorHandler = [
+ const errorHandler = [
   (err, req, res, next) => Promise.resolve()
     .then(() => {
       err.stack += `\n    at <kar> ${req.originalUrl}` // add request url to stack trace
@@ -173,6 +171,8 @@ const table = {} // live actor instances: table[actorType][actorId]
 
 function actorRuntime (actors) {
   const router = express.Router()
+
+  if (truthy(process.env.KAR_VERBOSE)) router.use([morgan('--> :date[iso] :method :url', { immediate: true }), morgan('<-- :date[iso] :method :url :status - :response-time ms')])
 
   router.use(express.json({ type: '*/*' })) // unconditionally parse request bodies to json
 
@@ -254,10 +254,8 @@ module.exports = {
   },
   sys: {
     actorRuntime,
-    broadcast,
     shutdown,
     h2c,
-    logger,
     errorHandler
   }
 }
