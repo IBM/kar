@@ -6,7 +6,9 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "kar": "../../sdk/js"
+    "fetch-retry": "^3.1.0",
+    "kar": "../../sdk/js",
+    "node-fetch": "^2.6.0"
   },
   "devDependencies": {
     "mocha": "^7.1.1",
