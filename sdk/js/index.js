@@ -148,7 +148,7 @@ const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subs
  * End of public methods intended for application programming
  **************************************************/
 
- const errorHandler = [
+const errorHandler = [
   (err, req, res, next) => Promise.resolve()
     .then(() => {
       err.stack += `\n    at <kar> ${req.originalUrl}` // add request url to stack trace
