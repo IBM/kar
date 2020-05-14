@@ -36,7 +36,7 @@ app.post('/pubsub', async (req, res) => {
   const type = 'number'
   const promise = new Promise(resolve => { success = resolve })
 
-  await subscribe(topic, 'accumulate', { contentType: 'application/cloudevents+json' }) // subscribe service to topic
+  await subscribe(topic, 'accumulate') // subscribe service to topic
 
   // Create event 1:
   const e1 = cloudevents.event()

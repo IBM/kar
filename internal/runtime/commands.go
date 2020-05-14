@@ -506,7 +506,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	actorID := m["actorId"]
 	contentType := m["contentType"]
 	if contentType == "" {
-		contentType = "text/plain"
+		contentType = "application/cloudevents+json"
 	}
 	var sub = subscriber{path: path}
 	if actorType != "" {
