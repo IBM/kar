@@ -54,30 +54,6 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /system/broadcast/{path} system idSystemBroadcast
-//
-// broadcast
-//
-// ### Asynchronously broadcast a message to the KAR runtime
-//
-// Broadcast asynchronously executes a `POST` on the `path` endpoint
-// of all other KAR runtimes that are currently part of the application.
-// The runtime initiating the broadcast is not included as a recipient.
-// A `200` response indicates that the request to send the broadcast
-// has been accepted and the POST will eventually be delivered to all targeted
-// runtime processes.
-//
-// This route is Deprecated and slated for removal from the API.
-//
-//     Deprecated: true
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200
-//
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
@@ -159,25 +135,6 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /actor/{actorType}/{actorId}/migrate actors idActorMigrate
-//
-// migrate
-//
-// ### Initiate an actor migration
-//
-// This operation is primarily intended to be used by the KAR actor runtime.
-// When delivered to the runtime currently hosting the designated actor instance,
-// it causes the actor to be passivated and the binding of the actor instance to
-// that runtime to be removed from the KAR actor placement service. When next
-// activated, the actor instance may be hosted by a different instance of the
-// application process.
-//
-//     Schemes: http
-//     Responses:
-//       200: response200
-//       500: response500
-//       503: response503
-//
 func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, "")
 	if err != nil {
@@ -652,17 +609,17 @@ func server(listener net.Listener) {
 	// service invocation
 	router.POST(base+"/service/:service/call/*path", call)
 
-	//actor invocation
+	// actor invocation
 	router.POST(base+"/actor/:type/:id/call/*path", call)
-	//
-	router.POST(base+"/actor/:type/:id/migrate", migrate)
-	//
+
+	// reminders
 	router.GET(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.GET(base+"/actor/:type/:id/reminders", reminder)
 	router.POST(base+"/actor/:type/:id/reminders", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders", reminder)
-	//
+
+	// actor state
 	router.GET(base+"/actor/:type/:id/state/:key", get)
 	router.PUT(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
@@ -671,7 +628,6 @@ func server(listener net.Listener) {
 	router.DELETE(base+"/actor/:type/:id/state", delAll)
 
 	// kar system methods
-	router.POST(base+"/system/broadcast/*path", broadcast)
 	router.GET(base+"/system/health", health)
 	router.POST(base+"/system/shutdown", shutdown)
 
@@ -679,6 +635,10 @@ func server(listener net.Listener) {
 	router.POST(base+"/event/:topic/publish", publish)
 	router.POST(base+"/event/:topic/subscribe", subscribe)
 	router.POST(base+"/event/:topic/unsubscribe", unsubscribe)
+
+	// deprecated
+	router.POST(base+"/system/broadcast/*path", broadcast)
+	router.POST(base+"/actor/:type/:id/migrate", migrate)
 
 	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 

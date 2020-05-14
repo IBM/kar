@@ -213,43 +213,6 @@ paths:
       summary: call
       tags:
       - actors
-  /actor/{actorType}/{actorId}/migrate:
-    post:
-      description: |-
-        ### Initiate an actor migration
-
-        This operation is primarily intended to be used by the KAR actor runtime.
-        When delivered to the runtime currently hosting the designated actor instance,
-        it causes the actor to be passivated and the binding of the actor instance to
-        that runtime to be removed from the KAR actor placement service. When next
-        activated, the actor instance may be hosted by a different instance of the
-        application process.
-      operationId: idActorMigrate
-      parameters:
-      - description: The actor type
-        in: path
-        name: actorType
-        required: true
-        type: string
-        x-go-name: ActorType
-      - description: The actor instance id
-        in: path
-        name: actorId
-        required: true
-        type: string
-        x-go-name: ActorID
-      responses:
-        "200":
-          $ref: '#/responses/response200'
-        "500":
-          $ref: '#/responses/response500'
-        "503":
-          $ref: '#/responses/response503'
-      schemes:
-      - http
-      summary: migrate
-      tags:
-      - actors
   /actor/{actorType}/{actorId}/reminders:
     delete:
       consumes:
@@ -882,47 +845,6 @@ paths:
       summary: call
       tags:
       - services
-  /system/broadcast/{path}:
-    post:
-      consumes:
-      - application/json
-      deprecated: true
-      description: |-
-        ### Asynchronously broadcast a message to the KAR runtime
-
-        Broadcast asynchronously executes a `POST` on the `path` endpoint
-        of all other KAR runtimes that are currently part of the application.
-        The runtime initiating the broadcast is not included as a recipient.
-        A `200` response indicates that the request to send the broadcast
-        has been accepted and the POST will eventually be delivered to all targeted
-        runtime processes.
-
-        This route is Deprecated and slated for removal from the API.
-      operationId: idSystemBroadcast
-      parameters:
-      - description: The target endpoint to be invoked by the operation
-        example: an/arbitrary/valid/pathSegment
-        in: path
-        name: path
-        required: true
-        type: string
-        x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      produces:
-      - application/json
-      responses:
-        "200":
-          $ref: '#/responses/response200'
-      schemes:
-      - http
-      summary: broadcast
-      tags:
-      - system
   /system/health:
     get:
       description: |-

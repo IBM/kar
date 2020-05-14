@@ -41,7 +41,6 @@ import "time"
  *******************************************************************/
 
 // swagger:parameters idActorCall
-// swagger:parameters idActorMigrate
 // swagger:parameters idActorReminderGet
 // swagger:parameters idActorReminderGetAll
 // swagger:parameters idActorReminderSchedule
@@ -89,7 +88,6 @@ type topicParam struct {
 // swagger:parameters idActorCall
 // swagger:parameters idServiceCall
 // swagger:parameters idEventSubscribe
-// swagger:parameters idSystemBroadcast
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path
@@ -123,7 +121,6 @@ type reminderScheduleParamWrapper struct {
 
 // swagger:parameters idActorCall
 // swagger:parameters idServiceCall
-// swagger:parameters idSystemBroadcast
 type endpointRequestBody struct {
 	// An arbitrary request body to be passed through unchanged to the target endpoint
 	// in:body
