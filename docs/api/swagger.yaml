@@ -147,13 +147,13 @@ paths:
   /actor/{actorType}/{actorId}/call/{path}:
     post:
       consumes:
-      - application/json
+      - application
       description: |-
         ### Invoke an actor method
 
         Call executes a `POST` to the `path` endpoint of the
         actor instance indicated by `actorType` and `actorId`.
-        The JSON request body is passed through to the target endpoint.
+        The request body is passed through to the target endpoint.
         The result of the call is the result of invoking the target actor method
         unless the `async` pragma header is specified.
       operationId: idActorCall
@@ -196,7 +196,7 @@ paths:
         schema:
           type: object
       produces:
-      - application/json
+      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
@@ -215,8 +215,6 @@ paths:
       - actors
   /actor/{actorType}/{actorId}/reminders:
     delete:
-      consumes:
-      - application/json
       description: |-
         ### Cancel all reminders
 
@@ -237,7 +235,7 @@ paths:
         type: string
         x-go-name: ActorID
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200ReminderCancelAllResult'
@@ -251,8 +249,6 @@ paths:
       tags:
       - actors
     get:
-      consumes:
-      - application/json
       description: |-
         ### Get all reminders
 
@@ -316,7 +312,7 @@ paths:
         schema:
           $ref: '#/definitions/scheduleReminderPayload'
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -331,8 +327,6 @@ paths:
       - actors
   /actor/{actorType}/{actorId}/reminders/{reminderId}:
     delete:
-      consumes:
-      - application/json
       description: |-
         ### Cancel a reminder
 
@@ -368,7 +362,7 @@ paths:
         type: boolean
         x-go-name: ErrorOnAbsent
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200ReminderCancelResult'
@@ -384,8 +378,6 @@ paths:
       tags:
       - actors
     get:
-      consumes:
-      - application/json
       description: |-
         ### Get a reminder
 
@@ -522,7 +514,7 @@ paths:
             type: object
           type: object
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200StateSetMultipleResult'
@@ -559,6 +551,8 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      produces:
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200StateDeleteResult'
@@ -637,7 +631,7 @@ paths:
         type: string
         x-go-name: ActorID
       produces:
-      - application/json
+      - text/plain
       responses:
         "200":
           $ref: '#/responses/response200StateSetResult'
@@ -681,8 +675,6 @@ paths:
       - events
   /event/{topic}/subscribe:
     post:
-      consumes:
-      - application/json
       description: |-
         ### Subscribe to a topic
 
@@ -793,12 +785,12 @@ paths:
   /service/{service}/call/{path}:
     post:
       consumes:
-      - application/json
+      - application
       description: |-
         ### Invoke a service endpoint
 
         Call executes a `POST` to the `path` endpoint of `service`.
-        The JSON request body is passed through to the target endpoint.
+        The request body is passed through to the target endpoint.
         The result of the call is the result of invoking the target service endpoint
         unless the `async` pragma header is specified.
       operationId: idServiceCall
@@ -828,7 +820,7 @@ paths:
         schema:
           type: object
       produces:
-      - application/json
+      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'

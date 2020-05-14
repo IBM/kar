@@ -12,12 +12,12 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
+        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
         "consumes": [
-          "application/json"
+          "application"
         ],
         "produces": [
-          "application/json"
+          "application"
         ],
         "schemes": [
           "http"
@@ -98,9 +98,6 @@
     "/actor/{actorType}/{actorId}/reminders": {
       "get": {
         "description": "### Get all reminders\n\nThis operation returns all reminders for the actor instance specified in the path.",
-        "consumes": [
-          "application/json"
-        ],
         "produces": [
           "application/json"
         ],
@@ -148,7 +145,7 @@
           "application/json"
         ],
         "produces": [
-          "application/json"
+          "text/plain"
         ],
         "schemes": [
           "http"
@@ -198,11 +195,8 @@
       },
       "delete": {
         "description": "### Cancel all reminders\n\nThis operation cancels all reminders for the actor instance specified in the path.\nThe number of reminders cancelled is returned as the result of the operation.",
-        "consumes": [
-          "application/json"
-        ],
         "produces": [
-          "application/json"
+          "text/plain"
         ],
         "schemes": [
           "http"
@@ -246,9 +240,6 @@
     "/actor/{actorType}/{actorId}/reminders/{reminderId}": {
       "get": {
         "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.\nIf there is no reminder with the id `reminderId` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`.\nIf `nilOnAbsent` is true the `404` response will be replaced with\na `200` response with a `nil` response body.",
-        "consumes": [
-          "application/json"
-        ],
         "produces": [
           "application/json"
         ],
@@ -310,11 +301,8 @@
       },
       "delete": {
         "description": "### Cancel a reminder\n\nThis operation cancels the reminder for the actor instance specified in the path.\nIf the reminder is successfully cancelled a `200` response with a body of `1` will be returned.\nIf the reminder is not found, a `404` response will be returned unless\nthe boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`\nis sent to true the `404` response will instead be a `200` with a body containing `0`.",
-        "consumes": [
-          "application/json"
-        ],
         "produces": [
-          "application/json"
+          "text/plain"
         ],
         "schemes": [
           "http"
@@ -420,7 +408,7 @@
           "application/json"
         ],
         "produces": [
-          "application/json"
+          "text/plain"
         ],
         "schemes": [
           "http"
@@ -553,7 +541,7 @@
           "application/json"
         ],
         "produces": [
-          "application/json"
+          "text/plain"
         ],
         "schemes": [
           "http"
@@ -592,6 +580,9 @@
       },
       "delete": {
         "description": "### Remove a single entry in an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by removing the entry for `key`.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if an entry was actually removed and\n`0` if there was no entry for `key`.",
+        "produces": [
+          "text/plain"
+        ],
         "schemes": [
           "http"
         ],
@@ -670,9 +661,6 @@
     "/event/{topic}/subscribe": {
       "post": {
         "description": "### Subscribe to a topic\n\nSubscribe an application endpoint to be invoked when events are delivered to\nthe targeted `topic`.  The endpoint is described in the request body and\nmay be either a service endpoint or an actor method.",
-        "consumes": [
-          "application/json"
-        ],
         "schemes": [
           "http"
         ],
@@ -803,12 +791,12 @@
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe JSON request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` pragma header is specified.",
+        "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` pragma header is specified.",
         "consumes": [
-          "application/json"
+          "application"
         ],
         "produces": [
-          "application/json"
+          "application"
         ],
         "schemes": [
           "http"

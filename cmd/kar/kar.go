@@ -66,14 +66,14 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // ### Invoke a service endpoint
 //
 // Call executes a `POST` to the `path` endpoint of `service`.
-// The JSON request body is passed through to the target endpoint.
+// The request body is passed through to the target endpoint.
 // The result of the call is the result of invoking the target service endpoint
 // unless the `async` pragma header is specified.
 //
 //     Consumes:
-//     - application/json
+//     - application
 //     Produces:
-//     - application/json
+//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
@@ -91,14 +91,14 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Call executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId`.
-// The JSON request body is passed through to the target endpoint.
+// The request body is passed through to the target endpoint.
 // The result of the call is the result of invoking the target actor method
 // unless the `async` pragma header is specified.
 //
 //     Consumes:
-//     - application/json
+//     - application
 //     Produces:
-//     - application/json
+//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
@@ -157,10 +157,8 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // This operation cancels all reminders for the actor instance specified in the path.
 // The number of reminders cancelled is returned as the result of the operation.
 //
-//     Consumes:
-//     - application/json
 //     Produces:
-//     - application/json
+//     - text/plain
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderCancelAllResult
@@ -180,10 +178,8 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
 // is sent to true the `404` response will instead be a `200` with a body containing `0`.
 //
-//     Consumes:
-//     - application/json
 //     Produces:
-//     - application/json
+//     - text/plain
 //     Schemes: http
 //     Responses:
 //       200: response200ReminderCancelResult
@@ -200,8 +196,6 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // This operation returns all reminders for the actor instance specified in the path.
 //
-//     Consumes:
-//     - application/json
 //     Produces:
 //     - application/json
 //     Schemes: http
@@ -223,8 +217,6 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // If `nilOnAbsent` is true the `404` response will be replaced with
 // a `200` response with a `nil` response body.
 //
-//     Consumes:
-//     - application/json
 //     Produces:
 //     - application/json
 //     Schemes: http
@@ -250,7 +242,7 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Consumes:
 //     - application/json
 //     Produces:
-//     - application/json
+//     - text/plain
 //     Schemes: http
 //     Responses:
 //       200: response200
@@ -307,7 +299,7 @@ func stateKey(t, id string) string {
 //     Consumes:
 //     - application/json
 //     Produces:
-//     - application/json
+//     - text/plain
 //     Schemes: http
 //     Responses:
 //       200: response200StateSetResult
@@ -368,6 +360,8 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // `0` if there was no entry for `key`.
 //
 //     Schemes: http
+//     Produces:
+//     - text/plain
 //     Responses:
 //       200: response200StateDeleteResult
 //       500: response500
@@ -428,7 +422,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Consumes:
 //     - application/json
 //     Produces:
-//     - application/json
+//     - text/plain
 //     Schemes: http
 //     Responses:
 //       200: response200StateSetMultipleResult
@@ -556,8 +550,6 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // may be either a service endpoint or an actor method.
 //
 //     Schemes: http
-//     Consumes:
-//     - application/json
 //     Responses:
 //       200: response200
 //       500: response500
