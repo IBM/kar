@@ -7,12 +7,23 @@ import javax.enterprise.context.RequestScoped;
 import javax.enterprise.inject.Default;
 import javax.json.JsonObject;
 
+import com.ibm.research.kar.actor.annotations.LockPolicy;
+
 @Default
 public class ActorTask implements Callable<Object> {
 
 	private Object actorObj;
 	private Method actorMethod;
 	private JsonObject params;
+	private int lockPolicy;
+
+	public int getLockPolicy() {
+		return lockPolicy;
+	}
+
+	public void setLockPolicy(int lockPolicy) {
+		this.lockPolicy = lockPolicy;
+	}
 
 	public Object getActorObj() {
 		return actorObj;
@@ -41,16 +52,30 @@ public class ActorTask implements Callable<Object> {
 	@Override
 	public Object call() throws Exception {
 
+		Object result = null;
+
 		if (actorMethod.getParameterCount() > 0) {
-			synchronized (actorObj) {
-				return actorMethod.invoke(actorObj, params);
+			switch (this.lockPolicy) {
+			case LockPolicy.READ:
+				result = actorMethod.invoke(actorObj, params);
+			case LockPolicy.WRITE:
+				synchronized (actorObj) {
+					result = actorMethod.invoke(actorObj, params);
+				}
 			}
 		} else {
-			synchronized (actorObj) {
-				return actorMethod.invoke(actorObj);
+			switch (this.lockPolicy) {
+			case LockPolicy.READ:
+				result = actorMethod.invoke(actorObj);
+			case LockPolicy.WRITE:
+				synchronized (actorObj) {
+					result = actorMethod.invoke(actorObj);
+				}
 			}
 		}
+		
+		return result;
+
+
 	}
-
-
 }

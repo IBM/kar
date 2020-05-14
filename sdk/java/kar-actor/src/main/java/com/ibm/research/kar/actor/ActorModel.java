@@ -1,6 +1,7 @@
 package com.ibm.research.kar.actor;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public class ActorModel {
 	private String className;
 
 	// Lookup for callable remote methods
-	private Map<String, Method> remoteMethods;
+	private Map<String, RemoteMethodType> remoteMethods;
 	
 	// Lookup for init method
 	private Method activateMethod;
@@ -21,13 +22,23 @@ public class ActorModel {
 	// Lookup for deinit method
 	private Method deactivateMethod;
 	
+	private Type[] interfaces;
+	
+
+	public Type[] getInterfaces() {
+		return interfaces;
+	}
+	public void setInterfaces(Type[] interfaces) {
+		this.interfaces = interfaces;
+	}
+
 
 	// Map of instances of this actor type indexed by id
 	private Map<String, Object> actorInstances;
 
 
 	public ActorModel() {
-		this.remoteMethods = new HashMap<String,Method>();
+		this.remoteMethods = new HashMap<String,RemoteMethodType>();
 		this.actorInstances = new HashMap<String,Object>();
 	}
 	/**
@@ -65,12 +76,12 @@ public class ActorModel {
 		return null;
 	}
 
-	public Map<String, Method> getRemoteMethods() {
+	public Map<String, RemoteMethodType> getRemoteMethods() {
 		return remoteMethods;
 	}
 
 
-	public void setRemoteMethods(Map<String, Method> remoteMethods) {
+	public void setRemoteMethods(Map<String, RemoteMethodType> remoteMethods) {
 		this.remoteMethods = remoteMethods;
 	}
 

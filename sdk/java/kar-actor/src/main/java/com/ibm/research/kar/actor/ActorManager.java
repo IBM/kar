@@ -12,6 +12,6 @@ public interface ActorManager {
 	// get existing or create new actor instance
 	public Object getActor(String type, String id);
 	
-	public Method getActorMethod(String type, String name);
+	public RemoteMethodType getActorMethod(String type, String name);
 	
 }

@@ -3,6 +3,7 @@ package com.ibm.research.kar.actor;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -61,14 +62,23 @@ public class ActorManagerImpl implements ActorManager {
 						if (annotation != null) {
 
 							Method[] methods = cls.getMethods();
-							Map<String,Method> remoteMethods = new HashMap<String,Method>();
+							Map<String,RemoteMethodType> remoteMethods = new HashMap<String,RemoteMethodType>();
 							Method activateMethod = null;
 							Method deactivateMethod = null;
+							
 
 							for (Method method : methods) {
 								if (method.isAnnotationPresent(Remote.class)) {
 									System.out.print(LOG_PREFIX+"initialize: adding method " + method.getName() + " to remote methods");
-									remoteMethods.put(method.getName(),method);
+									
+									int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
+									
+									RemoteMethodType methodType = new RemoteMethodType();
+									methodType.setLockPolicy(lockPolicy);
+									methodType.setMethod(method);
+									
+									remoteMethods.put(method.getName(),methodType);
+									
 								} else if (method.isAnnotationPresent(Activate.class)) {
 									activateMethod = method;
 								} else if (method.isAnnotationPresent(Deactivate.class)) {
@@ -80,6 +90,10 @@ public class ActorManagerImpl implements ActorManager {
 							ActorModel actorRef = new ActorModel();
 
 							String karTypeName = nameList.get(classList.indexOf(actorClassName));
+							
+
+							Type[] interfaces = cls.getGenericInterfaces();
+							actorRef.setInterfaces(interfaces);
 
 							// add kar type and class name for future (?) bookeeping
 							actorRef.setType(karTypeName);
@@ -197,13 +211,13 @@ public class ActorManagerImpl implements ActorManager {
 
 
 	@Override
-	public Method getActorMethod(String type, String name) {
+	public RemoteMethodType getActorMethod(String type, String name) {
 		System.out.println(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
 		ActorModel model = this.actorMap.get(type);
 
 		System.out.println(LOG_PREFIX + "getactorMethod: found actor model " + model);
 
-		Method method = null;
+		RemoteMethodType method = null;
 
 
 		if (model != null) {
