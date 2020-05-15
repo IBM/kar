@@ -121,7 +121,8 @@ instance to the caller. An asynchronous method invocation returns as soon as KAR
 accepts the invocation with a simple acknowledgment.
 
 If no application component is available to instantiate the specified actor
-type, KAR persists the invocation request until it can be delivered.
+type, KAR persists the invocation request until it can be delivered (up to a
+configurable timeout).
 
 Subsequent method invocations on the same actor reference will normally be
 handled by the same actor instance in the same application component. But, if an
