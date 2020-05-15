@@ -40,7 +40,6 @@ public class Dummy implements KarSessionListener {
 	
 		JsonObject respObj = resp.readEntity(JsonObject.class);
 		
-		System.out.println("Dummy.canBeInvoked: My session id is " + this.sessionid);
 		return respObj.toString();
 	}
 	

@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.ConcurrencyManagement;
@@ -28,15 +29,16 @@ import com.ibm.research.kar.actor.annotations.Remote;
 public class ActorManagerImpl implements ActorManager {
 
 	private final static String LOG_PREFIX = "ActorManagerImpl.";
+	private final Logger logger = Logger.getLogger(ActorManagerImpl.class.getName());
 
 	private Map<String, ActorModel> actorMap;
 
 	@PostConstruct
 	public void initialize() {
-		System.out.println(LOG_PREFIX+"initialize: Intializing Actor map");
+		logger.info(LOG_PREFIX+"initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
 
-		System.out.println(LOG_PREFIX+"initialize: Got init params " + ActorRuntimeContextListener.actorClassStr + ":"+ ActorRuntimeContextListener.actorTypeNameStr);
+		logger.info(LOG_PREFIX+"initialize: Got init params " + ActorRuntimeContextListener.actorClassStr + ":"+ ActorRuntimeContextListener.actorTypeNameStr);
 
 		// ensure that we have non-null class and kar type strings from web.xml
 		if ((ActorRuntimeContextListener.actorClassStr != null) && (ActorRuntimeContextListener.actorTypeNameStr != null)) {
@@ -115,14 +117,14 @@ public class ActorManagerImpl implements ActorManager {
 
 			}
 
-			System.out.println(LOG_PREFIX + "initialize: actor map initialized with " + actorMap.size() + " entries");
+			logger.info(LOG_PREFIX + "initialize: actor map initialized with " + actorMap.size() + " entries");
 		}
 	}
 
 
 	@Lock(LockType.WRITE)
 	public Object createActor(String type, String id) {
-		System.out.println(LOG_PREFIX + "createActor ActorManager");
+		logger.info(LOG_PREFIX + "createActor ActorManager");
 
 
 		ActorModel actorRef = actorMap.get(type);
@@ -156,7 +158,7 @@ public class ActorManagerImpl implements ActorManager {
 
 	@Lock(LockType.WRITE)
 	public void deleteActor(String type, String id) {
-		System.out.println(LOG_PREFIX + "deleteActor: deleting " + type + " actor " + id);
+		logger.info(LOG_PREFIX + "deleteActor: deleting " + type + " actor " + id);
 		ActorModel actorRef = this.actorMap.get(type);
 
 		if (actorRef != null) {
@@ -170,22 +172,22 @@ public class ActorManagerImpl implements ActorManager {
 					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
-						System.out.println(LOG_PREFIX + "deleteActor: error executing actor deactivate method");
+						logger.info(LOG_PREFIX + "deleteActor: error executing actor deactivate method");
 					}
 				}
 				actorRef.getActorInstances().remove(actorObj);
 			} else {
-				System.out.println(LOG_PREFIX + "deleteActor: warning, no instance found for actor " + id);
+				logger.info(LOG_PREFIX + "deleteActor: warning, no instance found for actor " + id);
 			}
 		} else {
-			System.out.println(LOG_PREFIX + "deleteActor: warning, no model found for " + type + " actor");
+			logger.info(LOG_PREFIX + "deleteActor: warning, no model found for " + type + " actor");
 		}
 	}
 
 	@Lock(LockType.READ) 
 	public Object getActor(String type, String id) {
 
-		System.out.println(LOG_PREFIX+"getActor: Retrieving actor instance");  
+		logger.info(LOG_PREFIX+"getActor: Retrieving actor instance");  
 
 		ActorModel model = this.actorMap.get(type);
 		Object actorObj = null;
@@ -199,12 +201,12 @@ public class ActorManagerImpl implements ActorManager {
 
 	@Lock(LockType.READ) 
 	public int getNumActors() {
-		System.out.println("ActorManagerImpl.getNumActors: checking actor map for size");
+		logger.info("ActorManagerImpl.getNumActors: checking actor map for size");
 
 		if (actorMap != null) {
 			return actorMap.size();
 		} else {
-			System.out.println(LOG_PREFIX + "getNumActors: no map instance found");
+			logger.info(LOG_PREFIX + "getNumActors: no map instance found");
 			return 0;
 		}
 	}
@@ -212,10 +214,10 @@ public class ActorManagerImpl implements ActorManager {
 
 	@Override
 	public RemoteMethodType getActorMethod(String type, String name) {
-		System.out.println(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
+		logger.info(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
 		ActorModel model = this.actorMap.get(type);
 
-		System.out.println(LOG_PREFIX + "getactorMethod: found actor model " + model);
+		logger.info(LOG_PREFIX + "getactorMethod: found actor model " + model);
 
 		RemoteMethodType method = null;
 
@@ -223,7 +225,7 @@ public class ActorManagerImpl implements ActorManager {
 		if (model != null) {
 			method = model.getRemoteMethods().get(name);
 		} else {
-			System.out.println(LOG_PREFIX+"getActorMethod: Warning, no model of type " + type + " found");
+			logger.info(LOG_PREFIX+"getActorMethod: Warning, no model of type " + type + " found");
 		}
 
 		return method; 

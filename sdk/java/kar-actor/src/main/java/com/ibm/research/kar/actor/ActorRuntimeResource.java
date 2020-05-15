@@ -3,6 +3,7 @@ package com.ibm.research.kar.actor;
 import java.lang.reflect.Type;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Logger;
 
 import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedExecutorService;
@@ -23,6 +24,7 @@ import javax.ws.rs.core.Response;
 @ApplicationScoped
 public class ActorRuntimeResource {
 
+	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
 	private final static String LOG_PREFIX = "ActorRuntimResource";
 	private final static int FUTURE_WAIT_TIME_MILLIS = 300;
 
@@ -36,14 +38,14 @@ public class ActorRuntimeResource {
 	@Path("{type}/{id}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
-		System.out.println(LOG_PREFIX + "getActor: Checking for actor with id " + id);
+		logger.info(LOG_PREFIX + "getActor: Checking for actor with id " + id);
 		if (actorManager.getActor(type, id) != null) {
 
-			System.out.println(LOG_PREFIX + "getActor: Found actor");
+			logger.info(LOG_PREFIX + "getActor: Found actor");
 			return Response.status(Response.Status.OK).build();
 		} else {
 
-			System.out.println(LOG_PREFIX + "getActor: No actor found, creating");
+			logger.info(LOG_PREFIX + "getActor: No actor found, creating");
 
 			this.actorManager.createActor(type, id);
 
@@ -54,7 +56,7 @@ public class ActorRuntimeResource {
 	@DELETE
 	@Path("{type}/{id}")
 	public Response deleteActor(@PathParam("type") String type, @PathParam("id") String id) {
-		System.out.println(LOG_PREFIX + "deleteActor: deleting actor");
+		logger.info(LOG_PREFIX + "deleteActor: deleting actor");
 
 		//actorManager.deleteActor(type, id);
 		return Response.status(Response.Status.OK).build();
@@ -71,12 +73,12 @@ public class ActorRuntimeResource {
 			@PathParam("path") String path, 
 			JsonObject params) {
 
-		System.out.println(LOG_PREFIX + "invokeActorMethod: invoking " + type + "actor " + id + " method " + path + " with params " + params);
+		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + "actor " + id + " method " + path + " with params " + params);
 
 		Object actorObj = this.actorManager.getActor(type, id);
 		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
 
-		System.out.println(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
+		logger.info(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
 		Object result = null;
 
 
@@ -113,15 +115,15 @@ public class ActorRuntimeResource {
 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
-				System.out.println(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
+				logger.info(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
 			} catch (ExecutionException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-				System.out.println(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
+				logger.info(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
 			}
 
 		} else {
-			System.out.println(LOG_PREFIX+"invokeActorMethod: Warning, cannot find " + type + " actor instance " + id + " or method " + path);
+			logger.info(LOG_PREFIX+"invokeActorMethod: Warning, cannot find " + type + " actor instance " + id + " or method " + path);
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 
