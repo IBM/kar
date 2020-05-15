@@ -11,7 +11,7 @@ The Java SDK provides `com.ibm.research.kar.Kar` you can use to communicate with
 ## Basic KAR SDK usage
 The following code example show how to use the SDK
 
-###Invoke a Service Code Example:
+### Invoke a Service Code Example:
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -32,7 +32,7 @@ public static void main(String[] args) {
 }
 ```
 
-###Call an Actor Code Example
+### Call an Actor Code Example
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -113,7 +113,7 @@ public class MyActor  {
 KAR manages a session ID for actor communications.  You can access the sessionId by implementing `KarSessionListener`:
 ```java
 @Actor
-public class Dummy implements KarSessionListener {
+public class MyActor implements KarSessionListener {
 	private String sessionid;
 
     // KAR actor runtime will pass the sessionid
@@ -165,7 +165,7 @@ The corresponding`pom.xml` in `actor-server` should include the dependencies:
     <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
-`kar-runtime` also requires the following features as part of the runtime.
+`kar-actor` also requires the following features as part of the runtime. The `server.xml` for `openliberty` looks like:
 ```xml
   <featureManager>
       <feature>jaxrs-2.1</feature>
@@ -178,7 +178,7 @@ The corresponding`pom.xml` in `actor-server` should include the dependencies:
       <feature>concurrent-1.0</feature>
   </featureManager>
 ```
-Actors are loaded into the actor-runtime at deploy time. Add the actors to your classpath and then expose them to the `kar-actor` in `web.xml`.  For example, if you want KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, you do:
+`kar-actor` loads actors at deploy time. Add the actors to your classpath and then expose them to `kar-actor` as context parameters in your `web.xml`.  For example, if you want KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
 ```xml
 	<context-param>
 		<param-name>kar-actor-classes</param-name>
