@@ -24,7 +24,7 @@ required to offer service. A component that offers a service must implement a
 REST server.
 
 An application component can make a _request_ to a service of the application. A
-request consist of the name of the target service and an HTTP request. KAR
+request consists of the name of the target service and an HTTP request. KAR
 delivers the request to any component offering the service. If no such component
 is available KAR persists the request until it can be delivered. Requests may be
 _synchronous_ or _asynchronous_. A synchronous request returns the _response_ to
@@ -48,9 +48,9 @@ components later joining the application.
 KAR provides support for _actors_. An _actor instance_ (or actor in short) is a
 logically independent unit of compute and state, typically much smaller than an
 application component. An actor instance offers _methods_ that can query and/or
-update the state of the actor instance. Actors offer a single-threaded execution
-model where two method invocations on an actor instance may not make progress
-concurrently.
+update the state of the actor instance and invoke other actors. Actors offer a
+single-threaded execution model where two method invocations on an actor
+instance may not make progress concurrently.
 
 Every actor instance is an instance of an _actor type_. Actor instances of the
 same type are expected to offer the same methods and logically represent
@@ -94,10 +94,10 @@ invocation returns the result of the invocation of the method on the actor
 instance to the caller. An asynchronous method invocation returns as soon as KAR
 accepts the invocation with a simple acknowledgment.
 
-If no an application component is available to instantiate the specified actor
+If no application component is available to instantiate the specified actor
 type, KAR persists the invocation request until it can be delivered.
 
-Subsequent method invocations on the same actor reference will normally be be
+Subsequent method invocations on the same actor reference will normally be
 handled by the same actor instance in the same application component. But, if an
 actor instance is not used for a period of time, KAR will request the
 application component to destruct the actor instance. If a method is later
@@ -108,8 +108,8 @@ application component.
 Because KAR makes explicit requests to construct and destruct actor instances to
 application components, these components can save the actor instance state to
 the application persistent store before destruction and restore the actor
-instance state upon reconstruction to give the illusion of a persistent actor
-instance.
+instance state upon reconstruction in order to give the illusion of a persistent
+actor instance.
 
 KAR may migrate an actor instance from one application component to another when
 no method is running on the instance by first destructing the existing instance
@@ -123,15 +123,16 @@ random unique ID.
 
 KAR ensures that concurrent invocations of methods on actor instance from
 different sessions are executed serially by queuing invocations if necessary. On
-the other hande, method invocations bearing the same session ID may execute
+the other hand, method invocations bearing the same session ID may execute
 concurrently.
 
 While session IDs may be managed by callers explicitly and serve arbitrary
-purposes, the primary intend of session IDs is to support actor re-entrancy.
+purposes, the primary intent of session IDs is to support actor re-entrancy.
 Re-entrancy makes it possible for an actor instance to make a synchronous
 invocation of method on itself (possibly indirectly) without deadlocking. KAR
 actor SDKs implicitly thread session IDs through method invocations to enable
-re-entrancy.
+re-entrancy. While re-entrancy permits method invocations to overlap, it still
+ensures that no two invocations make progress concurrently.
 
 ## Reminders
 
