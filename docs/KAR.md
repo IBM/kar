@@ -1,5 +1,21 @@
 # KAR Programming Model
 
+KAR makes is possible to construct scalable, fault-tolerant, cloud-native
+application by building networks of loosely coupled application components.
+These components implement microservices and actors. They communicate over Kafka
+and persist state in Redis.
+
+Components do not interface with each other, Kafka, or Redis directly but via
+the KAR sidecar. This sidecar runs in parallel with each application component
+(in the same pod when deploying on Kubernetes). It offers REST APIs that permit
+one component to invoke another (Remote Procedure Call), to produce or consume
+events, or to persist state.
+
+While the sidecar REST API may be used directly, KAR provides language-specific
+SDKs that offer more idiomatic APIs and facilitate the implementation of actors.
+A JavaScript and a Java SDK are available now, with more to come in the near
+future.
+
 ## Applications
 
 A KAR _application_ is identified by its name. KAR supports running multiple
