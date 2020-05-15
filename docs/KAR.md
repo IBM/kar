@@ -1,7 +1,7 @@
 # KAR Programming Model
 
 KAR makes is possible to construct scalable, fault-tolerant, cloud-native
-application by building networks of loosely coupled application components.
+applications by building networks of loosely coupled application components.
 These components implement microservices and actors. They communicate over Kafka
 and persist state in Redis.
 
@@ -9,7 +9,7 @@ Components do not interface with each other, Kafka, or Redis directly but via
 the KAR sidecar. This sidecar runs in parallel with each application component
 (in the same pod when deploying on Kubernetes). It offers REST APIs that permit
 one component to invoke another (Remote Procedure Call), to produce or consume
-events, or to persist state.
+events, and to persist state.
 
 While the sidecar REST API may be used directly, KAR provides language-specific
 SDKs that offer more idiomatic APIs and facilitate the implementation of actors.
@@ -42,10 +42,11 @@ REST server.
 An application component can make a _request_ to a service of the application. A
 request consists of the name of the target service and an HTTP request. KAR
 delivers the request to any component offering the service. If no such component
-is available KAR persists the request until it can be delivered. Requests may be
-_synchronous_ or _asynchronous_. A synchronous request returns the _response_ to
-the HTTP request. An asynchronous request returns as soon as KAR accepts the
-request with a simple _acknowledgment_.
+is available KAR persists the request until it can be delivered (up to a
+configurable timeout). Requests may be _synchronous_ or _asynchronous_. A
+synchronous request returns the _response_ to the HTTP request. An asynchronous
+request returns as soon as KAR accepts the request with a simple
+_acknowledgment_.
 
 ## Stores
 
@@ -58,6 +59,11 @@ An application starts when a first component is joined to the application. Its
 store is initially empty. While the number of components in an application may
 go down to zero, KAR will persists its store content and make it available to
 components later joining the application.
+
+Since KAR may persist state indefinitely, components should make sure to delete
+unnecessary content from the persistent store, or set content to expire after a
+delay. KAR will also provide tools to monitor, examine, and cleanup persistent
+state.
 
 ## Actors
 
@@ -80,6 +86,7 @@ an actor reference by combining an actor type and an arbitrary ID. Actor
 references of different types may share the same ID but enjoy no special
 relationship.
 
+Application components may host many actor instances of multiple actor types.
 Application components must specify at launch time what actor types they
 support. A application component supporting an actor type T, must implement a
 REST server capable of handling the following requests:
@@ -90,10 +97,13 @@ REST server capable of handling the following requests:
 KAR includes actor SDKs to facilitate the implementation of such REST servers.
 For instance, the JavaScript SDK for KAR makes it possible to define an actor
 type by means of a class declaration. An actor instance is simply an instance of
-that class and its methods are the methods of the actor. The SDK handles the
-mapping from actor IDs to object references.
+that class and its methods are the methods of the actor. Multiple actor types
+may be defined by means of multiple classes. The SDK handles the mapping from
+actor types and IDs to object references and implements the required routes of a
+REST server.
 
-Application components may support multiple actor types.
+An application component may offer a service and at the same time hosts actors
+by implementing a REST server capable of both.
 
 ### Actor Lifecyle
 
@@ -137,18 +147,22 @@ A method invocation on an actor reference may optionally include an
 alphanumerical _session ID_. If no session ID is specified, KAR synthesizes a
 random unique ID.
 
-KAR ensures that concurrent invocations of methods on actor instance from
-different sessions are executed serially by queuing invocations if necessary. On
-the other hand, method invocations bearing the same session ID may execute
+KAR ensures that concurrent invocations of methods on actor instance with
+distinct session IDs are executed serially by queuing invocations if necessary.
+On the other hand, method invocations bearing the same session ID may execute
 concurrently.
 
-While session IDs may be managed by callers explicitly and serve arbitrary
-purposes, the primary intent of session IDs is to support actor re-entrancy.
-Re-entrancy makes it possible for an actor instance to make a synchronous
-invocation of method on itself (possibly indirectly) without deadlocking. KAR
-actor SDKs implicitly thread session IDs through method invocations to enable
-re-entrancy. While re-entrancy permits method invocations to overlap, it still
-ensures that no two invocations make progress concurrently.
+The primary intent of session IDs is to support actor re-entrancy. Re-entrancy
+makes it possible for an actor instance to make a synchronous invocation of a
+method on itself (possibly indirectly) without deadlocking. KAR actor SDKs
+implicitly thread session IDs through method invocations to enable re-entrancy.
+Concretely, when an actor method invokes another actor method synchronously (for
+the same actor reference or a different one), it reuses the session ID it has
+been invoked with.
+
+While re-entrancy permits method invocations to overlap, it still ensures that
+no two invocations make progress concurrently, since only nested synchronous
+invocations share the same session ID.
 
 ## Reminders
 
