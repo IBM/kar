@@ -47,7 +47,7 @@ public class ActorRuntimeResource {
 
 			this.actorManager.createActor(type, id);
 
-			return Response.status(Response.Status.OK).entity("Created " + type + " actor " + id).build();
+			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
 		}
 	}
 
