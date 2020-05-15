@@ -3,7 +3,6 @@ package com.ibm.research.kar.actor;
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
 
-import javax.enterprise.context.RequestScoped;
 import javax.enterprise.inject.Default;
 import javax.json.JsonObject;
 
@@ -58,7 +57,8 @@ public class ActorTask implements Callable<Object> {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
 				result = actorMethod.invoke(actorObj, params);
-			case LockPolicy.WRITE:
+				break;
+			default:
 				synchronized (actorObj) {
 					result = actorMethod.invoke(actorObj, params);
 				}
@@ -67,11 +67,13 @@ public class ActorTask implements Callable<Object> {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
 				result = actorMethod.invoke(actorObj);
-			case LockPolicy.WRITE:
+				break;
+			default:
 				synchronized (actorObj) {
 					result = actorMethod.invoke(actorObj);
 				}
 			}
+
 		}
 		
 		return result;

@@ -71,7 +71,7 @@ public class ActorManagerImpl implements ActorManager {
 
 							for (Method method : methods) {
 								if (method.isAnnotationPresent(Remote.class)) {
-									System.out.print(LOG_PREFIX+"initialize: adding method " + method.getName() + " to remote methods");
+									System.out.print(LOG_PREFIX+"initialize: adding method " + method.getName() + " to remote methods for " + actorClassName);
 									
 									int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
 									

@@ -25,7 +25,7 @@ import javax.ws.rs.core.Response;
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
-	private final static String LOG_PREFIX = "ActorRuntimResource";
+	private final static String LOG_PREFIX = "ActorRuntimResource.";
 	private final static int FUTURE_WAIT_TIME_MILLIS = 300;
 
 	@Inject
