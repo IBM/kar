@@ -33,12 +33,12 @@ public interface KarRest extends AutoCloseable {
 	 * Services
 	 */
 
-	// asynchronous service invocation, returns "OK" immediately
-	@Deprecated
+	// asynchronous service invocation, returns  returns (202, "OK")
 	@POST
-	@Path("service/{service}/tell/{path}")
+	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 
 	// synchronous service invocation, returns invocation result
@@ -52,12 +52,12 @@ public interface KarRest extends AutoCloseable {
 	 * Actors
 	 */
 
-	// asynchronous actor invocation, returns "OK" immediately
-	@Deprecated
+	// asynchronous actor invocation, returns (202, "OK")
 	@POST
-	@Path("actor/{type}/{id}/tell/{path}")
+	@Path("actor/{type}/{id}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonObject params) throws ProcessingException;
 
 	// synchronous actor invocation: returns invocation result
@@ -66,12 +66,6 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = maxRetry)
 	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonObject params) throws ProcessingException;
 
-	// Request the migration of an actor
-	@POST
-	@Path("actor/{type}/{id}/migrate")
-	@Retry(maxRetries = maxRetry)
-	public Response actorMigrate(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
-
 	//
 	// Actor Reminder operations
 	//
@@ -79,11 +73,13 @@ public interface KarRest extends AutoCloseable {
 	@DELETE
 	@Path("actor/{type}/{id}/reminders")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorCancelReminders(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorCancelReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@GET
@@ -99,6 +95,7 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/reminders}")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, JsonObject params) throws ProcessingException;
 
 
@@ -114,11 +111,13 @@ public interface KarRest extends AutoCloseable {
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonObject params) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorDeleteState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@GET
@@ -129,11 +128,13 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorSetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = maxRetry)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	/*
@@ -158,11 +159,6 @@ public interface KarRest extends AutoCloseable {
 	/*
 	 * System 
 	 */
-	@Deprecated
-	@POST
-	@Path("system/broadcast/{path}")
-	@Retry(maxRetries = maxRetry)
-	public Response broadcast(@PathParam("path") String path, JsonObject params) throws ProcessingException;
 
 	@GET
 	@Path("system/health")
@@ -173,10 +169,4 @@ public interface KarRest extends AutoCloseable {
 	@Path("system/shutdown")
 	@Retry(maxRetries = maxRetry)
 	public Response kill() throws ProcessingException;
-
-	@Deprecated
-	@POST
-	@Path("system/killAll")
-	@Retry(maxRetries = maxRetry)
-	public Response killAll() throws ProcessingException;
 }

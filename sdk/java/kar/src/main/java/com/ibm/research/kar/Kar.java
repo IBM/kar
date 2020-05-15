@@ -52,10 +52,9 @@ public class Kar {
 
 	
 	/******************
-	 * Public methods
-	 ******************/
+	* Public methods
+	******************/
 	
-	@Deprecated
 	// asynchronous service invocation, returns "OK" immediately
 	public Response tell(String service, String path, JsonObject params) throws ProcessingException {
 		return karClient.tell(service, path, params);
@@ -66,26 +65,20 @@ public class Kar {
 		return karClient.call(service, path, params);
 	}
 
-	@Deprecated
 	// asynchronous actor invocation, returns "OK" immediately
 	public Response actorTell(String type, String id, String path, JsonObject params) throws ProcessingException {
 		return karClient.actorTell(type, id, path, params);
 	}
 
-	// synchronous actor invocation: returns invocation result
+	// synchronous actor invocation with explicit session: returns invocation result
 	public Response actorCall(String type, String id,  String path, String session, JsonObject params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, session, params);
   }
 
-  public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
+	// synchronous actor invocation: returns invocation result
+	public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, null, params);
 	}
-
-	// migrate actor
-	public Response actorMigrate(String type, String id) throws ProcessingException {
-		return karClient.actorMigrate(type, id);
-  }
-
 
 	/*
 	 * Reminder Operations
@@ -125,45 +118,41 @@ public class Kar {
 	/*
 	 * Actor State Operations
 	 */
-    public Response actorGetState( String type,  String id,  String key) throws ProcessingException {
-      return karClient.actorGetState(type, id, key, true);
-    }
-
-    public Response actorSetState(String type,  String id,  String key, JsonObject params) throws ProcessingException {
-    	return karClient.actorSetState(type, id, key, params);
-    }
-
-    public Response actorDeleteState(String type,  String id,  String key) throws ProcessingException {
-      return karClient.actorDeleteState(type, id, key, true);
-    }
-    public Response actorGetAllState(String type,  String id) throws ProcessingException {
-    	return karClient.actorGetAllState(type, id);
-}
-
-    public Response actorDeleteAllState(String type,  String id) throws ProcessingException {
-    	return karClient.actorDeleteAllState(type, id);
-    }
-    
-    // Events
-    public Response subscribe(String topic) throws ProcessingException {
-    	return karClient.subscribe(topic);
-    }
-    
-    public Response unsubscribe(String topic) throws ProcessingException {
-    	return karClient.unsubscribe(topic);
-    }
-    
-    public Response publish(String topic) throws ProcessingException {
-    	return karClient.publish(topic);
-    }
-    
-    
-    // System
-	// broadcast to all sidecars except for ours
-	public Response broadcast(@PathParam("path") String path, JsonObject params) throws ProcessingException {
-		return karClient.broadcast(path, params);
+	public Response actorGetState( String type,  String id,  String key) throws ProcessingException {
+		return karClient.actorGetState(type, id, key, true);
 	}
-	
+
+	public Response actorSetState(String type,  String id,  String key, JsonObject params) throws ProcessingException {
+		return karClient.actorSetState(type, id, key, params);
+	}
+
+	public Response actorDeleteState(String type,  String id,  String key) throws ProcessingException {
+		return karClient.actorDeleteState(type, id, key, true);
+	}
+
+	public Response actorGetAllState(String type,  String id) throws ProcessingException {
+		return karClient.actorGetAllState(type, id);
+	}
+
+	public Response actorDeleteAllState(String type,  String id) throws ProcessingException {
+		return karClient.actorDeleteAllState(type, id);
+	}
+
+	// Events
+	public Response subscribe(String topic) throws ProcessingException {
+		return karClient.subscribe(topic);
+	}
+
+	public Response unsubscribe(String topic) throws ProcessingException {
+		return karClient.unsubscribe(topic);
+	}
+
+	public Response publish(String topic) throws ProcessingException {
+		return karClient.publish(topic);
+	}
+
+	// System
+
 	public Response health() {
 		return karClient.health();
 	}
@@ -171,10 +160,4 @@ public class Kar {
 	public Response kill() {
 		return karClient.kill();
 	}
-	
-	public Response killAll() {
-		return karClient.killAll();
-	}
-	
-
 }
