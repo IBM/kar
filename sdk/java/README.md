@@ -2,16 +2,18 @@
 
 # Prerequisites
 SDK tested using
-- Java 1.8
-- Maven 3.6.3
+- Java 1.8.X
+- Maven 3.6.X
 
 # Overview
-The Java SDK provides `com.ibm.research.kar.Kar` you can use to communicate with the Kar runtime and the `com.ibm.research.kar.actor` to write and execute actors as part of your microservice applications.
+The Java SDK provides:
+1.  the class `com.ibm.research.kar.Kar` to communicate with the Kar runtime
+2. the package `com.ibm.research.kar.actor` to write and execute actors as part of a Kar component (e.g. a microservice).
 
 ## Basic KAR SDK usage
-The following code example show how to use the SDK
+The following code examples show how to use the Kar SDK.
 
-### Invoke a Service Code Example:
+### Invoke a Service:
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -32,7 +34,7 @@ public static void main(String[] args) {
 }
 ```
 
-### Call an Actor Code Example
+### Call an Actor Method:
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -60,7 +62,7 @@ The KAR actor runtime in `com.ibm.research.kar.actor` allows you to:
 
 ### Actor Annotations
 
-Actor annotation code example:
+Actor annotations example:
 ```java
 package com.ibm.research.kar.example.actors;
 
@@ -79,58 +81,56 @@ import com.ibm.research.kar.actor.annotations.Remote;
 @Actor
 public class MyActor  {
 
-	@Activate // optional actor constructor
-	public void init() {
-		// init code
-	}	
+    @Activate // optional actor constructor
+    public void init() {
+        // init code
+    }	
     
-    // expose this method to actor runtime.
-    // The Java actor runtime by default treats this as a 
-    // synchronized method
-	@Remote 
-	public void updateMyState(JsonObject json) {
+    // Expose this method to the actor runtime.
+    // Calls to this method are synchronized by default
+    @Remote 
+    public void updateMyState(JsonObject json) {
         // remote code
-	}
+    }
 
-    // You can specify a read policy to allow concurrent access to method
+    // Specify a read policy to allow concurrent access to method
     @Remote(lockPolicy = LockPolicy.READ)  
     public String readMyState() {
         // read-only code
     }
 	
-    // unmarked methods are not callable by actor runtime
-	public void cannotBeInvoked() {
-	}
-	
+    // methods not annotated as @Remote are 
+    // not callable by actor runtime
+    public void cannotBeInvoked() {
+    }
 
-	@Deactivate // optional actor de-constructor
-	public void kill() {
-		
-	}
+    @Deactivate // optional actor de-constructor
+    public void kill() {
+    }
 }
 ```
 ### KAR SessionID
-KAR manages a session ID for actor communications.  You can access the sessionId by implementing `KarSessionListener`:
+KAR manages a session ID for actor communications as part of the [KAR programming model](https://github.ibm.com/solsa/kar/blob/master/docs/KAR.md). Actors access the sessionId by implementing `KarSessionListener`:
 ```java
 @Actor
 public class MyActor implements KarSessionListener {
-	private String sessionid;
+    private String sessionid;
 
     // KAR actor runtime will pass the sessionid
     // using this method
-	@Override
-	public void setSessionId(String sessionId) {
-    	this.sessionid = sessionId;	
-	}
+    @Override
+    public void setSessionId(String sessionId) {
+        this.sessionid = sessionId;	
+    }
 
-	@Override
-	public String getSessionId() {
-		return this.sessionid;
-	}
+    @Override
+    public String getSessionId() {
+        return this.sessionid;
+    }
 }
 ```
-### Build and include the `kar-actor` module as part of your microsevice
- Using Maven, an example `pom.xml` file to include `kar` and `kar-runtime` into a microservice called `actor-server` is:
+### Build and include the `kar-actor` module as part of a Kar component
+ Using Maven, an example `pom.xml` file to include the `kar` and `kar-runtime` modules into a microservice called `actor-server` is:
  ```xml
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -152,7 +152,7 @@ public class MyActor implements KarSessionListener {
     </modules>
 </project>
 ```
-The corresponding`pom.xml` in `actor-server` should include the dependencies:
+The corresponding`pom.xml` in `actor-server` should include the following dependencies:
 ```xml
 <dependency>
     <groupId>com.ibm.research.kar</groupId>
@@ -165,27 +165,29 @@ The corresponding`pom.xml` in `actor-server` should include the dependencies:
     <version>1.0-SNAPSHOT</version>
 </dependency>
 ```
-`kar-actor` also requires the following features as part of the runtime. The `server.xml` for `openliberty` looks like:
+`kar-actor` also requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
 ```xml
-  <featureManager>
-      <feature>jaxrs-2.1</feature>
-      <feature>jsonb-1.0</feature>
-      <feature>mpHealth-2.1</feature>
-      <feature>mpConfig-1.3</feature>
-      <feature>mpRestClient-1.3</feature>
-      <feature>beanValidation-2.0</feature>
-      <feature>cdi-2.0</feature>
-      <feature>concurrent-1.0</feature>
-  </featureManager>
+<featureManager>
+    <feature>jaxrs-2.1</feature>
+    <feature>jsonb-1.0</feature>
+    <feature>mpHealth-2.1</feature>
+    <feature>mpConfig-1.3</feature>
+    <feature>mpRestClient-1.3</feature>
+    <feature>beanValidation-2.0</feature>
+    <feature>cdi-2.0</feature>
+    <feature>concurrent-1.0</feature>
+</featureManager>
 ```
-`kar-actor` loads actors at deploy time. Add the actors to your classpath and then expose them to `kar-actor` as context parameters in your `web.xml`.  For example, if you want KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
+`kar-actor` loads actors at deploy time. Add the actors to the classpath and expose to the actor runtime as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
 ```xml
-	<context-param>
-		<param-name>kar-actor-classes</param-name>
-		<param-value>com.example.Actor1, com.example.actor2</param-value>
-	</context-param>
-	<context-param>
-		<param-name>kar-actor-types</param-name>
-		<param-value>Dog, Cat</param-value>
-	</context-param>
+<context-param>
+    <param-name>kar-actor-classes</param-name>
+    <param-value>com.example.Actor1, com.example.Actor2</param-value>
+</context-param>
+<context-param>
+    <param-name>kar-actor-types</param-name>
+    <param-value>Dog, Cat</param-value>
+</context-param>
 ```
+
+For a complete example, see the [KAR example actor server](https://github.ibm.com/castrop/kar/tree/master/examples/java/actors)
