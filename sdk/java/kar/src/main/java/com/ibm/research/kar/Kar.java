@@ -55,29 +55,44 @@ public class Kar {
 	* Public methods
 	******************/
 
-	// asynchronous service invocation, returns "OK" immediately
-	public Response tell(String service, String path, JsonValue params) throws ProcessingException {
-		return karClient.tell(service, path, params);
+	// asynchronous service invocation, returns once invoke is scheduled
+	public void tell(String service, String path, JsonValue params) throws ProcessingException {
+		karClient.tell(service, path, params);
 	}
 
-	// synchronous service invocation, returns invocation result
-	public Response call(String service, String path, JsonValue params) throws ProcessingException {
-		return karClient.call(service, path, params);
+	// synchronous service invocation, returns result of invoking the service
+	public JsonValue call(String service, String path, JsonValue params) throws ProcessingException {
+		Response response = karClient.call(service, path, params);
+		if (response.hasEntity()) {
+			return response.readEntity(JsonValue.class);
+		} else {
+			return null;
+		}
 	}
 
-	// asynchronous actor invocation, returns "OK" immediately
-	public Response actorTell(String type, String id, String path, JsonValue params) throws ProcessingException {
-		return karClient.actorTell(type, id, path, params);
+	// asynchronous actor invocation, returns once invoke is scheduled
+	public void actorTell(String type, String id, String path, JsonValue params) throws ProcessingException {
+		karClient.actorTell(type, id, path, params);
 	}
 
-	// synchronous actor invocation with explicit session: returns invocation result
-	public Response actorCall(String type, String id,  String path, String session, JsonValue params) throws ProcessingException {
-		return karClient.actorCall(type, id, path, session, params);
+	// synchronous actor invocation with explicit session: returns result of the actor method
+	public JsonValue actorCall(String type, String id,  String path, String session, JsonValue params) throws ProcessingException {
+		Response response = karClient.actorCall(type, id, path, session, params);
+		if (response.hasEntity()) {
+			return response.readEntity(JsonValue.class);
+		} else {
+			return null;
+		}
   }
 
-	// synchronous actor invocation: returns invocation result
-	public Response actorCall(String type, String id,  String path, JsonValue params) throws ProcessingException {
-		return karClient.actorCall(type, id, path, null, params);
+	// synchronous actor invocation: returns the result of the actor method
+	public JsonValue actorCall(String type, String id,  String path, JsonValue params) throws ProcessingException {
+		Response response = karClient.actorCall(type, id, path, null, params);
+		if (response.hasEntity()) {
+			return response.readEntity(JsonValue.class);
+		} else {
+			return null;
+		}
 	}
 
 	/*

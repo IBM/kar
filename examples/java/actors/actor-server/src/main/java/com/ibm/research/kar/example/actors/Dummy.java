@@ -4,8 +4,6 @@ import javax.json.Json;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-import javax.ws.rs.core.Response;
-
 import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.KarSessionListener;
 import com.ibm.research.kar.actor.annotations.Activate;
@@ -27,50 +25,37 @@ public class Dummy implements KarSessionListener {
 	}
 
 	@Remote(lockPolicy = LockPolicy.READ)
-	public String canBeInvoked(JsonObject json) {
-
+	public JsonValue canBeInvoked(JsonObject json) {
 		int number = json.getInt("number");
-
 		number++;
 
 		JsonObject params = Json.createObjectBuilder()
 				.add("number",number)
 				.build();
 
-		Response resp = kar.actorCall("dummy2", "dummy2id", "canBeInvoked", params);
-
-		JsonObject respObj = resp.readEntity(JsonObject.class);
+		JsonValue result = kar.actorCall("dummy2", "dummy2id", "canBeInvoked", params);
 
 		System.out.println("Dummy.canBeInvoked: My session id is " + this.sessionid);
-		return respObj.toString();
+		return result;
 	}
 
 	@Remote(lockPolicy = LockPolicy.READ)
 	public JsonValue incr(JsonObject json) {
-
 		int number = json.getInt("number");
 		JsonValue n = Json.createValue(number);
-
-		Response resp = kar.actorCall("calculator", "mycalc", "add", n);
-
-		JsonValue result = resp.readEntity(JsonValue.class);
-
-		return result;
+		return kar.actorCall("calculator", "mycalc", "add", n);
 	}
 
 	public void cannotBeInvoked() {
-
 	}
 
 	@Deactivate
 	public void kill() {
-
 	}
 
 	@Override
 	public void setSessionId(String sessionId) {
 		this.sessionid = sessionId;
-
 	}
 
 	@Override
