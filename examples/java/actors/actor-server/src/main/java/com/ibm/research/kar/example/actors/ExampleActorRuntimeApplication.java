@@ -4,7 +4,6 @@ import javax.ws.rs.ApplicationPath;
 
 /**
  * Example deployment of KAR actor runtime
- *
  */
 @ApplicationPath("/")
 public class ExampleActorRuntimeApplication extends Application {

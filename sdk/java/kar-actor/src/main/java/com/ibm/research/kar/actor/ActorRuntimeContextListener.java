@@ -1,6 +1,5 @@
 package com.ibm.research.kar.actor;
 
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -16,21 +15,21 @@ import javax.servlet.annotation.WebListener;
  */
 @WebListener
 public class ActorRuntimeContextListener implements ServletContextListener {
-				
+
 	public static final String KAR_ACTOR_CLASSES = "kar-actor-classes";
-	public static final String KAR_ACTOR_TYPES = "kar-actor-types";	
+	public static final String KAR_ACTOR_TYPES = "kar-actor-types";
 
 	public static String actorClassStr;
 	public static String actorTypeNameStr;
-	
+
 	@Override
-	public void contextInitialized(final ServletContextEvent servletContextEvent) {		
-	
+	public void contextInitialized(final ServletContextEvent servletContextEvent) {
+
 		ServletContext ctx = servletContextEvent.getServletContext();
-		
+
 		actorClassStr = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
 		actorTypeNameStr = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_TYPES);
-		
+
 	}
 
 }

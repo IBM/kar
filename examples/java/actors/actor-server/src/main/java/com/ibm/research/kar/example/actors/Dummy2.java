@@ -13,30 +13,23 @@ public class Dummy2 {
 
 	@Activate
 	public void init() {
-		
+
 	}
-	
+
 	@Remote
 	public JsonObject canBeInvoked(JsonObject json) {
-		
 		int number = json.getInt("number");
-		
 		number++;
-		
+
 		JsonObject params = Json.createObjectBuilder()
 				.add("number", number)
 				.build();
-		
 
 		return params;
 	}
-	
-	public void cannotBeInvoked() {
-		
-	}
-	
+
 	@Deactivate
 	public void kill() {
-		
+
 	}
 }

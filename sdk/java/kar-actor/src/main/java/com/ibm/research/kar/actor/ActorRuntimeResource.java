@@ -9,7 +9,7 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.JsonObject;
+import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -67,13 +67,13 @@ public class ActorRuntimeResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response invokeActorMethod(
-			@PathParam("type") String type, 
-			@PathParam("id") String id, 
-			@PathParam("sessionid") String sessionid, 
-			@PathParam("path") String path, 
-			JsonObject params) {
+			@PathParam("type") String type,
+			@PathParam("id") String id,
+			@PathParam("sessionid") String sessionid,
+			@PathParam("path") String path,
+			JsonValue params) {
 
-		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + "actor " + id + " method " + path + " with params " + params);
+		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with params " + params);
 
 		Object actorObj = this.actorManager.getActor(type, id);
 		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
@@ -100,15 +100,13 @@ public class ActorRuntimeResource {
 			task.setLockPolicy(methodType.getLockPolicy());
 			task.setParams(params);
 
-
-
 			// execute task asynchronously
 			Future<Object> futureResult = managedExecutorService.submit(task);
 
 			try {
 				while (!futureResult.isDone()) {
 					Thread.sleep(FUTURE_WAIT_TIME_MILLIS);
-				} 
+				}
 
 				result = futureResult.get();
 
@@ -128,8 +126,8 @@ public class ActorRuntimeResource {
 		}
 
 		if (result == null) {
-			Response.status(Response.Status.OK).build();
-		} 
+			return Response.status(Response.Status.OK).build();
+		}
 
 		return Response.status(Response.Status.OK).entity(result).build();
 

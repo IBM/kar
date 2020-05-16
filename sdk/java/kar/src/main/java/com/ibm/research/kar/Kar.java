@@ -6,7 +6,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
-import javax.ws.rs.PathParam;
+import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 
@@ -16,67 +16,67 @@ import org.eclipse.microprofile.rest.client.RestClientBuilder;
 public class Kar {
 
 	private KarRest karClient;
-	
+
 	public static final String DEFAULT_PORT = "3500";
-	
+
 	public Kar() {
 		karClient = buildRestClient();
 	}
-	
+
 	/*
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	public KarRest buildRestClient() {
-		
+
 		String baseURIStr = "http://localhost";
-		
+
 		String port =  System.getenv("KAR_RUNTIME_PORT");
 
 		System.out.println("Port is " + port);
-		
+
 		if (port != null && !port.trim().isEmpty()) {
 			baseURIStr = baseURIStr+":"+port+"/";
 		} else {
 			baseURIStr = baseURIStr+":"+DEFAULT_PORT+"/";
 		}
-		
+
 
 		System.out.println("Sidecar location is " + baseURIStr);
-		
+
 		URI baseURI = URI.create(baseURIStr);
-		
+
 		return  RestClientBuilder.newBuilder()
 				.baseUri(baseURI)
                 .build(KarRest.class);
 	}
 
-	
+
 	/******************
 	* Public methods
 	******************/
-	
+
 	// asynchronous service invocation, returns "OK" immediately
-	public Response tell(String service, String path, JsonObject params) throws ProcessingException {
+	public Response tell(String service, String path, JsonValue params) throws ProcessingException {
 		return karClient.tell(service, path, params);
 	}
 
 	// synchronous service invocation, returns invocation result
-	public Response call(String service, String path, JsonObject params) throws ProcessingException {
+	public Response call(String service, String path, JsonValue params) throws ProcessingException {
 		return karClient.call(service, path, params);
 	}
 
 	// asynchronous actor invocation, returns "OK" immediately
-	public Response actorTell(String type, String id, String path, JsonObject params) throws ProcessingException {
+	public Response actorTell(String type, String id, String path, JsonValue params) throws ProcessingException {
 		return karClient.actorTell(type, id, path, params);
 	}
 
 	// synchronous actor invocation with explicit session: returns invocation result
-	public Response actorCall(String type, String id,  String path, String session, JsonObject params) throws ProcessingException {
+	public Response actorCall(String type, String id,  String path, String session, JsonValue params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, session, params);
   }
 
 	// synchronous actor invocation: returns invocation result
-	public Response actorCall(String type, String id,  String path, JsonObject params) throws ProcessingException {
+	public Response actorCall(String type, String id,  String path, JsonValue params) throws ProcessingException {
 		return karClient.actorCall(type, id, path, null, params);
 	}
 
@@ -103,16 +103,13 @@ public class Kar {
 
 	}
 
-	public Response actorScheduleReminder(String type, String id, String path, JsonObject params) throws ProcessingException {
- 
+	// FIXME:  Need to take targetTime and period as paramters and properly serialize
+	public Response actorScheduleReminder(String type, String id, String path, String reminderId, JsonValue params) throws ProcessingException {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
-        
-		builder.add("path", path);
-        params.entrySet().
-                forEach(e -> builder.add(e.getKey(), e.getValue()));
-    
-        JsonObject paramsWithPath =  builder.build();
-		return karClient.actorScheduleReminder(type, id, paramsWithPath);
+		builder.add("path", "/"+path);
+		builder.add("data", params);
+    JsonObject requestBody =  builder.build();
+		return karClient.actorScheduleReminder(type, id, requestBody);
 	}
 
 	/*
@@ -122,7 +119,7 @@ public class Kar {
 		return karClient.actorGetState(type, id, key, true);
 	}
 
-	public Response actorSetState(String type,  String id,  String key, JsonObject params) throws ProcessingException {
+	public Response actorSetState(String type,  String id,  String key, JsonValue params) throws ProcessingException {
 		return karClient.actorSetState(type, id, key, params);
 	}
 
@@ -156,7 +153,7 @@ public class Kar {
 	public Response health() {
 		return karClient.health();
 	}
-	
+
 	public Response kill() {
 		return karClient.kill();
 	}

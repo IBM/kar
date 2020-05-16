@@ -4,7 +4,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
 
 import javax.enterprise.inject.Default;
-import javax.json.JsonObject;
+import javax.json.JsonValue;
 
 import com.ibm.research.kar.actor.annotations.LockPolicy;
 
@@ -13,7 +13,7 @@ public class ActorTask implements Callable<Object> {
 
 	private Object actorObj;
 	private Method actorMethod;
-	private JsonObject params;
+	private JsonValue params;
 	private int lockPolicy;
 
 	public int getLockPolicy() {
@@ -40,11 +40,11 @@ public class ActorTask implements Callable<Object> {
 		this.actorMethod = actorMethod;
 	}
 
-	public JsonObject getParams() {
+	public JsonValue getParams() {
 		return params;
 	}
 
-	public void setParams(JsonObject params) {
+	public void setParams(JsonValue params) {
 		this.params = params;
 	}
 
@@ -61,8 +61,8 @@ public class ActorTask implements Callable<Object> {
 			default:
 				synchronized (actorObj) {
 					result = actorMethod.invoke(actorObj, params);
-				}
 			}
+		}
 		} else {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
@@ -71,13 +71,10 @@ public class ActorTask implements Callable<Object> {
 			default:
 				synchronized (actorObj) {
 					result = actorMethod.invoke(actorObj);
-				}
 			}
-
 		}
-		
+		}
+
 		return result;
-
-
 	}
 }

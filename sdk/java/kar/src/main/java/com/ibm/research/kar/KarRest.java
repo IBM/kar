@@ -2,6 +2,7 @@ package com.ibm.research.kar;
 
 import javax.enterprise.inject.Default;
 import javax.json.JsonObject;
+import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -39,13 +40,13 @@ public interface KarRest extends AutoCloseable {
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
+	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 	// synchronous service invocation, returns invocation result
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = maxRetry)
-	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonObject params) throws ProcessingException;
+	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 
 	/*
@@ -58,13 +59,13 @@ public interface KarRest extends AutoCloseable {
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = maxRetry)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonObject params) throws ProcessingException;
+	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 	// synchronous actor invocation: returns invocation result
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = maxRetry)
-	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonObject params) throws ProcessingException;
+	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonValue params) throws ProcessingException;
 
 	//
 	// Actor Reminder operations
@@ -112,7 +113,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = maxRetry)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonObject params) throws ProcessingException;
+	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonValue params) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state/{key}")
@@ -157,7 +158,7 @@ public interface KarRest extends AutoCloseable {
 	public Response unsubscribe(@PathParam("topic") String topic) throws ProcessingException;
 
 	/*
-	 * System 
+	 * System
 	 */
 
 	@GET
