@@ -103,11 +103,11 @@ actor types and IDs to object references and implements the required routes of a
 REST server.
 
 An application component may offer a service and at the same time hosts actors
-by implementing a REST server capable of both.
+by implementing a REST server capable of doing both.
 
 ### Actor Lifecyle
 
-When a method is invoked on an actor reference, KAR first checks whether an
+When a method is invoked on an actor reference, KAR first checks whether a
 matching instance exists for this reference. If there is no such instance, KAR
 selects an application component that supports the actor type specified in the
 method invocation and asks this component to construct an actor instance with
