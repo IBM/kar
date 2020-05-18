@@ -1,6 +1,6 @@
 const express = require('express')
-const { sys, subscribe } = require('kar')
-// const { errorHandler } = require('kar')
+const { actor, sys, subscribe } = require('kar')
+
 // CloudEvents SDK for defining a structured HTTP request receiver.
 const cloudevents = require('cloudevents-sdk/v1')
 
@@ -35,10 +35,68 @@ function cloudEventHandler (res, data, headers) {
 
 // Process subscription.
 app.post('/print-historical-prices', function (req, res) {
-  cloudEventHandler(res, req.body, req.headers)
+  cloudEventHandler(res, req.body[0], req.headers)
+})
+
+class Portfolio {
+  get name () {
+    return this.kar.id
+  }
+
+  async activate () {
+    console.log('Activate Portofolio')
+    const state = await actor.state.getAll(this)
+    this.counter = state.counter || 0
+    this.package = state.package || {}
+  }
+
+  async deactivate () {
+    console.log('Deactivate Portofolio')
+    const state = {
+      counter: this.counter,
+      package: this.package
+    }
+    console.log(state)
+    await actor.state.setMultiple(this, state)
+  }
+
+  async buy (buyStockEvent) {
+    console.log('Cloud Event Received')
+    // Only interested in the data field at this point since all the other
+    // CloudEvent-specific fields have been checked. The other fields can still
+    // be accessed here. For example, the type and source of the even may be
+    // relevant to application logic.
+    const purchaseData = buyStockEvent.data
+    console.log(`Buy a batch of ${purchaseData.quantity} ${purchaseData.stock} stock.`)
+    this.package[`stock_${this.counter}`] = {}
+    const stock = this.package[`stock_${this.counter}`]
+    stock.name = purchaseData.stock
+    stock.quantity = purchaseData.quantity
+    stock.price = purchaseData.price
+    this.counter += 1
+
+    // Show state of the Portfolio
+    console.log(this.package)
+    return this.counter
+  }
+}
+
+// Subscribe the `buy` method of the Portfolio Actor to respong to events emitted on
+// the 'buy-stock' topic.
+actor.subscribe(actor.proxy('Portfolio', 'ITStocks'), 'buy-stock', 'buy')
+
+// Enable actor.
+app.use(sys.actorRuntime({ Portfolio }))
+
+// Boilerplate code for terminating the service.
+app.post('/shutdown', async (_reg, res) => {
+  console.log('Shutting down service')
+  res.sendStatus(200)
+  await sys.shutdown()
+  server.close(() => process.exit())
 })
 
 // Enable kar error handling.
 app.use(sys.errorHandler)
 
-app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

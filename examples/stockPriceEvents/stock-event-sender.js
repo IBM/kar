@@ -43,7 +43,7 @@ app.post('/stockprice/:stock_name', (req, res) => {
         return item.open
       })
 
-      const msg = 'Latest ' + stockName + ' stock price: ' + openPrices[openPrices.length - 1].toString()
+      const msg = openPrices[openPrices.length - 1].toString()
       console.log(msg)
 
       // Set data of cloud event to stock data.

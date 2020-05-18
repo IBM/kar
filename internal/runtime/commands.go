@@ -535,7 +535,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 					var reply *Reply
 					var err error
 					if sub.actor != nil {
-						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), "text/plain", "", "")
+						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), contentType, "", "")
 					} else {
 						reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": contentType})
 					}

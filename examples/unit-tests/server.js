@@ -68,7 +68,7 @@ app.post('/pubsub', async (req, res) => {
 })
 
 app.post('/accumulate', (req, res) => {
-  const payload = req.body.data
+  const payload = req.body[0].data
   count += payload
   if (count >= 6) success()
   res.sendStatus(200)

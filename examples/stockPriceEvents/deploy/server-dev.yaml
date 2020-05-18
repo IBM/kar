@@ -5,8 +5,10 @@ metadata:
   annotations:
     kar.ibm.com/app: stockPriceEvents
     kar.ibm.com/service: price-printer
+    kar.ibm.com/actors: Portofolio
     kar.ibm.com/verbose: info
 spec:
+  restartPolicy: Never
   containers:
   - name: stock-server
     image: examples-js:dev

@@ -36,11 +36,15 @@ make kindPushDev
 
 The three coponents are:
 - `stock-client.js` the CLIENT which initiates the request for the latest stock price.
-- `stock-event-sender.js` the intermediate process, EVENT EMITTER, which does the following:
+    (1) if a `-s <STOCK_NAME>` is passed when invoking the client, the latest opening value of that stock will be printed.
+    (2) if no `-s` flag is provided, the client will attempt to automatically create a portfolio made up of some pre-defined technology stocks. The client will create and publish a purchase event (of type CloudEvent) for each stock.
+- `stock-event-sender.js` the intermediate process, EVENT EMITTER, does the following:
     (1) receives the POST request from CLIENT containing the stock identifier;
     (2) requests the stock prices from the third-party API;
-    (3) creates the CloudEvent and publishes it to the SERVER.
-- `stock-server.js` the SERVER subscribes to a topic and then processes any event emitted by the EVENT EMITTER side on that topic.
+    (3) creates a historical prices printing event (of type CloudEvent) on the `historical-prices` topic and publishes it.
+- `stock-server.js` the SERVER performs the following functions:
+    (1) subscribes to the `historical-prices` topic and then processes any event emitted by the EVENT EMITTER side on that topic. The event is handled by the `cloudevents-sdk` method. If the event has been formed and transmitted correctly, it should be accepted as a CloudEvent by the `StructuredHTTPReceiver.parse()` method.
+    (2) subscribes to the `buy-stock` topic and sets the `buy` method of the `Portfolio` actor to handle the incoming events on this topic. The `buy` method records the new purchase in the list of already purchased shares.
 
 # Running the application components locally
 
@@ -57,7 +61,7 @@ We can now start each component of the application individually. You can do this
 
 SERVER:
 ```shell
-kar -v info -app stocks -runtime_port 3502 -app_port 8082 -service price-printer -- node stock-server.js
+kar -v info -app stocks -runtime_port 3502 -app_port 8082 -service price-printer -actors Portfolio -- node stock-server.js
 ```
 
 EVENT EMITTER:
@@ -65,9 +69,15 @@ EVENT EMITTER:
 kar -v info -app stocks --runtime_port 3501 -app_port 8081 -service price-sender node stock-event-sender.js
 ```
 
-CLIENT:
+CLIENT (get stock price):
 ```shell
 kar -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js -s GOOG
+```
+or
+
+CLIENT (create portfolio):
+```shell
+kar -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js
 ```
 
 Notes:

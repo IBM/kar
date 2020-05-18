@@ -135,7 +135,7 @@ function publish (topic, event) {
   // Set specversion if not set.
   if (typeof payload.specversion === 'undefined') payload.specversion = '1.0'
 
-  return post(`event/${topic}/publish`, payload)
+  return post(`event/${topic}/publish`, [payload])
 }
 
 const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, opts))
@@ -206,7 +206,8 @@ function actorRuntime (actors) {
     .then(_ => {
       const actor = table[req.params.type][req.params.id]
       if (req.params.method in actor) {
-        actor.kar.session = req.params.session // NOTE: intentionally not cleared before return (could be nested call in same session)
+        // NOTE: session intentionally not cleared before return (could be nested call in same session)
+        actor.kar.session = req.params.session
         if (typeof actor[req.params.method] === 'function') {
           return actor[req.params.method](...req.body)
         }

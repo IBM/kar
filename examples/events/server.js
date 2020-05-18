@@ -17,7 +17,8 @@ app.use(express.json({ type: 'application/cloudevents+json' }))
 
 // event handler
 app.post('/handle', async (req, res) => {
-  console.log('event received:', req.body)
+  var event = req.body[0]
+  console.log('event received:', event)
   res.send('OK')
 })
 
