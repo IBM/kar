@@ -5,6 +5,8 @@ SDK tested using
 - Java 1.8.X
 - Maven 3.6.X
 
+Note: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty)
+
 # Overview
 The Java SDK provides:
 1.  the class `com.ibm.research.kar.Kar` to communicate with the Kar runtime

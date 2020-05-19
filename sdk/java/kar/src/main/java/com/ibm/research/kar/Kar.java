@@ -1,6 +1,7 @@
 package com.ibm.research.kar;
 
 import java.net.URI;
+import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.json.Json;
@@ -14,6 +15,8 @@ import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 @ApplicationScoped // change as needed
 public class Kar {
+
+	private final Logger logger = Logger.getLogger(Kar.class.getName());
 
 	private KarRest karClient;
 
@@ -31,8 +34,8 @@ public class Kar {
 		String baseURIStr = "http://localhost";
 
 		String port =  System.getenv("KAR_RUNTIME_PORT");
+		logger.fine("KAR_RUNTIME_PORT set to " + port);
 
-		System.out.println("Port is " + port);
 
 		if (port != null && !port.trim().isEmpty()) {
 			baseURIStr = baseURIStr+":"+port+"/";
@@ -41,19 +44,19 @@ public class Kar {
 		}
 
 
-		System.out.println("Sidecar location is " + baseURIStr);
+		logger.fine("Sidecar location set to " + baseURIStr);
 
 		URI baseURI = URI.create(baseURIStr);
 
 		return  RestClientBuilder.newBuilder()
 				.baseUri(baseURI)
-                .build(KarRest.class);
+				.build(KarRest.class);
 	}
 
 
 	/******************
-	* Public methods
-	******************/
+	 * Public methods
+	 ******************/
 
 	// asynchronous service invocation, returns once invoke is scheduled
 	public void tell(String service, String path, JsonValue params) throws ProcessingException {
@@ -83,7 +86,7 @@ public class Kar {
 		} else {
 			return null;
 		}
-  }
+	}
 
 	// synchronous actor invocation: returns the result of the actor method
 	public JsonValue actorCall(String type, String id,  String path, JsonValue params) throws ProcessingException {
@@ -101,19 +104,19 @@ public class Kar {
 	public Response actorCancelReminders(String type, String id) throws ProcessingException {
 		return karClient.actorCancelReminders(type, id);
 
-  }
+	}
 
-  public Response actorCancelReminder(String type, String id, String reminderId) throws ProcessingException {
+	public Response actorCancelReminder(String type, String id, String reminderId) throws ProcessingException {
 		return karClient.actorCancelReminder(type, id, reminderId, true);
 
-  }
+	}
 
 	public Response actorGetReminders(String type, String id) throws ProcessingException {
 		return karClient.actorGetReminders(type, id);
 
-  }
+	}
 
-  public Response actorGetReminder(String type, String id, String reminderId) throws ProcessingException {
+	public Response actorGetReminder(String type, String id, String reminderId) throws ProcessingException {
 		return karClient.actorGetReminder(type, id, reminderId, true);
 
 	}
@@ -123,7 +126,7 @@ public class Kar {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("path", "/"+path);
 		builder.add("data", params);
-    JsonObject requestBody =  builder.build();
+		JsonObject requestBody =  builder.build();
 		return karClient.actorScheduleReminder(type, id, requestBody);
 	}
 
