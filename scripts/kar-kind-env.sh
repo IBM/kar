@@ -1,5 +1,6 @@
 # Source this script to setup your shell environment for local app
-# invocation using a KAR runtime deployed in a kind cluster.
+# invocation using a KAR runtime deployed in a kind cluster or
+# using docker-compose.
 #
 # Usage . kar-kind-env.sh
 #

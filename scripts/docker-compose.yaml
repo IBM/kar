@@ -1,0 +1,26 @@
+version: "3"
+services:
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    hostname: zookeeper
+  kafka:
+    image: wurstmeister/kafka:2.12-2.4.0
+    command: [start-kafka.sh]
+    ports:
+      - "31093:31093"
+    hostname: kafka
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_PORT: 31093
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    depends_on:
+      - "zookeeper"
+  redis:
+    image: redis:5.0
+    command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass passw0rd --port 31379"]
+    ports:
+      - "31379:31379"
+    hostname: redis
