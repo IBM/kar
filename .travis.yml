@@ -13,6 +13,7 @@ script:
   - (./build/ci/build.sh && ./build/ci/start-kar.sh) || travis_terminate 1
   - ./build/ci/createTestTopic.sh
   - ./build/ci/testLocal.sh
+  - ./build/ci/testJavaLocal.sh
   - ./build/ci/testInCluster.sh
 
 deploy:
