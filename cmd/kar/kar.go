@@ -343,6 +343,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("HGET failed: %v", err), http.StatusInternalServerError)
 	} else {
+		w.Header().Add("Content-Type", "application/json")
 		fmt.Fprint(w, reply)
 	}
 }
@@ -403,6 +404,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			m[i] = v
 		}
 		b, _ := json.Marshal(m)
+		w.Header().Add("Content-Type", "application/json")
 		fmt.Fprint(w, string(b))
 	}
 }
