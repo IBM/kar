@@ -73,14 +73,19 @@ public class Kar {
 		}
 	}
 
+	// Get a reference to an actor instance to use in subsequent actor operations.
+	public ActorRef actorRef(String type, String id) {
+		return new ActorRef(type, id);
+	}
+
 	// asynchronous actor invocation, returns once invoke is scheduled
-	public void actorTell(String type, String id, String path, JsonValue params) throws ProcessingException {
-		karClient.actorTell(type, id, path, params);
+	public void actorTell(ActorRef p, String path, JsonValue params) throws ProcessingException {
+		karClient.actorTell(p.type, p.id, path, params);
 	}
 
 	// synchronous actor invocation with explicit session: returns result of the actor method
-	public JsonValue actorCall(String type, String id,  String path, String session, JsonValue params) throws ProcessingException {
-		Response response = karClient.actorCall(type, id, path, session, params);
+	public JsonValue actorCall(String callingSession, ActorRef p,  String path, JsonValue params) throws ProcessingException {
+		Response response = karClient.actorCall(p.type, p.id, path, callingSession, params);
 		if (response.hasEntity()) {
 			return response.readEntity(JsonValue.class);
 		} else {
@@ -89,8 +94,8 @@ public class Kar {
 	}
 
 	// synchronous actor invocation: returns the result of the actor method
-	public JsonValue actorCall(String type, String id,  String path, JsonValue params) throws ProcessingException {
-		Response response = karClient.actorCall(type, id, path, null, params);
+	public JsonValue actorCall(ActorRef p, String path, JsonValue params) throws ProcessingException {
+		Response response = karClient.actorCall(p.type, p.id, path, null, params);
 		if (response.hasEntity()) {
 			return response.readEntity(JsonValue.class);
 		} else {
@@ -101,56 +106,55 @@ public class Kar {
 	/*
 	 * Reminder Operations
 	 */
-	public Response actorCancelReminders(String type, String id) throws ProcessingException {
-		return karClient.actorCancelReminders(type, id);
+	public Response actorCancelReminders(ActorRef p) throws ProcessingException {
+		return karClient.actorCancelReminders(p.type, p.id);
 
 	}
 
-	public Response actorCancelReminder(String type, String id, String reminderId) throws ProcessingException {
-		return karClient.actorCancelReminder(type, id, reminderId, true);
+	public Response actorCancelReminder(ActorRef p, String reminderId) throws ProcessingException {
+		return karClient.actorCancelReminder(p.type, p.id, reminderId, true);
 
 	}
 
-	public Response actorGetReminders(String type, String id) throws ProcessingException {
-		return karClient.actorGetReminders(type, id);
+	public Response actorGetReminders(ActorRef p) throws ProcessingException {
+		return karClient.actorGetReminders(p.type, p.id);
 
 	}
 
-	public Response actorGetReminder(String type, String id, String reminderId) throws ProcessingException {
-		return karClient.actorGetReminder(type, id, reminderId, true);
-
+	public Response actorGetReminder(ActorRef p, String reminderId) throws ProcessingException {
+		return karClient.actorGetReminder(p.type, p.id, reminderId, true);
 	}
 
 	// FIXME:  Need to take targetTime and period as paramters and properly serialize
-	public Response actorScheduleReminder(String type, String id, String path, String reminderId, JsonValue params) throws ProcessingException {
+	public Response actorScheduleReminder(ActorRef p, String path, String reminderId, JsonValue params) throws ProcessingException {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("path", "/"+path);
 		builder.add("data", params);
 		JsonObject requestBody =  builder.build();
-		return karClient.actorScheduleReminder(type, id, requestBody);
+		return karClient.actorScheduleReminder(p.type, p.id, requestBody);
 	}
 
 	/*
 	 * Actor State Operations
 	 */
-	public Response actorGetState( String type,  String id,  String key) throws ProcessingException {
-		return karClient.actorGetState(type, id, key, true);
+	public Response actorGetState(ActorRef p,  String key) throws ProcessingException {
+		return karClient.actorGetState(p.type, p.id, key, true);
 	}
 
-	public Response actorSetState(String type,  String id,  String key, JsonValue params) throws ProcessingException {
-		return karClient.actorSetState(type, id, key, params);
+	public Response actorSetState(ActorRef p,  String key, JsonValue params) throws ProcessingException {
+		return karClient.actorSetState(p.type, p.id, key, params);
 	}
 
-	public Response actorDeleteState(String type,  String id,  String key) throws ProcessingException {
-		return karClient.actorDeleteState(type, id, key, true);
+	public Response actorDeleteState(ActorRef p,  String key) throws ProcessingException {
+		return karClient.actorDeleteState(p.type, p.id, key, true);
 	}
 
-	public Response actorGetAllState(String type,  String id) throws ProcessingException {
-		return karClient.actorGetAllState(type, id);
+	public Response actorGetAllState(ActorRef p) throws ProcessingException {
+		return karClient.actorGetAllState(p.type, p.id);
 	}
 
-	public Response actorDeleteAllState(String type,  String id) throws ProcessingException {
-		return karClient.actorDeleteAllState(type, id);
+	public Response actorDeleteAllState(ActorRef p) throws ProcessingException {
+		return karClient.actorDeleteAllState(p.type, p.id);
 	}
 
 	// Events

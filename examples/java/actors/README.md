@@ -16,7 +16,7 @@ mvn clean install
 In one terminal start the server
 ```shell
 cd ./actor-server
-kar -app actor -service dummy -actors dummy,dummy2 mvn liberty:run
+kar -app actor -service dummy -actors dummy,dummy2,calculator mvn liberty:run
 ```
 
 Wait a few seconds until you see

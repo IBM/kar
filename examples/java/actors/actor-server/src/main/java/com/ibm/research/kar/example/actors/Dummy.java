@@ -4,6 +4,8 @@ import javax.json.Json;
 
 import javax.json.JsonObject;
 import javax.json.JsonValue;
+
+import com.ibm.research.kar.ActorRef;
 import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.KarSessionListener;
 import com.ibm.research.kar.actor.annotations.Activate;
@@ -33,7 +35,9 @@ public class Dummy implements KarSessionListener {
 				.add("number",number)
 				.build();
 
-		JsonValue result = kar.actorCall("dummy2", "dummy2id", "canBeInvoked", params);
+		ActorRef dummy2 = kar.actorRef("dummy2", "dummy2id");
+
+		JsonValue result = kar.actorCall(dummy2, "canBeInvoked", params);
 
 		System.out.println("Dummy.canBeInvoked: My session id is " + this.sessionid);
 		return result;
@@ -43,7 +47,7 @@ public class Dummy implements KarSessionListener {
 	public JsonValue incr(JsonObject json) {
 		int number = json.getInt("number");
 		JsonValue n = Json.createValue(number);
-		return kar.actorCall("calculator", "mycalc", "add", n);
+		return kar.actorCall(kar.actorRef("calculator", "mycalc"), "add", n);
 	}
 
 	public void cannotBeInvoked() {

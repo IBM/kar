@@ -2,8 +2,6 @@ package com.ibm.research.kar.example.actors;
 
 import javax.json.Json;
 import javax.json.JsonNumber;
-import javax.json.JsonValue;
-
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
