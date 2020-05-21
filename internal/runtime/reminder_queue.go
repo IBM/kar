@@ -42,12 +42,12 @@ func (rq *reminderQueue) Pop() interface{} {
 	return r
 }
 
-func (rq *reminderQueue) addReminder(r Reminder) {
-	heap.Push(rq, &reminderEntry{r: r})
+func (rq *reminderQueue) add(b binding) {
+	heap.Push(rq, &reminderEntry{r: b.(Reminder)})
 }
 
-func (rq *reminderQueue) cancelMatchingReminders(actor Actor, ID string) []Reminder {
-	found := make([]Reminder, 0)
+func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {
+	found := make([]binding, 0)
 	for idx, elem := range *rq {
 		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			(*rq)[idx].cancelled = true
@@ -57,8 +57,8 @@ func (rq *reminderQueue) cancelMatchingReminders(actor Actor, ID string) []Remin
 	return found
 }
 
-func (rq *reminderQueue) findMatchingReminders(actor Actor, ID string) []Reminder {
-	result := make([]Reminder, 0)
+func (rq *reminderQueue) find(actor Actor, ID string) []binding {
+	result := make([]binding, 0)
 	for _, elem := range *rq {
 		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) && !elem.cancelled {
 			result = append(result, elem.r)

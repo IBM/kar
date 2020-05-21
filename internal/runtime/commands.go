@@ -58,14 +58,15 @@ func TellActor(ctx context.Context, actor Actor, path, payload, contentType stri
 		"payload":      payload})
 }
 
-// tell sidecar for actor to load reminder
-func tellReminder(ctx context.Context, actor Actor, key string) error {
+func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingId string) error {
 	return pubsub.Send(ctx, map[string]string{
-		"protocol": "actor",
-		"type":     actor.Type,
-		"id":       actor.ID,
-		"command":  "reminder:tell",
-		"key":      key})
+		"protocol":  "actor",
+		"type":      actor.Type,
+		"id":        actor.ID,
+		"command":   "binding:tell",
+		"kind":      kind,
+		"partition": partition,
+		"bindingId": bindingId})
 }
 
 // Reply represents the return value of a call
@@ -123,14 +124,15 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 	return callHelper(ctx, msg)
 }
 
-// Reminders sends a reminder command (cancel, get, schedule) to a reminder's assigned sidecar and waits for a reply
-func Reminders(ctx context.Context, actor Actor, reminderID, nilOnAbsent, action, payload, contentType, accept string) (*Reply, error) {
+// Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
+func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbsent, action, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
-		"reminderId":   reminderID,
-		"command":      "reminder:" + action,
+		"bindingId":    bindingID,
+		"kind":         kind,
+		"command":      "binding:" + action,
 		"nilOnAbsent":  nilOnAbsent,
 		"content-type": contentType,
 		"accept":       accept,
@@ -197,11 +199,11 @@ func callback(ctx context.Context, msg map[string]string) error {
 	return nil
 }
 
-func reminderCancel(ctx context.Context, msg map[string]string) error {
+func bindingDel(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := CancelReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
-	if found == 0 && msg["reminderId"] != "" && msg["nilOnAbsent"] != "true" {
+	found := deleteBindings(msg["kind"], actor, msg["bindingId"])
+	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
 		reply = &Reply{StatusCode: http.StatusNotFound}
 	} else {
 		reply = &Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
@@ -209,12 +211,12 @@ func reminderCancel(ctx context.Context, msg map[string]string) error {
 	return respond(ctx, msg, reply)
 }
 
-func reminderGet(ctx context.Context, msg map[string]string) error {
+func bindingGet(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := GetReminders(actor, msg["reminderId"], msg["content-type"], msg["accepts"])
+	found := getBindings(msg["kind"], actor, msg["bindingId"])
 	var responseBody interface{} = found
-	if msg["reminderId"] != "" {
+	if msg["bindingId"] != "" {
 		if len(found) == 0 {
 			if msg["nilOnAbsent"] != "true" {
 				reply = &Reply{StatusCode: http.StatusNotFound}
@@ -234,10 +236,10 @@ func reminderGet(ctx context.Context, msg map[string]string) error {
 	return respond(ctx, msg, reply)
 }
 
-func reminderSchedule(ctx context.Context, msg map[string]string) error {
+func bindingSet(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	err := ScheduleReminder(actor, msg["payload"], msg["content-type"], msg["accepts"])
+	err := postBinding(msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
 		reply = &Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -246,12 +248,12 @@ func reminderSchedule(ctx context.Context, msg map[string]string) error {
 	return respond(ctx, msg, reply)
 }
 
-func reminderTell(ctx context.Context, msg map[string]string) error {
+func bindingTell(ctx context.Context, msg map[string]string) error {
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	err := loadReminder(actor, msg["key"])
+	err := loadBinding(msg["kind"], actor, msg["partition"], msg["bindingId"])
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Error("load reminder %s failed: %v", msg["key"], err)
+			logger.Error("load binding failed: %v", err)
 		}
 	}
 	return nil
@@ -281,14 +283,14 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 		return callback(ctx, msg)
 	case "cancel":
 		cancel() // never fails
-	case "reminder:cancel":
-		return reminderCancel(ctx, msg)
-	case "reminder:get":
-		return reminderGet(ctx, msg)
-	case "reminder:schedule":
-		return reminderSchedule(ctx, msg)
-	case "reminder:tell":
-		return reminderTell(ctx, msg)
+	case "binding:del":
+		return bindingDel(ctx, msg)
+	case "binding:get":
+		return bindingGet(ctx, msg)
+	case "binding:set":
+		return bindingSet(ctx, msg)
+	case "binding:tell":
+		return bindingTell(ctx, msg)
 	case "tell":
 		return tell(ctx, msg)
 	default:
@@ -334,7 +336,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		actor := Actor{Type: msg["type"], ID: msg["id"]}
 		session := msg["session"]
 		if session == "" {
-			if strings.HasPrefix(msg["command"], "reminder:") {
+			if strings.HasPrefix(msg["command"], "binding:") {
 				session = "reminder"
 			} else {
 				session = uuid.New().String() // start new session
@@ -445,14 +447,13 @@ func ProcessReminders(ctx context.Context) {
 	}
 }
 
-// ManageReminderPartitions handles updating this sidecar's in-memory reminder data structures after
-// rebalancing operations to reflect the new assignment of partitions.
-func ManageReminderPartitions(ctx context.Context) {
+// ManageBindings reloads bindings on rebalance
+func ManageBindings(ctx context.Context) {
 	for {
 		partitions, rebalance := pubsub.Partitions()
-		if err := rebalanceReminders(ctx, partitions); err != nil {
+		if err := loadBindings(ctx, partitions); err != nil {
 			// TODO: This should trigger a more orderly shutdown of the sidecar.
-			logger.Fatal("Error when rebalancing reminders %v", err)
+			logger.Fatal("Error when loading bindings: %v", err)
 		}
 		select {
 		case <-rebalance:
@@ -574,6 +575,6 @@ func Migrate(ctx context.Context, actor Actor, sidecar string) error {
 	if err != nil {
 		return err
 	}
-	migrateReminders(ctx, actor)
+	// migrateReminders(ctx, actor) TODO
 	return nil
 }

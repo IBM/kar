@@ -227,7 +227,7 @@ func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /actor/{actorType}/{actorId}/reminders actors idActorReminderSchedule
+// swagger:route POST /actor/{actorType}/{actorId}/reminders/{reminderId} actors idActorReminderSchedule
 //
 // reminders
 //
@@ -258,16 +258,48 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		action = "get"
 		noa = r.FormValue("nilOnAbsent")
 	case "POST":
-		action = "schedule"
+		action = "set"
 		body = runtime.ReadAll(r)
 	case "DELETE":
-		action = "cancel"
+		action = "del"
 		noa = r.FormValue("nilOnAbsent")
 	default:
 		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
 		return
 	}
-	reply, err := runtime.Reminders(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("reminderId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := runtime.Bindings(ctx, "reminders", runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("reminderId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		w.Header().Add("Content-Type", reply.ContentType)
+		w.WriteHeader(reply.StatusCode)
+		fmt.Fprint(w, reply.Payload)
+	}
+}
+
+func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var action string
+	body := ""
+	noa := "false"
+	switch r.Method {
+	case "GET":
+		action = "get"
+		noa = r.FormValue("nilOnAbsent")
+	case "POST":
+		action = "set"
+		body = runtime.ReadAll(r)
+	case "DELETE":
+		action = "del"
+		noa = r.FormValue("nilOnAbsent")
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
+		return
+	}
+	reply, err := runtime.Bindings(ctx, "subscriptions", runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("subscriptionId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -609,9 +641,16 @@ func server(listener net.Listener) {
 	// reminders
 	router.GET(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.GET(base+"/actor/:type/:id/reminders", reminder)
-	router.POST(base+"/actor/:type/:id/reminders", reminder)
+	router.POST(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders", reminder)
+
+	// events
+	router.GET(base+"/actor/:type/:id/events/:subscriptionId", subscription)
+	router.GET(base+"/actor/:type/:id/events", subscription)
+	router.POST(base+"/actor/:type/:id/events/:subscriptionId", subscription)
+	router.DELETE(base+"/actor/:type/:id/events/:subscriptionId", subscription)
+	router.DELETE(base+"/actor/:type/:id/events", subscription)
 
 	// actor state
 	router.GET(base+"/actor/:type/:id/state/:key", get)
@@ -737,7 +776,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		runtime.ManageReminderPartitions(ctx)
+		runtime.ManageBindings(ctx)
 	}()
 
 	runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
