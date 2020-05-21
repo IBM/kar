@@ -18,6 +18,7 @@ import javax.ejb.Singleton;
 import javax.enterprise.context.ApplicationScoped;
 
 import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
@@ -38,16 +39,16 @@ public class ActorManagerImpl implements ActorManager {
 		logger.info(LOG_PREFIX+"initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
 
-		logger.info(LOG_PREFIX+"initialize: Got init params " + ActorRuntimeContextListener.actorClassStr + ":"+ ActorRuntimeContextListener.actorTypeNameStr);
+		logger.info(LOG_PREFIX+"initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":"+ KarConfig.ACTOR_TYPE_NAME_STR);
 
 		// ensure that we have non-null class and kar type strings from web.xml
-		if ((ActorRuntimeContextListener.actorClassStr != null) && (ActorRuntimeContextListener.actorTypeNameStr != null)) {
-			List<String> classList = Arrays.asList(ActorRuntimeContextListener.actorClassStr.split("\\s*,\\s*"));
-			List<String> nameList = Arrays.asList(ActorRuntimeContextListener.actorTypeNameStr.split("\\s*,\\s*"));
+		if ((KarConfig.ACTOR_CLASS_STR != null) && (KarConfig.ACTOR_TYPE_NAME_STR != null)) {
+			List<String> classList = Arrays.asList(KarConfig.ACTOR_CLASS_STR.split("\\s*,\\s*"));
+			List<String> nameList = Arrays.asList(KarConfig.ACTOR_TYPE_NAME_STR.split("\\s*,\\s*"));
 
 			if (classList.size() != nameList.size()) {
-				logger.severe("Incompatible actor configuration! "+ActorRuntimeContextListener.KAR_ACTOR_CLASSES+"="+ActorRuntimeContextListener.actorClassStr
-						+" and "+ActorRuntimeContextListener.KAR_ACTOR_TYPES+"="+ActorRuntimeContextListener.actorTypeNameStr);
+				logger.severe("Incompatible actor configuration! "+ActorRuntimeContextListener.KAR_ACTOR_CLASSES+"="+ KarConfig.ACTOR_CLASS_STR
+						+" and "+ActorRuntimeContextListener.KAR_ACTOR_TYPES+"="+KarConfig.ACTOR_TYPE_NAME_STR);
 			} else {
 				// Create ActorModel for each class
 				for (String actorClassName : classList) {

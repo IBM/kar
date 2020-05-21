@@ -8,13 +8,18 @@
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
-
+	<context-param>
+		<param-name>kar-connection-timeout-millis</param-name>
+		<param-value>600000</param-value>
+	</context-param>
 	<context-param>
 		<param-name>kar-actor-classes</param-name>
-		<param-value>com.ibm.research.kar.example.actors.Dummy, com.ibm.research.kar.example.actors.Dummy2, com.ibm.research.kar.example.actors.Calculator</param-value>
+		<param-value>com.ibm.research.kar.example.actors.Dummy,
+			com.ibm.research.kar.example.actors.Dummy2,
+			com.ibm.research.kar.example.actors.Calculator</param-value>
 	</context-param>
-	<context-param>
-		<param-name>kar-actor-types</param-name>
-		<param-value>dummy, dummy2, calculator</param-value>
-	</context-param>
+		<context-param>
+			<param-name>kar-actor-types</param-name>
+			<param-value>dummy, dummy2, calculator</param-value>
+		</context-param>
 </web-app>

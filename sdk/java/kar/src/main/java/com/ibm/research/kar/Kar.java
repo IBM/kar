@@ -1,6 +1,7 @@
 package com.ibm.research.kar;
 
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -20,8 +21,6 @@ public class Kar {
 
 	private KarRest karClient;
 
-	public static final String DEFAULT_PORT = "3500";
-
 	public Kar() {
 		karClient = buildRestClient();
 	}
@@ -40,7 +39,7 @@ public class Kar {
 		if (port != null && !port.trim().isEmpty()) {
 			baseURIStr = baseURIStr+":"+port+"/";
 		} else {
-			baseURIStr = baseURIStr+":"+DEFAULT_PORT+"/";
+			baseURIStr = baseURIStr+":"+KarConfig.DEFAULT_PORT+"/";
 		}
 
 
@@ -50,6 +49,8 @@ public class Kar {
 
 		return  RestClientBuilder.newBuilder()
 				.baseUri(baseURI)
+				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.build(KarRest.class);
 	}
 

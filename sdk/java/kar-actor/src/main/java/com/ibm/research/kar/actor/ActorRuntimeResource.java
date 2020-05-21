@@ -95,18 +95,19 @@ public class ActorRuntimeResource {
 			Future<Object> futureResult = managedExecutorService.submit(task);
 
 			try {
-				while (!futureResult.isDone()) {
-					Thread.sleep(FUTURE_WAIT_TIME_MILLIS);
-				}
-
+				// wait for actor task to complete
 				result = futureResult.get();
 
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				logger.info(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
-			} catch (ExecutionException e) {
+				futureResult.cancel(true);
+				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Actor task interrupted").build();
+			} catch (ExecutionException e) {				
 				e.printStackTrace();
 				logger.info(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
+				futureResult.cancel(true);
+				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Actor threw exception").build();
 			}
 
 		} else {

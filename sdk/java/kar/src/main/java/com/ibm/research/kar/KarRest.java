@@ -17,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
@@ -25,10 +26,9 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 @RegisterRestClient(configKey = "kar")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
+@Timeout(600000)
 @Path("/kar/v1")
 public interface KarRest extends AutoCloseable {
-
-	int maxRetry = 10;
 
 	/*
 	 * Services
@@ -38,14 +38,14 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 	// synchronous service invocation, returns invocation result
 	@POST
 	@Path("service/{service}/call/{path}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 
@@ -57,14 +57,14 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 	// synchronous actor invocation: returns invocation result
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonValue params) throws ProcessingException;
 
 	//
@@ -73,29 +73,29 @@ public interface KarRest extends AutoCloseable {
 
 	@DELETE
 	@Path("actor/{type}/{id}/reminders")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorCancelReminders(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorCancelReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@GET
 	@Path("actor/{type}/{id}/reminders")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetReminders(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@GET
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@POST
 	@Path("actor/{type}/{id}/reminders}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, JsonObject params) throws ProcessingException;
 
@@ -106,35 +106,35 @@ public interface KarRest extends AutoCloseable {
 
 	@GET
 	@Path("actor/{type}/{id}/state/{key}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonValue params) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state/{key}")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorDeleteState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@GET
 	@Path("actor/{type}/{id}/state")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@POST
 	@Path("actor/{type}/{id}/state")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorSetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
 
@@ -144,17 +144,17 @@ public interface KarRest extends AutoCloseable {
 
 	@POST
 	@Path("event/{topic}/publish")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response publish(@PathParam("topic") String topic) throws ProcessingException;
 
 	@POST
 	@Path("event/{topic}/subscribe")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response subscribe(@PathParam("topic") String topic) throws ProcessingException;
 
 	@POST
 	@Path("event/{topic}/unsubscribe")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response unsubscribe(@PathParam("topic") String topic) throws ProcessingException;
 
 	/*
@@ -163,11 +163,11 @@ public interface KarRest extends AutoCloseable {
 
 	@GET
 	@Path("system/health")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response health() throws ProcessingException;
 
 	@POST
 	@Path("system/shutdown")
-	@Retry(maxRetries = maxRetry)
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response kill() throws ProcessingException;
 }
