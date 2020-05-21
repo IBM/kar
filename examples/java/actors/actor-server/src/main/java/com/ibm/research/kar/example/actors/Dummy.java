@@ -7,7 +7,6 @@ import javax.json.JsonValue;
 
 import com.ibm.research.kar.ActorRef;
 import com.ibm.research.kar.Kar;
-import com.ibm.research.kar.actor.KarSessionListener;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
@@ -15,15 +14,12 @@ import com.ibm.research.kar.actor.annotations.LockPolicy;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor
-public class Dummy implements KarSessionListener {
+public class Dummy extends ActorBoilerplate {
 
 	Kar kar = new Kar();
 
-	private String sessionid;
-
 	@Activate
 	public void init() {
-
 	}
 
 	@Remote(lockPolicy = LockPolicy.READ)
@@ -39,7 +35,7 @@ public class Dummy implements KarSessionListener {
 
 		JsonValue result = kar.actorCall(dummy2, "canBeInvoked", params);
 
-		System.out.println("Dummy.canBeInvoked: My session id is " + this.sessionid);
+		System.out.println("Dummy.canBeInvoked: My session id is " + this.session);
 		return result;
 	}
 
@@ -55,15 +51,5 @@ public class Dummy implements KarSessionListener {
 
 	@Deactivate
 	public void kill() {
-	}
-
-	@Override
-	public void setSessionId(String sessionId) {
-		this.sessionid = sessionId;
-	}
-
-	@Override
-	public String getSessionId() {
-		return this.sessionid;
 	}
 }

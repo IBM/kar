@@ -1,6 +1,5 @@
 package com.ibm.research.kar.actor;
 
-import java.lang.reflect.Type;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
@@ -19,6 +18,8 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import com.ibm.research.kar.ActorInstance;
 
 @Path("/actor")
 @ApplicationScoped
@@ -58,7 +59,7 @@ public class ActorRuntimeResource {
 	public Response deleteActor(@PathParam("type") String type, @PathParam("id") String id) {
 		logger.info(LOG_PREFIX + "deleteActor: deleting actor");
 
-		//actorManager.deleteActor(type, id);
+		actorManager.deleteActor(type, id);
 		return Response.status(Response.Status.OK).build();
 	}
 
@@ -75,27 +76,17 @@ public class ActorRuntimeResource {
 
 		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with params " + params);
 
-		Object actorObj = this.actorManager.getActor(type, id);
+		ActorInstance actorObj = this.actorManager.getActor(type, id);
 		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
 
 		logger.info(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
 		Object result = null;
 
-
 		if ((actorObj != null) && (methodType != null)) {
-			Type[] interfaces = actorObj.getClass().getGenericInterfaces();
-
-			// give object sessionId if it is listening for it
-			for (Type t: interfaces) {
-				if (t.getTypeName() == KarSessionListener.class.getTypeName()) {
-					synchronized(actorObj) {
-						((KarSessionListener)actorObj).setSessionId(sessionid);
-					}
-				}
-			}
+			actorObj.setSession(sessionid);
 
 			ActorTask task = new ActorTask();
-			task.setActorObj(actorObj);
+			task.setActor(actorObj);
 			task.setActorMethod(methodType.getMethod());
 			task.setLockPolicy(methodType.getLockPolicy());
 			task.setParams(params);
@@ -110,12 +101,10 @@ public class ActorRuntimeResource {
 
 				result = futureResult.get();
 
-
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				logger.info(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
 			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				logger.info(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
 			}

@@ -6,12 +6,13 @@ import java.util.concurrent.Callable;
 import javax.enterprise.inject.Default;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.ActorInstance;
 import com.ibm.research.kar.actor.annotations.LockPolicy;
 
 @Default
 public class ActorTask implements Callable<Object> {
 
-	private Object actorObj;
+	private ActorInstance actor;
 	private Method actorMethod;
 	private JsonValue params;
 	private int lockPolicy;
@@ -24,12 +25,12 @@ public class ActorTask implements Callable<Object> {
 		this.lockPolicy = lockPolicy;
 	}
 
-	public Object getActorObj() {
-		return actorObj;
+	public ActorInstance getActor() {
+		return actor;
 	}
 
-	public void setActorObj(Object actorObj) {
-		this.actorObj = actorObj;
+	public void setActor(ActorInstance actorObj) {
+		this.actor = actorObj;
 	}
 
 	public Method getActorMethod() {
@@ -56,21 +57,21 @@ public class ActorTask implements Callable<Object> {
 		if (actorMethod.getParameterCount() > 0) {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
-				result = actorMethod.invoke(actorObj, params);
+				result = actorMethod.invoke(actor, params);
 				break;
 			default:
-				synchronized (actorObj) {
-					result = actorMethod.invoke(actorObj, params);
+				synchronized (actor) {
+					result = actorMethod.invoke(actor, params);
 			}
 		}
 		} else {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
-				result = actorMethod.invoke(actorObj);
+				result = actorMethod.invoke(actor);
 				break;
 			default:
-				synchronized (actorObj) {
-					result = actorMethod.invoke(actorObj);
+				synchronized (actor) {
+					result = actorMethod.invoke(actor);
 			}
 		}
 		}
