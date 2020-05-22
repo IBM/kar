@@ -16,14 +16,13 @@ public class Dummy2 extends ActorBoilerplate {
 
 		JsonObject params = Json.createObjectBuilder()
 				.add("number", number)
-				.build();	
-	
+				.build();
+
 		//uncomment to test long running
 		/*
 		try {
 			Thread.sleep(10000);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} */
 

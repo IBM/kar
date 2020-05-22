@@ -4,7 +4,7 @@ import javax.json.Json;
 import javax.json.JsonNumber;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.Kar;
+import static com.ibm.research.kar.Kar.*;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
@@ -15,13 +15,12 @@ import com.ibm.research.kar.actor.annotations.Remote;
  */
 @Actor
 public class Calculator extends ActorBoilerplate {
-	Kar kar = new Kar();
 
 	private int accum;
 
 	@Activate
 	public void initState() {
-		JsonValue v = this.kar.actorGetState(kar.actorRef(type, id), "accum");
+		JsonValue v = actorGetState(actorRef(type, id), "accum");
 		if (v instanceof JsonNumber) {
 			accum = ((JsonNumber)v).intValue();
 		} else {
@@ -31,7 +30,7 @@ public class Calculator extends ActorBoilerplate {
 
 	@Deactivate
 	public void saveState() {
-		kar.actorSetState(kar.actorRef(type, id), "accum", Json.createValue(accum));
+		actorSetState(actorRef(type, id), "accum", Json.createValue(accum));
 	}
 
 	@Remote

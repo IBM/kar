@@ -2,7 +2,14 @@ package com.ibm.research.kar.example.actors;
 
 import com.ibm.research.kar.ActorInstance;
 
-public class ActorBoilerplate implements ActorInstance {
+/**
+ * Kar requires all Actor Classes to implement the ActorIntance interface.
+ *
+ * When writing an application component that contains multiple actor types,
+ * one convenient pattern is to share the boilerplate code by defining a
+ * common superclass extended by all your Actor classes.
+ */
+public abstract class ActorBoilerplate implements ActorInstance {
   protected String type;
   protected String id;
   protected String session;

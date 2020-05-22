@@ -23,17 +23,12 @@ import com.ibm.research.kar.Kar;
 @Produces(MediaType.APPLICATION_JSON)
 public class ClientResource {
 
-	@Inject @ConfigProperty(name="useKar",
-			 defaultValue="true")
+	@Inject @ConfigProperty(name="useKar", defaultValue="true")
 	boolean useKar;
-
-	@Inject
-	private Kar karClient;
 
 	@Inject
 	@RestClient
 	private IncrServer defaultRestClient;
-
 
 	@POST
 	@Path("incrSync")
@@ -42,7 +37,7 @@ public class ClientResource {
 		try {
 
 			if (useKar == true) {
-				JsonValue result = karClient.call(karParams.service, karParams.path, karParams.params);
+				JsonValue result = Kar.call(karParams.service, karParams.path, karParams.params);
 				Response resp = Response.status(Response.Status.OK).entity(result).build();
 				return resp;
 			} else {
@@ -69,7 +64,7 @@ public class ClientResource {
 	public Response tell(KarParams karParams) throws ProcessingException {
 		try {
 			if (useKar == true) {
-				this.karClient.tell(karParams.service, karParams.path, karParams.params);
+				Kar.tell(karParams.service, karParams.path, karParams.params);
 				return Response.status(Response.Status.OK).build();
 			} else {
 				return Response.status(Response.Status.OK).build();
