@@ -21,10 +21,14 @@ type binding interface {
 // in-memory collection of bindings
 // assumes exclusive access
 type bindings interface {
-	add(b binding)
+	add(ctx context.Context, b binding) error
 	cancel(actor Actor, id string) []binding
 	find(actor Actor, id string) []binding
+
+	// parse binding creation request payload to binding object and serialized binding (map[string]string)
 	parse(actor Actor, id, key, payload string) (binding, map[string]string, error)
+
+	// parse serialized binding
 	load(actor Actor, id, key string, m map[string]string) (binding, error)
 }
 
@@ -60,7 +64,7 @@ func keyBinding(key string) (kind string, actor Actor, partition, id string) {
 }
 
 // load binding from redis in memory
-func loadBinding(kind string, actor Actor, partition, id string) error {
+func loadBinding(ctx context.Context, kind string, actor Actor, partition, id string) error {
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
@@ -80,7 +84,10 @@ func loadBinding(kind string, actor Actor, partition, id string) error {
 	if err != nil {
 		return err
 	}
-	pair.bindings.add(b)
+	err = pair.bindings.add(ctx, b)
+	if err != nil {
+		return err
+	}
 	logger.Debug("loaded binding %v", b)
 	return nil
 }
@@ -109,7 +116,7 @@ func getBindings(kind string, actor Actor, id string) []binding {
 }
 
 // add binding in redis and memory
-func postBinding(kind string, actor Actor, id, payload string) error {
+func postBinding(ctx context.Context, kind string, actor Actor, id, payload string) error {
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
@@ -127,7 +134,10 @@ func postBinding(kind string, actor Actor, id, payload string) error {
 		return err
 	}
 	pair.bindings.cancel(actor, id)
-	pair.bindings.add(b)
+	err = pair.bindings.add(ctx, b)
+	if err != nil {
+		return err
+	}
 	store.HSetMultiple(key, m)
 	logger.Debug("created binding %v", b)
 	return nil

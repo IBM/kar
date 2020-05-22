@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"container/heap"
+	"context"
 	"time"
 )
 
@@ -42,8 +43,9 @@ func (rq *reminderQueue) Pop() interface{} {
 	return r
 }
 
-func (rq *reminderQueue) add(b binding) {
+func (rq *reminderQueue) add(ctx context.Context, b binding) error {
 	heap.Push(rq, &reminderEntry{r: b.(Reminder)})
+	return nil
 }
 
 func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {

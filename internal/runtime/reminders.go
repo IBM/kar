@@ -159,13 +159,13 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		if err := TellActor(ctx, r.Actor, r.Path, r.EncodedData, "application/kar+json"); err != nil {
 			logger.Debug("ProcessReminders: firing %v raised error %v", r, err)
 			logger.Debug("ProcessReminders: ending this round; putting reminder back in queue to retry in next round")
-			activeReminders.add(r)
+			activeReminders.add(ctx, r)
 			break
 		}
 
 		if r.Period > 0 {
 			r.TargetTime = fireTime.Add(r.Period)
-			activeReminders.add(r)
+			activeReminders.add(ctx, r)
 			persistTargetTime(r.key, r.TargetTime)
 		} else {
 			store.Del(r.key)

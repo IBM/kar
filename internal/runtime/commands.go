@@ -239,7 +239,7 @@ func bindingGet(ctx context.Context, msg map[string]string) error {
 func bindingSet(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	err := postBinding(msg["kind"], actor, msg["bindingId"], msg["payload"])
+	err := postBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
 		reply = &Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -250,7 +250,7 @@ func bindingSet(ctx context.Context, msg map[string]string) error {
 
 func bindingTell(ctx context.Context, msg map[string]string) error {
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	err := loadBinding(msg["kind"], actor, msg["partition"], msg["bindingId"])
+	err := loadBinding(ctx, msg["kind"], actor, msg["partition"], msg["bindingId"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Error("load binding failed: %v", err)

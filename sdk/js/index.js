@@ -142,7 +142,10 @@ const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object
 
 const unsubscribe = (topic, opts) => post(`event/${topic}/unsubscribe`, opts)
 
-const actorSubscribe = (actor, topic, path, params) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}`, actorType: actor.kar.type, actorId: actor.kar.id }, params))
+function actorSubscribe (actor, topic, path, params = {}) {
+  const id = params.id || topic
+  return post(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ path: `/${path}`, topic }, params))
+}
 
 /***************************************************
  * End of public methods intended for application programming
