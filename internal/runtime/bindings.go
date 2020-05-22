@@ -18,17 +18,6 @@ type binding interface {
 	k() string // cached redis key
 }
 
-type base struct {
-	Actor   Actor
-	ID      string
-	key     string
-	Payload string
-}
-
-func (s base) k() string {
-	return s.key
-}
-
 // in-memory collection of bindings
 // assumes exclusive access
 type bindings interface {
@@ -37,58 +26,6 @@ type bindings interface {
 	find(actor Actor, id string) []binding
 	parse(actor Actor, id, key, payload string) (binding, map[string]string, error)
 	load(actor Actor, id, key string, m map[string]string) (binding, error)
-}
-
-// a collection of bindings implemented as a map
-type collection map[Actor]map[string]binding
-
-// add binding to collection
-func (c collection) add(b binding) {
-	x := b.(base)
-	if _, ok := c[x.Actor]; !ok {
-		c[x.Actor] = map[string]binding{}
-	}
-	c[x.Actor][x.ID] = b
-}
-
-// find bindings in collection
-func (c collection) find(actor Actor, id string) []binding {
-	if id != "" {
-		if b, ok := c[actor][id]; ok {
-			return []binding{b}
-		}
-		return []binding{}
-	}
-	a := []binding{}
-	for _, b := range c[actor] {
-		a = append(a, b)
-	}
-	return a
-}
-
-// remove bindings from collection
-func (c collection) cancel(actor Actor, id string) []binding {
-	if id != "" {
-		if b, ok := c[actor][id]; ok {
-			delete(c[actor], id)
-			return []binding{b}
-		}
-		return []binding{}
-	}
-	a := []binding{}
-	for _, b := range c[actor] {
-		a = append(a, b)
-	}
-	delete(c, actor)
-	return a
-}
-
-func (c collection) parse(actor Actor, id, key, payload string) (binding, map[string]string, error) {
-	return base{Actor: actor, ID: id, key: key, Payload: payload}, map[string]string{"payload": payload}, nil
-}
-
-func (c collection) load(actor Actor, id, key string, m map[string]string) (binding, error) {
-	return base{Actor: actor, ID: id, key: key, Payload: m["payload"]}, nil
 }
 
 // a collection of bindings and a mutex to protect it
@@ -101,11 +38,6 @@ var (
 	// binding kind -> binding collection
 	pairs = map[string]pair{}
 )
-
-func init() {
-	pairs["subscriptions"] = pair{bindings: collection{}, mu: &sync.Mutex{}}
-	pairs["reminders"] = pair{bindings: &activeReminders, mu: &sync.Mutex{}}
-}
 
 // redis key for binding
 func bindingKey(kind string, actor Actor, partition, id string) string {

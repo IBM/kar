@@ -13,13 +13,13 @@ import (
 )
 
 var (
-	activeReminders reminderQueue
-	arMutex         sync.Mutex
+	activeReminders = &reminderQueue{}
+	arMutex         = &sync.Mutex{}
 )
 
 func init() {
-	activeReminders = make(reminderQueue, 0)
-	heap.Init(&activeReminders)
+	heap.Init(activeReminders)
+	pairs["reminders"] = pair{bindings: activeReminders, mu: arMutex}
 }
 
 // Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
