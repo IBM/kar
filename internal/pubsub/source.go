@@ -290,7 +290,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 		defer wg.Done()
 		for {
 			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil && err != errTooFewPartitions { // abnormal termination
-				logger.Error("failed consumer for topic %s, group %s: %v", topic, group, err)
+				logger.Error("failed consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
 				// TODO maybe add an error channel
 				break
 			}
