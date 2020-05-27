@@ -52,9 +52,11 @@ public class Kar {
 				.build(KarRest.class);
 	}
 
-	private static JsonArray packArgs(JsonValue a) {
+	private static JsonArray packArgs(JsonValue[] args) {
 		JsonArrayBuilder ja = Json.createArrayBuilder();
-		ja.add(a);
+		for (JsonValue a: args) {
+			ja.add(a);
+		}
 		return ja.build();
 	}
 
@@ -87,19 +89,19 @@ public class Kar {
 	}
 
 	// asynchronous actor invocation, returns once invoke is scheduled
-	public static void actorTell(ActorRef p, String path, JsonValue arg) throws ProcessingException {
-		karClient.actorTell(p.getType(), p.getId(), path, packArgs(arg));
+	public static void actorTell(ActorRef p, String path, JsonValue... args) throws ProcessingException {
+		karClient.actorTell(p.getType(), p.getId(), path, packArgs(args));
 	}
 
 	// synchronous actor invocation with explicit session: returns result of the actor method
-	public static JsonValue actorCall(String callingSession, ActorRef p,  String path, JsonValue arg) throws ProcessingException {
-		Response response = karClient.actorCall(p.getType(), p.getId(), path, callingSession, packArgs(arg));
+	public static JsonValue actorCall(String callingSession, ActorRef p,  String path, JsonValue... args) throws ProcessingException {
+		Response response = karClient.actorCall(p.getType(), p.getId(), path, callingSession, packArgs(args));
 		return toValue(response);
 	}
 
 	// synchronous actor invocation: returns the result of the actor method
-	public static JsonValue actorCall(ActorRef p, String path, JsonValue arg) throws ProcessingException {
-		Response response = karClient.actorCall(p.getType(), p.getId(), path, null, packArgs(arg));
+	public static JsonValue actorCall(ActorRef p, String path, JsonValue... args) throws ProcessingException {
+		Response response = karClient.actorCall(p.getType(), p.getId(), path, null, packArgs(args));
 		return toValue(response);
 	}
 

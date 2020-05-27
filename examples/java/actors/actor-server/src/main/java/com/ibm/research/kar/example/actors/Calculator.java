@@ -22,7 +22,7 @@ public class Calculator extends ActorBoilerplate {
 	public void initState() {
 		JsonValue v = actorGetState(actorRef(type, id), "accum");
 		if (v instanceof JsonNumber) {
-			accum = ((JsonNumber)v).intValue();
+			accum = ((JsonNumber) v).intValue();
 		} else {
 			accum = 0;
 		}
@@ -34,16 +34,20 @@ public class Calculator extends ActorBoilerplate {
 	}
 
 	@Remote
-	public JsonNumber add(JsonNumber num) {
-		int number = num.intValue();
-		accum += number;
+	public JsonNumber add(JsonNumber... nums) {
+		for (JsonNumber n : nums) {
+			int number = n.intValue();
+			accum += number;
+		}
 		return Json.createValue(this.accum);
 	}
 
 	@Remote
-	public JsonNumber subtract(JsonNumber num) {
-		int number = num.intValue();
-		accum -= number;
+	public JsonNumber subtract(JsonNumber... nums) {
+		for (JsonNumber n : nums) {
+			int number = n.intValue();
+			accum -= number;
+		}
 		return Json.createValue(accum);
 	}
 

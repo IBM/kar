@@ -1,25 +1,21 @@
 package com.ibm.research.kar.actor;
 
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
 
 public class RemoteMethodType {
-	
-	private Method method;
-	private int lockPolicy;
-	
-	public Method getMethod() {
+	private final MethodHandle method;
+	private final int lockPolicy;
+
+	public RemoteMethodType(MethodHandle method, int lockPolicy) {
+		this.method = method;
+		this.lockPolicy = lockPolicy;
+	}
+
+	public MethodHandle getMethod() {
 		return method;
 	}
-	public void setMethod(Method method) {
-		this.method = method;
-	}
+
 	public int getLockPolicy() {
 		return lockPolicy;
 	}
-	public void setLockPolicy(int lockPolicy) {
-		this.lockPolicy = lockPolicy;
-	}
-	
-	
-
 }

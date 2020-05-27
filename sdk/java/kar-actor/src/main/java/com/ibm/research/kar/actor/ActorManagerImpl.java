@@ -1,5 +1,7 @@
 package com.ibm.research.kar.actor;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -36,10 +38,11 @@ public class ActorManagerImpl implements ActorManager {
 
 	@PostConstruct
 	public void initialize() {
-		logger.info(LOG_PREFIX+"initialize: Intializing Actor map");
+		logger.info(LOG_PREFIX + "initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
 
-		logger.info(LOG_PREFIX+"initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":"+ KarConfig.ACTOR_TYPE_NAME_STR);
+		logger.info(
+				LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
 
 		// ensure that we have non-null class and kar type strings from web.xml
 		if ((KarConfig.ACTOR_CLASS_STR != null) && (KarConfig.ACTOR_TYPE_NAME_STR != null)) {
@@ -47,38 +50,40 @@ public class ActorManagerImpl implements ActorManager {
 			List<String> nameList = Arrays.asList(KarConfig.ACTOR_TYPE_NAME_STR.split("\\s*,\\s*"));
 
 			if (classList.size() != nameList.size()) {
-				logger.severe("Incompatible actor configuration! "+ActorRuntimeContextListener.KAR_ACTOR_CLASSES+"="+ KarConfig.ACTOR_CLASS_STR
-						+" and "+ActorRuntimeContextListener.KAR_ACTOR_TYPES+"="+KarConfig.ACTOR_TYPE_NAME_STR);
+				logger.severe("Incompatible actor configuration! " + ActorRuntimeContextListener.KAR_ACTOR_CLASSES + "="
+						+ KarConfig.ACTOR_CLASS_STR + " and " + ActorRuntimeContextListener.KAR_ACTOR_TYPES + "="
+						+ KarConfig.ACTOR_TYPE_NAME_STR);
 			} else {
 				// Create ActorModel for each class
+				MethodHandles.Lookup lookup = MethodHandles.lookup();
 				for (String actorClassName : classList) {
 					try {
 						Class<?> cls = Class.forName(actorClassName);
 						boolean isAnnotated = cls.getAnnotation(Actor.class) != null;
 						boolean isActorInstance = ActorInstance.class.isAssignableFrom(cls);
 
-						// class must be annotated with @Actor and implement ActorInstance to be processed as a valid Actor
+						// class must be annotated with @Actor and implement ActorInstance to be
+						// processed as a valid Actor
 						if (isAnnotated && isActorInstance) {
 							@SuppressWarnings("unchecked") // can never fail because isActorInstance is true
-							Class<ActorInstance> actorClass = ((Class<ActorInstance>)cls);
+							Class<ActorInstance> actorClass = ((Class<ActorInstance>) cls);
 
 							Method[] methods = cls.getMethods();
-							Map<String,RemoteMethodType> remoteMethods = new HashMap<String,RemoteMethodType>();
+							Map<String, RemoteMethodType> remoteMethods = new HashMap<String, RemoteMethodType>();
 							Method activateMethod = null;
 							Method deactivateMethod = null;
 
 							for (Method method : methods) {
 								if (method.isAnnotationPresent(Remote.class)) {
-									logger.info(LOG_PREFIX+"initialize: adding method " + method.getName() + " to remote methods for " + actorClassName);
-
-									int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
-
-									RemoteMethodType methodType = new RemoteMethodType();
-									methodType.setLockPolicy(lockPolicy);
-									methodType.setMethod(method);
-
-									remoteMethods.put(method.getName(),methodType);
-
+									try {
+										MethodHandle mh = lookup.unreflect(method);
+										int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
+										RemoteMethodType methodType = new RemoteMethodType(mh, lockPolicy);
+										logger.info(LOG_PREFIX + "initialize: adding method " + method.getName() + " to remote methods for "+ actorClassName);
+										remoteMethods.put(method.getName(), methodType);
+									} catch (IllegalAccessException e) {
+										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName() + " to remote methods for "+ actorClassName);
+									}
 								} else if (method.isAnnotationPresent(Activate.class)) {
 									activateMethod = method;
 								} else if (method.isAnnotationPresent(Deactivate.class)) {
@@ -104,15 +109,16 @@ public class ActorManagerImpl implements ActorManager {
 							actorMap.put(karTypeName, actorModel);
 						} else {
 							if (!isAnnotated) {
-								logger.severe(LOG_PREFIX+"initialize: "+actorClassName+" is not annotated with @Actor");
+								logger.severe(LOG_PREFIX + "initialize: " + actorClassName + " is not annotated with @Actor");
 							}
 							if (!isActorInstance) {
-								logger.severe(LOG_PREFIX+"initialize: "+actorClassName+" does not implement "+ActorInstance.class.getName());
+								logger.severe(LOG_PREFIX + "initialize: " + actorClassName + " does not implement "
+										+ ActorInstance.class.getName());
 							}
 						}
 					} catch (ClassNotFoundException e) {
 						e.printStackTrace();
-						System.out.print(LOG_PREFIX+"initialize: Cannot log class " + actorClassName);
+						System.out.print(LOG_PREFIX + "initialize: Cannot log class " + actorClassName);
 					}
 				}
 
@@ -122,11 +128,9 @@ public class ActorManagerImpl implements ActorManager {
 		}
 	}
 
-
 	@Lock(LockType.WRITE)
 	public ActorInstance createActor(String type, String id) {
 		logger.info(LOG_PREFIX + "createActor ActorManager");
-
 
 		ActorModel actorRef = actorMap.get(type);
 		ActorInstance actorObj = null;
@@ -149,9 +153,8 @@ public class ActorManagerImpl implements ActorManager {
 				// put reference to actorObj in the ActorModel
 				actorRef.getActorInstances().put(id, actorObj);
 
-
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException | NoSuchMethodException | SecurityException e) {
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+					| NoSuchMethodException | SecurityException e) {
 				e.printStackTrace();
 			}
 		}
@@ -189,7 +192,7 @@ public class ActorManagerImpl implements ActorManager {
 	@Lock(LockType.READ)
 	public ActorInstance getActor(String type, String id) {
 
-		logger.info(LOG_PREFIX+"getActor: Retrieving actor instance");
+		logger.info(LOG_PREFIX + "getActor: Retrieving actor instance");
 
 		ActorModel model = this.actorMap.get(type);
 		ActorInstance actorObj = null;
@@ -213,7 +216,6 @@ public class ActorManagerImpl implements ActorManager {
 		}
 	}
 
-
 	@Override
 	public RemoteMethodType getActorMethod(String type, String name) {
 		logger.info(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
@@ -223,17 +225,13 @@ public class ActorManagerImpl implements ActorManager {
 
 		RemoteMethodType method = null;
 
-
 		if (model != null) {
 			method = model.getRemoteMethods().get(name);
 		} else {
-			logger.info(LOG_PREFIX+"getActorMethod: Warning, no model of type " + type + " found");
+			logger.info(LOG_PREFIX + "getActorMethod: Warning, no model of type " + type + " found");
 		}
 
 		return method;
 	}
-
-
-
 
 }

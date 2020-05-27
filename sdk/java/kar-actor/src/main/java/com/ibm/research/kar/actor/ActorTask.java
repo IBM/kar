@@ -1,18 +1,17 @@
 package com.ibm.research.kar.actor;
 
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
+import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.Callable;
 import javax.enterprise.inject.Default;
 import javax.json.JsonArray;
-
 import com.ibm.research.kar.ActorInstance;
 import com.ibm.research.kar.actor.annotations.LockPolicy;
 
 @Default
 public class ActorTask implements Callable<Object> {
-
 	private ActorInstance actor;
-	private Method actorMethod;
+	private MethodHandle actorMethod;
 	private JsonArray params;
 	private int lockPolicy;
 
@@ -32,11 +31,11 @@ public class ActorTask implements Callable<Object> {
 		this.actor = actorObj;
 	}
 
-	public Method getActorMethod() {
+	public MethodHandle getActorMethod() {
 		return actorMethod;
 	}
 
-	public void setActorMethod(Method actorMethod) {
+	public void setActorMethod(MethodHandle actorMethod) {
 		this.actorMethod = actorMethod;
 	}
 
@@ -50,31 +49,26 @@ public class ActorTask implements Callable<Object> {
 
 	@Override
 	public Object call() throws Exception {
+		Object[] args = new Object[params.size() + 1];
+		args[0] = actor;
+		for (int i = 0; i < params.size(); i++) {
+			args[i + 1] = params.get(i);
+		}
 
-		Object result = null;
-
-		if (actorMethod.getParameterCount() > 0) {
-			switch (this.lockPolicy) {
-			case LockPolicy.READ:
-				result = actorMethod.invoke(actor, params.get(0));
-				break;
-			default:
+		try {
+			Object result = null;
+			if (this.lockPolicy == LockPolicy.READ) {
+				result = actorMethod.invokeWithArguments(args);
+			} else {
 				synchronized (actor) {
-					result = actorMethod.invoke(actor, params.get(0));
+					result = actorMethod.invokeWithArguments(args);
+				}
 			}
+			return result;
+		} catch (Exception e) {
+			throw e;
+		} catch (Throwable t) {
+			throw new InvocationTargetException(t);
 		}
-		} else {
-			switch (this.lockPolicy) {
-			case LockPolicy.READ:
-				result = actorMethod.invoke(actor);
-				break;
-			default:
-				synchronized (actor) {
-					result = actorMethod.invoke(actor);
-			}
-		}
-		}
-
-		return result;
 	}
 }
