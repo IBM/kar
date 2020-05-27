@@ -2,9 +2,8 @@ package com.ibm.research.kar.actor;
 
 import java.lang.reflect.Method;
 import java.util.concurrent.Callable;
-
 import javax.enterprise.inject.Default;
-import javax.json.JsonValue;
+import javax.json.JsonArray;
 
 import com.ibm.research.kar.ActorInstance;
 import com.ibm.research.kar.actor.annotations.LockPolicy;
@@ -14,7 +13,7 @@ public class ActorTask implements Callable<Object> {
 
 	private ActorInstance actor;
 	private Method actorMethod;
-	private JsonValue params;
+	private JsonArray params;
 	private int lockPolicy;
 
 	public int getLockPolicy() {
@@ -41,11 +40,11 @@ public class ActorTask implements Callable<Object> {
 		this.actorMethod = actorMethod;
 	}
 
-	public JsonValue getParams() {
+	public JsonArray getParams() {
 		return params;
 	}
 
-	public void setParams(JsonValue params) {
+	public void setParams(JsonArray params) {
 		this.params = params;
 	}
 
@@ -57,11 +56,11 @@ public class ActorTask implements Callable<Object> {
 		if (actorMethod.getParameterCount() > 0) {
 			switch (this.lockPolicy) {
 			case LockPolicy.READ:
-				result = actorMethod.invoke(actor, params);
+				result = actorMethod.invoke(actor, params.get(0));
 				break;
 			default:
 				synchronized (actor) {
-					result = actorMethod.invoke(actor, params);
+					result = actorMethod.invoke(actor, params.get(0));
 			}
 		}
 		} else {

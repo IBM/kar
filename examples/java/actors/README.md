@@ -31,14 +31,11 @@ Wait a few seconds until you see
 
 Then, in a second terminal do
 ```shell
-kar -runtime_port 32123 -app actor curl -H "Content-Type: application/json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '{ "number": 10}'
+kar -runtime_port 32123 -app actor curl -s -H "Content-Type: application/json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
 ```
 
 You should see output like:
 ```shell
-2020/05/15 10:47:08 [STDERR]   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-2020/05/15 10:47:08 [STDERR]                                  Dload  Upload   Total   Spent    Left  Speed
-100    28  100    13  100    15     14     16 --:--:-- --:--:-- --:--:--    16
 2020/05/15 10:47:09 [STDOUT] {"number":12}
 ```
 

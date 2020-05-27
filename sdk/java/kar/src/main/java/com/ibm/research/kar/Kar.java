@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
@@ -50,6 +52,12 @@ public class Kar {
 				.build(KarRest.class);
 	}
 
+	private static JsonArray packArgs(JsonValue a) {
+		JsonArrayBuilder ja = Json.createArrayBuilder();
+		ja.add(a);
+		return ja.build();
+	}
+
 	private static JsonValue toValue(Response response) {
 		if (response.hasEntity()) {
 			return response.readEntity(JsonValue.class);
@@ -79,19 +87,19 @@ public class Kar {
 	}
 
 	// asynchronous actor invocation, returns once invoke is scheduled
-	public static void actorTell(ActorRef p, String path, JsonValue params) throws ProcessingException {
-		karClient.actorTell(p.getType(), p.getId(), path, params);
+	public static void actorTell(ActorRef p, String path, JsonValue arg) throws ProcessingException {
+		karClient.actorTell(p.getType(), p.getId(), path, packArgs(arg));
 	}
 
 	// synchronous actor invocation with explicit session: returns result of the actor method
-	public static JsonValue actorCall(String callingSession, ActorRef p,  String path, JsonValue params) throws ProcessingException {
-		Response response = karClient.actorCall(p.getType(), p.getId(), path, callingSession, params);
+	public static JsonValue actorCall(String callingSession, ActorRef p,  String path, JsonValue arg) throws ProcessingException {
+		Response response = karClient.actorCall(p.getType(), p.getId(), path, callingSession, packArgs(arg));
 		return toValue(response);
 	}
 
 	// synchronous actor invocation: returns the result of the actor method
-	public static JsonValue actorCall(ActorRef p, String path, JsonValue params) throws ProcessingException {
-		Response response = karClient.actorCall(p.getType(), p.getId(), path, null, params);
+	public static JsonValue actorCall(ActorRef p, String path, JsonValue arg) throws ProcessingException {
+		Response response = karClient.actorCall(p.getType(), p.getId(), path, null, packArgs(arg));
 		return toValue(response);
 	}
 

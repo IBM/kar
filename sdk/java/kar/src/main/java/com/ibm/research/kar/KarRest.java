@@ -1,6 +1,7 @@
 package com.ibm.research.kar;
 
 import javax.enterprise.inject.Default;
+import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
@@ -59,13 +60,13 @@ public interface KarRest extends AutoCloseable {
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonArray args) throws ProcessingException;
 
 	// synchronous actor invocation: returns invocation result
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonValue params) throws ProcessingException;
+	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ProcessingException;
 
 	//
 	// Actor Reminder operations

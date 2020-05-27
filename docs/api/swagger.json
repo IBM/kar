@@ -12,7 +12,7 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
+        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
         "consumes": [
           "application"
         ],
@@ -68,11 +68,15 @@
             "in": "query"
           },
           {
-            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
+            "example": "[3, 'hello', { msg: 'Greetings' }]",
+            "description": "A possibly empty array containing the arguments with which to invoke the target actor method.",
+            "name": "ActorMethodArguments",
             "in": "body",
             "schema": {
-              "type": "object"
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
             }
           }
         ],
@@ -130,60 +134,6 @@
         "responses": {
           "200": {
             "$ref": "#/responses/response200ReminderGetAllResult"
-          },
-          "500": {
-            "$ref": "#/responses/response500"
-          },
-          "503": {
-            "$ref": "#/responses/response503"
-          }
-        }
-      },
-      "post": {
-        "description": "### Schedule a reminder\n\nThis operation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "text/plain"
-        ],
-        "schemes": [
-          "http"
-        ],
-        "tags": [
-          "actors"
-        ],
-        "summary": "reminders",
-        "operationId": "idActorReminderSchedule",
-        "parameters": [
-          {
-            "type": "string",
-            "x-go-name": "ActorType",
-            "description": "The actor type",
-            "name": "actorType",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "x-go-name": "ActorID",
-            "description": "The actor instance id",
-            "name": "actorId",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "The request body describes the reminder to be scheduled",
-            "name": "Body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/scheduleReminderPayload"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -290,6 +240,60 @@
           },
           "404": {
             "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "post": {
+        "description": "### Schedule a reminder\n\nThis operation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "reminders",
+        "operationId": "idActorReminderSchedule",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the reminder to be scheduled",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/scheduleReminderPayload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1017,12 +1021,6 @@
           "type": "object",
           "x-go-name": "Data",
           "example": "{ msg: \"Hello Friend!\" }"
-        },
-        "id": {
-          "description": "The ID to use for this reminder",
-          "type": "string",
-          "x-go-name": "ID",
-          "example": "repeatingGreeter"
         },
         "path": {
           "description": "The path to invoke on the actor instance when the reminder is fired",

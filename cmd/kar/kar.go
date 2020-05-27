@@ -91,7 +91,8 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // Call executes a `POST` to the `path` endpoint of the
 // actor instance indicated by `actorType` and `actorId`.
-// The request body is passed through to the target endpoint.
+// The request body must be a (possibly zero-length) JSON array whose elements
+// are used as the actual parameters of the actor method.
 // The result of the call is the result of invoking the target actor method
 // unless the `async` pragma header is specified.
 //

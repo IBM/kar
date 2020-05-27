@@ -119,12 +119,19 @@ type reminderScheduleParamWrapper struct {
 	Body scheduleReminderPayload
 }
 
-// swagger:parameters idActorCall
 // swagger:parameters idServiceCall
 type endpointRequestBody struct {
 	// An arbitrary request body to be passed through unchanged to the target endpoint
 	// in:body
 	TargetRequestBody interface{}
+}
+
+// swagger:parameters idActorCall
+type actorCallRequestBody struct {
+	// A possibly empty array containing the arguments with which to invoke the target actor method.
+	// example: [3, 'hello', { msg: 'Greetings' }]
+	// in:body
+	ActorMethodArguments []interface{}
 }
 
 // swagger:parameters idActorStateGet

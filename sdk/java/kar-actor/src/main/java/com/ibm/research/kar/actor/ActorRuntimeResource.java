@@ -8,7 +8,7 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.JsonValue;
+import javax.json.JsonArray;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -72,9 +72,9 @@ public class ActorRuntimeResource {
 			@PathParam("id") String id,
 			@PathParam("sessionid") String sessionid,
 			@PathParam("path") String path,
-			JsonValue params) {
+			JsonArray args) {
 
-		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with params " + params);
+		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
 		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
@@ -89,7 +89,7 @@ public class ActorRuntimeResource {
 			task.setActor(actorObj);
 			task.setActorMethod(methodType.getMethod());
 			task.setLockPolicy(methodType.getLockPolicy());
-			task.setParams(params);
+			task.setParams(args);
 
 			// execute task asynchronously
 			Future<Object> futureResult = managedExecutorService.submit(task);
@@ -103,7 +103,7 @@ public class ActorRuntimeResource {
 				logger.info(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
 				futureResult.cancel(true);
 				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Actor task interrupted").build();
-			} catch (ExecutionException e) {				
+			} catch (ExecutionException e) {
 				e.printStackTrace();
 				logger.info(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
 				futureResult.cancel(true);
