@@ -49,6 +49,7 @@ func (e *Message) Mark() error {
 
 // handler of consumer group session
 type handler struct {
+	client  sarama.Client
 	conf    *sarama.Config               // kafka config
 	topic   string                       // subscribed topic
 	options *Options                     // options
@@ -105,6 +106,12 @@ func (h *handler) marshal() {
 // Setup consumer group session
 func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	logger.Info("setup session for topic %s, generation %d, claims %v", h.topic, session.GenerationID(), session.Claims()[h.topic])
+
+	admin, err := sarama.NewClusterAdminFromClient(h.client)
+	if err != nil {
+		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		return err
+	}
 
 	groups, err := admin.DescribeConsumerGroups([]string{h.topic})
 	if err != nil {
@@ -279,7 +286,13 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 	}
 	handler := newHandler(conf, topic, options)
 	handler.marshal()
-	consumer, err := sarama.NewConsumerGroup(config.KafkaBrokers, group, conf)
+	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	if err != nil {
+		wg.Done()
+		logger.Debug("failed to instantiate Kafka client: %v", err)
+		return nil, err
+	}
+	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
 		wg.Done()
 		logger.Debug("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
@@ -299,6 +312,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 			}
 		}
 		consumer.Close()
+		handler.client.Close()
 		close(handler.out)
 		close(handler.ready) // in case we never finished first session setup
 	}()

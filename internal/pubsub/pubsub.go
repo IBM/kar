@@ -14,7 +14,6 @@ import (
 
 var (
 	client   sarama.Client       // shared client
-	admin    sarama.ClusterAdmin // shared cluster admin
 	producer sarama.SyncProducer // shared idempotent producer
 
 	// routes
@@ -65,12 +64,6 @@ func Dial() error {
 		return err
 	}
 
-	admin, err = sarama.NewClusterAdmin(config.KafkaBrokers, conf)
-	if err != nil {
-		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
-		return err
-	}
-
 	producer, err = sarama.NewSyncProducerFromClient(client)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka producer: %v", err)
@@ -87,7 +80,6 @@ func Close() {
 	wgMutex.Unlock()
 	wg.Wait() // wait for all consumer groups to finish
 	producer.Close()
-	admin.Close()
 	client.Close()
 }
 
@@ -127,7 +119,12 @@ func Partitions() ([]int32, <-chan struct{}) {
 
 // Join joins the sidecar to the application and returns a channel of incoming messages
 func Join(ctx context.Context) (<-chan Message, error) {
-	err := admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		return nil, err
+	}
+	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 	if err != nil {
 		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 	}
