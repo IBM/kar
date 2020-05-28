@@ -162,13 +162,8 @@ public interface KarRest extends AutoCloseable {
 	 * System
 	 */
 
-	@GET
-	@Path("system/health")
-	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response health() throws ProcessingException;
-
 	@POST
 	@Path("system/shutdown")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response kill() throws ProcessingException;
+	public Response shutdown() throws ProcessingException;
 }
