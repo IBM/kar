@@ -1,14 +1,11 @@
 package com.ibm.research.kar.actor;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.JsonArray;
+import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -20,6 +17,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.actor.annotations.LockPolicy;
 
 @Path("/actor")
 @ApplicationScoped
@@ -27,13 +25,9 @@ public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
 	private final static String LOG_PREFIX = "ActorRuntimResource.";
-	private final static int FUTURE_WAIT_TIME_MILLIS = 300;
 
 	@Inject
 	ActorManager actorManager;
-
-	@Resource
-	ManagedExecutorService managedExecutorService;
 
 	@GET
 	@Path("{type}/{id}")
@@ -41,15 +35,12 @@ public class ActorRuntimeResource {
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
 		logger.info(LOG_PREFIX + "getActor: Checking for actor with id " + id);
 		if (actorManager.getActor(type, id) != null) {
-
 			logger.info(LOG_PREFIX + "getActor: Found actor");
 			return Response.status(Response.Status.OK).build();
 		} else {
-
 			logger.info(LOG_PREFIX + "getActor: No actor found, creating");
 
 			this.actorManager.createActor(type, id);
-
 			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
 		}
 	}
@@ -74,53 +65,45 @@ public class ActorRuntimeResource {
 			@PathParam("path") String path,
 			JsonArray args) {
 
-		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
+		logger.finer(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
-		RemoteMethod methodType = this.actorManager.getActorMethod(type, path);
+		RemoteMethod actorMethod = this.actorManager.getActorMethod(type, path);
 
-		logger.info(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
-		Object result = null;
+		if (actorObj == null) {
+			// Internal error.  KAR should ensure that it has called getActor before calling this method.
+			logger.warning(LOG_PREFIX+"invokeActorMethod: Actor instance not found for " + type + "<" + id + ">");
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+		}
 
-		if ((actorObj != null) && (methodType != null)) {
-			actorObj.setSession(sessionid);
-
-			ActorTask task = new ActorTask();
-			task.setActor(actorObj);
-			task.setActorMethod(methodType.getMethod());
-			task.setLockPolicy(methodType.getLockPolicy());
-			task.setParams(args);
-
-			// execute task asynchronously
-			Future<Object> futureResult = managedExecutorService.submit(task);
-
-			try {
-				// wait for actor task to complete
-				result = futureResult.get();
-
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				logger.info(LOG_PREFIX + "invokeActorMethod: waiting interrupted");
-				futureResult.cancel(true);
-				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Actor task interrupted").build();
-			} catch (ExecutionException e) {
-				e.printStackTrace();
-				logger.info(LOG_PREFIX + "invokeActorMethod: execution error for actor method");
-				futureResult.cancel(true);
-				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Actor threw exception").build();
-			}
-
-		} else {
-			logger.info(LOG_PREFIX+"invokeActorMethod: Warning, cannot find " + type + " actor instance " + id + " or method " + path);
+		if (actorMethod == null) {
+			logger.info(LOG_PREFIX+"invokeActorMethod: Cannot find method " + path);
 			return Response.status(Response.Status.NOT_FOUND).build();
 		}
 
-		if (result == null) {
-			return Response.status(Response.Status.OK).build();
+		// set the session
+		actorObj.setSession(sessionid);
+
+		// build arguments array for method handle invoke
+		Object[] actuals = new Object[args.size()+1];
+		actuals[0] = actorObj;
+		for (int i = 0; i < args.size(); i++) {
+			actuals[i + 1] = args.get(i);
 		}
 
-		return Response.status(Response.Status.OK).entity(result).build();
-
+		try {
+			Object result = JsonValue.NULL;
+			if (actorMethod.getLockPolicy() == LockPolicy.READ) {
+				result = actorMethod.getMethod().invokeWithArguments(actuals);
+			} else {
+				synchronized (actorObj) {
+					result = actorMethod.getMethod().invokeWithArguments(actuals);
+				}
+			}
+			return Response.status(Response.Status.OK).entity(result).build();
+		} catch (Throwable t) {
+			// TODO: Revist the response code for Errors raised by actor methods (https://github.ibm.com/solsa/kar/issues/130)
+			return Response.status(Response.Status.BAD_REQUEST).build();
+		}
 	}
-
 }
