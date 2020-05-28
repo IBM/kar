@@ -20,9 +20,9 @@ public class Calculator extends ActorBoilerplate {
 
 	@Activate
 	public void initState() {
-		JsonValue v = actorGetState(actorRef(type, id), "accum");
+		JsonValue v = actorGetState(this, "accum");
 		if (v instanceof JsonNumber) {
-			accum = ((JsonNumber) v).intValue();
+			accum = ((JsonNumber)v).intValue();
 		} else {
 			accum = 0;
 		}
@@ -30,7 +30,7 @@ public class Calculator extends ActorBoilerplate {
 
 	@Deactivate
 	public void saveState() {
-		actorSetState(actorRef(type, id), "accum", Json.createValue(accum));
+		actorSetState(this, "accum", Json.createValue(accum));
 	}
 
 	@Remote
