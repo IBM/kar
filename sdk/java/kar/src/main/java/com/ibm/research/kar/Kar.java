@@ -1,6 +1,9 @@
 package com.ibm.research.kar;
 
 import java.net.URI;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -12,6 +15,7 @@ import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
@@ -59,7 +63,15 @@ public class Kar {
 		if (response.hasEntity()) {
 			return response.readEntity(JsonValue.class);
 		} else {
-			return null; // TODO: Should this be null or JSONValue.NULL?
+			return JsonValue.NULL;
+		}
+	}
+
+	private static int toInt(Response response) {
+		if (response.getStatus() == Status.OK.getStatusCode() && response.hasEntity()) {
+			return response.readEntity(java.lang.Integer.TYPE);
+		} else {
+			return 0;
 		}
 	}
 
@@ -148,10 +160,11 @@ public class Kar {
 	 * Cancel all reminders for an Actor instance.
 	 *
 	 * @param actor The Actor instance.
-	 * @return The number of reminders that were cancelled.  FIXME: actually implement
+	 * @return The number of reminders that were cancelled.
 	 */
-	public static Response actorCancelAllReminders(ActorRef actor) {
-		return karClient.actorCancelReminders(actor.getType(), actor.getId());
+	public static int actorCancelAllReminders(ActorRef actor) {
+		Response response = karClient.actorCancelReminders(actor.getType(), actor.getId());
+		return toInt(response);
 	}
 
 	/**
@@ -159,10 +172,11 @@ public class Kar {
 	 *
 	 * @param actor      The Actor instance.
 	 * @param reminderId The id of a specific reminder to cancel
-	 * @return The number of reminders that were cancelled. FIXME: actually implement
+	 * @return The number of reminders that were cancelled.
 	 */
-	public static Response actorCancelReminder(ActorRef actor, String reminderId) {
-		return karClient.actorCancelReminder(actor.getType(), actor.getId(), reminderId, true);
+	public static int actorCancelReminder(ActorRef actor, String reminderId) {
+		Response response = karClient.actorCancelReminder(actor.getType(), actor.getId(), reminderId, true);
+		return toInt(response);
 	}
 
 	/**
@@ -237,10 +251,28 @@ public class Kar {
 	 * @param actor The Actor instance.
 	 * @param key   The key to get from the instance's state
 	 * @param value The value to store
+	 * @return The number of new state entries created by this store (0 or 1)
 	 */
-	public static void actorSetState(ActorRef actor, String key, JsonValue value) {
-		// TODO: return result of kar api call which is number of new entries created?
-		karClient.actorSetState(actor.getType(), actor.getId(), key, value);
+	public static int actorSetState(ActorRef actor, String key, JsonValue value) {
+		Response response = karClient.actorSetState(actor.getType(), actor.getId(), key, value);
+		return toInt(response);
+	}
+
+	/**
+	 * Store multiple values to an Actor's state
+	 *
+	 * @param actor The Actor instance.
+	 * @param updates A map containing the state updates to perform
+	 * @return The number of new state entries created by this operation
+	 */
+	public static int actorSetMultipleState(ActorRef actor, Map<String,JsonValue> updates) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		for (Entry<String,JsonValue> e : updates.entrySet()) {
+			jb.add(e.getKey(), e.getValue());
+		}
+		JsonObject jup = jb.build();
+		Response response = karClient.actorSetMultipleState(actor.getType(), actor.getId(), jup);
+		return toInt(response);
 	}
 
 	/**
@@ -248,31 +280,37 @@ public class Kar {
 	 *
 	 * @param actor The Actor instance.
 	 * @param key   The key to delete
+	 * @return  `1` if an entry was actually removed and `0` if there was no entry for `key`.
 	 */
-	public static void actorDeleteState(ActorRef actor, String key) {
-		// TODO: return boolean based on 0/1 result of kar api call?
-		karClient.actorDeleteState(actor.getType(), actor.getId(), key, true);
+	public static int actorDeleteState(ActorRef actor, String key) {
+		Response response = karClient.actorDeleteState(actor.getType(), actor.getId(), key, true);
+		return toInt(response);
 	}
 
 	/**
 	 * Get all the key value pairs from an Actor's state
 	 *
 	 * @param actor The Actor instance.
-	 * @return A map representing the Actor's state FIXME: actually implement
+	 * @return A map representing the Actor's state
 	 */
-	public static Response actorGetAllState(ActorRef actor) {
-		return karClient.actorGetAllState(actor.getType(), actor.getId());
+	public static Map<String,JsonValue> actorGetAllState(ActorRef actor) {
+		Response response = karClient.actorGetAllState(actor.getType(), actor.getId());
+		try {
+			return toValue(response).asJsonObject();
+		} catch (ClassCastException e) {
+			return Collections.emptyMap();
+		}
 	}
 
 	/**
 	 * Remove all key value pairs from an Actor's state
 	 *
 	 * @param actor The Actor instance.
+	 * @return The number of removed key/value pairs
 	 */
-	public static void actorDeleteAllState(ActorRef actor) {
-		// TODO: return result of kar api call which is number of entries actually
-		// deleted?
-		karClient.actorDeleteAllState(actor.getType(), actor.getId());
+	public static int actorDeleteAllState(ActorRef actor) {
+		Response response = karClient.actorDeleteAllState(actor.getType(), actor.getId());
+		return toInt(response);
 	}
 
 	/*
@@ -315,7 +353,7 @@ public class Kar {
 	/**
 	 * Publish a CloudEvent to a topic
 	 *
-	 * @param {*} TODO: Document this API when it stabalizes
+	 * TODO: Document this API when it stabalizes
 	 */
 	public static Response publish(String topic) throws ProcessingException {
 		return karClient.publish(topic); // FIXME: actually implement

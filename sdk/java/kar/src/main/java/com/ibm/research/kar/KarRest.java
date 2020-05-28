@@ -131,7 +131,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorSetMultipleState(@PathParam("type") String type, @PathParam("id") String id, JsonObject updates) throws ProcessingException;
 
 	@DELETE
 	@Path("actor/{type}/{id}/state")
