@@ -691,6 +691,7 @@ func server(listener net.Listener) {
 		if err := srv.Shutdown(context.Background()); err != nil {
 			logger.Error("failed to shutdown HTTP server: %v", err)
 		}
+		runtime.CloseIdleConnections()
 	}()
 }
 
@@ -721,11 +722,6 @@ func main() {
 		<-signals
 		logger.Info("Invoking cancel9() from signal handler")
 		cancel9()
-	}()
-
-	go func() {
-		<-ctx.Done()
-		runtime.CloseIdleConnections()
 	}()
 
 	var listenHost string
