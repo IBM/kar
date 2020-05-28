@@ -44,11 +44,7 @@ func Run(ctx context.Context, args, env []string) (exitCode int) {
 		defer wg.Done()
 		dump("[STDOUT] ", stdout)
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		dump("[STDERR] ", stderr)
-	}()
+	dump("[STDERR] ", stderr)
 	wg.Wait()
 
 	if err := cmd.Wait(); err != nil {
