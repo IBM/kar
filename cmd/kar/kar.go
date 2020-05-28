@@ -705,13 +705,6 @@ func process(m pubsub.Message) {
 	}()
 }
 
-// subscriber handles incoming messages
-func subscriber(channel <-chan pubsub.Message) {
-	for m := range channel {
-		process(m)
-	}
-}
-
 func main() {
 	logger.Warning("starting...")
 	exitCode := 0
@@ -752,16 +745,9 @@ func main() {
 	}
 	defer pubsub.Close()
 
-	channel, err := pubsub.Join(ctx)
-	if err != nil {
+	if pubsub.Join(ctx, process) != nil {
 		logger.Fatal("join failed: %v", err)
 	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		subscriber(channel)
-	}()
 
 	server(listener)
 

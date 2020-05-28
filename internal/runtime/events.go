@@ -116,26 +116,20 @@ func subscribe(ctx context.Context, s source) error {
 	if group == "" {
 		group = s.ID
 	}
-	ch, err := pubsub.Subscribe(ctx, s.Topic, group, &pubsub.Options{OffsetOldest: s.OffsetOldest})
-	if err != nil {
-		return err
-	}
 
-	go func() {
-		for msg := range ch {
-			reply, err := CallActor(ctx, s.Actor, s.Path, string(msg.Value), contentType, "", "")
-			msg.Mark()
-			if err != nil {
-				logger.Error("failed to post event to %s: %v", s.Path, err)
+	f := func(msg pubsub.Message) {
+		reply, err := CallActor(ctx, s.Actor, s.Path, string(msg.Value), contentType, "", "")
+		msg.Mark()
+		if err != nil {
+			logger.Error("failed to post event to %s: %v", s.Path, err)
+		} else {
+			if reply.StatusCode >= http.StatusBadRequest {
+				logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
 			} else {
-				if reply.StatusCode >= http.StatusBadRequest {
-					logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-				} else {
-					logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-				}
+				logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
 			}
 		}
-	}()
+	}
 
-	return nil
+	return pubsub.Subscribe(ctx, s.Topic, group, &pubsub.Options{OffsetOldest: s.OffsetOldest}, f)
 }

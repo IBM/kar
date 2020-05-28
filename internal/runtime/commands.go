@@ -23,9 +23,7 @@ type subscriber struct {
 }
 
 type subscription struct {
-	sub    chan subscriber    // channel to update the subscriber
 	cancel context.CancelFunc // to cancel subscription
-	done   chan struct{}      // to wait for cancellation to complete
 }
 
 var (
@@ -479,10 +477,6 @@ func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
 	if v, ok := subscriptions.Load(id); ok {
 		s := v.(subscription)
 		s.cancel()
-		select {
-		case <-ctx.Done():
-		case <-s.done:
-		}
 		subscriptions.Delete(id)
 		return "OK", nil
 	}
@@ -513,49 +507,32 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 	if actorType != "" {
 		sub.actor = &Actor{Type: actorType, ID: actorID}
 	}
-	if v, ok := subscriptions.Load(id); ok {
-		s := v.(subscription)
-		s.sub <- sub // update subscriber
-		return "OK", nil
-	}
 	c, cancel := context.WithCancel(ctx)
-	done := make(chan struct{})
-	s := subscription{sub: make(chan subscriber, 1), cancel: cancel, done: done}
+	s := subscription{cancel: cancel}
 	subscriptions.Store(id, s)
-	ch, err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""})
+	f := func(msg pubsub.Message) {
+		var reply *Reply
+		var err error
+		if sub.actor != nil {
+			reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), contentType, "", "")
+		} else {
+			reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": contentType})
+		}
+		msg.Mark()
+		if err != nil {
+			logger.Error("failed to post to %s: %v", sub.path, err)
+		} else {
+			if reply.StatusCode >= http.StatusBadRequest {
+				logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
+			} else {
+				logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
+			}
+		}
+	}
+	err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
 	if err != nil {
 		return "", err
 	}
-	ok := true
-	var msg pubsub.Message
-	go func() {
-		for ok {
-			select {
-			case msg, ok = <-ch:
-				if ok {
-					var reply *Reply
-					var err error
-					if sub.actor != nil {
-						reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), contentType, "", "")
-					} else {
-						reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": contentType})
-					}
-					msg.Mark()
-					if err != nil {
-						logger.Error("failed to post to %s: %v", sub.path, err)
-					} else {
-						if reply.StatusCode >= http.StatusBadRequest {
-							logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-						} else {
-							logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-						}
-					}
-				}
-			case sub = <-s.sub: // updated subscriber
-			}
-		}
-		close(done)
-	}()
 	return "OK", nil
 }
 

@@ -118,11 +118,11 @@ func Partitions() ([]int32, <-chan struct{}) {
 }
 
 // Join joins the sidecar to the application and returns a channel of incoming messages
-func Join(ctx context.Context) (<-chan Message, error) {
+func Join(ctx context.Context, f func(Message)) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
-		return nil, err
+		return err
 	}
 	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 	if err != nil {
@@ -131,8 +131,8 @@ func Join(ctx context.Context) (<-chan Message, error) {
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
 			logger.Debug("failed to create Kafka topic: %v", err)
-			return nil, err
+			return err
 		}
 	}
-	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true})
+	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
 }

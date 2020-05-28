@@ -53,7 +53,7 @@ type handler struct {
 	conf    *sarama.Config               // kafka config
 	topic   string                       // subscribed topic
 	options *Options                     // options
-	out     chan Message                 // output channel
+	f       func(Message)                // Message handler
 	ready   chan struct{}                // channel closed when ready to accept events
 	local   map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
 	lock    sync.Mutex                   // mutex to protect local map
@@ -61,12 +61,12 @@ type handler struct {
 	done    map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, topic string, options *Options) *handler {
+func newHandler(conf *sarama.Config, topic string, options *Options, f func(Message)) *handler {
 	return &handler{
 		conf:    conf,
 		topic:   topic,
 		options: options,
-		out:     make(chan Message),
+		f:       f,
 		ready:   make(chan struct{}),
 		local:   map[int32]map[int64]struct{}{},
 	}
@@ -251,28 +251,21 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		h.local[m.Partition][m.Offset] = struct{}{}
 		h.lock.Unlock()
 		logger.Debug("starting work on topic %s, at partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-		select {
-		case <-session.Context().Done():
-			logger.Debug("cancelling work on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-			h.lock.Lock()
-			delete(h.local[m.Partition], m.Offset) // rollback
-			h.lock.Unlock()
-		case h.out <- Message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h}:
-		}
+		h.f(Message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
 	}
 	return nil
 }
 
 // Subscribe joins a consumer group for a topic
-func Subscribe(ctx context.Context, topic, group string, options *Options) (<-chan Message, error) {
+func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) error {
 	conf, err := newConfig()
 	if err != nil {
-		return nil, err
+		return err
 	}
 	wgMutex.Lock()
 	if wgQuit {
 		wgMutex.Unlock()
-		return nil, fmt.Errorf("failed to instantiate Kafka consumer for topic %s, group %s: shutting down", topic, group)
+		return fmt.Errorf("failed to instantiate Kafka consumer for topic %s, group %s: shutting down", topic, group)
 	}
 	wg.Add(1) // increment subscriber count
 	wgMutex.Unlock()
@@ -284,20 +277,22 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 	if options.OffsetOldest {
 		conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
-	handler := newHandler(conf, topic, options)
+	handler := newHandler(conf, topic, options, f)
 	handler.marshal()
 	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {
 		wg.Done()
 		logger.Debug("failed to instantiate Kafka client: %v", err)
-		return nil, err
+		return err
 	}
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
 		wg.Done()
 		logger.Debug("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
-		return nil, err
+		return err
 	}
+
+	abort := make(chan struct{})
 
 	go func() {
 		defer wg.Done()
@@ -313,12 +308,14 @@ func Subscribe(ctx context.Context, topic, group string, options *Options) (<-ch
 		}
 		consumer.Close()
 		handler.client.Close()
-		close(handler.out)
-		close(handler.ready) // in case we never finished first session setup
+		close(abort) // in case we never finished first session setup
 	}()
 
-	<-handler.ready // wait for first session setup or consumer error before that
-	return handler.out, nil
+	select { // wait for first session setup or consumer error before that
+	case <-handler.ready:
+	case <-abort:
+	}
+	return nil
 }
 
 type entry struct {
