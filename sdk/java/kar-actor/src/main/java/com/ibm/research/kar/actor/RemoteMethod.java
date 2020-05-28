@@ -2,11 +2,11 @@ package com.ibm.research.kar.actor;
 
 import java.lang.invoke.MethodHandle;
 
-public class RemoteMethodType {
+public class RemoteMethod {
 	private final MethodHandle method;
 	private final int lockPolicy;
 
-	public RemoteMethodType(MethodHandle method, int lockPolicy) {
+	public RemoteMethod(MethodHandle method, int lockPolicy) {
 		this.method = method;
 		this.lockPolicy = lockPolicy;
 	}

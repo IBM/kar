@@ -2,7 +2,6 @@ package com.ibm.research.kar.actor;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -69,25 +68,37 @@ public class ActorManagerImpl implements ActorManager {
 							Class<ActorInstance> actorClass = ((Class<ActorInstance>) cls);
 
 							Method[] methods = cls.getMethods();
-							Map<String, RemoteMethodType> remoteMethods = new HashMap<String, RemoteMethodType>();
-							Method activateMethod = null;
-							Method deactivateMethod = null;
+							Map<String, RemoteMethod> remoteMethods = new HashMap<String, RemoteMethod>();
+							MethodHandle activateMethod = null;
+							MethodHandle deactivateMethod = null;
 
 							for (Method method : methods) {
 								if (method.isAnnotationPresent(Remote.class)) {
 									try {
 										MethodHandle mh = lookup.unreflect(method);
 										int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
-										RemoteMethodType methodType = new RemoteMethodType(mh, lockPolicy);
-										logger.info(LOG_PREFIX + "initialize: adding method " + method.getName() + " to remote methods for "+ actorClassName);
+										RemoteMethod methodType = new RemoteMethod(mh, lockPolicy);
+										logger.info(LOG_PREFIX + "initialize: adding method " + method.getName() + " to remote methods for "
+												+ actorClassName);
 										remoteMethods.put(method.getName(), methodType);
 									} catch (IllegalAccessException e) {
-										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName() + " to remote methods for "+ actorClassName);
+										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName()
+												+ " to remote methods for " + actorClassName);
 									}
 								} else if (method.isAnnotationPresent(Activate.class)) {
-									activateMethod = method;
+									try {
+										activateMethod = lookup.unreflect(method);
+									} catch (IllegalAccessException e) {
+										logger
+												.severe(LOG_PREFIX + "initialize: IllegalAccessException adding activate to " + actorClassName);
+									}
 								} else if (method.isAnnotationPresent(Deactivate.class)) {
-									deactivateMethod = method;
+									try {
+										deactivateMethod = lookup.unreflect(method);
+									} catch (IllegalAccessException e) {
+										logger.severe(
+												LOG_PREFIX + "initialize: IllegalAccessException adding deactivate to " + actorClassName);
+									}
 								}
 
 							}
@@ -136,26 +147,22 @@ public class ActorManagerImpl implements ActorManager {
 		ActorInstance actorObj = null;
 
 		if (actorRef != null) {
-			Class<ActorInstance> actorClass = actorRef.getActorClass();
-
 			try {
+				Class<ActorInstance> actorClass = actorRef.getActorClass();
 				actorObj = actorClass.getConstructor().newInstance();
 				actorObj.setType(type);
 				actorObj.setId(id);
 
 				// initialize actor instance
-				Method activate = actorRef.getActivateMethod();
-
+				MethodHandle activate = actorRef.getActivateMethod();
 				if (activate != null) {
 					activate.invoke(actorObj);
 				}
 
 				// put reference to actorObj in the ActorModel
 				actorRef.getActorInstances().put(id, actorObj);
-
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-					| NoSuchMethodException | SecurityException e) {
-				e.printStackTrace();
+			} catch (Throwable t) {
+				logger.severe(LOG_PREFIX + "createActor: " + t.getMessage());
 			}
 		}
 
@@ -171,13 +178,12 @@ public class ActorManagerImpl implements ActorManager {
 			Object actorObj = actorRef.getActorInstances().get(id);
 
 			if (actorObj != null) {
-				Method deactivateMethod = actorRef.getDeactivateMethod();
+				MethodHandle deactivateMethod = actorRef.getDeactivateMethod();
 				if (deactivateMethod != null) {
 					try {
 						deactivateMethod.invoke(actorObj);
-					} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-						e.printStackTrace();
-						logger.info(LOG_PREFIX + "deleteActor: error executing actor deactivate method");
+					} catch (Throwable t) {
+						logger.severe(LOG_PREFIX + "deleteActor: error executing actor deactivate method "+t.getMessage());
 					}
 				}
 				actorRef.getActorInstances().remove(actorObj);
@@ -217,13 +223,13 @@ public class ActorManagerImpl implements ActorManager {
 	}
 
 	@Override
-	public RemoteMethodType getActorMethod(String type, String name) {
+	public RemoteMethod getActorMethod(String type, String name) {
 		logger.info(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
 		ActorModel model = this.actorMap.get(type);
 
 		logger.info(LOG_PREFIX + "getactorMethod: found actor model " + model);
 
-		RemoteMethodType method = null;
+		RemoteMethod method = null;
 
 		if (model != null) {
 			method = model.getRemoteMethods().get(name);

@@ -43,6 +43,11 @@ public class Calculator extends ActorBoilerplate {
 	}
 
 	@Remote
+	public JsonNumber plus(JsonNumber x, JsonNumber y) {
+		return Json.createValue(x.intValue() + y.intValue());
+	}
+
+	@Remote
 	public JsonNumber subtract(JsonNumber... nums) {
 		for (JsonNumber n : nums) {
 			int number = n.intValue();

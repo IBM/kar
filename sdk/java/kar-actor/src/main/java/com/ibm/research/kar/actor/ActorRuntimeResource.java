@@ -77,7 +77,7 @@ public class ActorRuntimeResource {
 		logger.info(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
-		RemoteMethodType methodType = this.actorManager.getActorMethod(type, path);
+		RemoteMethod methodType = this.actorManager.getActorMethod(type, path);
 
 		logger.info(LOG_PREFIX + "invokeActorMethod: actorObj is " + actorObj + " and method is " + methodType);
 		Object result = null;

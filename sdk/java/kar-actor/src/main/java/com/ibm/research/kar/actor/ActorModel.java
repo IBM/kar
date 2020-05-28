@@ -1,6 +1,6 @@
 package com.ibm.research.kar.actor;
 
-import java.lang.reflect.Method;
+import java.lang.invoke.MethodHandle;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,20 +15,20 @@ public class ActorModel {
 	private Class<ActorInstance> actorClass;
 
 	// Lookup for callable remote methods
-	private Map<String, RemoteMethodType> remoteMethods;
+	private Map<String, RemoteMethod> remoteMethods;
 
 	// Lookup for init method
-	private Method activateMethod;
+	private MethodHandle activateMethod;
 
 	// Lookup for deinit method
-	private Method deactivateMethod;
+	private MethodHandle deactivateMethod;
 
 	// Map of instances of this actor type indexed by id
 	private Map<String, ActorInstance> actorInstances;
 
 
 	public ActorModel() {
-		this.remoteMethods = new HashMap<String,RemoteMethodType>();
+		this.remoteMethods = new HashMap<String,RemoteMethod>();
 		this.actorInstances = new HashMap<String,ActorInstance>();
 	}
 
@@ -53,27 +53,27 @@ public class ActorModel {
 		this.actorClass = cls;
 	}
 
-	public Map<String, RemoteMethodType> getRemoteMethods() {
+	public Map<String, RemoteMethod> getRemoteMethods() {
 		return remoteMethods;
 	}
 
-	public void setRemoteMethods(Map<String, RemoteMethodType> remoteMethods) {
+	public void setRemoteMethods(Map<String, RemoteMethod> remoteMethods) {
 		this.remoteMethods = remoteMethods;
 	}
 
-	public Method getActivateMethod() {
+	public MethodHandle getActivateMethod() {
 		return activateMethod;
 	}
 
-	public void setActivateMethod(Method activateMethod) {
+	public void setActivateMethod(MethodHandle activateMethod) {
 		this.activateMethod = activateMethod;
 	}
 
-	public Method getDeactivateMethod() {
+	public MethodHandle getDeactivateMethod() {
 		return deactivateMethod;
 	}
 
-	public void setDeactivateMethod(Method deactivateMethod) {
+	public void setDeactivateMethod(MethodHandle deactivateMethod) {
 		this.deactivateMethod = deactivateMethod;
 	}
 
