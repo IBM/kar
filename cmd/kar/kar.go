@@ -33,6 +33,7 @@ var (
 	ctx9, cancel9 = context.WithCancel(context.Background()) // preemptive: kill subprocess
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
+	wg9           = &sync.WaitGroup{}                        // wait for signal handler
 )
 
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -718,10 +719,16 @@ func main() {
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	wg9.Add(1)
 	go func() {
-		<-signals
-		logger.Info("Invoking cancel9() from signal handler")
-		cancel9()
+		defer wg9.Done()
+		select {
+		case <-signals:
+			logger.Info("Invoking cancel9() from signal handler")
+			cancel9()
+		case <-ctx9.Done():
+		}
 	}()
 
 	var listenHost string
@@ -790,6 +797,8 @@ func main() {
 	wg.Wait()
 
 	cancel9()
+
+	wg9.Wait()
 
 	logger.Warning("exiting...")
 }
