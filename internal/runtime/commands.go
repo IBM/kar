@@ -529,7 +529,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 			}
 		}
 	}
-	err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
+	_, err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
 	if err != nil {
 		return "", err
 	}

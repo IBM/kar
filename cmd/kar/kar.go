@@ -745,7 +745,8 @@ func main() {
 	}
 	defer pubsub.Close()
 
-	if pubsub.Join(ctx, process) != nil {
+	closed, err := pubsub.Join(ctx, process)
+	if err != nil {
 		logger.Fatal("join failed: %v", err)
 	}
 
@@ -780,6 +781,7 @@ func main() {
 		cancel()
 	}
 
+	<-closed // wait for closed consumer first since process adds to WaitGroup
 	wg.Wait()
 
 	cancel9()

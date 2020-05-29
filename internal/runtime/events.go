@@ -20,14 +20,12 @@ type source struct {
 	ContentType  string
 	OffsetOldest bool
 	cancel       context.CancelFunc // not serialized
+	closed       <-chan struct{}
 }
 
 func (s source) k() string {
 	return s.key
 }
-
-// TODO lock
-// TODO synchronous subscribe and unsubscribe
 
 // a collection of event sources
 type sources map[Actor]map[string]source
@@ -43,10 +41,11 @@ func (c sources) add(ctx context.Context, b binding) error {
 		c[s.Actor] = map[string]source{}
 	}
 	ctx, s.cancel = context.WithCancel(ctx)
-	err := subscribe(ctx, s)
+	closed, err := subscribe(ctx, s)
 	if err != nil {
 		return err
 	}
+	s.closed = closed
 	c[s.Actor][s.ID] = s
 	return nil
 }
@@ -71,6 +70,7 @@ func (c sources) cancel(actor Actor, id string) []binding {
 	if id != "" {
 		if b, ok := c[actor][id]; ok {
 			b.cancel()
+			<-b.closed
 			delete(c[actor], id)
 			return []binding{b}
 		}
@@ -79,6 +79,7 @@ func (c sources) cancel(actor Actor, id string) []binding {
 	a := []binding{}
 	for _, b := range c[actor] {
 		b.cancel()
+		<-b.closed
 		a = append(a, b)
 	}
 	delete(c, actor)
@@ -107,7 +108,7 @@ func (c sources) load(actor Actor, id, key string, m map[string]string) (binding
 	}, nil
 }
 
-func subscribe(ctx context.Context, s source) error {
+func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
 	contentType := s.ContentType
 	if contentType == "" {
 		contentType = "application/cloudevents+json"

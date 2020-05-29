@@ -3,7 +3,6 @@ package pubsub
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"strconv"
 	"sync"
@@ -231,6 +230,11 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 	// ok to ignore error in ZRemRangeByScore as this is just garbage collection
 	mark := true
 	for m := range claim.Messages() {
+		select {
+		case <-session.Context().Done():
+			return nil // fail fast
+		default:
+		}
 		logger.Debug("received message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
 		if _, ok := h.done[m.Partition][m.Offset]; ok {
 			logger.Debug("skipping committed message on topic %s, partition %d, offset %d", m.Topic, m.Partition, m.Offset)
@@ -256,19 +260,17 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 	return nil
 }
 
-// Subscribe joins a consumer group for a topic
-func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) error {
+// Subscribe joins a consumer group and consumes messages on a topic
+// f is invoked on each message (serially for each partition)
+// f must return quickly if the context is cancelled
+func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, error) {
+	if ctx.Err() != nil { // fail fast
+		return nil, ctx.Err()
+	}
 	conf, err := newConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	wgMutex.Lock()
-	if wgQuit {
-		wgMutex.Unlock()
-		return fmt.Errorf("failed to instantiate Kafka consumer for topic %s, group %s: shutting down", topic, group)
-	}
-	wg.Add(1) // increment subscriber count
-	wgMutex.Unlock()
 	if options.master {
 		conf.Consumer.Group.Rebalance.Strategy = &customStrategy{}
 	} else {
@@ -281,21 +283,21 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	handler.marshal()
 	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {
-		wg.Done()
 		logger.Debug("failed to instantiate Kafka client: %v", err)
-		return err
+		return nil, err
 	}
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
-		wg.Done()
 		logger.Debug("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
-		return err
+		handler.client.Close()
+		return nil, err
 	}
 
-	abort := make(chan struct{})
+	closed := make(chan struct{})
 
+	// consumer loop
 	go func() {
-		defer wg.Done()
+		defer close(closed)
 		for {
 			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil && err != errTooFewPartitions { // abnormal termination
 				logger.Error("failed consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
@@ -308,14 +310,14 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 		}
 		consumer.Close()
 		handler.client.Close()
-		close(abort) // in case we never finished first session setup
 	}()
 
-	select { // wait for first session setup or consumer error before that
+	select {
 	case <-handler.ready:
-	case <-abort:
+	case <-closed:
 	}
-	return nil
+
+	return closed, nil
 }
 
 type entry struct {

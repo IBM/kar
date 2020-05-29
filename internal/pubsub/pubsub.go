@@ -27,11 +27,6 @@ var (
 
 	manualPartitioner = sarama.NewManualPartitioner(topic)
 
-	// termination
-	wg      = &sync.WaitGroup{}
-	wgMutex = &sync.Mutex{}
-	wgQuit  bool
-
 	errTooFewPartitions = errors.New("too few partitions")
 
 	// ErrUnknownSidecar error
@@ -45,7 +40,7 @@ func partitioner(t string) sarama.Partitioner {
 	return sarama.NewRandomPartitioner(t)
 }
 
-// Dial connects to Kafka
+// Dial connects Kafka producer
 func Dial() error {
 	conf, err := newConfig()
 	if err != nil {
@@ -73,12 +68,8 @@ func Dial() error {
 	return nil
 }
 
-// Close disconnects from Kafka
+// Close closes Kafka producer
 func Close() {
-	wgMutex.Lock()
-	wgQuit = true // prevent instantiation of new consumer groups
-	wgMutex.Unlock()
-	wg.Wait() // wait for all consumer groups to finish
 	producer.Close()
 	client.Close()
 }
@@ -118,11 +109,11 @@ func Partitions() ([]int32, <-chan struct{}) {
 }
 
 // Join joins the sidecar to the application and returns a channel of incoming messages
-func Join(ctx context.Context, f func(Message)) error {
+func Join(ctx context.Context, f func(Message)) (<-chan struct{}, error) {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
-		return err
+		return nil, err
 	}
 	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 	if err != nil {
@@ -131,7 +122,7 @@ func Join(ctx context.Context, f func(Message)) error {
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
 			logger.Debug("failed to create Kafka topic: %v", err)
-			return err
+			return nil, err
 		}
 	}
 	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
