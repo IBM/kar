@@ -21,18 +21,15 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.kar.Kar;
+import static com.ibm.research.kar.Kar.*;
 
 public static void main(String[] args) {
-    // get instance of SDK which generates REST client
-    Kar kar = new Kar();
-
     JsonObject params = Json.createObjectBuilder()
 				.add("number",42)
 				.build();
 
     // call service
-    Response resp = kar.call("MyService", "increment", params);
+    Response resp = call("MyService", "increment", params);
 }
 ```
 
@@ -42,18 +39,16 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.kar.Kar;
+import static com.ibm.research.kar.Kar.*;
 
 public static void main(String[] args) {
-    // get instance of SDK which generates REST client
-    Kar kar = new Kar();
 
     JsonObject params = Json.createObjectBuilder()
 				.add("number",42)
 				.build();
 
     // call service
-    Response resp = kar.actorCall("ActorType", "ActorID", "remoteMethodName", params);
+    Response resp = actorCall("ActorType", "ActorID", "remoteMethodName", params);
 }
 ```
 
@@ -61,6 +56,22 @@ public static void main(String[] args) {
 The KAR actor runtime in `com.ibm.research.kar.actor` allows you to:
 - Create an actor using an annotated POJO class
 - Execute actors as part of your microservice
+
+KAR requires all Actor classes to implement the ActorInstance interface. 
+### Actor Instance
+```java
+public interface ActorInstance extends ActorRef {
+
+  // Allow KAR to get and set session ids   
+  public String getSession();
+  public void setSession(String session);
+
+  // set actor ID and Type
+  public void setType(String type);
+  public void setId(String id);
+}
+```
+The ActorInstance includes two methods to manage session IDs, which KAR uses for actor communications as part of the [KAR programming model](https://github.ibm.com/solsa/kar/blob/master/docs/KAR.md).
 
 ### Actor Annotations
 
@@ -72,7 +83,6 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.KarSessionListener;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -81,7 +91,7 @@ import com.ibm.research.kar.actor.annotations.LockPolicy;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor
-public class MyActor  {
+public class MyActor implements ActorInstance {
 
     @Activate // optional actor constructor
     public void init() {
@@ -109,28 +119,12 @@ public class MyActor  {
     @Deactivate // optional actor de-constructor
     public void kill() {
     }
+
+    //.... ActorInstance implementation would be below
+    //.....
 }
 ```
-### KAR SessionID
-KAR manages a session ID for actor communications as part of the [KAR programming model](https://github.ibm.com/solsa/kar/blob/master/docs/KAR.md). Actors access the sessionId by implementing `KarSessionListener`:
-```java
-@Actor
-public class MyActor implements KarSessionListener {
-    private String sessionid;
 
-    // KAR actor runtime will pass the sessionid
-    // using this method
-    @Override
-    public void setSessionId(String sessionId) {
-        this.sessionid = sessionId;	
-    }
-
-    @Override
-    public String getSessionId() {
-        return this.sessionid;
-    }
-}
-```
 ### Build and include the `kar-actor` module as part of a Kar component
  Using Maven, an example `pom.xml` file to include the `kar` and `kar-runtime` modules into a microservice called `actor-server` is:
  ```xml
