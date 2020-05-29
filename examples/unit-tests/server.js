@@ -80,12 +80,50 @@ class Foo {
   constructor (id) {
     this.id = id
     this.field = 42
+    this.count = 0
   }
 
-  accumulate (e) {
-    const v = e.data
-    count += v
-    if (count >= 6) success()
+  accumulate (event) {
+    this.count += event.data
+  }
+
+  async pubsub (topic) {
+    const source = 'numServer'
+    const type = 'number'
+    await actor.subscribe(this, topic, 'accumulate') // subscribe service to topic
+
+    // Create event 1:
+    const e1 = cloudevents.event()
+      .type(type)
+      .source(source)
+      .id(1)
+      .data(1)
+    await publish(topic, e1)
+
+    // Create event 2:
+    const e2 = cloudevents.event()
+      .type(type)
+      .source(source)
+      .id(2)
+      .data(2)
+    await publish(topic, e2)
+
+    // Create event 3:
+    const e3 = cloudevents.event()
+      .type(type)
+      .source(source)
+      .id(3)
+      .data(3)
+    await publish(topic, e3)
+    return 'OK'
+  }
+
+  async check (topic) {
+    if (this.count >= 6) {
+      await actor.unsubscribe(this, topic)
+      return true
+    }
+    return false
   }
 
   activate () {

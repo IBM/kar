@@ -17,13 +17,9 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
-type subscriber struct {
-	actor *Actor
-	path  string
-}
-
 type subscription struct {
 	cancel context.CancelFunc // to cancel subscription
+	closed <-chan struct{}
 }
 
 var (
@@ -477,6 +473,7 @@ func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
 	if v, ok := subscriptions.Load(id); ok {
 		s := v.(subscription)
 		s.cancel()
+		<-s.closed
 		subscriptions.Delete(id)
 		return "OK", nil
 	}
@@ -497,30 +494,22 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 		id = topic
 	}
 	path := m["path"]
-	actorType := m["actorType"]
-	actorID := m["actorId"]
 	contentType := m["contentType"]
 	if contentType == "" {
 		contentType = "application/cloudevents+json"
 	}
-	var sub = subscriber{path: path}
-	if actorType != "" {
-		sub.actor = &Actor{Type: actorType, ID: actorID}
+	if v, ok := subscriptions.Load(id); ok {
+		s := v.(subscription)
+		s.cancel()
+		<-s.closed
+		subscriptions.Delete(id)
 	}
-	c, cancel := context.WithCancel(ctx)
-	s := subscription{cancel: cancel}
-	subscriptions.Store(id, s)
+	context, cancel := context.WithCancel(ctx)
 	f := func(msg pubsub.Message) {
-		var reply *Reply
-		var err error
-		if sub.actor != nil {
-			reply, err = CallActor(ctx, *sub.actor, sub.path, string(msg.Value), contentType, "", "")
-		} else {
-			reply, err = invoke(ctx, "POST", map[string]string{"path": sub.path, "payload": string(msg.Value), "content-type": contentType})
-		}
+		reply, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": string(msg.Value), "content-type": contentType})
 		msg.Mark()
 		if err != nil {
-			logger.Error("failed to post to %s: %v", sub.path, err)
+			logger.Error("failed to post to %s: %v", path, err)
 		} else {
 			if reply.StatusCode >= http.StatusBadRequest {
 				logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
@@ -529,10 +518,12 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 			}
 		}
 	}
-	_, err := pubsub.Subscribe(c, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
+	closed, err := pubsub.Subscribe(context, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
 	if err != nil {
+		cancel()
 		return "", err
 	}
+	subscriptions.Store(id, subscription{cancel: cancel, closed: closed})
 	return "OK", nil
 }
 

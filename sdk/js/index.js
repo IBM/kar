@@ -147,6 +147,11 @@ function actorSubscribe (actor, topic, path, params = {}) {
   return post(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ path: `/${path}`, topic }, params))
 }
 
+function actorUnsubscribe (actor, topic, params = {}) {
+  const id = params.id || topic
+  return post(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ topic }, params))
+}
+
 /***************************************************
  * End of public methods intended for application programming
  **************************************************/
@@ -242,6 +247,7 @@ module.exports = {
     tell: actorTell,
     call: actorCall,
     subscribe: actorSubscribe,
+    unsubscribe: actorUnsubscribe,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,

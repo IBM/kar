@@ -40,11 +40,13 @@ func (c sources) add(ctx context.Context, b binding) error {
 	if _, ok := c[s.Actor]; !ok {
 		c[s.Actor] = map[string]source{}
 	}
-	ctx, s.cancel = context.WithCancel(ctx)
-	closed, err := subscribe(ctx, s)
+	context, cancel := context.WithCancel(ctx)
+	closed, err := subscribe(context, s)
 	if err != nil {
+		cancel()
 		return err
 	}
+	s.cancel = cancel
 	s.closed = closed
 	c[s.Actor][s.ID] = s
 	return nil

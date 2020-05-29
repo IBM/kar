@@ -68,9 +68,9 @@ async function actorTests () {
   const v3 = await actor.state.getAll(a)
   try {
     if (v3.key1 !== 42 ||
-    v3.key2 !== 'abc123' ||
-    v3.key3.field !== 'value' ||
-    v3.key4 != null) {
+      v3.key2 !== 'abc123' ||
+      v3.key3.field !== 'value' ||
+      v3.key4 != null) {
       console.log(`Failed: getAll ${v3}`)
       failure = true
     }
@@ -88,10 +88,10 @@ async function actorTests () {
   const v3a = await actor.state.getAll(a)
   try {
     if (v3a.key1 !== 2020 ||
-    v3a.key2 !== 'abc123' ||
-    v3a.key3.field !== 'value' ||
-    v3a.key4 != null ||
-    v3a.key10.myData !== 1234) {
+      v3a.key2 !== 'abc123' ||
+      v3a.key3.field !== 'value' ||
+      v3a.key4 != null ||
+      v3a.key10.myData !== 1234) {
       console.log(`Failed: getAll ${v3a}`)
       failure = true
     }
@@ -177,10 +177,25 @@ async function actorTests () {
 }
 
 async function pubSubTests () {
+  const a = actor.proxy('Foo', 456)
   let failure = false
 
   const v = await call('myService', 'pubsub', 'topic1')
   if (v !== 'OK') {
+    console.log('Failed: pubsub')
+    failure = true
+  }
+
+  const v1 = await actor.call(a, 'pubsub', 'topic2')
+  if (v1 !== 'OK') {
+    console.log('Failed: pubsub')
+    failure = true
+  }
+
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+  const v2 = await actor.call(a, 'check', 'topic2')
+  if (v2 !== true) {
     console.log('Failed: pubsub')
     failure = true
   }
