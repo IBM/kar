@@ -631,7 +631,7 @@ func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 }
 
 // server implements the HTTP server
-func server(listener net.Listener) {
+func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
 	router := httprouter.New()
 	// service invocation
@@ -675,28 +675,11 @@ func server(listener net.Listener) {
 	router.POST(base+"/system/broadcast/*path", broadcast)
 	router.POST(base+"/actor/:type/:id/migrate", migrate)
 
-	srv := http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := srv.Serve(listener); err != http.ErrServerClosed {
-			logger.Fatal("HTTP server failed: %v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done() // wait
-		if err := srv.Shutdown(context.Background()); err != nil {
-			logger.Error("failed to shutdown HTTP server: %v", err)
-		}
-		runtime.CloseIdleConnections()
-	}()
+	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
 
-// process incoming messages in parallel
+// process incoming message asynchronously
+// one goroutine, incr and decr WaitGroup
 func process(m pubsub.Message) {
 	wg.Add(1)
 	go func() {
@@ -745,12 +728,31 @@ func main() {
 	}
 	defer pubsub.Close()
 
+	// one goroutine, defer close(closed)
 	closed, err := pubsub.Join(ctx, process)
 	if err != nil {
 		logger.Fatal("join failed: %v", err)
 	}
 
-	server(listener)
+	srv := server(listener)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := srv.Serve(listener); err != http.ErrServerClosed {
+			logger.Fatal("HTTP server failed: %v", err)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done() // wait
+		if err := srv.Shutdown(context.Background()); err != nil {
+			logger.Error("failed to shutdown HTTP server: %v", err)
+		}
+		runtime.CloseIdleConnections()
+	}()
 
 	wg.Add(1)
 	go func() {
