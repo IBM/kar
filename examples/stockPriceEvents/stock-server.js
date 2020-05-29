@@ -35,7 +35,7 @@ function cloudEventHandler (res, data, headers) {
 
 // Process subscription.
 app.post('/print-historical-prices', function (req, res) {
-  cloudEventHandler(res, req.body[0], req.headers)
+  cloudEventHandler(res, req.body, req.headers)
 })
 
 class Portfolio {

@@ -135,7 +135,7 @@ function publish (topic, event) {
   // Set specversion if not set.
   if (typeof payload.specversion === 'undefined') payload.specversion = '1.0'
 
-  return post(`event/${topic}/publish`, [payload])
+  return post(`event/${topic}/publish`, payload)
 }
 
 const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, opts))

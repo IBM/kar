@@ -121,7 +121,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
 	}
 
 	f := func(msg pubsub.Message) {
-		reply, err := CallActor(ctx, s.Actor, s.Path, string(msg.Value), contentType, "", "")
+		reply, err := CallActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType, "", "")
 		msg.Mark()
 		if err != nil {
 			logger.Error("failed to post event to %s: %v", s.Path, err)
