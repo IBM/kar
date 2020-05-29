@@ -11,7 +11,8 @@ function url (service, route) {
 }
 
 // Stocks to consider and available cash for each one.
-const stocks = ['AAPL', 'GOOG', 'IBM', 'NVDA', 'MSFT', 'FB']
+// AAPL is the only stock that can be used for testing puroposes.
+const stocks = ['AAPL']
 const cash = 5000
 
 async function main () {

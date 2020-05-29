@@ -21,7 +21,7 @@ app.post('/stockprice/:stock_name', (req, res) => {
   const occurenceConfig = {
     hostname: 'financialmodelingprep.com',
     port: 443,
-    path: '/api/v3/historical-price-full/' + stockName,
+    path: '/api/v3/historical-price-full/' + stockName + '?apikey=demo',
     method: 'GET'
   }
 
