@@ -3,7 +3,6 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"sync"
 
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
@@ -121,16 +120,11 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
 	}
 
 	f := func(msg pubsub.Message) {
-		reply, err := CallActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType, "", "")
-		msg.Mark()
+		err := TellActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType)
 		if err != nil {
 			logger.Error("failed to post event to %s: %v", s.Path, err)
 		} else {
-			if reply.StatusCode >= http.StatusBadRequest {
-				logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-			} else {
-				logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-			}
+			msg.Mark()
 		}
 	}
 
