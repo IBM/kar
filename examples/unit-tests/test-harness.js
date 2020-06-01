@@ -192,10 +192,13 @@ async function pubSubTests () {
     failure = true
   }
 
-  await new Promise(resolve => setTimeout(resolve, 5000))
-
-  const v2 = await actor.call(a, 'check', 'topic2')
-  if (v2 !== true) {
+  let i
+  for (i = 30; i > 0; i--) { // poll
+    const v2 = await actor.call(a, 'check', 'topic2')
+    if (v2 === true) break
+    await new Promise(resolve => setTimeout(resolve, 500)) // wait
+  }
+  if (i === 0) {
     console.log('Failed: pubsub')
     failure = true
   }
