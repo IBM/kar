@@ -25,7 +25,7 @@ public class Dummy extends ActorBoilerplate {
 	public void init() {
 	}
 
-	@Remote(lockPolicy = LockPolicy.READ)
+	@Remote
 	public JsonValue canBeInvoked(JsonObject json) {
 		int number = json.getInt("number");
 		number++;
@@ -41,7 +41,7 @@ public class Dummy extends ActorBoilerplate {
 		return result;
 	}
 
-	@Remote(lockPolicy = LockPolicy.READ)
+	@Remote
 	public JsonValue incr(JsonObject json) {
 		int number = json.getInt("number");
 		JsonValue n = Json.createValue(number);

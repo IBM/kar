@@ -12,5 +12,5 @@ import java.lang.annotation.Target;
 @Inherited
 @Target(ElementType.METHOD)
 public @interface Remote {
-	int lockPolicy() default LockPolicy.WRITE;
+	
 }

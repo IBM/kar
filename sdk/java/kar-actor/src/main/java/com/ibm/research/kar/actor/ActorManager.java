@@ -1,5 +1,7 @@
 package com.ibm.research.kar.actor;
 
+import java.lang.invoke.MethodHandle;
+
 import com.ibm.research.kar.ActorInstance;
 
 public interface ActorManager {
@@ -12,5 +14,5 @@ public interface ActorManager {
 	// get existing or create new actor instance
 	public ActorInstance getActor(String type, String id);
 
-	public RemoteMethod getActorMethod(String type, String name);
+	public MethodHandle getActorMethod(String type, String name);
 }

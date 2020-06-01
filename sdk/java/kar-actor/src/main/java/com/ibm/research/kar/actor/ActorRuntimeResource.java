@@ -1,5 +1,6 @@
 package com.ibm.research.kar.actor;
 
+import java.lang.invoke.MethodHandle;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -68,7 +69,7 @@ public class ActorRuntimeResource {
 		logger.finer(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
-		RemoteMethod actorMethod = this.actorManager.getActorMethod(type, path);
+		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path);
 
 		if (actorObj == null) {
 			// Internal error.  KAR should ensure that it has called getActor before calling this method.
@@ -93,13 +94,7 @@ public class ActorRuntimeResource {
 
 		try {
 			Object result = JsonValue.NULL;
-			if (actorMethod.getLockPolicy() == LockPolicy.READ) {
-				result = actorMethod.getMethod().invokeWithArguments(actuals);
-			} else {
-				synchronized (actorObj) {
-					result = actorMethod.getMethod().invokeWithArguments(actuals);
-				}
-			}
+			result = actorMethod.invokeWithArguments(actuals);
 			return Response.status(Response.Status.OK).entity(result).build();
 		} catch (Throwable t) {
 			// TODO: Revist the response code for Errors raised by actor methods (https://github.ibm.com/solsa/kar/issues/130)

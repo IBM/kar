@@ -99,14 +99,16 @@ public class MyActor implements ActorInstance {
     }	
     
     // Expose this method to the actor runtime.
-    // Calls to this method are synchronized by default
-    @Remote 
+    // KAR synchronizes requests to the actor by default
+    @Remote
     public void updateMyState(JsonObject json) {
         // remote code
     }
 
-    // Specify a read policy to allow concurrent access to method
-    @Remote(lockPolicy = LockPolicy.READ)  
+    
+    // Expose this method to the actor runtime.
+    // KAR synchronizes requests to the actor by default
+    @Remote 
     public String readMyState() {
         // read-only code
     }

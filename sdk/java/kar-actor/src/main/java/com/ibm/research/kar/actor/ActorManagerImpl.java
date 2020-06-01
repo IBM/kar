@@ -68,7 +68,7 @@ public class ActorManagerImpl implements ActorManager {
 							Class<ActorInstance> actorClass = ((Class<ActorInstance>) cls);
 
 							Method[] methods = cls.getMethods();
-							Map<String, RemoteMethod> remoteMethods = new HashMap<String, RemoteMethod>();
+							Map<String, MethodHandle> remoteMethods = new HashMap<String, MethodHandle>();
 							MethodHandle activateMethod = null;
 							MethodHandle deactivateMethod = null;
 
@@ -76,11 +76,9 @@ public class ActorManagerImpl implements ActorManager {
 								if (method.isAnnotationPresent(Remote.class)) {
 									try {
 										MethodHandle mh = lookup.unreflect(method);
-										int lockPolicy = method.getAnnotation(Remote.class).lockPolicy();
-										RemoteMethod methodType = new RemoteMethod(mh, lockPolicy);
 										logger.info(LOG_PREFIX + "initialize: adding method " + method.getName() + " to remote methods for "
 												+ actorClassName);
-										remoteMethods.put(method.getName(), methodType);
+										remoteMethods.put(method.getName(), mh);
 									} catch (IllegalAccessException e) {
 										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName()
 												+ " to remote methods for " + actorClassName);
@@ -223,13 +221,14 @@ public class ActorManagerImpl implements ActorManager {
 	}
 
 	@Override
-	public RemoteMethod getActorMethod(String type, String name) {
+	@Lock(LockType.READ)
+	public MethodHandle getActorMethod(String type, String name) {
 		logger.info(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
 		ActorModel model = this.actorMap.get(type);
 
 		logger.info(LOG_PREFIX + "getactorMethod: found actor model " + model);
 
-		RemoteMethod method = null;
+		MethodHandle method = null;
 
 		if (model != null) {
 			method = model.getRemoteMethods().get(name);

@@ -15,7 +15,7 @@ public class ActorModel {
 	private Class<ActorInstance> actorClass;
 
 	// Lookup for callable remote methods
-	private Map<String, RemoteMethod> remoteMethods;
+	private Map<String, MethodHandle> remoteMethods;
 
 	// Lookup for init method
 	private MethodHandle activateMethod;
@@ -28,7 +28,7 @@ public class ActorModel {
 
 
 	public ActorModel() {
-		this.remoteMethods = new HashMap<String,RemoteMethod>();
+		this.remoteMethods = new HashMap<String,MethodHandle>();
 		this.actorInstances = new HashMap<String,ActorInstance>();
 	}
 
@@ -53,11 +53,11 @@ public class ActorModel {
 		this.actorClass = cls;
 	}
 
-	public Map<String, RemoteMethod> getRemoteMethods() {
+	public Map<String, MethodHandle> getRemoteMethods() {
 		return remoteMethods;
 	}
 
-	public void setRemoteMethods(Map<String, RemoteMethod> remoteMethods) {
+	public void setRemoteMethods(Map<String, MethodHandle> remoteMethods) {
 		this.remoteMethods = remoteMethods;
 	}
 
