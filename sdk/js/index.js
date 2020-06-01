@@ -149,7 +149,7 @@ function actorSubscribe (actor, topic, path, params = {}) {
 
 function actorUnsubscribe (actor, topic, params = {}) {
   const id = params.id || topic
-  return post(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ topic }, params))
+  return del(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ topic }, params))
 }
 
 /***************************************************
