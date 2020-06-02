@@ -21,6 +21,7 @@
 // Kubernetes Application Runtime (KAR). It consists of
 // four logical sets of sub-APIs:
 // + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+// + **Callbacks**: APIs to await the response to an actor or service invocation.
 // + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
 // + **Services**: APIs to invoke service endpoints
 // + **System**: APIs for controlling the KAR runtime mesh
@@ -71,6 +72,8 @@ type serviceParam struct {
 // swagger:parameters idServiceCall
 type asyncParam struct {
 	// Optionally specify the `async` pragma to make a non-blocking call.
+	// Optionally specify the `promise` pragma to make a non-blocking call and
+	// obtain a request id to query later.
 	// in:header
 	// required:false
 	Pragma string `json:"Pragma"`
@@ -117,6 +120,13 @@ type reminderScheduleParamWrapper struct {
 	// The request body describes the reminder to be scheduled
 	// in:body
 	Body scheduleReminderPayload
+}
+
+// swagger:parameters idAwait
+type awaitParameter struct {
+	// The request id
+	// in:body
+	Body string
 }
 
 // swagger:parameters idServiceCall

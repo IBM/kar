@@ -55,6 +55,62 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var request string
+	var err error
+	if ps.ByName("service") != "" {
+		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	} else {
+		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	}
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		w.WriteHeader(http.StatusAccepted)
+		w.Header().Add("Content-Type", "text/plain")
+		fmt.Fprint(w, request)
+	}
+}
+
+// swagger:route POST /await callbacks idAwait
+//
+// await
+//
+// ### Await the response to an actor or service call
+//
+// Await blocks until the response to an asynchronous call is received and
+// returns this response.
+//
+//     Consumes:
+//     - text/plain
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	reply, err := runtime.AwaitPromise(ctx, runtime.ReadAll(r))
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to await promise: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		w.Header().Add("Content-Type", reply.ContentType)
+		w.WriteHeader(reply.StatusCode)
+		fmt.Fprint(w, reply.Payload)
+	}
+}
+
 func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
 	fmt.Fprint(w, "OK")
@@ -69,7 +125,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // Call executes a `POST` to the `path` endpoint of `service`.
 // The request body is passed through to the target endpoint.
 // The result of the call is the result of invoking the target service endpoint
-// unless the `async` pragma header is specified.
+// unless the `async` or `promise` pragma header is specified.
 //
 //     Consumes:
 //     - application
@@ -95,7 +151,7 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // The request body must be a (possibly zero-length) JSON array whose elements
 // are used as the actual parameters of the actor method.
 // The result of the call is the result of invoking the target actor method
-// unless the `async` pragma header is specified.
+// unless the `async` or `promise` pragma header is specified.
 //
 //     Consumes:
 //     - application
@@ -113,6 +169,9 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "async" {
 			tell(w, r, ps)
+			return
+		} else if strings.ToLower(pragma) == "promise" {
+			callPromise(w, r, ps)
 			return
 		}
 	}
@@ -636,6 +695,9 @@ func server(listener net.Listener) http.Server {
 	router := httprouter.New()
 	// service invocation
 	router.POST(base+"/service/:service/call/*path", call)
+
+	// callbacks
+	router.POST(base+"/await", awaitPromise)
 
 	// actor invocation
 	router.POST(base+"/actor/:type/:id/call/*path", call)

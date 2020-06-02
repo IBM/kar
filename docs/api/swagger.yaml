@@ -131,6 +131,7 @@ info:
     Kubernetes Application Runtime (KAR). It consists of
     four logical sets of sub-APIs:
     + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+    + **Callbacks**: APIs to await the response to an actor or service invocation.
     + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
     + **Services**: APIs to invoke service endpoints
     + **System**: APIs for controlling the KAR runtime mesh
@@ -151,7 +152,7 @@ paths:
         The request body must be a (possibly zero-length) JSON array whose elements
         are used as the actual parameters of the actor method.
         The result of the call is the result of invoking the target actor method
-        unless the `async` pragma header is specified.
+        unless the `async` or `promise` pragma header is specified.
       operationId: idActorCall
       parameters:
       - description: The actor type
@@ -166,8 +167,10 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: Optionally specify the `async` pragma to make a non-blocking
-          call.
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
         in: header
         name: Pragma
         type: string
@@ -641,6 +644,38 @@ paths:
       summary: state/key
       tags:
       - actors
+  /await:
+    post:
+      consumes:
+      - text/plain
+      description: |-
+        ### Await the response to an actor or service call
+
+        Await blocks until the response to an asynchronous call is received and
+        returns this response.
+      operationId: idAwait
+      parameters:
+      - description: The request id
+        in: body
+        name: Body
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: await
+      tags:
+      - callbacks
   /event/{topic}/publish:
     post:
       description: |-
@@ -791,7 +826,7 @@ paths:
         Call executes a `POST` to the `path` endpoint of `service`.
         The request body is passed through to the target endpoint.
         The result of the call is the result of invoking the target service endpoint
-        unless the `async` pragma header is specified.
+        unless the `async` or `promise` pragma header is specified.
       operationId: idServiceCall
       parameters:
       - description: The service name
@@ -800,8 +835,10 @@ paths:
         required: true
         type: string
         x-go-name: Service
-      - description: Optionally specify the `async` pragma to make a non-blocking
-          call.
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
         in: header
         name: Pragma
         type: string

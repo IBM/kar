@@ -73,6 +73,12 @@ const tell = (service, path, body) => post(`service/${service}/call/${path}`, bo
 
 const call = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json' })
 
+const resolver = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' }, agent }).then(parse)
+
+function asyncCall (service, path, body) {
+  return post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json', Pragma: 'promise' }).then(resolver)
+}
+
 function actorProxy (type, id) { return { kar: { type, id } } }
 
 const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'async' })
@@ -89,6 +95,21 @@ function actorCall (...args) {
     const ta = args.shift()
     const path = args.shift()
     return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json' })
+  }
+}
+
+function actorAsyncCall (...args) {
+  if (typeof args[1] === 'string') {
+    // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const ta = args.shift()
+    const path = args.shift()
+    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolver)
+  } else {
+    //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const sa = args.shift()
+    const ta = args.shift()
+    const path = args.shift()
+    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolver)
   }
 }
 
@@ -239,6 +260,7 @@ function actorRuntime (actors) {
 module.exports = {
   tell,
   call,
+  asyncCall,
   publish,
   subscribe,
   unsubscribe,
@@ -246,6 +268,7 @@ module.exports = {
     proxy: actorProxy,
     tell: actorTell,
     call: actorCall,
+    asyncCall: actorAsyncCall,
     subscribe: actorSubscribe,
     unsubscribe: actorUnsubscribe,
     reminders: {

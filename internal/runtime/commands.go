@@ -90,6 +90,34 @@ func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	}
 }
 
+func callPromiseHelper(ctx context.Context, msg map[string]string) (string, error) {
+	request := uuid.New().String()
+	ch := make(chan *Reply)
+	requests.Store(request, ch)
+	// defer requests.Delete(request)
+	msg["from"] = config.ID // this sidecar
+	msg["request"] = request
+	err := pubsub.Send(ctx, msg)
+	if err != nil {
+		return "", err
+	}
+	return request, nil
+}
+
+// AwaitPromise awaits the response to an actor or service call
+func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
+	if ch, ok := requests.Load(request); ok {
+		defer requests.Delete(request)
+		select {
+		case r := <-ch.(chan *Reply):
+			return r, nil
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return nil, fmt.Errorf("unexpected request %s", request)
+}
+
 // CallService calls a service and waits for a reply
 func CallService(ctx context.Context, service, path, payload, contentType, accept string) (*Reply, error) {
 	msg := map[string]string{
@@ -101,6 +129,19 @@ func CallService(ctx context.Context, service, path, payload, contentType, accep
 		"accept":       accept,
 		"payload":      payload}
 	return callHelper(ctx, msg)
+}
+
+// CallPromiseService calls a service and returns a request id
+func CallPromiseService(ctx context.Context, service, path, payload, contentType, accept string) (string, error) {
+	msg := map[string]string{
+		"protocol":     "service",
+		"service":      service,
+		"command":      "call",
+		"path":         path,
+		"content-type": contentType,
+		"accept":       accept,
+		"payload":      payload}
+	return callPromiseHelper(ctx, msg)
 }
 
 // CallActor calls an actor and waits for a reply
@@ -116,6 +157,20 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 		"session":      session,
 		"payload":      payload}
 	return callHelper(ctx, msg)
+}
+
+// CallPromiseActor calls an actor and returns a request id
+func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept string) (string, error) {
+	msg := map[string]string{
+		"protocol":     "actor",
+		"type":         actor.Type,
+		"id":           actor.ID,
+		"command":      "call",
+		"path":         path,
+		"content-type": contentType,
+		"accept":       accept,
+		"payload":      payload}
+	return callPromiseHelper(ctx, msg)
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply

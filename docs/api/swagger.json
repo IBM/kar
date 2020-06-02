@@ -4,7 +4,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfour logical sets of sub-APIs:\n+ **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.\n+ **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks\n+ **Services**: APIs to invoke service endpoints\n+ **System**: APIs for controlling the KAR runtime mesh\n\nAll operations are scoped to a single instance of an application.",
+    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfour logical sets of sub-APIs:\n+ **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.\n+ **Callbacks**: APIs to await the response to an actor or service invocation.\n+ **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks\n+ **Services**: APIs to invoke service endpoints\n+ **System**: APIs for controlling the KAR runtime mesh\n\nAll operations are scoped to a single instance of an application.",
     "title": "KAR",
     "version": "v1"
   },
@@ -12,7 +12,7 @@
   "paths": {
     "/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` pragma header is specified.",
+        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.",
         "consumes": [
           "application"
         ],
@@ -46,7 +46,7 @@
           },
           {
             "type": "string",
-            "description": "Optionally specify the `async` pragma to make a non-blocking call.",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
             "name": "Pragma",
             "in": "header"
           },
@@ -623,6 +623,49 @@
         }
       }
     },
+    "/await": {
+      "post": {
+        "description": "### Await the response to an actor or service call\n\nAwait blocks until the response to an asynchronous call is received and\nreturns this response.",
+        "consumes": [
+          "text/plain"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "callbacks"
+        ],
+        "summary": "await",
+        "operationId": "idAwait",
+        "parameters": [
+          {
+            "description": "The request id",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      }
+    },
     "/event/{topic}/publish": {
       "post": {
         "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
@@ -795,7 +838,7 @@
     },
     "/service/{service}/call/{path}": {
       "post": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` pragma header is specified.",
+        "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
         "consumes": [
           "application"
         ],
@@ -821,7 +864,7 @@
           },
           {
             "type": "string",
-            "description": "Optionally specify the `async` pragma to make a non-blocking call.",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
             "name": "Pragma",
             "in": "header"
           },
