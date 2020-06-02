@@ -20,7 +20,6 @@ import javax.ws.rs.core.Response;
 import com.ibm.research.kar.actor.ActorInstance;
 
 @Path("/actor")
-@ApplicationScoped
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
