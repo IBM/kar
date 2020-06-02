@@ -127,8 +127,8 @@ public class MyActor implements ActorInstance {
 }
 ```
 
-### Build and include the `kar-actor` module as part of a Kar component
- Using Maven, an example `pom.xml` file to include the `kar` and `kar-runtime` modules into a microservice called `actor-server` is:
+### Build and include the `kar` module as part of a Kar component
+ Using Maven, an example `pom.xml` file to include the `kar` module into a microservice called `actor-server` is:
  ```xml
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -145,25 +145,19 @@ public class MyActor implements ActorInstance {
 
     <modules>
         <module>path/to/sdk/java/kar</module>
-        <module>path/to/sdk/java/kar-actor</module>
         <module>actor-server</module>
     </modules>
 </project>
 ```
-The corresponding`pom.xml` in `actor-server` should include the following dependencies:
+The corresponding`pom.xml` in `actor-server` should include the following dependency:
 ```xml
 <dependency>
     <groupId>com.ibm.research.kar</groupId>
     <artifactId>kar</artifactId>
     <version>1.0-SNAPSHOT</version>
 </dependency>
-<dependency>
-    <groupId>com.ibm.research.kar.actor</groupId>
-    <artifactId>kar-actor</artifactId>
-    <version>1.0-SNAPSHOT</version>
-</dependency>
 ```
-`kar-actor` also requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
+`kar` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
 ```xml
 <featureManager>
     <feature>jaxrs-2.1</feature>
@@ -176,7 +170,7 @@ The corresponding`pom.xml` in `actor-server` should include the following depend
     <feature>concurrent-1.0</feature>
 </featureManager>
 ```
-`kar-actor` loads actors at deploy time. Add the actors to the classpath and expose to the actor runtime as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
+`kar` loads actors at deploy time. Add the actors to the classpath and expose to the actor runtime as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
 ```xml
 <context-param>
     <param-name>kar-actor-classes</param-name>

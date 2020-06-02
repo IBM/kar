@@ -1,13 +1,15 @@
 <server description="KAR example Increment Server">
 
   <featureManager>
-      <feature>jaxrs-2.1</feature>
-      <feature>jsonb-1.0</feature>
-      <feature>mpHealth-2.1</feature>
-      <feature>mpConfig-1.3</feature>
-      <feature>mpRestClient-1.3</feature>
-      <feature>beanValidation-2.0</feature>
-      <feature>cdi-2.0</feature>
+    <feature>jaxrs-2.1</feature>
+    <feature>jsonb-1.0</feature>
+    <feature>mpHealth-2.1</feature>
+    <feature>mpConfig-1.3</feature>
+    <feature>mpRestClient-1.3</feature>
+    <feature>beanValidation-2.0</feature>
+    <feature>cdi-2.0</feature>
+    <feature>concurrent-1.0</feature>
+    <feature>mpOpenTracing-1.3</feature>
   </featureManager>
   
   <variable name="default.http.port" defaultValue="8080"/>

@@ -13,7 +13,6 @@
 
     <modules>
         <module>../../../sdk/java/kar</module>
-        <module>../../../sdk/java/kar-actor</module>
         <module>server</module>
         <module>client</module>
     </modules>
