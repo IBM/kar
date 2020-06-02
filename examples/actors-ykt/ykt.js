@@ -247,16 +247,9 @@ class Office {
 //
 // The `move` method is triggered by a one-shot reminder
 // (time triggered event).  It illustrates a general pattern
-// fault-tolerance pattern of performing idempotent global
-// actions + local computation, then committing a check point,
-// then performing non-idempotent (but potentially lost) global
-// operations.
+// fault-tolerance pattern of breaking a complex operation
+// into a sequence of steps.
 //
-// One subtle point is that if there is a failure in move after the
-// checkpoint but before the next reminder is scheduled, the runtime
-// system will actually re-execute the `move` method by replaying
-// the delivery of the previous reminder to a new Researcher instance
-// whose state will be restored from the checkpoint.
 class Researcher {
   get name () { return this.kar.id }
 
@@ -293,28 +286,34 @@ class Researcher {
 
   async move (targetTime) {
     const observedDelay = Date.now() - targetTime
-
     if (debug) console.log(`${this.site}: Researcher ${this.name} entered move with delay ${observedDelay}`)
 
-    // Clear secondary simulation state from previous step (idempotent)
-    if (this.location !== undefined) {
-      await actor.call(this, actor.proxy('Office', this.location), 'leave', this.name)
-    }
-
-    // Remember what we were doing before we start updating our in-memory state
-    const stepNumber = this.delays.length
-    const priorActivity = this.activity
-
-    this.delays.push(observedDelay)
-
-    // Is it time to retire?
+    const stepNumber = await actor.call(this, this, 'endPreviousStep', observedDelay)
     if (stepNumber === this.career) {
       this.retired = true
       await actor.call(this, actor.proxy('Site', this.site), 'retire', this.name, this.delays)
-      return
+    } else {
+      const { thinkTime, priorActivity } = await actor.call(this, this, 'determineNextStep', stepNumber)
+      if (verbose) console.log(`${this.site}: ${this.name} will be doing ${this.activity} at ${this.location || 'off-site'} for ${thinkTime}ms`)
+      await actor.call(this, this, 'reportDecision', priorActivity)
+      await actor.call(this, this, 'scheduleNextStep', thinkTime)
     }
+    if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
+  }
 
-    // Still an active Researcher. What to do next?
+  // Inform other actors the previous step has ended and persist observedDelay
+  async endPreviousStep (observedDelay) {
+    if (this.location !== undefined) {
+      await actor.call(this, actor.proxy('Office', this.location), 'leave', this.name)
+    }
+    this.delays.push(observedDelay)
+    await actor.state.set(this, 'delays', this.delays)
+    return this.delays.length - 1
+  }
+
+  // Commit to the next action
+  async determineNextStep (stepNumber) {
+    const priorActivity = this.activity
     const diceRoll = Math.random()
     let thinkTime = 1 + randI(this.thinkms)
     if (stepNumber % this.workday === 0) {
@@ -353,23 +352,23 @@ class Researcher {
 
     // Commit the decision by checkpointing updated state.
     await this.checkpointState()
-    if (verbose) console.log(`${this.site}: ${this.name} will be doing ${this.activity} at ${this.location || 'off-site'} for ${thinkTime}ms`)
 
-    // Update derived simulation state by informing other actors of our next action.
-    // The simulation logic must be prepared for these updates to get lost if there is a failure
-    // after the above commit point but before these interactions are completed.
+    return { thinkTime, priorActivity }
+  }
+
+  // Update derived simulation state by informing other actors of our next action.
+  async reportDecision (priorActivity) {
     if (this.location !== undefined) {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
     }
     if (this.activity !== priorActivity) {
       await actor.tell(actor.proxy('Site', this.site), 'workerUpdate', this.name, this.activity, Date.now())
     }
+  }
 
-    // Schedule next step
+  async scheduleNextStep (thinkTime) {
     const when = new Date(Date.now() + thinkTime)
     await actor.reminders.schedule(this, 'move', { id: 'step', targetTime: when }, when.getTime())
-
-    if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
   }
 }
 
