@@ -16,10 +16,13 @@
 		<param-name>kar-actor-classes</param-name>
 		<param-value>com.ibm.research.kar.example.actors.Dummy,
 			com.ibm.research.kar.example.actors.Dummy2,
-			com.ibm.research.kar.example.actors.Calculator</param-value>
+			com.ibm.research.kar.example.actors.Calculator,
+			com.ibm.research.kar.example.actors.TreeActor,
+			com.ibm.research.kar.example.actors.TreeActorCounter,
+			com.ibm.research.kar.example.actors.TreeActorParallel</param-value>
 	</context-param>
 		<context-param>
 			<param-name>kar-actor-types</param-name>
-			<param-value>dummy, dummy2, calculator</param-value>
+			<param-value>dummy, dummy2, calculator, tree, treecounter, telltree</param-value>
 		</context-param>
 </web-app>
