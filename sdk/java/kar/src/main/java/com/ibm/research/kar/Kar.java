@@ -17,6 +17,8 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.ibm.research.kar.actor.ActorRef;
+
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 public class Kar {
@@ -74,6 +76,27 @@ public class Kar {
 			return 0;
 		}
 	}
+
+	private static final class ActorRefImpl implements ActorRef {
+		final String type;
+		final String id;
+
+		ActorRefImpl(String type, String id) {
+			this.type = type;
+			this.id = id;
+		}
+
+		@Override
+		public String getType() {
+			return type;
+		}
+
+		@Override
+		public String getId() {
+			return id;
+		}
+	}
+
 
 	/******************
 	 * Public methods

@@ -1,4 +1,4 @@
-package com.ibm.research.kar.actor;
+package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
 import java.util.logging.Logger;
@@ -17,8 +17,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.kar.ActorInstance;
-import com.ibm.research.kar.actor.annotations.LockPolicy;
+import com.ibm.research.kar.actor.ActorInstance;
 
 @Path("/actor")
 @ApplicationScoped

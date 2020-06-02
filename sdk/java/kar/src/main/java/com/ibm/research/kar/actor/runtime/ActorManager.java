@@ -1,8 +1,8 @@
-package com.ibm.research.kar.actor;
+package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
 
-import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.actor.ActorInstance;
 
 public interface ActorManager {
 	// create actor instance

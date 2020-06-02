@@ -1,4 +1,4 @@
-package com.ibm.research.kar.actor;
+package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -18,7 +18,7 @@ import javax.ejb.Singleton;
 
 import javax.enterprise.context.ApplicationScoped;
 
-import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;

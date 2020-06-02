@@ -1,6 +1,6 @@
 package com.ibm.research.kar.example.actors;
 
-import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.actor.ActorInstance;
 
 /**
  * Kar requires all Actor Classes to implement the ActorInstance interface.

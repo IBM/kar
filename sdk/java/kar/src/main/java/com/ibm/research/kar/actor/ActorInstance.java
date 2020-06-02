@@ -1,4 +1,4 @@
-package com.ibm.research.kar;
+package com.ibm.research.kar.actor;
 
 /**
  * ActorInstace must be implemented by every Class that

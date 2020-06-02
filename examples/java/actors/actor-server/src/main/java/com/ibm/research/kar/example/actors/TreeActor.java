@@ -6,7 +6,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.ActorRef;
+import com.ibm.research.kar.actor.ActorRef;
 import static com.ibm.research.kar.Kar.*;
 
 import java.util.Map;
@@ -23,7 +23,7 @@ public class TreeActor extends ActorBoilerplate {
 	@Activate
 	public void init() {
 	}
-	
+
 	@Remote
 	public JsonValue callTree(JsonObject json) {
 		String label = json.getString("label");
@@ -46,7 +46,7 @@ public class TreeActor extends ActorBoilerplate {
 					.build();
 			return params;
 		}
-		
+
 		JsonObject paramsA = Json.createObjectBuilder()
 				.add("label",  label+level+"A")
 				.add("level", level+1)

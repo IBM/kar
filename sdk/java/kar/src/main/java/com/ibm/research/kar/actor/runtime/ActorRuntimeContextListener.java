@@ -1,4 +1,4 @@
-package com.ibm.research.kar.actor;
+package com.ibm.research.kar.actor.runtime;
 
 import java.util.logging.Logger;
 
@@ -14,7 +14,7 @@ import com.ibm.research.kar.KarConfig;
  */
 @WebListener
 public class ActorRuntimeContextListener implements ServletContextListener {
-	
+
 	public static Logger logger = Logger.getLogger(ActorRuntimeContextListener.class.getName());
 
 	public static final String KAR_ACTOR_CLASSES = "kar-actor-classes";
@@ -40,7 +40,7 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 				ex.printStackTrace();
 			}
 		}
-		
+
 		String port = ctx.getInitParameter(ActorRuntimeContextListener.KAR_DEFAULT_SIDECAR_PORT);
 
 		if (port != null) {

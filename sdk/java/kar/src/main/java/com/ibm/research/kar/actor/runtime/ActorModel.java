@@ -1,10 +1,10 @@
-package com.ibm.research.kar.actor;
+package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.ibm.research.kar.ActorInstance;
+import com.ibm.research.kar.actor.ActorInstance;
 
 public class ActorModel {
 

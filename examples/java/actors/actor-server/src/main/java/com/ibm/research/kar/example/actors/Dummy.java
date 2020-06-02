@@ -6,7 +6,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.ActorRef;
+import com.ibm.research.kar.actor.ActorRef;
 import static com.ibm.research.kar.Kar.*;
 
 import java.util.Map;
@@ -15,7 +15,6 @@ import java.util.Map.Entry;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
-import com.ibm.research.kar.actor.annotations.LockPolicy;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor

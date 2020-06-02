@@ -17,11 +17,10 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.ActorRef;
+import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
-import com.ibm.research.kar.actor.annotations.LockPolicy;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor
@@ -29,14 +28,14 @@ public class TreeActorParallel extends ActorBoilerplate {
 
 	AtomicLong expectedLeaves;
 	Boolean waiter;
-	
+
 	@Activate
 	public void init() {
 	}
 
 	private void propagate(String label, int level, int maxdepth, String topid, String session, boolean trace) {
 		ActorRef actorA = actorRef("telltree",label+level+"A");
-		ActorRef actorB = actorRef("telltree",label+level+"B");	
+		ActorRef actorB = actorRef("telltree",label+level+"B");
 
 		JsonObject paramsA = Json.createObjectBuilder()
 				.add("label",  label+level+"A")
@@ -58,7 +57,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 				.build();
 		actorTell(actorB, "tellTree", paramsB);
 	}
-	
+
 	@Remote
 	public void tellDone(JsonObject json) {
 		String leaf = json.getString("leaf");
@@ -68,7 +67,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 		if (trace)
 			System.out.println("TreeActor:tellDone notified by " + leaf + " still expecting " + expecting);
 	}
-	
+
 	@Remote
 	public JsonValue callTree(JsonObject json) {
 		int maxdepth = json.getInt("maxdepth");
@@ -80,7 +79,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 		String session = this.getSession();
 		long starttime = System.nanoTime();
 		expectedLeaves = new AtomicLong();
-		expectedLeaves.set(1 << (maxdepth-1)); 
+		expectedLeaves.set(1 << (maxdepth-1));
 		waiter = new Boolean(true);
 
 		System.out.println("TreeActor:callTree " + this.getId() + " Expecting " + expectedLeaves.get() + " notifies");
@@ -90,7 +89,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 				.build();
 		ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
 		actorCall(countActor, "setCount", params);
-		
+
 
 		propagate(label, level, maxdepth, topid, session, trace);
 
@@ -111,7 +110,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 			if (0 == timeout%10 )
 				System.out.println("TreeActor:callTree Still expecting " + expectedLeaves + " notifies");
 		}
-		
+
 		long duration = (System.nanoTime()-starttime)/1000000;
 		System.out.println("recursion took " + duration + "ms");
 
