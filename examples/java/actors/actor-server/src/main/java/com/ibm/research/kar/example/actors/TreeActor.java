@@ -23,22 +23,22 @@ public class TreeActor extends ActorBoilerplate {
 	@Activate
 	public void init() {
 	}
-
+	
 	@Remote
 	public JsonValue callTree(JsonObject json) {
-		String label = json.getString("label");
-		int level = json.getInt("level");
+		String label = json.getString("label","top");
+		int level = json.getInt("level",1);
 		int maxdepth = json.getInt("maxdepth");
 		boolean trace = json.getBoolean("trace", false);
 		int replies = 0;
 		long starttime = 0;
 
-		if (trace)
-			System.out.println("TreeActor:" + this.getId() + " Received level " + level);
-
 		if ( 1 == level) {
 			starttime = System.nanoTime();
 		}
+
+		if (trace)
+			System.out.println("TreeActor:" + this.getId() + " Received level " + level);
 
 		if (level >= maxdepth) {
 			JsonObject params = Json.createObjectBuilder()
@@ -46,7 +46,7 @@ public class TreeActor extends ActorBoilerplate {
 					.build();
 			return params;
 		}
-
+		
 		JsonObject paramsA = Json.createObjectBuilder()
 				.add("label",  label+level+"A")
 				.add("level", level+1)
@@ -68,8 +68,6 @@ public class TreeActor extends ActorBoilerplate {
 				.build();
 		JsonValue resultB = actorCall(actorB, "callTree", paramsB);
 		replies += 1 + resultB.asJsonObject().getInt("replies");
-
-//		System.out.println("TreeActor:" + this.getId() + " at level " + level + " collected " + replies + " replies");
 
 		long duration = 0;
 		if ( 1 == level) {

@@ -64,6 +64,10 @@ public class TreeActorParallel extends ActorBoilerplate {
 		boolean trace = json.getBoolean("trace", false);
 
 		long expecting = expectedLeaves.decrementAndGet();
+		if (0 == expecting) {
+			System.out.println("TreeActor:tellDone notified by " + leaf + " no more expected ");
+			return;
+		}
 		if (trace)
 			System.out.println("TreeActor:tellDone notified by " + leaf + " still expecting " + expecting);
 	}
@@ -83,21 +87,36 @@ public class TreeActorParallel extends ActorBoilerplate {
 		waiter = new Boolean(true);
 
 		System.out.println("TreeActor:callTree " + this.getId() + " Expecting " + expectedLeaves.get() + " notifies");
-		JsonObject params = Json.createObjectBuilder()
-				.add("expected", this.expectedLeaves.get())
-				.add("trace", trace)
-				.build();
-		ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
-		actorCall(countActor, "setCount", params);
+//		JsonObject params = Json.createObjectBuilder()
+//				.add("expected", this.expectedLeaves.get())
+//				.add("trace", trace)
+//				.build();
+//		ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
+//		actorCall(countActor, "setCount", params);
 
 
 		propagate(label, level, maxdepth, topid, session, trace);
 
 		int timeout = 300;
-		while (expectedLeaves.get() > 0) {
+		while (true) {
+			long expected =expectedLeaves.get();
+			if (expected == 0) {
+				long duration = (System.nanoTime()-starttime)/1000000;
+				System.out.println("recursion took " + duration + "ms");
+
+				JsonObject result = Json.createObjectBuilder()
+						.add("duration", duration)
+						.build();
+				return result;
+			}
+
+			if (0 == timeout%10)
+				System.out.println("TreeActor:callTree Still expecting " + expected + " notifies");
+
 			try {
 				Thread.sleep(100);
 				if (0 >= --timeout) {
+					System.out.println("TreeActor:callTree Timed out");
 					JsonObject result = Json.createObjectBuilder()
 							.add("duration", "timed out")
 							.build();
@@ -107,17 +126,7 @@ public class TreeActorParallel extends ActorBoilerplate {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			if (0 == timeout%10 )
-				System.out.println("TreeActor:callTree Still expecting " + expectedLeaves + " notifies");
 		}
-
-		long duration = (System.nanoTime()-starttime)/1000000;
-		System.out.println("recursion took " + duration + "ms");
-
-		JsonObject result = Json.createObjectBuilder()
-				.add("duration", duration)
-				.build();
-		return result;
 	}
 
 	@Remote
@@ -138,8 +147,8 @@ public class TreeActorParallel extends ActorBoilerplate {
 					.add("trace", trace)
 					.build();
 
-			ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
-			actorCall(countActor, "callDone", params);
+//			ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
+//			actorCall(countActor, "callDone", params);
 			ActorRef topActor = actorRef("telltree", topid);
 			actorCall(session, topActor, "tellDone", params);
 			return;
