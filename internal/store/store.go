@@ -9,6 +9,7 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
 var (
@@ -187,7 +188,7 @@ func Close() error {
 // Purge deletes all keys for the application
 func Purge() error {
 	pattern := mangle("*")
-	keys := []string{}
+	bags := [][]interface{}{}
 	cursor := 0
 	for {
 		reply, err := redis.MultiBulk(doRaw("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
@@ -195,18 +196,22 @@ func Purge() error {
 			return err
 		}
 		cursor, _ = strconv.Atoi(string(reply[0].([]byte)))
-		for _, key := range reply[1].([]interface{}) {
-			keys = append(keys, string(key.([]byte)))
+		keys := reply[1].([]interface{})
+		if len(keys) > 0 {
+			bags = append(bags, keys)
 		}
 		if cursor == 0 {
 			break
 		}
 	}
-	for _, key := range keys {
-		_, err := doRaw("DEL", key)
+	count := 0
+	for _, keys := range bags {
+		n, err := redis.Int(doRaw("DEL", keys...))
+		count += n
 		if err != nil {
 			return err
 		}
 	}
+	logger.Info("%v deleted keys", count)
 	return nil
 }
