@@ -127,3 +127,16 @@ func Join(ctx context.Context, f func(Message)) (<-chan struct{}, error) {
 	}
 	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
 }
+
+// Purge deletes the application topic
+func Purge() error {
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		return err
+	}
+	err = admin.DeleteTopic(topic)
+	if err != sarama.ErrUnknownTopicOrPartition {
+		return err
+	}
+	return nil
+}

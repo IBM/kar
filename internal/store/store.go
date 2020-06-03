@@ -183,3 +183,9 @@ func Close() error {
 	// redis so there is no need for synchronization here
 	return conn.Close()
 }
+
+// Purge deletes all keys for the application
+func Purge() error {
+	_, err := doRaw("EVAL", "for _,k in ipairs(redis.call('KEYS', KEYS[1])) do redis.call('DEL', k) end", 1, mangle("*"))
+	return err
+}

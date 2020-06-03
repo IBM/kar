@@ -80,6 +80,9 @@ var (
 
 	// H2C enables h2c to communicate with the app service
 	H2C bool
+
+	// Purge the application state
+	Purge bool
 )
 
 func init() {
@@ -108,6 +111,7 @@ func init() {
 	flag.StringVar(&verbosity, "v", "error", "Logging verbosity")
 	flag.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 	flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
+	flag.BoolVar(&Purge, "purge", false, "Purge the application state and exit")
 
 	flag.Parse()
 

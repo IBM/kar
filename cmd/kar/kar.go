@@ -790,6 +790,11 @@ func main() {
 	}
 	defer pubsub.Close()
 
+	if config.Purge {
+		purge()
+		return
+	}
+
 	// one goroutine, defer close(closed)
 	closed, err := pubsub.Join(ctx, process)
 	if err != nil {
@@ -853,4 +858,13 @@ func main() {
 	wg9.Wait()
 
 	logger.Warning("exiting...")
+}
+
+func purge() {
+	if err := pubsub.Purge(); err != nil {
+		logger.Error("failed to delete Kafka topic: %v", err)
+	}
+	if err := store.Purge(); err != nil {
+		logger.Error("failed to delete Redis keys: %v", err)
+	}
 }
