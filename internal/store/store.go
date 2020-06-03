@@ -186,6 +186,27 @@ func Close() error {
 
 // Purge deletes all keys for the application
 func Purge() error {
-	_, err := doRaw("EVAL", "for _,k in ipairs(redis.call('KEYS', KEYS[1])) do redis.call('DEL', k) end", 1, mangle("*"))
-	return err
+	pattern := mangle("*")
+	keys := []string{}
+	cursor := 0
+	for {
+		reply, err := redis.MultiBulk(doRaw("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
+		if err != nil {
+			return err
+		}
+		cursor, _ = strconv.Atoi(string(reply[0].([]byte)))
+		for _, key := range reply[1].([]interface{}) {
+			keys = append(keys, string(key.([]byte)))
+		}
+		if cursor == 0 {
+			break
+		}
+	}
+	for _, key := range keys {
+		_, err := doRaw("DEL", key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
