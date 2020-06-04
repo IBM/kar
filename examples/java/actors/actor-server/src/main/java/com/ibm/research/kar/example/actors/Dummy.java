@@ -106,6 +106,15 @@ public class Dummy extends ActorBoilerplate {
 	}
 
 	@Remote
+	public void echoFriend() {
+		try {
+			actorCall(this.session, this, "echo", Json.createValue("Hello Friend"));
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
+	}
+
+	@Remote
 	public JsonNumber setState(JsonObject updates) {
 		int numNew = actorSetMultipleState(this, updates);
 		return Json.createValue(numNew);
