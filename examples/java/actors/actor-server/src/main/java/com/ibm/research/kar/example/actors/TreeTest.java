@@ -8,11 +8,11 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
+import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 @Actor
 public class TreeTest extends ActorBoilerplate {

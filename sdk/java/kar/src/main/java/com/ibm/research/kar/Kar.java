@@ -25,6 +25,8 @@ import javax.ws.rs.core.Response.Status;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.Reminder;
+import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
+import com.ibm.research.kar.actor.runtime.ActorExceptionMapper;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 

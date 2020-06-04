@@ -13,8 +13,6 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.ActorException;
-import com.ibm.research.kar.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.ActorRef;
 
 import java.util.concurrent.CompletionStage;
@@ -24,6 +22,7 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
+import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 @Actor
 public class Dummy extends ActorBoilerplate {
@@ -58,6 +57,20 @@ public class Dummy extends ActorBoilerplate {
 		JsonValue n = Json.createValue(number);
 		try {
 			return actorCall(actorRef("calculator", "mycalc"), "add", n);
+		} catch (ActorMethodNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+	
+	@Remote
+	public JsonValue incrFail(JsonObject json) {
+		int number = json.getInt("number");
+		JsonValue n = Json.createValue(number);
+		try {
+			return actorCall(actorRef("calculator", "mycalc"), "magic", n);
 		} catch (ActorMethodNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

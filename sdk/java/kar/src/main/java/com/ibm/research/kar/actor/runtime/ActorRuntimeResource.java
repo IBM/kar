@@ -18,7 +18,6 @@ import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 
-import com.ibm.research.kar.ActorExceptionMapper;
 import com.ibm.research.kar.actor.ActorInstance;
 
 @Path("/actor")
