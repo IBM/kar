@@ -92,8 +92,10 @@ public class ActorRuntimeResource {
 		}
 
 		try {
-			Object result = JsonValue.NULL;
-			result = actorMethod.invokeWithArguments(actuals);
+			Object result = actorMethod.invokeWithArguments(actuals);
+			if (result == null) {
+				result = JsonValue.NULL;
+			}
 			return Response.status(Response.Status.OK).entity(result).build();
 		} catch (Throwable t) {
 			// TODO: Revist the response code for Errors raised by actor methods (https://github.ibm.com/solsa/kar/issues/130)
