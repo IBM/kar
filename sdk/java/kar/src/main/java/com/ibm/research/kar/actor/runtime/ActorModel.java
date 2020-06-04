@@ -6,7 +6,7 @@ import java.util.Map;
 
 import com.ibm.research.kar.actor.ActorInstance;
 
-public class ActorModel {
+public final class ActorModel {
 
 	// KAR type
 	private String type;

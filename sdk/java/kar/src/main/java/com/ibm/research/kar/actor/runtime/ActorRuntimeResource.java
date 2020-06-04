@@ -3,7 +3,6 @@ package com.ibm.research.kar.actor.runtime;
 import java.lang.invoke.MethodHandle;
 import java.util.logging.Logger;
 
-import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.JsonArray;
 import javax.json.JsonValue;
@@ -41,7 +40,6 @@ public class ActorRuntimeResource {
 			return Response.status(Response.Status.OK).build();
 		} else {
 			logger.info(LOG_PREFIX + "getActor: No actor found, creating");
-
 			this.actorManager.createActor(type, id);
 			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
 		}
@@ -73,7 +71,7 @@ public class ActorRuntimeResource {
 		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path);
 
 		if (actorObj == null) {
-			// Internal error.  KAR should ensure that it has called getActor before calling this method.
+			// Internal error.  KAR promises that getActor will be called before it invokes a method on the actor.
 			logger.warning(LOG_PREFIX+"invokeActorMethod: Actor instance not found for " + type + "<" + id + ">");
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
 		}

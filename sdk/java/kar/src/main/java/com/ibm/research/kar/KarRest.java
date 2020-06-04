@@ -104,7 +104,7 @@ public interface KarRest extends AutoCloseable {
 	public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
 	@POST
-	@Path("actor/{type}/{id}/reminders}/{reminderId}")
+	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, JsonObject params) throws ProcessingException;

@@ -1,6 +1,9 @@
 package com.ibm.research.kar;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -11,6 +14,7 @@ import java.util.logging.Logger;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
+import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
@@ -19,6 +23,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import com.ibm.research.kar.actor.ActorRef;
+import com.ibm.research.kar.actor.Reminder;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
@@ -77,6 +82,37 @@ public class Kar {
 			return response.readEntity(java.lang.Integer.TYPE);
 		} else {
 			return 0;
+		}
+	}
+
+	private static Reminder[] toReminderArray(Response response) {
+		try {
+			ArrayList<Reminder> res = new ArrayList<Reminder>();
+			JsonArray ja = toValue(response).asJsonArray();
+			for (JsonValue jv : ja) {
+				try {
+					JsonObject jo = jv.asJsonObject();
+					String actorType = jo.getJsonObject("Actor").getString("Type");
+					String actorId = jo.getJsonObject("Actor").getString("ID");
+					String id = jo.getString("id");
+					String path = jo.getString("path");
+					String targetTimeString = jo.getString("targetTime");
+					Instant targetTime = Instant.parse(targetTimeString);
+					Duration period = null;
+					if (jo.get("period") != null) {
+						long nanos = ((JsonNumber)jo.get("period")).longValueExact();
+						period = Duration.ofNanos(nanos);
+					}
+					String encodedData = jo.getString("encodedData");
+					Reminder r = new Reminder(actorRef(actorType, actorId), id, path, targetTime, period, encodedData);
+					res.add(r);
+				} catch (ClassCastException e) {
+					logger.warning("toReminderArray: Dropping unexpected element "+jv);
+				}
+			}
+			return res.toArray(new Reminder[res.size()]);
+		} catch (ClassCastException e) {
+			return new Reminder[0];
 		}
 	}
 
@@ -230,10 +266,11 @@ public class Kar {
 	 * Get all reminders for an Actor instance.
 	 *
 	 * @param actor      The Actor instance.
-	 * @return An array of matching reminders FIXME: actually implement
+	 * @return An array of matching reminders
 	 */
-	public static Response actorGetAllReminders(ActorRef actor) {
-		return karClient.actorGetReminders(actor.getType(), actor.getId());
+	public static Reminder[] actorGetAllReminders(ActorRef actor) {
+		Response response = karClient.actorGetReminders(actor.getType(), actor.getId());
+		return toReminderArray(response);
 	}
 
 	/**
@@ -241,33 +278,46 @@ public class Kar {
 	 *
 	 * @param actor      The Actor instance.
 	 * @param reminderId The id of a specific reminder to cancel
-	 * @returns An array of matching reminders  FIXME: actually implement
+	 * @returns An array of matching reminders
 	 */
-	public static Response actorGetReminder(ActorRef actor, String reminderId) {
-		return karClient.actorGetReminder(actor.getType(), actor.getId(), reminderId, true);
+	public static Reminder[] actorGetReminder(ActorRef actor, String reminderId) {
+		Response response = karClient.actorGetReminder(actor.getType(), actor.getId(), reminderId, true);
+		return toReminderArray(response);
 	}
 
 	/**
-	 * Schedule a reminder for an Actor instance.   FIXME: actually implement
+	 * Schedule a reminder for an Actor instance.
 	 *
-	 * @param actor              The Actor instance.
-	 * @param path               The actor method to invoke when the reminder fires.
-	 * @param options.id         The id of the reminder being scheduled
-	 * @param options.targetTime The earliest time at which the reminder should be
-	 *                           delivered
-	 * @param options.period     For periodic reminders, a string encoding a
-	 *                           Duration representing the desired gap between
-	 *                           successive reminders
-	 * @param args               The arguments with which to invoke the actor
-	 *                           method.
+	 * @param actor      The Actor instance.
+	 * @param path       The actor method to invoke when the reminder fires.
+	 * @param reminderId The id of the reminder being scheduled
+	 * @param targetTime The earliest time at which the reminder should be delivered
+	 * @param period     For periodic reminders, a String that is compatible with GoLang's Duration
+	 * @param args       The arguments with which to invoke the actor method.
 	 */
-	public static Response actorScheduleReminder(ActorRef actor, String path, String reminderId, JsonValue params) {
-		// FIXME: Need to take targetTime and period as paramters and properly serialize
+	public static void actorScheduleReminder(ActorRef actor, String path, String reminderId, Instant targetTime, Duration period, JsonValue... args) {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("path", "/" + path);
-		builder.add("data", params);
+		builder.add("targetTime", targetTime.toString());
+
+		if (period != null) {
+			// Sigh.  Encode in a way that GoLang will understand since it sadly doesn't actually implement ISO-8601
+			String goPeriod = "";
+			if (period.toHours() > 0) {
+				goPeriod += period.toHours()+"h";
+				period.minusHours(period.toHours());
+			}
+			if (period.toMinutes() > 0) {
+				goPeriod += period.toMinutes()+"m";
+				period.minusMinutes(period.toMinutes());
+			}
+			goPeriod += period.getSeconds()+"s";
+			builder.add("period", goPeriod);
+		}
+		builder.add("data", packArgs(args));
 		JsonObject requestBody = builder.build();
-		return karClient.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody);
+
+		karClient.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody);
 	}
 
 	/*

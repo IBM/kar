@@ -40,8 +40,7 @@ public class ActorManagerImpl implements ActorManager {
 		logger.info(LOG_PREFIX + "initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
 
-		logger.info(
-				LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
+		logger.info(LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
 
 		// ensure that we have non-null class and kar type strings from web.xml
 		if ((KarConfig.ACTOR_CLASS_STR != null) && (KarConfig.ACTOR_TYPE_NAME_STR != null)) {
@@ -195,17 +194,14 @@ public class ActorManagerImpl implements ActorManager {
 
 	@Lock(LockType.READ)
 	public ActorInstance getActor(String type, String id) {
-
 		logger.info(LOG_PREFIX + "getActor: Retrieving actor instance");
 
 		ActorModel model = this.actorMap.get(type);
-		ActorInstance actorObj = null;
-
 		if (model != null) {
-			actorObj = model.getActorInstances().get(id);
+			return model.getActorInstances().get(id);
+		} else {
+			return null;
 		}
-
-		return actorObj;
 	}
 
 	@Lock(LockType.READ)

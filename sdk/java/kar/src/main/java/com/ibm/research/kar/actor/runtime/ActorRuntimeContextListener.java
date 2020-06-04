@@ -24,14 +24,12 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
-
 		ServletContext ctx = servletContextEvent.getServletContext();
 
 		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
 		KarConfig.ACTOR_TYPE_NAME_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_TYPES);
 
 		String timeOut = ctx.getInitParameter(ActorRuntimeContextListener.KAR_CONNECTION_TIMEOUT);
-
 		if (timeOut != null) {
 			try {
 				logger.info("Setting default connection timeout to " + timeOut);
@@ -42,7 +40,6 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 		}
 
 		String port = ctx.getInitParameter(ActorRuntimeContextListener.KAR_DEFAULT_SIDECAR_PORT);
-
 		if (port != null) {
 			try {
 				logger.info("Setting default sidecar port to " + port);

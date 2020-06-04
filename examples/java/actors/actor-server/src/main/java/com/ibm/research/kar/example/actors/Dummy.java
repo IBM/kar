@@ -1,5 +1,12 @@
 package com.ibm.research.kar.example.actors;
 
+import static com.ibm.research.kar.Kar.*;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import javax.json.Json;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
@@ -9,10 +16,7 @@ import javax.json.JsonValue;
 import com.ibm.research.kar.ActorException;
 import com.ibm.research.kar.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.ActorRef;
-import static com.ibm.research.kar.Kar.*;
 
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 
@@ -33,9 +37,7 @@ public class Dummy extends ActorBoilerplate {
 		int number = json.getInt("number");
 		number++;
 
-		JsonObject params = Json.createObjectBuilder()
-				.add("number",number)
-				.build();
+		JsonObject params = Json.createObjectBuilder().add("number", number).build();
 
 		ActorRef dummy2 = actorRef("dummy2", "dummy2id");
 		JsonValue result = null;
@@ -60,7 +62,7 @@ public class Dummy extends ActorBoilerplate {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return null;
 	}
 
@@ -74,18 +76,14 @@ public class Dummy extends ActorBoilerplate {
 		try {
 			CompletionStage<JsonValue> cf = actorCallAsync(actorRef("calculator", "mycalc"), "add", n);
 
-
-			return cf
-						.exceptionally(t -> {
-						// exception thrown
-						System.out.println("In exceptionally");
-						if (t instanceof ActorMethodNotFoundException) {
-							System.out.println(t.getCause());
-						}
-						return Json.createValue("Exceptionally: Error invoking asyncIncr");
-					})
-					.toCompletableFuture()
-					.get();
+			return cf.exceptionally(t -> {
+				// exception thrown
+				System.out.println("In exceptionally");
+				if (t instanceof ActorMethodNotFoundException) {
+					System.out.println(t.getCause());
+				}
+				return Json.createValue("Exceptionally: Error invoking asyncIncr");
+			}).toCompletableFuture().get();
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -103,6 +101,11 @@ public class Dummy extends ActorBoilerplate {
 	}
 
 	@Remote
+	public void echo(JsonString msg) {
+		System.out.println(msg);
+	}
+
+	@Remote
 	public JsonNumber setState(JsonObject updates) {
 		int numNew = actorSetMultipleState(this, updates);
 		return Json.createValue(numNew);
@@ -115,11 +118,21 @@ public class Dummy extends ActorBoilerplate {
 
 	@Remote
 	public JsonNumber printState() {
-		Map<String,JsonValue> state = actorGetAllState(this);
-		for (Entry<String,JsonValue> e: state.entrySet()) {
+		Map<String, JsonValue> state = actorGetAllState(this);
+		for (Entry<String, JsonValue> e : state.entrySet()) {
 			System.out.println(e.getKey() + " = " + e.getValue().toString());
 		}
 		return Json.createValue(state.size());
+	}
+
+	@Remote
+	public void createReminder(JsonString msg) {
+		actorScheduleReminder(this, "echo", "r1", Instant.now().plusSeconds(1), Duration.ofSeconds(5), msg);
+	}
+
+	@Remote
+	public void dumpReminders() {
+		System.out.println(actorGetAllReminders(this)[0]);
 	}
 
 	@Deactivate
