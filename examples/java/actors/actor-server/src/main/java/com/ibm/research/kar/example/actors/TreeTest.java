@@ -20,9 +20,9 @@ public class TreeTest extends ActorBoilerplate {
 	@Activate
 	public void init() {
 	}
-	
+
 	// Sync actor tree -------------------------------
-	
+
 	@Remote
 	public JsonValue testsync(JsonObject json) {
 		int depth = json.getInt("depth");
@@ -36,7 +36,7 @@ public class TreeTest extends ActorBoilerplate {
 				.build();
 
 		try {
-			actorCall(this.getSession(),actorRef("treetest", "1"), "forksync", params);
+			actorCall(this, actorRef("treetest", "1"), "forksync", params);
 		} catch (ActorMethodNotFoundException e) {
 			params = Json.createObjectBuilder()
 					.add("error", e.toString())
@@ -94,14 +94,14 @@ public class TreeTest extends ActorBoilerplate {
 		}
 		System.out.println("Async test expecting " + async_expecting + " leaves");
 		long starttime = System.nanoTime();
-		
+
 		JsonObject params = Json.createObjectBuilder()
 				.add("depth", depth)
 				.add("session",  session)
 				.build();
 
 		try {
-			actorCall(session, actorRef("treetest", "1"), "forkasync", params);
+			actorCall(this, actorRef("treetest", "1"), "forkasync", params);
 		} catch (ActorMethodNotFoundException e1) {
 			params = Json.createObjectBuilder()
 					.add("error", e1.toString())
@@ -114,7 +114,7 @@ public class TreeTest extends ActorBoilerplate {
 				lock.wait(30000);
 			} catch (InterruptedException e) {	}
 		}
-		
+
 		long duration = 0;
 		duration = (System.nanoTime()-starttime)/1000000;
 		int left=async_expecting;

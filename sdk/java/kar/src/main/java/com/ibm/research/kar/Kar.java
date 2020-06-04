@@ -22,6 +22,7 @@ import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.Reminder;
 
@@ -201,14 +202,27 @@ public class Kar {
 	/**
 	 * Synchronous actor invocation where the invoked method will execute as part of the current session.
 	 *
-	 * @param callingSession The current session
+	 * @param caller The calling actor.
 	 * @param actor The target actor.
 	 * @param path  The actor method to invoke.
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(String callingSession, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
-		return karClient.actorCall(actor.getType(), actor.getId(), path, callingSession, packArgs(args));
+	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+		return karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args));
+	}
+
+	/**
+	 * Synchronous actor invocation where the invoked method will execute as part of the specified session.
+	 *
+	 * @param session The session in which to execute the actor method
+	 * @param actor The target actor.
+	 * @param path  The actor method to invoke.
+	 * @param args  The arguments with which to invoke the actor method.
+	 * @return The result of the invoked actor method.
+	 */
+	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+		return karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
 	}
 
 	/**
