@@ -6,6 +6,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.ActorRef;
 import static com.ibm.research.kar.Kar.*;
 
@@ -57,8 +58,14 @@ public class TreeActor extends ActorBoilerplate {
 		ActorRef actorA = actorRef("tree",label+level+"A");
 		ActorRef actorB = actorRef("tree",label+level+"B");
 
-		JsonValue resultA = actorCall(actorA, "callTree", paramsA);
-		replies = 1 + resultA.asJsonObject().getInt("replies");
+		JsonValue resultA;
+		try {
+			resultA = actorCall(actorA, "callTree", paramsA);
+			replies = 1 + resultA.asJsonObject().getInt("replies");
+		} catch (ActorMethodNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		JsonObject paramsB = Json.createObjectBuilder()
 				.add("label",  label+level+"B")
@@ -66,8 +73,14 @@ public class TreeActor extends ActorBoilerplate {
 				.add("maxdepth", maxdepth)
 				.add("trace", trace)
 				.build();
-		JsonValue resultB = actorCall(actorB, "callTree", paramsB);
-		replies += 1 + resultB.asJsonObject().getInt("replies");
+		JsonValue resultB;
+		try {
+			resultB = actorCall(actorB, "callTree", paramsB);
+			replies += 1 + resultB.asJsonObject().getInt("replies");
+		} catch (ActorMethodNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 		long duration = 0;
 		if ( 1 == level) {

@@ -19,7 +19,7 @@ The following code examples show how to use the Kar SDK.
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.ws.rs.core.Response;
+import javax.json.JsonValue;
 
 import static com.ibm.research.kar.Kar.*;
 
@@ -29,7 +29,7 @@ public static void main(String[] args) {
 				.build();
 
     // call service
-    Response resp = call("MyService", "increment", params);
+    JsonValue value = call("MyService", "increment", params);
 }
 ```
 
@@ -37,7 +37,7 @@ public static void main(String[] args) {
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.ws.rs.core.Response;
+import javax.json.JsonValue;
 
 import static com.ibm.research.kar.Kar.*;
 
@@ -48,7 +48,52 @@ public static void main(String[] args) {
 				.build();
 
     // call service
-    Response resp = actorCall("ActorType", "ActorID", "remoteMethodName", params);
+    JsonValue value = actorCall("ActorType", "ActorID", "remoteMethodName", params);
+}
+```
+
+### Invoke a service asynchronously 
+```java
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+
+import static com.ibm.research.kar.Kar.*;
+
+public static void main(String[] args) {
+
+    JsonObject params = Json.createObjectBuilder()
+				.add("number",42)
+				.build();
+
+    // call service asynchronously
+   CompletionStage<JsonValue> cf = callAsync("MyService", "increment", params);
+
+   JsonValue value = cf
+                    .toCompletableFuture()
+                    .get();
+}
+```
+
+### Call an Actor Method asynchronously
+```java
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonValue;
+
+import static com.ibm.research.kar.Kar.*;
+
+public static void main(String[] args) {
+
+    JsonObject params = Json.createObjectBuilder()
+				.add("number",42)
+				.build();
+    // call actor asnchronously
+    CompletionStage<JsonValue> cf = actorCallAsync("ActorType", "ActorID", "remoteMethodName", params);
+    
+    JsonValue value = cf
+                    .toCompletableFuture()
+                    .get();
 }
 ```
 

@@ -1,6 +1,7 @@
 package com.ibm.research.kar;
 
-import javax.enterprise.inject.Default;
+import java.util.concurrent.CompletionStage;
+
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -20,11 +21,7 @@ import javax.ws.rs.core.Response;
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
-import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
-
-@Default
-@RegisterRestClient(configKey = "kar")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Timeout(600000)
@@ -47,7 +44,13 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public JsonValue call(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
+	// asynchronous service invocation, returns invocation result
+	@POST
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<JsonValue> callAsync(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 
 	/*
@@ -66,7 +69,13 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ProcessingException;
+	public JsonValue actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
+
+	// synchronous actor invocation: returns invocation result
+	@POST
+	@Path("actor/{type}/{id}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<JsonValue> actorCallAsync(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
 
 	//
 	// Actor Reminder operations

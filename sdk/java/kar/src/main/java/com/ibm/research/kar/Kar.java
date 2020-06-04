@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -48,7 +49,9 @@ public class Kar {
 
 		URI baseURI = URI.create(baseURIStr);
 
-		return RestClientBuilder.newBuilder().baseUri(baseURI)
+		return RestClientBuilder.newBuilder()
+				.baseUri(baseURI)
+				.register(ActorExceptionMapper.class)
 				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 	}
@@ -122,8 +125,19 @@ public class Kar {
 	 * @return The result returned by the target service.
 	 */
 	public static JsonValue call(String service, String path, JsonValue body) {
-		Response response = karClient.call(service, path, body);
-		return toValue(response);
+		return karClient.call(service, path, body);
+	}
+
+	/**
+	 * aynchronous service invocation
+	 *
+	 * @param service The name of the service to invoke.
+	 * @param path    The service endpoint to invoke.
+	 * @param body    The request body with which to invoke the service endpoint.
+	 * @return The result returned by the target service.
+	 */
+	public static CompletionStage<JsonValue> callAsync(String service, String path, JsonValue body) {
+		return karClient.callAsync(service, path, body);
 	}
 
 	/**
@@ -157,9 +171,8 @@ public class Kar {
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(String callingSession, ActorRef actor, String path, JsonValue... args) {
-		Response response = karClient.actorCall(actor.getType(), actor.getId(), path, callingSession, packArgs(args));
-		return toValue(response);
+	public static JsonValue actorCall(String callingSession, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+		return karClient.actorCall(actor.getType(), actor.getId(), path, callingSession, packArgs(args));
 	}
 
 	/**
@@ -170,9 +183,20 @@ public class Kar {
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args) {
-		Response response = karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
-		return toValue(response);
+	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+		return karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
+	}
+
+	/**
+	 * Asynchronous actor invocation where the invoked method will execute in a new session.
+	 *
+	 * @param actor The target Actor.
+	 * @param path  The actor method to invoke.
+	 * @param args  The arguments with which to invoke the actor method.
+	 * @return The result of the invoked actor method.
+	 */
+	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+		return karClient.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
 	}
 
 	/*

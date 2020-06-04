@@ -17,6 +17,7 @@ import javax.json.JsonObject;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -150,7 +151,12 @@ public class TreeActorParallel extends ActorBoilerplate {
 //			ActorRef countActor = actorRef("treecounter", "tellTreeCounter");
 //			actorCall(countActor, "callDone", params);
 			ActorRef topActor = actorRef("telltree", topid);
-			actorCall(session, topActor, "tellDone", params);
+			try {
+				actorCall(session, topActor, "tellDone", params);
+			} catch (ActorMethodNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			return;
 		}
 
