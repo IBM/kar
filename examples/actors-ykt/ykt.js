@@ -254,7 +254,7 @@ class Researcher {
   get name () { return this.kar.id }
 
   async newHire (site, days, steps, thinkms) {
-    const initialState = { site, career: days * steps, workday: steps, thinkms, activity: States.ONBOARDING, delays: [] }
+    const initialState = { site, career: days * steps, workday: steps, thinkms, activity: States.ONBOARDING, delays: [], currentStep: 0 }
     Object.assign(this, initialState)
     await actor.state.setMultiple(this, initialState)
 
@@ -268,6 +268,7 @@ class Researcher {
     if (this.retired) return
     const state = {
       activity: this.activity,
+      currentStep: this.currentStep,
       location: this.location,
       delays: this.delays
     }
@@ -286,45 +287,38 @@ class Researcher {
 
   async move (targetTime) {
     const observedDelay = Date.now() - targetTime
-    if (debug) console.log(`${this.site}: Researcher ${this.name} entered move with delay ${observedDelay}`)
+    if (debug) console.log(`${this.site}: Researcher ${this.name} started move ${this.currentStep} with delay ${observedDelay}`)
 
-    const stepNumber = await actor.call(this, this, 'endPreviousStep', observedDelay)
-    if (stepNumber === this.career) {
-      this.retired = true
-      await actor.call(this, actor.proxy('Site', this.site), 'retire', this.name, this.delays)
-    } else {
-      const { thinkTime, priorActivity } = await actor.call(this, this, 'determineNextStep', stepNumber)
-      if (verbose) console.log(`${this.site}: ${this.name} will be doing ${this.activity} at ${this.location || 'off-site'} for ${thinkTime}ms`)
-      await actor.call(this, this, 'reportDecision', priorActivity)
-      await actor.call(this, this, 'scheduleNextStep', thinkTime)
-    }
-    if (debug) console.log(`${this.site}: Researcher ${this.name} exited move`)
-  }
-
-  // Inform other actors the previous step has ended and persist observedDelay
-  async endPreviousStep (observedDelay) {
     if (this.location !== undefined) {
       await actor.call(this, actor.proxy('Office', this.location), 'leave', this.name)
     }
-    this.delays.push(observedDelay)
-    await actor.state.set(this, 'delays', this.delays)
-    return this.delays.length - 1
+
+    this.delays[this.currentStep] = observedDelay
+
+    // TODO: atomic checkpoint & doNext
+    await this.checkpointState()
+    if (this.currentStep === this.career) {
+      this.retired = true
+      await actor.tell(actor.proxy('Site', this.site), 'retire', this.name, this.delays)
+    } else {
+      await actor.tell(this, 'determineNextStep')
+    }
   }
 
-  // Commit to the next action
-  async determineNextStep (stepNumber) {
+  // Commit to the next action; invoked as continuation to move
+  async determineNextStep () {
     const priorActivity = this.activity
     const diceRoll = Math.random()
     let thinkTime = 1 + randI(this.thinkms)
-    if (stepNumber % this.workday === 0) {
+    if (this.currentStep % this.workday === 0) {
       // Morning rush hour.
       this.activity = States.COMMUTING
       thinkTime = thinkTime * 3
-    } else if ((stepNumber + 2) % this.workday === 0) {
+    } else if ((this.currentStep + 2) % this.workday === 0) {
       // Evening rush hour.
       this.activity = States.COMMUTING
       thinkTime = thinkTime * 2
-    } else if ((stepNumber + 1) % this.workday === 0) {
+    } else if ((this.currentStep + 1) % this.workday === 0) {
       // Time to relax
       this.activity = States.HOME
       thinkTime = thinkTime * 5
@@ -349,26 +343,27 @@ class Researcher {
       // If the office we are going to next is non-empty, we will spend more time there.
       thinkTime = thinkTime * 2
     }
+    this.currentStep = this.currentStep + 1
 
-    // Commit the decision by checkpointing updated state.
+    // TODO: atomic checkpoint & doNext
     await this.checkpointState()
-
-    return { thinkTime, priorActivity }
+    await actor.tell(this, 'reportDecision', thinkTime, priorActivity)
   }
 
   // Update derived simulation state by informing other actors of our next action.
-  async reportDecision (priorActivity) {
+  // Schedule a reminder for the next move step.
+  // Invoked as continuation from determineNextStep
+  async reportDecision (thinkTime, priorActivity) {
+    if (verbose) console.log(`${this.site}: ${this.name} will be doing ${this.activity} at ${this.location || 'off-site'} for ${thinkTime}ms`)
     if (this.location !== undefined) {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
     }
     if (this.activity !== priorActivity) {
       await actor.tell(actor.proxy('Site', this.site), 'workerUpdate', this.name, this.activity, Date.now())
     }
-  }
-
-  async scheduleNextStep (thinkTime) {
     const when = new Date(Date.now() + thinkTime)
     await actor.reminders.schedule(this, 'move', { id: 'step', targetTime: when }, when.getTime())
+    if (debug) console.log(`${this.site}: Researcher ${this.name} completed move ${this.currentStep - 1}`)
   }
 }
 
