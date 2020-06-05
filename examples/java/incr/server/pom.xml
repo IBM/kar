@@ -73,6 +73,13 @@
 				<groupId>io.openliberty.tools</groupId>
 				<artifactId>liberty-maven-plugin</artifactId>
 				<version>${version.liberty-maven-plugin}</version>
+				<configuration>
+					<runtimeArtifact>
+						<groupId>io.openliberty</groupId>
+						<artifactId>openliberty-runtime</artifactId>
+						<type>zip</type>
+					</runtimeArtifact>
+				</configuration>
 			</plugin>
 			<!-- Plugin to run integration tests -->
 			<plugin>
