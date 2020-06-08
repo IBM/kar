@@ -186,8 +186,8 @@ func Close() error {
 }
 
 // Purge deletes all keys for the application
-func Purge() error {
-	pattern := mangle("*")
+func Purge(pattern string) error {
+	pattern = mangle(pattern)
 	bags := [][]interface{}{}
 	cursor := 0
 	for {

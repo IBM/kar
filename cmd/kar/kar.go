@@ -791,7 +791,10 @@ func main() {
 	defer pubsub.Close()
 
 	if config.Purge {
-		purge()
+		purge("*")
+		return
+	} else if config.Drain {
+		purge("pubsub" + config.Separator + "*")
 		return
 	}
 
@@ -860,11 +863,11 @@ func main() {
 	logger.Warning("exiting...")
 }
 
-func purge() {
+func purge(pattern string) {
 	if err := pubsub.Purge(); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
-	if err := store.Purge(); err != nil {
+	if err := store.Purge(pattern); err != nil {
 		logger.Error("failed to delete Redis keys: %v", err)
 	}
 }
