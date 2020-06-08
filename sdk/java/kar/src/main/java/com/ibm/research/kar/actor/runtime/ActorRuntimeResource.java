@@ -20,7 +20,7 @@ import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 
 import com.ibm.research.kar.actor.ActorInstance;
 
-@Path("/actor")
+@Path("/")
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
