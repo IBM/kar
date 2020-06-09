@@ -30,6 +30,8 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 @Path("/kar/v1")
 public interface KarRest extends AutoCloseable {
 
+	public final static String KAR_ACTOR_JSON = "application/kar+json";
+
 	/*
 	 * Services
 	 */
@@ -64,6 +66,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Consumes(KAR_ACTOR_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonArray args) throws ProcessingException;
 
@@ -71,12 +74,16 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Consumes(KAR_ACTOR_JSON)
+	@Produces(KAR_ACTOR_JSON)
 	public JsonValue actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
 
 	// synchronous actor invocation: returns invocation result
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Consumes(KAR_ACTOR_JSON)
+	@Produces(KAR_ACTOR_JSON)
 	public CompletionStage<JsonValue> actorCallAsync(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
 
 	//

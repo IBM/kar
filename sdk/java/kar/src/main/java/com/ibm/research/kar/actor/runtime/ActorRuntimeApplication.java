@@ -9,14 +9,14 @@ import javax.ws.rs.core.Application;
 
 @ApplicationPath("/actor")
 public class ActorRuntimeApplication extends Application {
-	
-	private static Logger logger = Logger.getLogger(ActorRuntimeApplication.class.getName());
-	
-	public Set<Class<?>> getClasses() {
-		logger.info("Running ActorRuntimeApplication getClasses()");
-        Set<Class<?>> classes = new HashSet<Class<?>>();
-        classes.add(ActorRuntimeResource.class);
-        return classes;
-    }
 
+  private static Logger logger = Logger.getLogger(ActorRuntimeApplication.class.getName());
+
+  public Set<Class<?>> getClasses() {
+    logger.info("Running ActorRuntimeApplication getClasses()");
+    Set<Class<?>> classes = new HashSet<Class<?>>();
+    classes.add(JSONProvider.class);
+    classes.add(ActorRuntimeResource.class);
+    return classes;
+  }
 }

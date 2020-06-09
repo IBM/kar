@@ -16,22 +16,21 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
-
+import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
 
 @Path("/")
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
-	private final static String LOG_PREFIX = "ActorRuntimResource.";
+	private final static String LOG_PREFIX = "ActorRuntimeResource.";
 
 	@Inject
 	ActorManager actorManager;
 
 	@GET
 	@Path("{type}/{id}")
-	@Produces(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
 		logger.info(LOG_PREFIX + "getActor: Checking for actor with id " + id);
 		if (actorManager.getActor(type, id) != null) {
@@ -55,8 +54,8 @@ public class ActorRuntimeResource {
 
 	@POST
 	@Path("{type}/{id}/{sessionid}/{path}")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(KarRest.KAR_ACTOR_JSON)
+	@Produces(KarRest.KAR_ACTOR_JSON)
 	public Response invokeActorMethod(
 			@PathParam("type") String type,
 			@PathParam("id") String id,
