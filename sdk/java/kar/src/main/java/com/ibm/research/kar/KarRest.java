@@ -27,7 +27,7 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Timeout(600000)
-@Path("/kar/v1")
+@Path("kar/v1")
 public interface KarRest extends AutoCloseable {
 
 	public final static String KAR_ACTOR_JSON = "application/kar+json";

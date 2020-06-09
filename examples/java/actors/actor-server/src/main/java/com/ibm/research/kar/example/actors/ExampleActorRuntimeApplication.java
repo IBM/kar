@@ -1,9 +1,10 @@
 package com.ibm.research.kar.example.actors;
+
 import javax.ws.rs.core.Application;
 import javax.ws.rs.ApplicationPath;
 
 /**
- * Example deployment of KAR actor runtime
+ * Trivial Jax-RS Application subclass; required OpenLiberty boilerplate code.
  */
 @ApplicationPath("/")
 public class ExampleActorRuntimeApplication extends Application {

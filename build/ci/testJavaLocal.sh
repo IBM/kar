@@ -37,4 +37,4 @@ echo "Waiting 10 seconds for Java actor server to launch"
 sleep 10
 
 echo "Sending curl request to Java actor server"
-run $PID kar -runtime_port 32123 -app actor curl -H "Content-Type: application/json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
+run $PID kar -runtime_port 32123 -app actor curl -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'

@@ -22,6 +22,10 @@ type subscription struct {
 	closed <-chan struct{}
 }
 
+const (
+	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
+)
+
 var (
 	// pending requests: map request uuid (string) to channel (chan Reply)
 	requests = sync.Map{}
@@ -52,7 +56,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload, contentType stri
 		"payload":      payload})
 }
 
-func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingId string) error {
+func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingID string) error {
 	return pubsub.Send(ctx, map[string]string{
 		"protocol":  "actor",
 		"type":      actor.Type,
@@ -60,7 +64,7 @@ func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindi
 		"command":   "binding:tell",
 		"kind":      kind,
 		"partition": partition,
-		"bindingId": bindingId})
+		"bindingId": bindingID})
 }
 
 // Reply represents the return value of a call
@@ -415,7 +419,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 					err = nil // not to be retried
 				}
 			} else if err == nil {
-				msg["path"] = "/actor/" + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+				msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 				err = dispatch(ctx, cancel, msg)
 			}
 		}
@@ -429,10 +433,10 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 // activate an actor
 func activate(ctx context.Context, actor Actor) (*Reply, error) {
-	reply, err := invoke(ctx, "GET", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID})
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Debug("activate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
+			logger.Debug("activate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
 		}
 		return nil, err
 	}
@@ -445,10 +449,10 @@ func activate(ctx context.Context, actor Actor) (*Reply, error) {
 
 // deactivate an actor (but retains placement)
 func deactivate(ctx context.Context, actor Actor) error {
-	reply, err := invoke(ctx, "DELETE", map[string]string{"path": "/actor/" + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID})
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Debug("deactivate failed to invoke %s: %v", "/actor/"+actor.Type+"/"+actor.ID, err)
+			logger.Debug("deactivate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
 		}
 		return err
 	}

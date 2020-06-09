@@ -206,7 +206,7 @@ function actorRuntime (actors) {
   router.use(express.json({ type: '*/*' })) // unconditionally parse request bodies to json
 
   // actor activation route
-  router.get('/actor/:type/:id', (req, res, next) => Promise.resolve()
+  router.get('/kar/impl/v1/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => {
       table[req.params.type] = table[req.params.type] || {}
       const actor = new (actors[req.params.type])(req.params.id)
@@ -220,7 +220,7 @@ function actorRuntime (actors) {
     .catch(next))
 
   // actor deactivation route
-  router.delete('/actor/:type/:id', (req, res, next) => Promise.resolve()
+  router.delete('/kar/impl/v1/actor/:type/:id', (req, res, next) => Promise.resolve()
     .then(_ => { // run optional deactivate callback
       const actor = table[req.params.type][req.params.id]
       delete actor.kar.session
@@ -231,7 +231,7 @@ function actorRuntime (actors) {
     .catch(next))
 
   // method invocation route
-  router.post('/actor/:type/:id/:session/:method', (req, res, next) => Promise.resolve()
+  router.post('/kar/impl/v1/actor/:type/:id/:session/:method', (req, res, next) => Promise.resolve()
     .then(_ => {
       const actor = table[req.params.type][req.params.id]
       if (req.params.method in actor) {

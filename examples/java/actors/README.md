@@ -31,7 +31,7 @@ Wait a few seconds until you see
 
 Then, in a second terminal do
 ```shell
-kar -runtime_port 32123 -app actor curl -s -H "Content-Type: application/json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
+kar -runtime_port 32123 -app actor curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
 ```
 
 You should see output like:

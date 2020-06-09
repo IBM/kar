@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
 
-@Path("/")
+@Path("kar/impl/v1/actor")
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
