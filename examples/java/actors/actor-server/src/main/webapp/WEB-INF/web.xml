@@ -18,12 +18,10 @@
 			com.ibm.research.kar.example.actors.Dummy2,
 			com.ibm.research.kar.example.actors.Calculator,
 			com.ibm.research.kar.example.actors.TreeTest,
-			com.ibm.research.kar.example.actors.TreeActor,
-			com.ibm.research.kar.example.actors.TreeActorCounter,
-			com.ibm.research.kar.example.actors.TreeActorParallel</param-value>
+			com.ibm.research.kar.example.actors.BroadcastTest</param-value>
 	</context-param>
 		<context-param>
 			<param-name>kar-actor-types</param-name>
-			<param-value>dummy, dummy2, calculator, treetest, tree, treecounter, telltree</param-value>
+			<param-value>dummy, dummy2, calculator, treetest, broadcast</param-value>
 		</context-param>
 </web-app>

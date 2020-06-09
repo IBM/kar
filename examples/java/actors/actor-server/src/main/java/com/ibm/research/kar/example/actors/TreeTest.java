@@ -4,6 +4,8 @@ import static com.ibm.research.kar.Kar.actorCall;
 import static com.ibm.research.kar.Kar.actorRef;
 import static com.ibm.research.kar.Kar.actorTell;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -36,7 +38,7 @@ public class TreeTest extends ActorBoilerplate {
 				.build();
 
 		try {
-			actorCall(this, actorRef("treetest", "1"), "forksync", params);
+			actorCall(this.getSession(),actorRef("treetest", "1"), "forksync", params);
 		} catch (ActorMethodNotFoundException e) {
 			params = Json.createObjectBuilder()
 					.add("error", e.toString())
@@ -77,14 +79,15 @@ public class TreeTest extends ActorBoilerplate {
 
 	// Async tree ----------------------------------
 
-	int async_expecting;
+	AtomicLong async_expecting;
 	Object lock = new Object();
+
 	@Remote
 	public JsonValue testasync(JsonObject json) {
 		int depth = json.getInt("depth");
 		String session = this.getSession();
 
-		async_expecting = 1 << (depth-1);
+		async_expecting = new AtomicLong(1 << (depth-1));
 		if (! this.getId().equals("1")) {
 			System.err.println("testasync called with ID:"+this.getId()+" instead of:1");
 			JsonObject result = Json.createObjectBuilder()
@@ -101,7 +104,7 @@ public class TreeTest extends ActorBoilerplate {
 				.build();
 
 		try {
-			actorCall(this, actorRef("treetest", "1"), "forkasync", params);
+			actorCall(session, actorRef("treetest", "1"), "forkasync", params);
 		} catch (ActorMethodNotFoundException e1) {
 			params = Json.createObjectBuilder()
 					.add("error", e1.toString())
@@ -117,7 +120,7 @@ public class TreeTest extends ActorBoilerplate {
 
 		long duration = 0;
 		duration = (System.nanoTime()-starttime)/1000000;
-		int left=async_expecting;
+		long left=async_expecting.get();
 		if (left == 0) {
 			System.out.println("recursion took " + duration + "ms");
 			JsonObject result = Json.createObjectBuilder()
@@ -137,8 +140,8 @@ public class TreeTest extends ActorBoilerplate {
 
 	@Remote
 	public void leafdone() {
-		if (--async_expecting <= 0) {
-			synchronized(lock) {
+		synchronized(lock) {
+			if (async_expecting.decrementAndGet() <= 0) {
 				lock.notify();
 			}
 		}
