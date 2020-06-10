@@ -7,7 +7,11 @@
        Using kind is only supported in KAR's "dev" mode where you will
        be building your own docker images of the KAR system components
        and pushing them into kind's local docker registry.
-       Once you have Docker installed, just run
+
+       **IMPORTANT: You must use our `start-kind.sh` script to create your
+       kind cluster to properly configure networking and ingress.**
+       
+       Once you have Docker installed, run
        [start-kind.sh](../scripts/start-kind.sh) to create a virtual
        cluster properly configured for running KAR.
 
