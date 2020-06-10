@@ -13,15 +13,35 @@ spec:
     metadata:
       labels:
         name: ykt-server
+{{ if not .Values.localMode }}
       annotations:
         kar.ibm.com/app: ykt
-        kar.ibm.com/service: simulation 
         kar.ibm.com/actors: Company,Site,Office,Researcher
         kar.ibm.com/verbose: {{ .Values.verbose }}
+{{ end }}
     spec:
+{{ if .Values.localMode }}
+      volumes:
+      - name: kar-ibm-com-config
+        secret:
+          secretName: kar.ibm.com.runtime-config
+{{ end }}
       containers:
       - name: server
         image: {{ .Values.image }}
+
         env:
         - name: MAIN
           value: actors-ykt/ykt.js
+{{ if .Values.localMode }}
+        - name: KAR_LOCAL_MODE
+          value: "true"
+        - name: KAR_APP
+          value: ykt
+        - name: KAR_EXTRA_ARGS
+          value: -config_dir /var/run/secrets/kar.ibm.com -v {{ .Values.verbose }} -actors Company,Site,Office,Researcher
+        volumeMounts:
+        - mountPath: /var/run/secrets/kar.ibm.com
+          name: kar-ibm-com-config
+          readOnly: true
+{{ end }}

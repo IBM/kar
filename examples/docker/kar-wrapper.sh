@@ -3,6 +3,6 @@
 if [ -z "$KAR_LOCAL_MODE" ]; then
     exec node "$MAIN"
 else
-    exec kar -app $KAR_APP $KAR_EXTRA_ARGS node "$MAIN"
+    exec /kar/bin/kar -app $KAR_APP $KAR_EXTRA_ARGS node "$MAIN"
 fi
 
