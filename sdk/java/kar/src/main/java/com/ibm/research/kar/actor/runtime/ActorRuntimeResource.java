@@ -18,6 +18,7 @@ import javax.ws.rs.core.Response;
 
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
+import com.ibm.research.kar.actor.exceptions.ActorCreateException;
 
 @Path("kar/impl/v1/actor")
 public class ActorRuntimeResource {
@@ -38,8 +39,17 @@ public class ActorRuntimeResource {
 			return Response.status(Response.Status.OK).build();
 		} else {
 			logger.info(LOG_PREFIX + "getActor: No actor found, creating");
-			this.actorManager.createActor(type, id);
-			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
+
+			try {
+				if (this.actorManager.createActor(type, id) != null) {
+					return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
+				} else {
+					return Response.status(Response.Status.NOT_FOUND).entity("Cannot create actor, no actor implementation for " + type + " actor " + id).build();
+				}
+			} catch (ActorCreateException ex) {
+				logger.warning(LOG_PREFIX + "getActor: Error when creating " + type + " actor " + id);
+				return Response.status(Response.Status.BAD_REQUEST).entity("Cannot create actor, no actor implementation for " + type + " actor " + id).build();
+			}
 		}
 	}
 

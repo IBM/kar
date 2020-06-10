@@ -24,6 +24,7 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
+import com.ibm.research.kar.actor.exceptions.ActorCreateException;
 
 @Singleton
 @ApplicationScoped
@@ -137,7 +138,7 @@ public class ActorManagerImpl implements ActorManager {
 	}
 
 	@Lock(LockType.WRITE)
-	public ActorInstance createActor(String type, String id) {
+	public ActorInstance createActor(String type, String id) throws ActorCreateException {
 		logger.info(LOG_PREFIX + "createActor ActorManager");
 
 		ActorModel actorRef = actorMap.get(type);
@@ -160,6 +161,8 @@ public class ActorManagerImpl implements ActorManager {
 				actorRef.getActorInstances().put(id, actorObj);
 			} catch (Throwable t) {
 				logger.severe(LOG_PREFIX + "createActor: " + t.getMessage());
+				
+				throw new ActorCreateException(t.getMessage());
 			}
 		}
 
