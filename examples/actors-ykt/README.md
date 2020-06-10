@@ -271,7 +271,7 @@ simulation.  The client is configured as a Helm test that initiates a
 single workday and verifies that the expected work was completed.
 
 ```
-$ helm install ykt ./deploy/chart --set image=example-ykt:dev
+$ helm install ykt ./deploy/chart --set image=examples-js:dev
 NAME: ykt
 LAST DEPLOYED: Fri Apr  3 16:08:35 2020
 NAMESPACE: default
