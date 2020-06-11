@@ -30,7 +30,7 @@ export REDIS_PORT=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.hosts[
 export REDIS_PASSWORD=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.authentication.password`
 
 # setup kafka env variables
-export KAFKA_VERSION=2.2.0
+export KAFKA_VERSION=2.3.0
 export KAFKA_ENABLE_TLS=true
 export KAFKA_BROKERS=`echo $KAFKA_KEY | jq -r .credentials.kafka_brokers_sasl[0]` # TODO: use all brokers
 export KAFKA_PASSWORD=`echo $KAFKA_KEY | jq -r .credentials.password`
