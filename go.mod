@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/Shopify/sarama v1.26.4
 	github.com/cenkalti/backoff/v4 v4.0.0
-	github.com/gomodule/redigo v1.7.0
+	github.com/gomodule/redigo v1.8.2
 	github.com/google/uuid v1.1.1
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
