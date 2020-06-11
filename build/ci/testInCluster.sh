@@ -37,3 +37,18 @@ else
 fi
 
 
+echo "*** Running in-cluster no-sidecar actors-ykt ***"
+
+helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=examples-js:dev --set localMode=true
+
+if helm test ykt-sc; then
+    echo "PASSED! In cluster no-sidecar actors-ykt passed."
+    helm delete ykt-sc
+else
+    echo "FAILED: In cluster no-sidecar actors-ykt failed."
+    kubectl logs ykt-client -c client
+    kubectl logs ykt-client -c kar
+    kubectl delete pod ykt-client
+    helm delete ykt-sc
+    exit 1
+fi

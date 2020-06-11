@@ -13,8 +13,8 @@ spec:
     metadata:
       labels:
         name: ykt-server
-{{ if not .Values.localMode }}
       annotations:
+{{ if not .Values.localMode }}
         kar.ibm.com/app: ykt
         kar.ibm.com/actors: Company,Site,Office,Researcher
         kar.ibm.com/verbose: {{ .Values.verbose }}
