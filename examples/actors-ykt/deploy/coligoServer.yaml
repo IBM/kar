@@ -1,0 +1,68 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ykt-server
+spec:
+  template:
+    spec:
+      containerConcurrency: 1
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
+      containers:
+      - image: us.icr.io/research/kar-dev/examples-js
+        name: user-container
+        env:
+        - name: MAIN
+          value: actors-ykt/ykt.js
+
+        - name: KAR_APP_PORT
+          value: "8080"
+        - name: KAR_APP
+          value: ykt
+        - name: KAR_EXTRA_ARGS
+          value: -v debug -actors Company,Site,Office,Researcher
+
+        - name: KAR_LOCAL_MODE
+          value: "true"
+
+        # Explode KAR secret since volume mounts don't work in coligo :(
+        - name: KAFKA_VERSION
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: KAFKA_VERSION
+        - name: KAFKA_ENABLE_TLS
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: KAFKA_ENABLE_TLS
+        - name: KAFKA_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: KAFKA_PASSWORD
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: KAFKA_BROKERS
+        - name: REDIS_ENABLE_TLS
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: REDIS_ENABLE_TLS
+        - name: REDIS_HOST
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: REDIS_HOST
+        - name: REDIS_PORT
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: REDIS_PORT
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kar.ibm.com.runtime-config
+              key: REDIS_PASSWORD
