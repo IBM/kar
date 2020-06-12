@@ -382,4 +382,12 @@ app.post('/shutdown', async (_reg, res) => {
 
 app.use(sys.actorRuntime({ Company, Site, Office, Researcher }))
 
+if (truthy(process.env.KAR_LOCAL_MODE)) {
+  console.log('installing knative liveness probe at /')
+  app.get('/', async (_reg, res) => {
+    console.log('Liveness probe; returning 200')
+    res.sendStatus(200)
+  })
+}
+
 const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, '127.0.0.1')
