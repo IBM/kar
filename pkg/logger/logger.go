@@ -31,6 +31,10 @@ var severity = []string{
 
 var verbosity = errorLog
 
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds)
+}
+
 // SetVerbosity sets the verbosity of the log.
 func SetVerbosity(s string) error {
 	s = strings.ToUpper(s)
