@@ -20,7 +20,7 @@ import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.exceptions.ActorCreateException;
 
-@Path("kar/impl/v1/actor")
+@Path("actor")
 public class ActorRuntimeResource {
 
 	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());

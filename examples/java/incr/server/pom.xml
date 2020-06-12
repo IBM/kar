@@ -16,10 +16,11 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 
-		<version.liberty-maven-plugin>3.1</version.liberty-maven-plugin>
-		<version.maven-failsafe-plugin>2.22.2</version.maven-failsafe-plugin>
-		<version.maven-surefire-plugin>2.22.2</version.maven-surefire-plugin>
-		<version.maven-war-plugin>3.2.3</version.maven-war-plugin>
+		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
+		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
+		<version.microprofile>3.3</version.microprofile>
+		<version.slf4j>1.7.25</version.slf4j>
+		<jaeger.version>0.34.0</jaeger.version>
 		<!-- Liberty configuration -->
 		<liberty.var.default.http.port>8080</liberty.var.default.http.port>
 		<liberty.var.default.https.port>8443</liberty.var.default.https.port>
@@ -37,28 +38,15 @@
 		<dependency>
 			<groupId>org.eclipse.microprofile</groupId>
 			<artifactId>microprofile</artifactId>
-			<version>3.3</version>
+			<version>${version.microprofile}</version>
 			<type>pom</type>
 			<scope>provided</scope>
 		</dependency>
-		<!-- For tests -->
+		<!-- KAR SDK -->
 		<dependency>
-			<groupId>org.microshed</groupId>
-			<artifactId>microshed-testing-liberty</artifactId>
-			<version>0.8</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-log4j12</artifactId>
-			<version>1.7.30</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter</artifactId>
-			<version>5.5.2</version>
-			<scope>test</scope>
+			<groupId>com.ibm.research.kar</groupId>
+			<artifactId>kar</artifactId>
+			<version>1.0-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 
@@ -67,7 +55,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>3.2.3</version>
+				<version>${version.maven-war-plugin}</version>
 			</plugin>
 			<plugin>
 				<groupId>io.openliberty.tools</groupId>
@@ -80,28 +68,6 @@
 						<type>zip</type>
 					</runtimeArtifact>
 				</configuration>
-			</plugin>
-			<!-- Plugin to run integration tests -->
-			<plugin>
-				<artifactId>maven-failsafe-plugin</artifactId>
-				<version>3.0.0-M4</version>
-				<executions>
-					<execution>
-						<id>integration-test</id>
-						<goals>
-							<goal>integration-test</goal>
-						</goals>
-						<configuration>
-							<trimStackTrace>false</trimStackTrace>
-						</configuration>
-					</execution>
-					<execution>
-						<id>verify</id>
-						<goals>
-							<goal>verify</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>

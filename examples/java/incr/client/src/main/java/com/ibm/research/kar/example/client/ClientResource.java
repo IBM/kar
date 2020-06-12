@@ -2,6 +2,7 @@ package com.ibm.research.kar.example.client;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
 import javax.json.JsonNumber;
 import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
@@ -16,6 +17,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.KarRest;
 
 @Path("client")
 @ApplicationScoped
@@ -32,46 +34,26 @@ public class ClientResource {
 
 	@POST
 	@Path("incrSync")
-	public Response call(KarParams karParams) throws ProcessingException {
+	public Response call(JsonValue num) throws ProcessingException {
 
 		try {
+			System.out.println("Got params " + num);
 
 			if (useKar == true) {
-				JsonValue result = Kar.call(karParams.service, karParams.path, karParams.params);
+				System.out.println("Using KAR");
+				JsonValue result = Kar.call("number", "number/incr", num);
 				Response resp = Response.status(Response.Status.OK).entity(result).build();
 				return resp;
-			} else {
-				JsonNumber bg = (JsonNumber)karParams.params.get("number");
-				int num = bg.intValue();
+			} 
+			
+			// remote the non-kar case
+			return Response.status(Response.Status.NOT_IMPLEMENTED).build();
 
-				Number numObj = new Number();
-				numObj.setNumber(num);
-
-				Number respNum = this.defaultRestClient.incrNumber(numObj);
-
-				Response resp = Response.status(Response.Status.OK).entity(respNum).build();
-				return resp;
-			}
 		} catch (Exception ex) {
 
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
 		}
 
-	}
-
-	@POST
-	@Path("incrAsync")
-	public Response tell(KarParams karParams) throws ProcessingException {
-		try {
-			if (useKar == true) {
-				Kar.tell(karParams.service, karParams.path, karParams.params);
-				return Response.status(Response.Status.OK).build();
-			} else {
-				return Response.status(Response.Status.OK).build();
-			}
-		} catch (Exception ex) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex).build();
-		}
 	}
 
 }

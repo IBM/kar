@@ -7,6 +7,23 @@ This example demonstrates how to use the Java Microprofile KAR SDK to make synch
 - Apache Maven 3.6.3 or above
 - Java 1.8.0 or above
 
+### Running Example Incr Code wit Local Installation of KAR
+Assuming you have KAR installed:
+
+#### 1. Launch Number Service
+Inside the `incr/server` directory:
+` kar -app example -service number mvn liberty:run`
+
+#### 2. Launch Client Service
+Inside the `incr/client` directory:
+`kar -app_port 9090 -app example -service client mvn liberty:run`
+
+#### 3. Run curl test
+Inside the `incr/scripts` directory:
+`$ ./clientPost.sh
+
+If all goes well you should get a response `11`.
+
 ### Running Example Incr Code Locally Without KAR
 You can build and run the code locally to see how it works without using KAR. To build, run the maven command `mvn install` in `example/java/incr/`.  This will build the java SDK in `sdk/java`, the server, and the client (which uses the sdk as a dependency).
 

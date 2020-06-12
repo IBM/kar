@@ -1,17 +1,11 @@
 package com.ibm.research.kar.example;
 
+import java.math.BigDecimal;
+
 public class NumberService {
 	
-	public int incr(int num) {
-		num++;
-		return num;
+	public BigDecimal incr(BigDecimal oldNum) {
+		return  new BigDecimal(oldNum.intValue() + 1);
 	}
 	
-	public Number getNum() {
-		Number num = new Number();
-		num.setNumber(7);
-		
-		return num;
-	}
-
 }

@@ -10,6 +10,8 @@ import javax.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
+import com.ibm.research.kar.KarRest;
+
 
 @RegisterRestClient(configKey = "defaultClient", baseUri = "http://localhost:9080/")
 @RegisterProvider(UnknownUriExceptionMapper.class)
@@ -18,11 +20,11 @@ public interface IncrServer extends AutoCloseable{
 	
 	@POST
 	@Path("incr")
-	@Produces(MediaType.APPLICATION_JSON) 
+	@Produces(KarRest.KAR_ACTOR_JSON) 
 	Number incrNumber(Number num) throws UnknownUriException, ProcessingException;
 	
 	@GET
-	@Produces(MediaType.APPLICATION_JSON) 
+	@Produces(KarRest.KAR_ACTOR_JSON)
 	Number getNumber()  throws UnknownUriException, ProcessingException;
 
 }

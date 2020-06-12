@@ -16,18 +16,21 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 
-		<version.liberty-maven-plugin>3.1</version.liberty-maven-plugin>
+		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
 		<version.maven-failsafe-plugin>2.22.2</version.maven-failsafe-plugin>
 		<version.maven-surefire-plugin>2.22.2</version.maven-surefire-plugin>
-		<version.maven-war-plugin>3.2.3</version.maven-war-plugin>
+		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
+		<version.microprofile>3.3</version.microprofile>
+		<version.slf4j>1.7.25</version.slf4j>
+		<jaeger.version>0.34.0</jaeger.version>
 		<!-- Liberty configuration -->
-		<liberty.embedded.version>20.0.0.5</liberty.embedded.version>
+		<liberty.embedded.version>20.0.0.6</liberty.embedded.version>
 		<liberty.var.default.http.port>8080</liberty.var.default.http.port>
 		<liberty.var.default.https.port>8443</liberty.var.default.https.port>
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
 		<!-- Jaeger tracing version -->
 		<!-- openliberty requires older version -->
-		<jaeger.version>0.34.0</jaeger.version>
+		
 	</properties>
 
 	<dependencies>
@@ -41,7 +44,7 @@
 		<dependency>
 			<groupId>org.eclipse.microprofile</groupId>
 			<artifactId>microprofile</artifactId>
-			<version>3.3</version>
+			<version>${version.microprofile}</version>
 			<type>pom</type>
 			<scope>provided</scope>
 		</dependency>
@@ -61,7 +64,7 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-jdk14</artifactId>
-			<version>1.7.25</version>
+			<version>${version.slf4j}</version>
 		</dependency>
 	</dependencies>
 	<build>
@@ -69,7 +72,7 @@
 		<plugins>
 			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>3.2.3</version>
+				<version>${version.maven-war-plugin}</version>
 			</plugin>
 			<plugin>
 				<groupId>io.openliberty.tools</groupId>
