@@ -41,9 +41,31 @@ const parse = res => res.text().then(text => { // parse to string first
   }
 })
 
+// parse actor response
+const parseActor = res => res.text().then(text => { // parse to string first
+  if (!res.ok) throw new Error(text) // if error response return error string
+  try { // try parsing to json object
+    const obj = JSON.parse(text)
+    if (obj.error) {
+      const err = new Error(obj.message)
+      err.stack = obj.stack
+      throw err
+    } else {
+      return obj.value
+    }
+  } catch (err) {
+    throw new Error(text)
+  }
+})
+
 // http post: json stringify request body, parse response body
 function post (api, body, headers) {
   return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers, agent }).then(parse)
+}
+
+// http post: json stringify request body, parse response body
+function postActor (api, body, headers) {
+  return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers, agent }).then(parseActor)
 }
 
 // http put: json stringify request body, parse response body
@@ -75,6 +97,8 @@ const call = (service, path, body) => post(`service/${service}/call/${path}`, bo
 
 const resolver = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' }, agent }).then(parse)
 
+const resolverActor = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' }, agent }).then(parseActor)
+
 function asyncCall (service, path, body) {
   return post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json', Pragma: 'promise' }).then(resolver)
 }
@@ -88,13 +112,13 @@ function actorCall (...args) {
     // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
     const ta = args.shift()
     const path = args.shift()
-    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
   } else {
     //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
     const sa = args.shift()
     const ta = args.shift()
     const path = args.shift()
-    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json' })
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json' })
   }
 }
 
@@ -103,13 +127,13 @@ function actorAsyncCall (...args) {
     // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
     const ta = args.shift()
     const path = args.shift()
-    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolver)
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolverActor)
   } else {
     //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
     const sa = args.shift()
     const ta = args.shift()
     const path = args.shift()
-    return post(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolver)
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'promise' }).then(resolverActor)
   }
 }
 
@@ -181,11 +205,10 @@ const errorHandler = [
   (err, req, res, next) => Promise.resolve()
     .then(() => {
       err.stack += `\n    at <kar> ${req.originalUrl}` // add request url to stack trace
-      const body = {} // sanitize error object
+      const body = { error: true } // sanitize error object
       body.message = typeof err.message === 'string' ? err.message : typeof err === 'string' ? err : 'Internal Server Error'
       body.stack = typeof err.stack === 'string' ? err.stack : new Error(body.message).stack
-      if (typeof err.errorCode === 'string') body.errorCode = err.errorCode
-      return res.status(500).json(body) // return error
+      return res.json(body) // return error
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
@@ -206,46 +229,60 @@ function actorRuntime (actors) {
   router.use(express.json({ type: '*/*' })) // unconditionally parse request bodies to json
 
   // actor activation route
-  router.get('/kar/impl/v1/actor/:type/:id', (req, res, next) => Promise.resolve()
-    .then(_ => {
-      table[req.params.type] = table[req.params.type] || {}
-      const actor = new (actors[req.params.type])(req.params.id)
-      table[req.params.type][req.params.id] = actor
-      table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id }
-    }) // instantiate actor and add to index
-    .then(_ => { // run optional activate callback
-      if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
-    })
-    .then(_ => res.sendStatus(200)) // OK
-    .catch(next))
+  router.get('/kar/impl/v1/actor/:type/:id', (req, res, next) => {
+    const Actor = actors[req.params.type]
+    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
+    return Promise.resolve()
+      .then(_ => {
+        table[req.params.type] = table[req.params.type] || {}
+        const actor = new Actor(req.params.id)
+        table[req.params.type][req.params.id] = actor
+        table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id }
+      }) // instantiate actor and add to index
+      .then(_ => { // run optional activate callback
+        if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
+      })
+      .then(_ => res.sendStatus(200)) // OK
+      .catch(next)
+  })
 
   // actor deactivation route
-  router.delete('/kar/impl/v1/actor/:type/:id', (req, res, next) => Promise.resolve()
-    .then(_ => { // run optional deactivate callback
-      const actor = table[req.params.type][req.params.id]
-      delete actor.kar.session
-      if (typeof actor.deactivate === 'function') return actor.deactivate()
-    })
-    .then(_ => delete table[req.params.type][req.params.id]) // remove actor from index
-    .then(_ => res.sendStatus(200)) // OK
-    .catch(next))
+  router.delete('/kar/impl/v1/actor/:type/:id', (req, res, next) => {
+    const Actor = actors[req.params.type]
+    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
+    const actor = table[req.params.type][req.params.id]
+    if (actor == null) return res.status(404).send(`no actor with type ${req.params.type} and id ${req.params.id}`)
+    return Promise.resolve()
+      .then(_ => { // run optional deactivate callback
+        delete actor.kar.session
+        if (typeof actor.deactivate === 'function') return actor.deactivate()
+      })
+      .then(_ => delete table[req.params.type][req.params.id]) // remove actor from index
+      .then(_ => res.sendStatus(200)) // OK
+      .catch(next)
+  })
 
   // method invocation route
-  router.post('/kar/impl/v1/actor/:type/:id/:session/:method', (req, res, next) => Promise.resolve()
-    .then(_ => {
-      const actor = table[req.params.type][req.params.id]
-      if (req.params.method in actor) {
-        // NOTE: session intentionally not cleared before return (could be nested call in same session)
-        actor.kar.session = req.params.session
-        if (typeof actor[req.params.method] === 'function') {
-          return actor[req.params.method](...req.body)
+  router.post('/kar/impl/v1/actor/:type/:id/:session/:method', (req, res, next) => {
+    const Actor = actors[req.params.type]
+    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
+    const actor = table[req.params.type][req.params.id]
+    if (actor == null) return res.status(404).send(`no actor with type ${req.params.type} and id ${req.params.id}`)
+    return Promise.resolve()
+      .then(_ => {
+        if (req.params.method in actor) {
+          // NOTE: session intentionally not cleared before return (could be nested call in same session)
+          actor.kar.session = req.params.session
+          if (typeof actor[req.params.method] === 'function') {
+            return actor[req.params.method](...req.body)
+          }
+          return actor[req.params.method]
         }
-        return actor[req.params.method]
-      }
-      throw new Error(`${req.params.method} is not defined on actor with type ${req.params.type} and id ${req.params.id}`)
-    }) // invoke method on actor
-    .then(result => res.json(result)) // stringify invocation result
-    .catch(next)) // delegate error handling to postprocessor
+        throw new Error(`${req.params.method} is not defined on actor with type ${req.params.type} and id ${req.params.id}`)
+      }) // invoke method on actor
+      .then(value => res.json({ value })) // stringify invocation result
+      .catch(next)
+  }) // delegate error handling to postprocessor
 
   router.use(errorHandler)
 
