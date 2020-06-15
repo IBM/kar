@@ -29,13 +29,66 @@
 // All operations are scoped to a single instance of an application.
 //
 //     Schemes: http
-//     BasePath: /kar/v1
+//     BasePath: /kar
 //     Version: v1
 //
 // swagger:meta
 package runtime
 
 import "time"
+
+/*******************************************************************
+ * Actor runtime implementation
+ *******************************************************************/
+
+// swagger:route GET /impl/v1/actor/{type}/{id} impl idImplActorGet
+//
+// actor allocation
+//
+// ### Allocate the language-level state for the specified actor instance
+//
+// TODO: Document me
+//
+//     Schemes: http
+//     Responses:
+//       200: response200
+//       404: response404
+//       500: response500
+//
+
+// swagger:route DELETE /impl/v1/actor/{type}/{id} impl idImplActorDelete
+//
+// actor deallocation
+//
+// ### Deallocate the language-level state for the specified actor instance
+//
+// TODO: Document me
+//
+//     Schemes: http
+//     Responses:
+//       200: response200
+//       404: response404
+//       500: response500
+//
+
+// swagger:route POST /impl/v1/actor/{type}/{id}/{session}/{method} impl idImplActorPost
+//
+// actor invocation
+//
+// ### Invoke an actor method of the specified actor instance
+//
+// TODO: Document me
+//
+//     Schemes: http
+//     Consumes:
+//     - application/kar+json
+//     Prodices:
+//     - application/kar+json
+//     Responses:
+//       200: response200
+//       404: response404
+//       500: response500
+//
 
 /*******************************************************************
  * Request parameter and body documentation

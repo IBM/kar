@@ -8,9 +8,84 @@
     "title": "KAR",
     "version": "v1"
   },
-  "basePath": "/kar/v1",
+  "basePath": "/kar",
   "paths": {
-    "/actor/{actorType}/{actorId}/call/{path}": {
+    "/impl/v1/actor/{type}/{id}": {
+      "get": {
+        "description": "### Allocate the language-level state for the specified actor instance\n\nTODO: Document me",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "impl"
+        ],
+        "summary": "actor allocation",
+        "operationId": "idImplActorGet",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Deallocate the language-level state for the specified actor instance\n\nTODO: Document me",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "impl"
+        ],
+        "summary": "actor deallocation",
+        "operationId": "idImplActorDelete",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/impl/v1/actor/{type}/{id}/{session}/{method}": {
+      "post": {
+        "description": "### Invoke an actor method of the specified actor instance\n\nTODO: Document me",
+        "consumes": [
+          "application/kar+json",
+          "Prodices:",
+          "application/kar+json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "impl"
+        ],
+        "summary": "actor invocation",
+        "operationId": "idImplActorPost",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
         "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.",
         "consumes": [
@@ -99,7 +174,7 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/reminders": {
+    "/v1/actor/{actorType}/{actorId}/reminders": {
       "get": {
         "description": "### Get all reminders\n\nThis operation returns all reminders for the actor instance specified in the path.",
         "produces": [
@@ -187,7 +262,7 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/reminders/{reminderId}": {
+    "/v1/actor/{actorType}/{actorId}/reminders/{reminderId}": {
       "get": {
         "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.\nIf there is no reminder with the id `reminderId` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`.\nIf `nilOnAbsent` is true the `404` response will be replaced with\na `200` response with a `nil` response body.",
         "produces": [
@@ -365,7 +440,7 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/state": {
+    "/v1/actor/{actorType}/{actorId}/state": {
       "get": {
         "description": "### Get an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.",
         "produces": [
@@ -488,7 +563,7 @@
         }
       }
     },
-    "/actor/{actorType}/{actorId}/state/{key}": {
+    "/v1/actor/{actorType}/{actorId}/state/{key}": {
       "get": {
         "description": "### Get a single entry of an actor's state\n\nThe `key` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry for `key` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`,\nin which case a `200` reponse with a `nil` response body will be returned.",
         "produces": [
@@ -623,7 +698,7 @@
         }
       }
     },
-    "/await": {
+    "/v1/await": {
       "post": {
         "description": "### Await the response to an actor or service call\n\nAwait blocks until the response to an asynchronous call is received and\nreturns this response.",
         "consumes": [
@@ -666,7 +741,7 @@
         }
       }
     },
-    "/event/{topic}/publish": {
+    "/v1/event/{topic}/publish": {
       "post": {
         "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
         "schemes": [
@@ -705,7 +780,7 @@
         }
       }
     },
-    "/event/{topic}/subscribe": {
+    "/v1/event/{topic}/subscribe": {
       "post": {
         "description": "### Subscribe to a topic\n\nSubscribe an application endpoint to be invoked when events are delivered to\nthe targeted `topic`.  The endpoint is described in the request body and\nmay be either a service endpoint or an actor method.",
         "schemes": [
@@ -788,7 +863,7 @@
         }
       }
     },
-    "/event/{topic}/unsubscribe": {
+    "/v1/event/{topic}/unsubscribe": {
       "post": {
         "description": "### Unsubscribe from a topic\n\nUnsubscribe an application endpoint described by the request body from `topic`.\nThe operation may return before it actually completes, but upon\nsuccess it is guaranteed that the endpoint will eventually stop receive\nevents from the topic.",
         "consumes": [
@@ -836,7 +911,7 @@
         }
       }
     },
-    "/service/{service}/call/{path}": {
+    "/v1/service/{service}/call/{path}": {
       "post": {
         "description": "### Invoke a service endpoint\n\nCall executes a `POST` to the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
         "consumes": [
@@ -905,7 +980,7 @@
         }
       }
     },
-    "/system/health": {
+    "/v1/system/health": {
       "get": {
         "description": "### Health-check endpoint\n\nReturns a `200` response to indicate that the KAR runtime processes is healthy.",
         "schemes": [
@@ -923,7 +998,7 @@
         }
       }
     },
-    "/system/shutdown": {
+    "/v1/system/shutdown": {
       "post": {
         "description": "### Shutdown a single KAR runtime\n\nInitiate an orderly shutdown of the target KAR runtime process.",
         "schemes": [

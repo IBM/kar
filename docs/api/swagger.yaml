@@ -1,4 +1,4 @@
-basePath: /kar/v1
+basePath: /kar
 definitions:
   Actor:
     properties:
@@ -140,7 +140,67 @@ info:
   title: KAR
   version: v1
 paths:
-  /actor/{actorType}/{actorId}/call/{path}:
+  /impl/v1/actor/{type}/{id}:
+    delete:
+      description: |-
+        ### Deallocate the language-level state for the specified actor instance
+
+        TODO: Document me
+      operationId: idImplActorDelete
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor deallocation
+      tags:
+      - impl
+    get:
+      description: |-
+        ### Allocate the language-level state for the specified actor instance
+
+        TODO: Document me
+      operationId: idImplActorGet
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor allocation
+      tags:
+      - impl
+  /impl/v1/actor/{type}/{id}/{session}/{method}:
+    post:
+      consumes:
+      - application/kar+json
+      - 'Prodices:'
+      - application/kar+json
+      description: |-
+        ### Invoke an actor method of the specified actor instance
+
+        TODO: Document me
+      operationId: idImplActorPost
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor invocation
+      tags:
+      - impl
+  /v1/actor/{actorType}/{actorId}/call/{path}:
     post:
       consumes:
       - application
@@ -215,7 +275,7 @@ paths:
       summary: call
       tags:
       - actors
-  /actor/{actorType}/{actorId}/reminders:
+  /v1/actor/{actorType}/{actorId}/reminders:
     delete:
       description: |-
         ### Cancel all reminders
@@ -283,7 +343,7 @@ paths:
       summary: reminders
       tags:
       - actors
-  /actor/{actorType}/{actorId}/reminders/{reminderId}:
+  /v1/actor/{actorType}/{actorId}/reminders/{reminderId}:
     delete:
       description: |-
         ### Cancel a reminder
@@ -430,7 +490,7 @@ paths:
       summary: reminders
       tags:
       - actors
-  /actor/{actorType}/{actorId}/state:
+  /v1/actor/{actorType}/{actorId}/state:
     delete:
       description: |-
         ### Remove an actor's state
@@ -529,7 +589,7 @@ paths:
       summary: state
       tags:
       - actors
-  /actor/{actorType}/{actorId}/state/{key}:
+  /v1/actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: |-
         ### Remove a single entry in an actor's state
@@ -644,7 +704,7 @@ paths:
       summary: state/key
       tags:
       - actors
-  /await:
+  /v1/await:
     post:
       consumes:
       - text/plain
@@ -676,7 +736,7 @@ paths:
       summary: await
       tags:
       - callbacks
-  /event/{topic}/publish:
+  /v1/event/{topic}/publish:
     post:
       description: |-
         ### Publish an event to a topic
@@ -707,7 +767,7 @@ paths:
       summary: publish
       tags:
       - events
-  /event/{topic}/subscribe:
+  /v1/event/{topic}/subscribe:
     post:
       description: |-
         ### Subscribe to a topic
@@ -776,7 +836,7 @@ paths:
       summary: subscribe
       tags:
       - events
-  /event/{topic}/unsubscribe:
+  /v1/event/{topic}/unsubscribe:
     post:
       consumes:
       - application/json
@@ -816,7 +876,7 @@ paths:
       summary: unsubscribe
       tags:
       - events
-  /service/{service}/call/{path}:
+  /v1/service/{service}/call/{path}:
     post:
       consumes:
       - application
@@ -873,7 +933,7 @@ paths:
       summary: call
       tags:
       - services
-  /system/health:
+  /v1/system/health:
     get:
       description: |-
         ### Health-check endpoint
@@ -888,7 +948,7 @@ paths:
       summary: health
       tags:
       - system
-  /system/shutdown:
+  /v1/system/shutdown:
     post:
       description: |-
         ### Shutdown a single KAR runtime
