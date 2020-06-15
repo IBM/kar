@@ -4,6 +4,10 @@ metadata:
   name: ykt-server
 spec:
   template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: "2"
+        autoscaling.knative.dev/minScale: "2"
     spec:
       containerConcurrency: 1
       imagePullSecrets:
@@ -20,7 +24,7 @@ spec:
         - name: KAR_APP
           value: ykt
         - name: KAR_EXTRA_ARGS
-          value: -v debug -actors Company,Site,Office,Researcher
+          value: -v info -actors Company,Site,Office,Researcher
 
         - name: KAR_LOCAL_MODE
           value: "true"
