@@ -45,9 +45,6 @@ var (
 	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
 	KubernetesMode bool
 
-	// PartitionZeroIneligible when true, Partition 0 will not be assigned to this sidecar
-	PartitionZeroIneligible bool
-
 	// KafkaBrokers is an array of Kafka brokers
 	KafkaBrokers []string
 
@@ -101,7 +98,6 @@ func init() {
 	flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
 	flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
 	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
-	flag.BoolVar(&PartitionZeroIneligible, "partition_zero_ineligible", false, "Is this sidecar ineligible to host partition zero?")
 	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
 	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
 	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")

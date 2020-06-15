@@ -20,11 +20,10 @@ func mangle(topic string, partition int32) string {
 
 // data exchanged when setting up consumer group session for application topic
 type userData struct {
-	Sidecar                 string   // id of this sidecar
-	Service                 string   // name of this service
-	Actors                  []string // types of actors implemented by this service
-	PartitionZeroIneligible bool
-	Offsets                 map[int32]map[int64]struct{} // live local offsets
+	Sidecar string                       // id of this sidecar
+	Service string                       // name of this service
+	Actors  []string                     // types of actors implemented by this service
+	Offsets map[int32]map[int64]struct{} // live local offsets
 }
 
 // Options specifies the options for subscribing to a topic
@@ -90,11 +89,10 @@ func (h *handler) marshal() {
 	h.lock.Lock()
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
-			Sidecar:                 config.ID,
-			Service:                 config.ServiceName,
-			Actors:                  config.ActorTypes,
-			PartitionZeroIneligible: config.PartitionZeroIneligible,
-			Offsets:                 h.local,
+			Sidecar: config.ID,
+			Service: config.ServiceName,
+			Actors:  config.ActorTypes,
+			Offsets: h.local,
 		})
 	} else {
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(h.local) // exchange only local progress
@@ -322,7 +320,6 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 
 type entry struct {
 	memberID string
-	avoid    bool
 }
 
 type customStrategy struct{}
@@ -336,17 +333,16 @@ func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetad
 	for memberID, m := range members {
 		var d userData
 		json.Unmarshal(m.UserData, &d)
-		entries = append(entries, entry{memberID: memberID, avoid: d.PartitionZeroIneligible})
+		entries = append(entries, entry{memberID: memberID})
 	}
 
+	// TODO: Olivier, can this loop be further simplified now that the !e.avoid is gone?
 	for i, e := range entries {
-		if !e.avoid {
-			if i != 0 {
-				entries[i] = entries[0]
-				entries[0] = e
-			}
-			break
+		if i != 0 {
+			entries[i] = entries[0]
+			entries[0] = e
 		}
+		break
 	}
 
 	plan := make(sarama.BalanceStrategyPlan, len(members))

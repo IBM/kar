@@ -10,7 +10,6 @@ metadata:
 {{ if not .Values.localMode }}
     kar.ibm.com/app: ykt
     kar.ibm.com/verbose: {{ .Values.verbose }}
-    kar.ibm.com/extraArgs: "-partition_zero_ineligible"
 {{ end }}
 spec:
 {{ if .Values.localMode }}

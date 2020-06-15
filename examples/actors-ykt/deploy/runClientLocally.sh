@@ -6,4 +6,4 @@ CODEDIR="$SCRIPTDIR/.."
 KAR_VERBOSE=${KAR_VERBOSE:="info"}
 KAR_RUNTIME_PORT=${KAR_RUNTIME_PORT:=30666}
 
-kar  -v $KAR_VERBOSE -runtime_port $KAR_RUNTIME_PORT -partition_zero_ineligible -app ykt node $CODEDIR/ykt-client.js
+kar  -v $KAR_VERBOSE -runtime_port $KAR_RUNTIME_PORT -app ykt node $CODEDIR/ykt-client.js
