@@ -91,15 +91,16 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 }
 
 // release releases the actor lock
-// release updates the timestamp if session is not "reminder"
-func (e *actorEntry) release(session string) {
+// release updates the timestamp if the actor was invoked
+// release removes the actor from the table if it was not activated at depth 0
+func (e *actorEntry) release(session string, invoked bool) {
 	e.lock <- struct{}{} // lock entry
 	e.depth--
-	if session != "reminder" {
+	if invoked {
 		e.time = time.Now() // update last release time
 	}
 	if e.depth == 0 { // end session
-		if e.session == "reminder" { // actor was never activated
+		if !invoked { // actor was not activated
 			e.valid = false
 			actorTable.Delete(e.actor)
 		}

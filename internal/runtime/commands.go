@@ -401,16 +401,16 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if err == errActorHasMoved {
 			err = pubsub.Send(ctx, msg) // forward
 		} else if err == nil {
-			defer e.release(session)
 			if session == "reminder" { // do not activate actor
 				err = dispatch(ctx, cancel, msg)
+				e.release(session, false)
 				break
 			}
 			var reply *Reply
 			if fresh {
 				reply, err = activate(ctx, actor)
 			}
-			if reply != nil {
+			if reply != nil { // activate returned an error, report or log error, do not retry
 				if msg["command"] == "call" {
 					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg["path"])
 					err = respond(ctx, msg, reply) // return activation error to caller
@@ -418,9 +418,13 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg["path"])
 					err = nil // not to be retried
 				}
-			} else if err == nil {
+				e.release(session, false)
+			} else if err != nil { // failed to invoke activate
+				e.release(session, false)
+			} else { // invoke actor method
 				msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 				err = dispatch(ctx, cancel, msg)
+				e.release(session, true)
 			}
 		}
 	}
@@ -440,7 +444,7 @@ func activate(ctx context.Context, actor Actor) (*Reply, error) {
 		}
 		return nil, err
 	}
-	if reply.StatusCode >= http.StatusBadRequest && reply.StatusCode != http.StatusNotFound {
+	if reply.StatusCode >= http.StatusBadRequest {
 		return reply, nil
 	}
 	logger.Debug("activate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
@@ -456,7 +460,7 @@ func deactivate(ctx context.Context, actor Actor) error {
 		}
 		return err
 	}
-	if reply.StatusCode >= http.StatusBadRequest && reply.StatusCode != http.StatusNotFound {
+	if reply.StatusCode >= http.StatusBadRequest {
 		logger.Error("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	} else {
 		logger.Debug("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
