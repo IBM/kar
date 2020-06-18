@@ -45,7 +45,7 @@
 		<!-- KAR SDK -->
 		<dependency>
 			<groupId>com.ibm.research.kar</groupId>
-			<artifactId>kar</artifactId>
+			<artifactId>kar-rest-client</artifactId>
 			<version>1.0-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
