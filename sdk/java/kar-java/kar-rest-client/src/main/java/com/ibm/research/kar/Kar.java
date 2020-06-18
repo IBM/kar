@@ -19,6 +19,7 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -72,9 +73,21 @@ public class Kar {
 		return ja.build();
 	}
 
-	private static JsonValue toValue(Response response) {
+	public static Object toValue(Response response) {
 		if (response.hasEntity()) {
-			return response.readEntity(JsonValue.class);
+
+			MediaType type = response.getMediaType();
+			logger.info("toValue: Got type " + type + ":"+ MediaType.APPLICATION_JSON);
+			if (type.equals(MediaType.APPLICATION_JSON_TYPE)) {
+				System.out.println("Matched Json");
+				return response.readEntity(JsonValue.class);
+			} else if (type.equals(MediaType.TEXT_PLAIN_TYPE)) {
+				System.out.println("Matched Json");
+				return response.readEntity(String.class);
+			} else {
+				System.out.println("Matched Null");
+				return JsonValue.NULL;
+			}
 		} else {
 			return JsonValue.NULL;
 		}
@@ -91,7 +104,7 @@ public class Kar {
 	private static Reminder[] toReminderArray(Response response) {
 		try {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
-			JsonArray ja = toValue(response).asJsonArray();
+			JsonArray ja = ((JsonValue)toValue(response)).asJsonArray();
 			for (JsonValue jv : ja) {
 				try {
 					JsonObject jo = jv.asJsonObject();
@@ -163,8 +176,9 @@ public class Kar {
 	 * @param body    The request body with which to invoke the service endpoint.
 	 * @return The result returned by the target service.
 	 */
-	public static JsonValue call(String service, String path, JsonValue body) {
-		return karClient.call(service, path, body);
+	public static Object call(String service, String path, JsonValue body) {
+		Response resp = karClient.call(service, path, body);
+		return toValue(resp);
 	}
 
 	/**
@@ -175,8 +189,9 @@ public class Kar {
 	 * @param body    The request body with which to invoke the service endpoint.
 	 * @return The result returned by the target service.
 	 */
-	public static CompletionStage<JsonValue> callAsync(String service, String path, JsonValue body) {
-		return karClient.callAsync(service, path, body);
+	public static CompletionStage<Object> callAsync(String service, String path, JsonValue body) {
+		
+		return karClient.callAsync(service, path, body).thenApply(response -> toValue(response));
 	}
 
 	/**
@@ -351,7 +366,7 @@ public class Kar {
 		JsonValue value;
 		try {
 			Response resp = karClient.actorGetState(actor.getType(), actor.getId(), key, true);
-			return toValue(resp);
+			return (JsonValue)toValue(resp);
 		} catch (ProcessingException e) {
 			value = JsonValue.NULL;
 		}
@@ -409,7 +424,7 @@ public class Kar {
 	public static Map<String,JsonValue> actorGetAllState(ActorRef actor) {
 		Response response = karClient.actorGetAllState(actor.getType(), actor.getId());
 		try {
-			return toValue(response).asJsonObject();
+			return ((JsonValue)toValue(response)).asJsonObject();
 		} catch (ClassCastException e) {
 			return Collections.emptyMap();
 		}

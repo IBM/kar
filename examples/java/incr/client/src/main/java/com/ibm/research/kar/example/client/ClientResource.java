@@ -4,8 +4,6 @@ import java.util.concurrent.CompletionStage;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.json.Json;
-import javax.json.JsonNumber;
 import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -19,7 +17,6 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import com.ibm.research.kar.Kar;
-import com.ibm.research.kar.KarRest;
 
 @Path("client")
 @ApplicationScoped
@@ -39,7 +36,7 @@ public class ClientResource {
 	public Response call(JsonValue num) throws ProcessingException {
 
 		try {
-			JsonValue result = Kar.call("number", "number/incr", num);
+			JsonValue result = (JsonValue)Kar.call("number", "number/incr", num);
 			Response resp = Response.status(Response.Status.OK).entity(result).build();
 			return resp;
 		} catch (Exception ex) {
@@ -54,11 +51,13 @@ public class ClientResource {
 	public Response callAsync(JsonValue num) throws ProcessingException {
 
 		try {
-			CompletionStage<JsonValue> cf = Kar.callAsync("number", "number/incr", num);
+			CompletionStage<Object> cf = Kar.callAsync("number", "number/incr", num);
 			
-			JsonValue value = cf
+			JsonValue value = (JsonValue)cf
                     .toCompletableFuture()
                     .get();
+			
+			System.out.println("Got value " + value);
 			
 			Response resp = Response.status(Response.Status.OK).entity(value).build();
 			return resp;

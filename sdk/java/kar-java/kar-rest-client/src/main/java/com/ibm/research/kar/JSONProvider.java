@@ -17,8 +17,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-import com.ibm.research.kar.KarRest;
-
 @javax.ws.rs.Consumes(KarRest.KAR_ACTOR_JSON)
 @javax.ws.rs.Produces(KarRest.KAR_ACTOR_JSON)
 @javax.ws.rs.ext.Provider

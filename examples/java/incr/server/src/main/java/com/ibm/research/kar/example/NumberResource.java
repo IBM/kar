@@ -3,20 +3,18 @@ package com.ibm.research.kar.example;
 import java.math.BigDecimal;
 
 import javax.json.JsonValue;
-import javax.json.Json;
 import javax.json.JsonNumber;
-import javax.json.JsonValue.ValueType;
 import javax.json.spi.JsonProvider;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 
-import com.ibm.research.kar.KarRest;
 
 @Path("/number")
-@Consumes(KarRest.KAR_ACTOR_JSON)
-@Produces(KarRest.KAR_ACTOR_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
 public class NumberResource {
 
 	NumberService numService = new NumberService();
