@@ -1,5 +1,7 @@
 package com.ibm.research.kar.example.client;
 
+import java.util.concurrent.CompletionStage;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
@@ -37,17 +39,29 @@ public class ClientResource {
 	public Response call(JsonValue num) throws ProcessingException {
 
 		try {
-			System.out.println("Got params " + num);
+			JsonValue result = Kar.call("number", "number/incr", num);
+			Response resp = Response.status(Response.Status.OK).entity(result).build();
+			return resp;
+		} catch (Exception ex) {
 
-			if (useKar == true) {
-				System.out.println("Using KAR");
-				JsonValue result = Kar.call("number", "number/incr", num);
-				Response resp = Response.status(Response.Status.OK).entity(result).build();
-				return resp;
-			} 
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+		}
+
+	}
+
+	@POST
+	@Path("incrAsync")
+	public Response callAsync(JsonValue num) throws ProcessingException {
+
+		try {
+			CompletionStage<JsonValue> cf = Kar.callAsync("number", "number/incr", num);
 			
-			// remote the non-kar case
-			return Response.status(Response.Status.NOT_IMPLEMENTED).build();
+			JsonValue value = cf
+                    .toCompletableFuture()
+                    .get();
+			
+			Response resp = Response.status(Response.Status.OK).entity(value).build();
+			return resp;
 
 		} catch (Exception ex) {
 

@@ -58,6 +58,8 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Consumes(KAR_ACTOR_JSON)
+	@Produces(KAR_ACTOR_JSON)
 	public CompletionStage<JsonValue> callAsync(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 
