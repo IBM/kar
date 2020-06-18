@@ -25,12 +25,12 @@ cd $ROOTDIR/examples/java/actors
 mvn clean install
 
 echo "Creating Java actor server"
-cd $ROOTDIR/examples/java/actors/actor-server
+cd $ROOTDIR/examples/java/actors/kar-actor-example
 mvn liberty:create liberty:install-feature liberty:deploy liberty:package -Dinclude=runnable
 
 echo "Launching Java actor server"
-cd $ROOTDIR/examples/java/actors/actor-server/target
-kar -v info  -actor_reminder_interval 30s -app actor -service dummy -actors dummy,dummy2 java -jar kar-example-actor-server.jar &
+cd $ROOTDIR/examples/java/actors/kar-actor-example/target
+kar -v info  -actor_reminder_interval 30s -app actor -service dummy -actors dummy,dummy2 java -jar kar-actor-example.jar &
 PID=$!
 
 echo "Waiting 10 seconds for Java actor server to launch"

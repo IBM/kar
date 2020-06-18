@@ -1,21 +1,25 @@
 # Java KAR SDK Usage
 
 # Prerequisites
-SDK tested using
-- Java 1.8.X
+- Java 8 or 11
 - Maven 3.6.X
 
 Note: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty)
 
 # Overview
 The Java SDK provides:
-1.  the class `com.ibm.research.kar.Kar` to communicate with the Kar runtime
-2. the package `com.ibm.research.kar.actor` to write and execute actors as part of a Kar component (e.g. a microservice).
+1. `kar-rest-client` - contains basic classes to communicate with KAR and implement the actor abstractions
+2. `kar-actor-runtime` - classes that implement the KAR actor runtime in Java
 
-## Basic KAR SDK usage
+# Building
+To build these packages, run `mvn install` in the `kar-java` directory.  This will build both `kar-rest-client` and `kar-actor-runtime`.  
+
+# Basic KAR SDK usage
+The basic KAR SDK is in `kar-rest-client`. After building, add `target/kar-rest-client.jar` and `target/libs` to the CLASSPATH of your application. Note: `target/libs` contains dependent jars required by `target/kar-rest-client.jar`, which is implemented using the [Microprofile 3.3 Rest Client](https://github.com/eclipse/microprofile-rest-client).
+
 The following code examples show how to use the Kar SDK.
 
-### Invoke a Service:
+## Invoke a Service:
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -33,7 +37,7 @@ public static void main(String[] args) {
 }
 ```
 
-### Call an Actor Method:
+## Call an Actor Method:
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -52,7 +56,7 @@ public static void main(String[] args) {
 }
 ```
 
-### Invoke a service asynchronously 
+## Invoke a service asynchronously 
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -75,7 +79,7 @@ public static void main(String[] args) {
 }
 ```
 
-### Call an Actor Method asynchronously
+## Call an Actor Method asynchronously
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -97,13 +101,13 @@ public static void main(String[] args) {
 }
 ```
 
-## KAR actor runtime
-The KAR actor runtime in `com.ibm.research.kar.actor` allows you to:
+# KAR actor runtime
+The KAR actor runtime in `kar-actor-runtime` allows you to:
 - Create an actor using an annotated POJO class
 - Execute actors as part of your microservice
 
 KAR requires all Actor classes to implement the ActorInstance interface. 
-### Actor Instance
+## Actor Instance
 ```java
 public interface ActorInstance extends ActorRef {
 
@@ -118,7 +122,7 @@ public interface ActorInstance extends ActorRef {
 ```
 The ActorInstance includes two methods to manage session IDs, which KAR uses for actor communications as part of the [KAR programming model](https://github.ibm.com/solsa/kar/blob/master/docs/KAR.md).
 
-### Actor Annotations
+## Actor Annotations
 
 Actor annotations example:
 ```java
@@ -172,8 +176,10 @@ public class MyActor implements ActorInstance {
 }
 ```
 
-### Build and include the `kar` module as part of a Kar component
- Using Maven, an example `pom.xml` file to include the `kar` module into a microservice called `actor-server` is:
+## Building a microservice with `kar-actor-runtime`
+We have tested the Java actor runtime using openliberty. `kar-actor-runtime` will automatically bundle `kar-rest-client` and is packaged as a jar.  Include this as a dependency when you create your microserivce. Note that `kar-actor-runtime` will not execute on its own.  At a minimum, implement a class that extends `javax.ws.rs.core.Application`. 
+
+ Using Maven, an example `pom.xml` to include `kar-actor-runtime` module into a microservice called `kar-actor-example` is:
  ```xml
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -189,33 +195,37 @@ public class MyActor implements ActorInstance {
     <packaging>pom</packaging>
 
     <modules>
-        <module>path/to/sdk/java/kar</module>
-        <module>actor-server</module>
+        <!-- Path to KAR SDK  -->
+        <module>path/to/sdk/java/kar-java</module>
+        <!-- Your application -->
+        <module>kar-actor-example</module>
     </modules>
 </project>
 ```
-The corresponding`pom.xml` in `actor-server` should include the following dependency:
+The corresponding`pom.xml` in `kar-actor-example` should include the following dependency:
 ```xml
+<!-- KAR SDK -->
 <dependency>
-    <groupId>com.ibm.research.kar</groupId>
-    <artifactId>kar</artifactId>
-    <version>1.0-SNAPSHOT</version>
+	<groupId>com.ibm.research.kar</groupId>
+	<artifactId>kar-actor-runtime</artifactId>
+	<version>1.0-SNAPSHOT</version>
 </dependency>
 ```
-`kar` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
+`kar-actor-runtime` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
 ```xml
 <featureManager>
-    <feature>jaxrs-2.1</feature>
-    <feature>jsonb-1.0</feature>
-    <feature>mpHealth-2.1</feature>
-    <feature>mpConfig-1.3</feature>
-    <feature>mpRestClient-1.3</feature>
-    <feature>beanValidation-2.0</feature>
-    <feature>cdi-2.0</feature>
-    <feature>concurrent-1.0</feature>
-</featureManager>
+		<feature>jaxrs-2.1</feature>
+		<feature>jsonb-1.0</feature>
+		<feature>mpHealth-2.1</feature>
+		<feature>mpConfig-1.3</feature>
+		<feature>mpRestClient-1.3</feature>
+		<feature>beanValidation-2.0</feature>
+		<feature>cdi-2.0</feature>
+		<feature>concurrent-1.0</feature>
+		<feature>mpOpenTracing-1.3</feature>
+	</featureManager>
 ```
-`kar` loads actors at deploy time. Add the actors to the classpath and expose to the actor runtime as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
+`kar-actor-runtime` loads actors at deploy time. Actor classfiles should be added to your CLASSPATH.  Declare your actors to `kar-actor-runtime` as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
 ```xml
 <context-param>
     <param-name>kar-actor-classes</param-name>
@@ -227,4 +237,4 @@ The corresponding`pom.xml` in `actor-server` should include the following depend
 </context-param>
 ```
 
-For a complete example, see the [KAR example actor server](https://github.ibm.com/castrop/kar/tree/master/examples/java/actors)
+For a complete example, see the [KAR example actor server](https://github.ibm.com/solsa/kar/tree/master/examples/java/actors/kar-actor-example)
