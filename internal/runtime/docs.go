@@ -19,12 +19,15 @@
 //
 // This document describes the RESTful API provided by the
 // Kubernetes Application Runtime (KAR). It consists of
-// four logical sets of sub-APIs:
+// five logical sets of sub-APIs that can be used by applications:
 // + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
 // + **Callbacks**: APIs to await the response to an actor or service invocation.
 // + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
 // + **Services**: APIs to invoke service endpoints
 // + **System**: APIs for controlling the KAR runtime mesh
+//
+// The **Impl** set of endpoints is not intended for application use.
+// It is used by KAR runtime components for internal communication.
 //
 // All operations are scoped to a single instance of an application.
 //
@@ -38,14 +41,14 @@ package runtime
 import "time"
 
 /*******************************************************************
- * Actor runtime implementation
+ * Swagger specification for language-level actor runtime implementation
  *******************************************************************/
 
 // swagger:route GET /impl/v1/actor/{type}/{id} impl idImplActorGet
 //
 // actor allocation
 //
-// ### Allocate the language-level state for the specified actor instance
+// ### Allocate the language-level state for the specified actor instance
 //
 // TODO: Document me
 //
@@ -55,12 +58,13 @@ import "time"
 //       404: response404
 //       500: response500
 //
+func dummy1() {}
 
 // swagger:route DELETE /impl/v1/actor/{type}/{id} impl idImplActorDelete
 //
 // actor deallocation
 //
-// ### Deallocate the language-level state for the specified actor instance
+// ### Deallocate the language-level state for the specified actor instance
 //
 // TODO: Document me
 //
@@ -70,25 +74,27 @@ import "time"
 //       404: response404
 //       500: response500
 //
+func dummy2() {}
 
 // swagger:route POST /impl/v1/actor/{type}/{id}/{session}/{method} impl idImplActorPost
 //
 // actor invocation
 //
-// ### Invoke an actor method of the specified actor instance
+// ### Invoke an actor method of the specified actor instance
 //
 // TODO: Document me
 //
 //     Schemes: http
 //     Consumes:
 //     - application/kar+json
-//     Prodices:
+//     Produces:
 //     - application/kar+json
 //     Responses:
 //       200: response200
 //       404: response404
 //       500: response500
 //
+func dummy3() {}
 
 /*******************************************************************
  * Request parameter and body documentation

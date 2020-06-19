@@ -664,7 +664,7 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // unsubscribe
 //
-// ### Unsubscribe from a topic
+// ### Unsubscribe from a topic
 //
 // Unsubscribe an application endpoint described by the request body from `topic`.
 // The operation may return before it actually completes, but upon

@@ -4,7 +4,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfour logical sets of sub-APIs:\n+ **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.\n+ **Callbacks**: APIs to await the response to an actor or service invocation.\n+ **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks\n+ **Services**: APIs to invoke service endpoints\n+ **System**: APIs for controlling the KAR runtime mesh\n\nAll operations are scoped to a single instance of an application.",
+    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfive logical sets of sub-APIs that can be used by applications:\n+ **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.\n+ **Callbacks**: APIs to await the response to an actor or service invocation.\n+ **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks\n+ **Services**: APIs to invoke service endpoints\n+ **System**: APIs for controlling the KAR runtime mesh\n\nThe **Impl** set of endpoints is not intended for application use.\nIt is used by KAR runtime components for internal communication.\n\nAll operations are scoped to a single instance of an application.",
     "title": "KAR",
     "version": "v1"
   },
@@ -60,8 +60,9 @@
       "post": {
         "description": "### Invoke an actor method of the specified actor instance\n\nTODO: Document me",
         "consumes": [
-          "application/kar+json",
-          "Prodices:",
+          "application/kar+json"
+        ],
+        "produces": [
           "application/kar+json"
         ],
         "schemes": [
@@ -865,7 +866,7 @@
     },
     "/v1/event/{topic}/unsubscribe": {
       "post": {
-        "description": "### Unsubscribe from a topic\n\nUnsubscribe an application endpoint described by the request body from `topic`.\nThe operation may return before it actually completes, but upon\nsuccess it is guaranteed that the endpoint will eventually stop receive\nevents from the topic.",
+        "description": "\ufffd### Unsubscribe from a topic\n\nUnsubscribe an application endpoint described by the request body from `topic`.\nThe operation may return before it actually completes, but upon\nsuccess it is guaranteed that the endpoint will eventually stop receive\nevents from the topic.",
         "consumes": [
           "application/json"
         ],

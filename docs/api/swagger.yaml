@@ -129,12 +129,15 @@ info:
   description: |-
     This document describes the RESTful API provided by the
     Kubernetes Application Runtime (KAR). It consists of
-    four logical sets of sub-APIs:
+    five logical sets of sub-APIs that can be used by applications:
     + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
     + **Callbacks**: APIs to await the response to an actor or service invocation.
     + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
     + **Services**: APIs to invoke service endpoints
     + **System**: APIs for controlling the KAR runtime mesh
+
+    The **Impl** set of endpoints is not intended for application use.
+    It is used by KAR runtime components for internal communication.
 
     All operations are scoped to a single instance of an application.
   title: KAR
@@ -181,13 +184,13 @@ paths:
     post:
       consumes:
       - application/kar+json
-      - 'Prodices:'
-      - application/kar+json
       description: |-
         ### Invoke an actor method of the specified actor instance
 
         TODO: Document me
       operationId: idImplActorPost
+      produces:
+      - application/kar+json
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -841,7 +844,7 @@ paths:
       consumes:
       - application/json
       description: |-
-        ### Unsubscribe from a topic
+        �### Unsubscribe from a topic
 
         Unsubscribe an application endpoint described by the request body from `topic`.
         The operation may return before it actually completes, but upon
