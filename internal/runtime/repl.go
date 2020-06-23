@@ -3,8 +3,8 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"strings"
+	"log"
+	"net/http"
 
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
@@ -22,28 +22,21 @@ func Invoke(ctx context.Context, args []string) (exitCode int) {
 	}
 	payload, err := json.Marshal(params)
 	if err != nil {
-		logger.Error("internal error: %v", err)
+		logger.Error("error serializing the payload: %v", err)
 		exitCode = 1
 		return
 	}
-	reply, err := CallActor(ctx, actor, path, string(payload), "application/kar+json", "application/json", "")
+	reply, err := CallActor(ctx, actor, path, string(payload), "application/kar+json", "", "")
 	if err != nil {
-		logger.Error("internal error: %v", err)
+		logger.Error("error invoking the actor: %v", err)
 		exitCode = 1
 		return
 	}
-	var r map[string]interface{}
-	err = json.Unmarshal([]byte(reply.Payload), &r)
-	if err != nil {
-		logger.Error("internal error: %v", err)
-		exitCode = 1
-		return
-	}
-	if r["error"] != nil {
-		dump("[STDERR] ", strings.NewReader(fmt.Sprintf("%v", r["message"])))
-		dump("[STDERR] ", strings.NewReader(fmt.Sprintf("%v", r["stack"])))
+	if reply.StatusCode != http.StatusOK {
+		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
+		log.Printf("[STDERR] %v", reply.Payload)
 	} else {
-		dump("[STDOUT] ", strings.NewReader(fmt.Sprintf("%v", r["value"])))
+		log.Printf("[STDOUT] %v", reply.Payload)
 	}
 	return
 }
