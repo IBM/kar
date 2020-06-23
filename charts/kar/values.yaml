@@ -1,6 +1,7 @@
 kafka:
   internal: true
   externalConfig:
+    enabletls: 'false'
     brokers: 'mustOverrideIfInternalIsFalse'
     password: 'mustOverrideIfInternalIsFalse'
     username: 'mustOverrideIfInternalIsFalse'
@@ -9,6 +10,7 @@ kafka:
 redis:
   internal: true
   externalConfig:
+    enabletls: 'false'
     host: 'mustOverrideIfInternalIsFalse'
     port: 'mustOverrideIfInternalIsFalse'
     password: 'mustOverrideIfInternalIsFalse'

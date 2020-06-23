@@ -12,8 +12,11 @@ data:
 {{ else }}
   kafka_brokers: {{ .Values.kafka.externalConfig.brokers | b64enc }}
   kafka_password: {{ .Values.kafka.externalConfig.password | b64enc }}
+  {{ if ne .Values.kafka.externalConfig.username "mustOverrideIfInternalIsFalse" }}
   kafka_username: {{ .Values.kafka.externalConfig.username | b64enc }}
+  {{ end }}
   kafka_version: {{ .Values.kafka.externalConfig.version | b64enc }}
+  kafka_enable_tls: {{ .Values.kafka.externalConfig.enabletls | b64enc }}
 {{ end -}}
 {{- if .Values.redis.internal }}
   redis_host: {{ include "kar.redis_host" . | b64enc }}
@@ -23,4 +26,5 @@ data:
   redis_host: {{ .Values.redis.externalConfig.host | b64enc }}
   redis_port: {{ print (int64 .Values.redis.externalConfig.port) | b64enc }}
   redis_password: {{ .Values.redis.externalConfig.password | b64enc }}
+  redis_enable_tls: {{ .Values.redis.externalConfig.enabletls | b64enc }}
 {{ end -}}
