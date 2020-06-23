@@ -150,9 +150,15 @@ func init() {
 		logger.Fatal("error parsing actor_reminder_acceptable_delay %s", remindDelay)
 	}
 
-	if !KafkaEnableTLS && os.Getenv("KAFKA_ENABLE_TLS") != "" {
-		if KafkaEnableTLS, err = strconv.ParseBool(os.Getenv("KAFKA_ENABLE_TLS")); err != nil {
-			logger.Fatal("error parsing environment variable KAFKA_ENABLE_TLS")
+	if !KafkaEnableTLS {
+		ktmp := os.Getenv("KAFKA_ENABLE_TLS")
+		if ktmp == "" {
+			ktmp = loadStringFromConfig(configDir, "kafka_enable_tls")
+		}
+		if ktmp != "" {
+			if KafkaEnableTLS, err = strconv.ParseBool(ktmp); err != nil {
+				logger.Fatal("error parsing KAFKA_ENABLE_TLS as boolean")
+			}
 		}
 	}
 
@@ -188,9 +194,15 @@ func init() {
 		}
 	}
 
-	if !RedisEnableTLS && os.Getenv("REDIS_ENABLE_TLS") != "" {
-		if RedisEnableTLS, err = strconv.ParseBool(os.Getenv("REDIS_ENABLE_TLS")); err != nil {
-			logger.Fatal("error parsing environment variable REDIS_ENABLE_TLS")
+	if !RedisEnableTLS {
+		rtmp := os.Getenv("REDIS_ENABLE_TLS")
+		if rtmp == "" {
+			rtmp = loadStringFromConfig(configDir, "redis_enable_tls")
+		}
+		if rtmp != "" {
+			if RedisEnableTLS, err = strconv.ParseBool(rtmp); err != nil {
+				logger.Fatal("error parsing REDIS_ENABLE_TLS as boolean")
+			}
 		}
 	}
 
