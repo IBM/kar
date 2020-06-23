@@ -849,7 +849,11 @@ func main() {
 	args := flag.Args()
 
 	if len(args) > 0 {
-		exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort))
+		if config.Invoke {
+			exitCode = runtime.Invoke(ctx9, args)
+		} else {
+			exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort))
+		}
 		cancel()
 	}
 
