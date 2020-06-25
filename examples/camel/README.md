@@ -10,7 +10,7 @@ The event source exercised in this example is the console input stream. The exam
 Install Cloud Events Java SDK: 
 
 ```
-git clone git@github.com:cloudevents/sdk-java.git
+git clone git@github.com:cloudevents/sdk-java.git@c632f56f8b3c6aed63b06e2c422ae3f4707506c5
 cd sdk-java
 mvn install
 ```

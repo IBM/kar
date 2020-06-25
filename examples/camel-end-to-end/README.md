@@ -8,7 +8,7 @@ In this example, Camel uses reactive streams to repeatedly request stock price u
 Install Cloud Events Java SDK (example uses version 2.0.0-SNAPSHOT):
 
 ```
-git clone git@github.com:cloudevents/sdk-java.git
+git clone git@github.com:cloudevents/sdk-java.git@c632f56f8b3c6aed63b06e2c422ae3f4707506c5
 cd sdk-java
 mvn install
 ```

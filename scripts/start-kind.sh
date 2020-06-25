@@ -26,8 +26,24 @@ if [ "$KIND_ACTUAL_VERSION" != "$KIND_EXPECTED_VERSION" ]; then
     exit 1
 fi
 
+# create registry container unless it already exists
+reg_name='registry'
+running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
+if [ "${running}" != 'true' ]; then
+  docker run -d --restart=always -p 5000:5000 --name registry registry:2
+fi
+
 # Boot cluster
 kind create cluster --config ${SCRIPTDIR}/kind/kind-cluster.yaml --name kind --image kindest/node:${KIND_NODE_TAG} --wait 10m || exit 1
+
+# Connect the registry to the cluster network
+if [ "${running}" != 'true' ]; then
+  docker network connect kind registry
+fi
+
+for node in $(kind get nodes --name kind); do
+  docker exec ${node} sh -c "echo $(docker inspect --format '{{.NetworkSettings.IPAddress }}' registry) registry >> /etc/hosts"
+done
 
 echo "KIND cluster is running and reachable"
 kubectl get nodes
