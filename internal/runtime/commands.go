@@ -34,18 +34,19 @@ var (
 )
 
 // TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service, path, payload, contentType string) error {
+func TellService(ctx context.Context, service, path, payload, header, method string) error {
 	return pubsub.Send(ctx, map[string]string{
-		"protocol":     "service",
-		"service":      service,
-		"command":      "tell", // post with no callback expected
-		"path":         path,
-		"content-type": contentType,
-		"payload":      payload})
+		"protocol": "service",
+		"service":  service,
+		"command":  "tell", // post with no callback expected
+		"path":     path,
+		"header":   header,
+		"method":   method,
+		"payload":  payload})
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Actor, path, payload, contentType string) error {
+func TellActor(ctx context.Context, actor Actor, path, payload, contentType, method string) error {
 	return pubsub.Send(ctx, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -53,6 +54,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload, contentType stri
 		"command":      "tell", // post with no callback expected
 		"path":         path,
 		"content-type": contentType,
+		"method":       method,
 		"payload":      payload})
 }
 
@@ -123,33 +125,33 @@ func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
 }
 
 // CallService calls a service and waits for a reply
-func CallService(ctx context.Context, service, path, payload, contentType, accept string) (*Reply, error) {
+func CallService(ctx context.Context, service, path, payload, header, method string) (*Reply, error) {
 	msg := map[string]string{
-		"protocol":     "service",
-		"service":      service,
-		"command":      "call",
-		"path":         path,
-		"content-type": contentType,
-		"accept":       accept,
-		"payload":      payload}
+		"protocol": "service",
+		"service":  service,
+		"command":  "call",
+		"path":     path,
+		"header":   header,
+		"method":   method,
+		"payload":  payload}
 	return callHelper(ctx, msg)
 }
 
 // CallPromiseService calls a service and returns a request id
-func CallPromiseService(ctx context.Context, service, path, payload, contentType, accept string) (string, error) {
+func CallPromiseService(ctx context.Context, service, path, payload, header, method string) (string, error) {
 	msg := map[string]string{
-		"protocol":     "service",
-		"service":      service,
-		"command":      "call",
-		"path":         path,
-		"content-type": contentType,
-		"accept":       accept,
-		"payload":      payload}
+		"protocol": "service",
+		"service":  service,
+		"command":  "call",
+		"path":     path,
+		"header":   header,
+		"method":   method,
+		"payload":  payload}
 	return callPromiseHelper(ctx, msg)
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, session string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method, session string) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -159,12 +161,13 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 		"content-type": contentType,
 		"accept":       accept,
 		"session":      session,
+		"method":       method,
 		"payload":      payload}
 	return callHelper(ctx, msg)
 }
 
 // CallPromiseActor calls an actor and returns a request id
-func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept string) (string, error) {
+func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method string) (string, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -173,6 +176,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentTy
 		"path":         path,
 		"content-type": contentType,
 		"accept":       accept,
+		"method":       method,
 		"payload":      payload}
 	return callPromiseHelper(ctx, msg)
 }
@@ -228,7 +232,7 @@ func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
 }
 
 func call(ctx context.Context, msg map[string]string) error {
-	reply, err := invoke(ctx, "POST", msg)
+	reply, err := invoke(ctx, msg["method"], msg)
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
@@ -313,7 +317,7 @@ func bindingTell(ctx context.Context, msg map[string]string) error {
 }
 
 func tell(ctx context.Context, msg map[string]string) error {
-	reply, err := invoke(ctx, "POST", msg)
+	reply, err := invoke(ctx, msg["method"], msg)
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)

@@ -39,9 +39,13 @@ var (
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
+		m, err := json.Marshal(r.Header)
+		if err != nil {
+			logger.Error("failed to marshal header: %v", err)
+		}
+		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Method)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -59,9 +63,13 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var request string
 	var err error
 	if ps.ByName("service") != "" {
-		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		m, err := json.Marshal(r.Header)
+		if err != nil {
+			logger.Error("failed to marshal header: %v", err)
+		}
+		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
 	} else {
-		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -140,6 +148,147 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 
+// swagger:route GET /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `POST` to the `path` endpoint of `service`.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route HEAD /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `HEAD` to the `path` endpoint of `service`.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route PUT /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `PUT` to the `path` endpoint of `service`.
+// The request body is passed through to the target endpoint.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route PATCH /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `PATCH` to the `path` endpoint of `service`.
+// The request body is passed through to the target endpoint.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route DELETE /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `DELETE` to the `path` endpoint of `service`.
+// The request body is passed through to the target endpoint.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route OPTIONS /v1/service/{service}/call/{path} services idServiceCall
+//
+// call
+//
+// ### Invoke a service endpoint
+//
+// Call executes a `OPTIONS` to the `path` endpoint of `service`.
+// The result of the call is the result of invoking the target service endpoint
+// unless the `async` or `promise` pragma header is specified.
+//
+//     Consumes:
+//     - application
+//     Produces:
+//     - application
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
 // swagger:route POST /v1/actor/{actorType}/{actorId}/call/{path} actors idActorCall
 //
 // call
@@ -178,10 +327,14 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
-		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+		m, err := json.Marshal(r.Header)
+		if err != nil {
+			logger.Error("failed to marshal header: %v", err)
+		}
+		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
 	} else {
 		session := r.FormValue("session")
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), session)
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, session)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -693,8 +846,12 @@ func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
 	router := httprouter.New()
-	// service invocation
-	router.POST(base+"/service/:service/call/*path", call)
+	methods := [7]string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+
+	// service invocation - handles all common HTTP requests
+	for _, method := range methods {
+		router.Handle(method, base+"/service/:service/call/*path", call)
+	}
 
 	// callbacks
 	router.POST(base+"/await", awaitPromise)

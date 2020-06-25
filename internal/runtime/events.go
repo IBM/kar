@@ -120,7 +120,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
 	}
 
 	f := func(msg pubsub.Message) {
-		err := TellActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType)
+		err := TellActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType, "POST")
 		if err != nil {
 			logger.Error("failed to post event to %s: %v", s.Path, err)
 		} else {

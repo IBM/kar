@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -55,11 +56,24 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 	if err != nil {
 		return nil, err
 	}
-	if msg["content-type"] != "" {
-		req.Header.Set("Content-Type", msg["content-type"])
-	}
-	if msg["accept"] != "" {
-		req.Header.Set("Accept", msg["accept"])
+	if msg["header"] != "" {
+		var head map[string][]string
+		err := json.Unmarshal([]byte(msg["header"]), &head)
+		if err != nil {
+			logger.Error("failed to properly unmarshal header: %v", err)
+		}
+		for field, vals := range head {
+			for _, val := range vals {
+				req.Header.Add(field, val)
+			}
+		}
+	} else {
+		if msg["content-type"] != "" {
+			req.Header.Set("Content-Type", msg["content-type"])
+		}
+		if msg["accept"] != "" {
+			req.Header.Set("Accept", msg["accept"])
+		}
 	}
 	var reply *Reply
 	err = backoff.Retry(func() error {
