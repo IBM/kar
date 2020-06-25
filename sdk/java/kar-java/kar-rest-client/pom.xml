@@ -11,10 +11,17 @@
 		<maven.compiler.target>1.8</maven.compiler.target>
 		<version.maven-jar-plugin>3.2.0</version.maven-jar-plugin>
 		<version.microprofile>3.3</version.microprofile>
-		<version.apache-cxf-rt-rs-client>3.3.6</version.apache-cxf-rt-rs-client>
-		<version.glassfish-json>1.1</version.glassfish-json>
+		<version.cxf-rt-rs-mp-client>3.3.6</version.cxf-rt-rs-mp-client>
+		<version.glassfish-json>1.1.4</version.glassfish-json>
+		<version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
 	</properties>
 	<dependencies>
+		<dependency>
+			<groupId>jakarta.platform</groupId>
+			<artifactId>jakarta.jakartaee-api</artifactId>
+			<version>8.0.0</version>
+			<scope>provided</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.eclipse.microprofile</groupId>
 			<artifactId>microprofile</artifactId>
@@ -22,16 +29,25 @@
 			<type>pom</type>
 			<scope>provided</scope>
 		</dependency>
+		<!-- Implementation of Microprofile REST Client for standalone applications -->
 		<dependency>
 			<groupId>org.apache.cxf</groupId>
 			<artifactId>cxf-rt-rs-mp-client</artifactId>
-			<version>3.3.6</version>
+			<version>${version.cxf-rt-rs-mp-client}</version>
 			<scope>provided</scope>
 		</dependency>
+		<!-- Implementation of JSON APIs -->
 		<dependency>
 			<groupId>org.glassfish</groupId>
 			<artifactId>javax.json</artifactId>
 			<version>${version.glassfish-json}</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- Implementation of JsonProvider for JsonValue de/serializing -->
+		<dependency>
+			<groupId>org.glassfish</groupId>
+			<artifactId>jsonp-jaxrs</artifactId>
+			<version>${version.glassfish-jaxrs}</version>
 		</dependency>
 	</dependencies>
 	<build>

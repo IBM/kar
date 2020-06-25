@@ -24,6 +24,7 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
+		
 		ServletContext ctx = servletContextEvent.getServletContext();
 
 		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
@@ -48,6 +49,8 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 				ex.printStackTrace();
 			}
 		}
+
+
 	}
 
 }

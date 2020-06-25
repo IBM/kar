@@ -30,6 +30,8 @@ import com.ibm.research.kar.actor.exceptions.ActorExceptionMapper;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
+import org.glassfish.json.jaxrs.JsonValueBodyReader;
+import org.glassfish.json.jaxrs.JsonValueBodyWriter;
 
 public class Kar {
 
@@ -43,6 +45,8 @@ public class Kar {
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	private static KarRest buildRestClient() {
+		
+		
 		String baseURIStr = "http://localhost";
 
 		String port = System.getenv("KAR_RUNTIME_PORT");
@@ -58,11 +62,23 @@ public class Kar {
 
 		URI baseURI = URI.create(baseURIStr);
 
-		return RestClientBuilder.newBuilder()
-				.baseUri(baseURI)
+		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(baseURI);
+
+		// If running in standalone mode, add JsonValue serializers by hand
+		if (!isRunningEmbedded()) {
+			builder
+			.register(JsonValueBodyReader.class)
+			.register(JsonValueBodyWriter.class);
+		}
+
+		return builder
 				.register(ActorExceptionMapper.class)
 				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
+	}
+	
+	private static boolean isRunningEmbedded() {
+		return (System.getProperty("wlp.server.name") != null);
 	}
 
 	private static JsonArray packArgs(JsonValue[] args) {
@@ -73,19 +89,15 @@ public class Kar {
 		return ja.build();
 	}
 
-	public static Object toValue(Response response) {
+	private static Object toValue(Response response) {
 		if (response.hasEntity()) {
 
 			MediaType type = response.getMediaType();
-			logger.info("toValue: Got type " + type + ":"+ MediaType.APPLICATION_JSON);
 			if (type.equals(MediaType.APPLICATION_JSON_TYPE)) {
-				System.out.println("Matched Json");
 				return response.readEntity(JsonValue.class);
 			} else if (type.equals(MediaType.TEXT_PLAIN_TYPE)) {
-				System.out.println("Matched Json");
 				return response.readEntity(String.class);
 			} else {
-				System.out.println("Matched Null");
 				return JsonValue.NULL;
 			}
 		} else {
@@ -190,7 +202,7 @@ public class Kar {
 	 * @return The result returned by the target service.
 	 */
 	public static CompletionStage<Object> callAsync(String service, String path, JsonValue body) {
-		
+
 		return karClient.callAsync(service, path, body).thenApply(response -> toValue(response));
 	}
 

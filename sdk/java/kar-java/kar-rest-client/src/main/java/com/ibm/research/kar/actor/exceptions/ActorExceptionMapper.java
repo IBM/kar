@@ -7,8 +7,6 @@ import javax.ws.rs.ext.Provider;
 
 import org.eclipse.microprofile.rest.client.ext.ResponseExceptionMapper;
 
-import com.ibm.research.kar.actor.exceptions.BaseActorException;
-
 @Provider
 public class ActorExceptionMapper implements ResponseExceptionMapper<BaseActorException>{
 	
