@@ -232,6 +232,9 @@ function actorRuntime (actors) {
   router.get('/kar/impl/v1/actor/:type/:id', (req, res, next) => {
     const Actor = actors[req.params.type]
     if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
+    if (table[req.params.type] && table[req.params.type][req.params.id]) {
+      return res.status(200).send('existing instance')
+    }
     return Promise.resolve()
       .then(_ => {
         table[req.params.type] = table[req.params.type] || {}
@@ -242,7 +245,7 @@ function actorRuntime (actors) {
       .then(_ => { // run optional activate callback
         if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
       })
-      .then(_ => res.sendStatus(200)) // OK
+      .then(_ => res.sendStatus(201)) // Created
       .catch(next)
   })
 
