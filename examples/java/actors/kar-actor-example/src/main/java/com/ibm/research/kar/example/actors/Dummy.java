@@ -31,21 +31,18 @@ public class Dummy extends ActorBoilerplate {
 	public void init() {
 	}
 
+	@Deactivate
+	public void kill() {
+	}
+
 	@Remote
 	public JsonValue canBeInvoked(JsonObject json) {
 		int number = json.getInt("number");
 		number++;
 
 		JsonObject params = Json.createObjectBuilder().add("number", number).build();
-
 		ActorRef dummy2 = actorRef("dummy2", "dummy2id");
-		JsonValue result = null;
-		try {
-			result = actorCall(dummy2, "canBeInvoked", params);
-		} catch (ActorMethodNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		JsonValue result = actorCall(dummy2, "canBeInvoked", params);
 
 		System.out.println("Dummy.canBeInvoked: My session id is " + this.session);
 		return result;
@@ -55,31 +52,14 @@ public class Dummy extends ActorBoilerplate {
 	public JsonValue incr(JsonObject json) {
 		int number = json.getInt("number");
 		JsonValue n = Json.createValue(number);
-		try {
-			return actorCall(actorRef("calculator", "mycalc"), "add", n);
-		} catch (ActorMethodNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		return null;
+		return actorCall(actorRef("calculator", "mycalc"), "add", n);
 	}
-	
+
 	@Remote
 	public JsonValue incrFail(JsonObject json) {
 		int number = json.getInt("number");
 		JsonValue n = Json.createValue(number);
-		try {
-			return actorCall(actorRef("calculator", "mycalc"), "magic", n);
-		} catch (ActorMethodNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
-	public void cannotBeInvoked() {
+		return actorCall(actorRef("calculator", "mycalc"), "magic", n); // intentionally invoke an undefined method to test exception behavior
 	}
 
 	@Remote
@@ -103,9 +83,6 @@ public class Dummy extends ActorBoilerplate {
 		} catch (ExecutionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (ActorMethodNotFoundException e) {
-			System.out.println("In actor exception");
-			e.printStackTrace();
 		}
 
 		System.out.println("Never got here");
@@ -120,11 +97,7 @@ public class Dummy extends ActorBoilerplate {
 
 	@Remote
 	public void echoFriend() {
-		try {
-			actorCall(this, this, "echo", Json.createValue("Hello Friend"));
-		} catch (Throwable t) {
-			t.printStackTrace();
-		}
+		actorCall(this, this, "echo", Json.createValue("Hello Friend"));
 	}
 
 	@Remote
@@ -155,9 +128,5 @@ public class Dummy extends ActorBoilerplate {
 	@Remote
 	public void dumpReminders() {
 		System.out.println(actorGetAllReminders(this)[0]);
-	}
-
-	@Deactivate
-	public void kill() {
 	}
 }

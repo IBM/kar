@@ -14,7 +14,7 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
-import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
+import com.ibm.research.kar.actor.exceptions.ActorException;
 
 @Actor
 public class TreeTest extends ActorBoilerplate {
@@ -39,7 +39,7 @@ public class TreeTest extends ActorBoilerplate {
 
 		try {
 			actorCall(this.getSession(),actorRef("treetest", "1"), "forksync", params);
-		} catch (ActorMethodNotFoundException e) {
+		} catch (ActorException e) {
 			params = Json.createObjectBuilder()
 					.add("error", e.toString())
 					.build();
@@ -105,7 +105,7 @@ public class TreeTest extends ActorBoilerplate {
 
 		try {
 			actorCall(session, actorRef("treetest", "1"), "forkasync", params);
-		} catch (ActorMethodNotFoundException e1) {
+		} catch (ActorException e1) {
 			params = Json.createObjectBuilder()
 					.add("error", e1.toString())
 					.build();
@@ -155,7 +155,7 @@ public class TreeTest extends ActorBoilerplate {
 		if (--depth == 0) {
 			try {
 				actorCall(session, actorRef("treetest","1"), "leafdone");
-			} catch (ActorMethodNotFoundException e) {
+			} catch (ActorException e) {
 				System.err.println(e.toString());
 				return;
 			}

@@ -24,7 +24,6 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
-import com.ibm.research.kar.actor.exceptions.ActorCreateException;
 
 @Singleton
 @ApplicationScoped
@@ -41,7 +40,8 @@ public class ActorManagerImpl implements ActorManager {
 		logger.info(LOG_PREFIX + "initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
 
-		logger.info(LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
+		logger.info(
+				LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
 
 		// ensure that we have non-null class and kar type strings from web.xml
 		if ((KarConfig.ACTOR_CLASS_STR != null) && (KarConfig.ACTOR_TYPE_NAME_STR != null)) {
@@ -137,105 +137,61 @@ public class ActorManagerImpl implements ActorManager {
 		}
 	}
 
-	@Lock(LockType.WRITE)
-	public ActorInstance createActor(String type, String id) throws ActorCreateException {
-		logger.info(LOG_PREFIX + "createActor ActorManager");
-
-		ActorModel actorRef = actorMap.get(type);
-		ActorInstance actorObj = null;
-
-		if (actorRef != null) {
-			try {
-				Class<ActorInstance> actorClass = actorRef.getActorClass();
-				actorObj = actorClass.getConstructor().newInstance();
-				actorObj.setType(type);
-				actorObj.setId(id);
-
-				// initialize actor instance
-				MethodHandle activate = actorRef.getActivateMethod();
-				if (activate != null) {
-					activate.invoke(actorObj);
-				}
-
-				// put reference to actorObj in the ActorModel
-				actorRef.getActorInstances().put(id, actorObj);
-			} catch (Throwable t) {
-				logger.severe(LOG_PREFIX + "createActor: " + t.getMessage());
-				
-				throw new ActorCreateException(t.getMessage());
-			}
-		}
-
-		return actorObj;
-	}
-
-	@Lock(LockType.WRITE)
-	public void deleteActor(String type, String id) {
-		logger.info(LOG_PREFIX + "deleteActor: deleting " + type + " actor " + id);
-		ActorModel actorRef = this.actorMap.get(type);
-
-		if (actorRef != null) {
-			Object actorObj = actorRef.getActorInstances().get(id);
-
-			if (actorObj != null) {
-				MethodHandle deactivateMethod = actorRef.getDeactivateMethod();
-				if (deactivateMethod != null) {
-					try {
-						deactivateMethod.invoke(actorObj);
-					} catch (Throwable t) {
-						logger.severe(LOG_PREFIX + "deleteActor: error executing actor deactivate method "+t.getMessage());
-					}
-				}
-				actorRef.getActorInstances().remove(actorObj);
-			} else {
-				logger.info(LOG_PREFIX + "deleteActor: warning, no instance found for actor " + id);
-			}
-		} else {
-			logger.info(LOG_PREFIX + "deleteActor: warning, no model found for " + type + " actor");
-		}
-	}
-
 	@Lock(LockType.READ)
 	public ActorInstance getActor(String type, String id) {
-		logger.info(LOG_PREFIX + "getActor: Retrieving actor instance");
-
 		ActorModel model = this.actorMap.get(type);
-		if (model != null) {
-			return model.getActorInstances().get(id);
-		} else {
+		return model != null ? model.getActorInstances().get(id) : null;
+	}
+
+	@Lock(LockType.WRITE)
+	public ActorInstance createActor(String type, String id) {
+		ActorModel actorModel = actorMap.get(type);
+		if (actorModel == null) {
+			return null;
+		}
+
+		try {
+			Class<ActorInstance> actorClass = actorModel.getActorClass();
+			ActorInstance actorObj = actorClass.getConstructor().newInstance();
+			actorObj.setType(type);
+			actorObj.setId(id);
+			actorModel.getActorInstances().put(id, actorObj);
+			return actorObj;
+		} catch (Throwable t) {
+			logger.severe(LOG_PREFIX + "createActor: " + t.toString());
 			return null;
 		}
 	}
 
-	@Lock(LockType.READ)
-	public int getNumActors() {
-		logger.info("ActorManagerImpl.getNumActors: checking actor map for size");
-
-		if (actorMap != null) {
-			return actorMap.size();
+	@Lock(LockType.WRITE)
+	public boolean deleteActor(String type, String id) {
+		ActorModel actorModel = this.actorMap.get(type);
+		if (actorModel != null) {
+			return actorModel.getActorInstances().remove(id) != null;
 		} else {
-			logger.info(LOG_PREFIX + "getNumActors: no map instance found");
-			return 0;
+			return false;
 		}
 	}
 
 	@Override
 	@Lock(LockType.READ)
 	public MethodHandle getActorMethod(String type, String name) {
-		logger.info(LOG_PREFIX + "getactorMethod: getting method " + name + " for " + type + " actor");
 		ActorModel model = this.actorMap.get(type);
+		return model != null ? model.getRemoteMethods().get(name) : null;
+	}
 
-		logger.info(LOG_PREFIX + "getactorMethod: found actor model " + model);
+	@Override
+	@Lock(LockType.READ)
+	public MethodHandle getActorActivateMethod(String type) {
+		ActorModel model = this.actorMap.get(type);
+		return model != null ? model.getActivateMethod() : null;
+	}
 
-		MethodHandle method = null;
-
-		if (model != null) {
-			method = model.getRemoteMethods().get(name);
-		} else {
-			logger.info(LOG_PREFIX + "getActorMethod: Warning, no model of type " + type + " found");
-		}
-
-		return method;
+	@Override
+	@Lock(LockType.READ)
+	public MethodHandle getActorDeactivateMethod(String type) {
+		ActorModel model = this.actorMap.get(type);
+		return model != null ? model.getDeactivateMethod() : null;
 	}
 
 }

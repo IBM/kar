@@ -27,6 +27,7 @@ import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.Reminder;
 import com.ibm.research.kar.actor.exceptions.ActorExceptionMapper;
+import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -45,8 +46,8 @@ public class Kar {
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	private static KarRest buildRestClient() {
-		
-		
+
+
 		String baseURIStr = "http://localhost";
 
 		String port = System.getenv("KAR_RUNTIME_PORT");
@@ -76,7 +77,7 @@ public class Kar {
 				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 	}
-	
+
 	private static boolean isRunningEmbedded() {
 		return (System.getProperty("wlp.server.name") != null);
 	}
@@ -89,9 +90,19 @@ public class Kar {
 		return ja.build();
 	}
 
+	private static JsonValue actorUnwrap(JsonValue v) throws ActorMethodInvocationException {
+		JsonObject o = v.asJsonObject();
+		if (o.containsKey("error")) {
+			String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
+			String stack = o.containsKey("stack") ? o.getString("stack") : "";
+			throw new ActorMethodInvocationException(message + ": "+stack);
+		} else {
+			return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
+		}
+	}
+
 	private static Object toValue(Response response) {
 		if (response.hasEntity()) {
-
 			MediaType type = response.getMediaType();
 			if (type.equals(MediaType.APPLICATION_JSON_TYPE)) {
 				return response.readEntity(JsonValue.class);
@@ -237,8 +248,9 @@ public class Kar {
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
-		return karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args));
+	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException {
+		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args)));
+
 	}
 
 	/**
@@ -250,8 +262,8 @@ public class Kar {
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
-		return karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
+	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException{
+		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args)));
 	}
 
 	/**
@@ -262,8 +274,8 @@ public class Kar {
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
-		return karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
+	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException {
+		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args)));
 	}
 
 	/**

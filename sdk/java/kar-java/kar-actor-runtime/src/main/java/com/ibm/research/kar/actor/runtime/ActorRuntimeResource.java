@@ -3,8 +3,14 @@ package com.ibm.research.kar.actor.runtime;
 import java.lang.invoke.MethodHandle;
 import java.util.logging.Logger;
 
+import java.io.StringWriter;
+import java.io.PrintWriter;
+
 import javax.inject.Inject;
+import javax.json.Json;
 import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -18,7 +24,6 @@ import javax.ws.rs.core.Response;
 
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
-import com.ibm.research.kar.actor.exceptions.ActorCreateException;
 
 @Path("actor")
 public class ActorRuntimeResource {
@@ -33,31 +38,48 @@ public class ActorRuntimeResource {
 	@Path("{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
-		logger.info(LOG_PREFIX + "getActor: Checking for actor with id " + id);
 		if (actorManager.getActor(type, id) != null) {
-			logger.info(LOG_PREFIX + "getActor: Found actor");
+			// Already exists; nothing to do.
 			return Response.status(Response.Status.OK).build();
-		} else {
-			logger.info(LOG_PREFIX + "getActor: No actor found, creating");
+		}
 
-			try {
-				if (this.actorManager.createActor(type, id) != null) {
-					return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
-				} else {
-					return Response.status(Response.Status.NOT_FOUND).entity("Cannot create actor, no actor implementation for " + type + " actor " + id).build();
-				}
-			} catch (ActorCreateException ex) {
-				logger.warning(LOG_PREFIX + "getActor: Error when creating " + type + " actor " + id);
-				return Response.status(Response.Status.BAD_REQUEST).entity("Cannot create actor, no actor implementation for " + type + " actor " + id).build();
+		// Allocate a new actor instance
+		ActorInstance actorObj = this.actorManager.createActor(type, id);
+		if (actorObj == null) {
+			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
+		}
+
+		// Call the optional activate method
+		try {
+			MethodHandle activate = this.actorManager.getActorActivateMethod(type);
+			if (activate != null) {
+				activate.invoke(actorObj);
 			}
+			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
+		} catch (Throwable t) {
+			return Response.status(Response.Status.BAD_REQUEST).entity(t.toString()).build();
 		}
 	}
 
 	@DELETE
 	@Path("{type}/{id}")
 	public Response deleteActor(@PathParam("type") String type, @PathParam("id") String id) {
-		logger.info(LOG_PREFIX + "deleteActor: deleting actor");
+		ActorInstance actorObj = this.actorManager.getActor(type, id);
+		if (actorObj == null) {
+			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
+		}
 
+		// Call the optional deactivate method
+		MethodHandle deactivate = this.actorManager.getActorDeactivateMethod(type);
+		if (deactivate != null) {
+			try {
+				deactivate.invoke(actorObj);
+			} catch (Throwable t) {
+				return Response.status(Response.Status.BAD_REQUEST).entity(t.toString()).build();
+			}
+		}
+
+		// Actually remove the instance
 		actorManager.deleteActor(type, id);
 		return Response.status(Response.Status.OK).build();
 	}
@@ -66,52 +88,43 @@ public class ActorRuntimeResource {
 	@Path("{type}/{id}/{sessionid}/{path}")
 	@Consumes(KarRest.KAR_ACTOR_JSON)
 	@Produces(KarRest.KAR_ACTOR_JSON)
-	public Response invokeActorMethod(
-			@PathParam("type") String type,
-			@PathParam("id") String id,
-			@PathParam("sessionid") String sessionid,
-			@PathParam("path") String path,
-			JsonArray args) {
-
-		logger.finer(LOG_PREFIX + "invokeActorMethod: invoking " + type + " actor " + id + " method " + path + " with args " + args);
+	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("sessionid") String sessionid, @PathParam("path") String path, JsonArray args) {
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
-		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path);
-
 		if (actorObj == null) {
-			// Internal error.  KAR promises that getActor will be called before it invokes a method on the actor.
-			logger.warning(LOG_PREFIX+"invokeActorMethod: Actor instance not found for " + type + "<" + id + ">");
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+			return Response.status(Response.Status.NOT_FOUND).entity("Actor instance not found " + type + "actor" + id).build();
 		}
 
+		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path);
 		if (actorMethod == null) {
-			logger.info(LOG_PREFIX+"invokeActorMethod: Cannot find method " + path);
-			return Response.status(Response.Status.NOT_FOUND).build();
+			return Response.status(Response.Status.NOT_FOUND).entity("Cannot find method " + path).build();
 		}
 
 		// set the session
 		actorObj.setSession(sessionid);
 
 		// build arguments array for method handle invoke
-		Object[] actuals = new Object[args.size()+1];
+		Object[] actuals = new Object[args.size() + 1];
 		actuals[0] = actorObj;
 		for (int i = 0; i < args.size(); i++) {
 			actuals[i + 1] = args.get(i);
 		}
 
 		try {
-			logger.info("Invoking actor method");
 			Object result = actorMethod.invokeWithArguments(actuals);
-
-			logger.info("Called invoking");
-			if (result == null) {
-				result = JsonValue.NULL;
-			}
-			logger.info("Done invoking");
-			return Response.status(Response.Status.OK).entity(result).build();
+			JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
+			JsonObject ro = Json.createObjectBuilder().add("value", jv).build();
+			return Response.status(Response.Status.OK).entity(ro).build();
 		} catch (Throwable t) {
-			// TODO: Revist the response code for Errors raised by actor methods (https://github.ibm.com/solsa/kar/issues/130)
-			return Response.status(Response.Status.BAD_REQUEST).build();
+			JsonObjectBuilder ro = Json.createObjectBuilder();
+			ro.add("error", true);
+			ro.add("message", t.toString());
+			StringWriter sw = new StringWriter();
+			PrintWriter pw = new PrintWriter(sw);
+			t.printStackTrace(pw);
+			ro.add("stack", sw.toString());
+			return Response.status(Response.Status.OK).entity(ro.build()).build();
 		}
 	}
 }

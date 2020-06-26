@@ -15,7 +15,7 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
-import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
+import com.ibm.research.kar.actor.exceptions.ActorException;
 
 @Actor
 public class BroadcastTest extends ActorBoilerplate {
@@ -23,7 +23,7 @@ public class BroadcastTest extends ActorBoilerplate {
 	@Activate
 	public void init() {
 	}
-	
+
 
 	// Broadcast Spread -------------------------------
 
@@ -38,7 +38,7 @@ public class BroadcastTest extends ActorBoilerplate {
 		String syncOrAsync = json.getString("syncOrAsync", "sync");
 		boolean trace = json.getBoolean("trace", false);
 		String session = this.getSession();
-		
+
 		int maxParallel;
 		if (syncOrAsync.equals("sync")) {
 			maxParallel = ndrivers;
@@ -103,7 +103,7 @@ public class BroadcastTest extends ActorBoilerplate {
 
 
 	// Broadcast Driver -------------------------------
-	
+
 	@Remote
 	public JsonValue driver(JsonObject json) {
 		int nleaves = json.getInt("nleaves");
@@ -121,7 +121,7 @@ public class BroadcastTest extends ActorBoilerplate {
 		JsonObject params = Json.createObjectBuilder()
 				.add("session",  session)
 				.build();
-		
+
 		Random random = new Random();
 		for (int i=0; i<nleaves; i++) {
 			int target = random.nextInt(population);
@@ -132,7 +132,7 @@ public class BroadcastTest extends ActorBoilerplate {
 				else {
 					actorTell(actorRef("broadcast", "SL"+target), "asyncleaf", params);
 				}
-			} catch (ActorMethodNotFoundException e) {
+			} catch (ActorException e) {
 				System.err.println("Broadcast sync: error calling " + "actorRef(\"broadcast\",SL"+target+" Error: " +e.toString());
 				params = Json.createObjectBuilder()
 						.add("error", e.toString())
@@ -148,7 +148,7 @@ public class BroadcastTest extends ActorBoilerplate {
 		if (syncOrAsync.equals("sync")) {
 			try {
 				actorCall(session, actorRef("broadcast","1"), "leafdone");
-			} catch (ActorMethodNotFoundException e) {
+			} catch (ActorException e) {
 				System.err.println(e.toString());
 				JsonObject result = Json.createObjectBuilder()
 						.add("Error", e.toString())
@@ -182,7 +182,7 @@ public class BroadcastTest extends ActorBoilerplate {
 		String session = json.getString("session");
 		try {
 			actorCall(session, actorRef("broadcast","1"), "leafdone");
-		} catch (ActorMethodNotFoundException e) {
+		} catch (ActorException e) {
 			System.err.println(e.toString());
 			return;
 		}

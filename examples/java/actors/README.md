@@ -27,16 +27,26 @@ Wait a few seconds until you see something similar to:
 2020/06/17 14:17:57.221198 [STDOUT] [INFO] [AUDIT   ] CWWKF0011I: The defaultServer server is ready to run a smarter planet. The defaultServer server started in 14.519 seconds.
 ```
 
+### Use kar
+You can use the `kar` cli to invoke an actor method
+```shell
+kar -app actor -invoke dummy dummyid canBeInvoked '{"number":10}'
+```
 
-#### Use curl
-To use `curl` to call an actor directly on the KAR sidecar:
+You should see output like:
+```shell
+2020/06/26 11:09:36.397079 [STDOUT] {"value":{"number":12}}
+```
+
+#### Use kar+curl (lower-level)
+You can use the `kar` cli to wrap a curl command that directly invokes the lower-level KAR REST API:
 ```shell
 kar -runtime_port 32123 -app actor curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
 ```
 
 You should see output like:
 ```shell
-2020/05/15 10:47:09 [STDOUT] {"number":12}
+2020/05/15 10:47:09 [STDOUT] {"value":{"number":12}}
 ```
 
 #### Use Java example
