@@ -39,7 +39,8 @@ var (
 func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
-		m, err := json.Marshal(r.Header)
+		var m []byte
+		m, err = json.Marshal(r.Header)
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
@@ -63,7 +64,8 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var request string
 	var err error
 	if ps.ByName("service") != "" {
-		m, err := json.Marshal(r.Header)
+		var m []byte
+		m, err = json.Marshal(r.Header)
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
@@ -327,7 +329,8 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var reply *runtime.Reply
 	var err error
 	if ps.ByName("service") != "" {
-		m, err := json.Marshal(r.Header)
+		var m []byte
+		m, err = json.Marshal(r.Header)
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
