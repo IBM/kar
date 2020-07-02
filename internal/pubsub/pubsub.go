@@ -5,6 +5,8 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
+	"strconv"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -17,13 +19,15 @@ var (
 	producer sarama.SyncProducer // shared idempotent producer
 
 	// routes
-	topic    = "kar" + config.Separator + config.AppName
-	replicas map[string][]string // map services to sidecars
-	hosts    map[string][]string // map actor types to sidecars
-	routes   map[string][]int32  // map sidecards to partitions
-	tick     = make(chan struct{})
-	joined   = tick
-	mu       = &sync.RWMutex{}
+	topic     = "kar" + config.Separator + config.AppName
+	replicas  map[string][]string // map services to sidecars
+	hosts     map[string][]string // map actor types to sidecars
+	routes    map[string][]int32  // map sidecards to partitions
+	address   string              // host:port of sidecar http server (for peer-to-peer connections)
+	addresses map[string]string   // map sidecards to addresses
+	tick      = make(chan struct{})
+	joined    = tick
+	mu        = &sync.RWMutex{}
 
 	manualPartitioner = sarama.NewManualPartitioner(topic)
 
@@ -109,7 +113,8 @@ func Partitions() ([]int32, <-chan struct{}) {
 }
 
 // Join joins the sidecar to the application and returns a channel of incoming messages
-func Join(ctx context.Context, f func(Message)) (<-chan struct{}, error) {
+func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, error) {
+	address = net.JoinHostPort(config.Hostname, strconv.Itoa(port))
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)

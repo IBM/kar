@@ -20,6 +20,7 @@ func mangle(topic string, partition int32) string {
 
 // data exchanged when setting up consumer group session for application topic
 type userData struct {
+	Address string                       // ip:port of sidecar
 	Sidecar string                       // id of this sidecar
 	Service string                       // name of this service
 	Actors  []string                     // types of actors implemented by this service
@@ -40,9 +41,12 @@ type Message struct {
 	handler   *handler // hidden
 }
 
-// Mark marks a message as consumed
+// Mark marks a message as consumed if coming from kafka
 func (e *Message) Mark() error {
-	return e.handler.mark(e.partition, e.offset)
+	if e.handler != nil {
+		return e.handler.mark(e.partition, e.offset)
+	}
+	return nil
 }
 
 // handler of consumer group session
@@ -89,6 +93,7 @@ func (h *handler) marshal() {
 	h.lock.Lock()
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
+			Address: address,
 			Sidecar: config.ID,
 			Service: config.ServiceName,
 			Actors:  config.ActorTypes,
@@ -120,6 +125,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	var rp map[string][]string // temp replicas
 	var hs map[string][]string // temp hosts
 	var rt map[string][]int32  // temp routes
+	var ad map[string]string   // temp addresses
 
 	if h.options.master {
 		for _, member := range members { // ensure enough partitions
@@ -138,6 +144,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 		rp = map[string][]string{}
 		hs = map[string][]string{}
 		rt = map[string][]int32{}
+		ad = map[string]string{}
 	}
 
 	h.live = map[int32]map[int64]struct{}{} // clear live list
@@ -183,6 +190,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 			}
 			rt[d.Sidecar] = append(rt[d.Sidecar], a.Topics[h.topic]...)
 			remote = d.Offsets
+			ad[d.Sidecar] = d.Address
 		} else {
 			if err := json.Unmarshal(m.UserData, &remote); err != nil {
 				logger.Debug("failed to unmarshal user data: %v", err)
@@ -205,6 +213,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 		replicas = rp
 		hosts = hs
 		routes = rt
+		addresses = ad
 		close(tick)
 		tick = make(chan struct{})
 		mu.Unlock()

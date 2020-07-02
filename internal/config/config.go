@@ -86,6 +86,9 @@ var (
 
 	// Invoke an actor method
 	Invoke bool
+
+	// Hostname is the name of the host
+	Hostname string
 )
 
 func init() {
@@ -116,6 +119,7 @@ func init() {
 	flag.BoolVar(&Purge, "purge", false, "Purge the application state and messages and exit")
 	flag.BoolVar(&Drain, "drain", false, "Drain the application messages and exit")
 	flag.BoolVar(&Invoke, "invoke", false, "Invoke <actor type> <actor id> <method> [<1st argument> [<2nd argument> [...]]]")
+	flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 
 	flag.Parse()
 

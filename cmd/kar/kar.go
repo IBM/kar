@@ -36,7 +36,7 @@ var (
 	wg9           = &sync.WaitGroup{}                        // wait for signal handler
 )
 
-func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
@@ -44,9 +44,9 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
+		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Method)
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Method, direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -60,7 +60,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
 	var request string
 	var err error
 	if ps.ByName("service") != "" {
@@ -69,9 +69,9 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
+		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
-		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method)
+		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -317,12 +317,19 @@ func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	direct := false
+	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
+		if strings.ToLower(pragma) == "http" {
+			direct = true
+			break
+		}
+	}
 	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "async" {
-			tell(w, r, ps)
+			tell(w, r, ps, direct)
 			return
 		} else if strings.ToLower(pragma) == "promise" {
-			callPromise(w, r, ps)
+			callPromise(w, r, ps, direct)
 			return
 		}
 	}
@@ -334,10 +341,10 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method)
+		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
 		session := r.FormValue("session")
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, session)
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, session, direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -845,6 +852,16 @@ func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// post handles a direct http request from a peer sidecar
+// TODO swagger
+func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	value, _ := ioutil.ReadAll(r.Body)
+	m := pubsub.Message{Value: value}
+	process(m)
+	w.WriteHeader(http.StatusAccepted)
+	fmt.Fprint(w, "OK")
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
@@ -887,6 +904,7 @@ func server(listener net.Listener) http.Server {
 	// kar system methods
 	router.GET(base+"/system/health", health)
 	router.POST(base+"/system/shutdown", shutdown)
+	router.POST(base+"/system/post", post)
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
@@ -959,7 +977,7 @@ func main() {
 	}
 
 	// one goroutine, defer close(closed)
-	closed, err := pubsub.Join(ctx, process)
+	closed, err := pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
 	if err != nil {
 		logger.Fatal("join failed: %v", err)
 	}

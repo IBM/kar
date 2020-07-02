@@ -26,7 +26,7 @@ func Invoke(ctx context.Context, args []string) (exitCode int) {
 		exitCode = 1
 		return
 	}
-	reply, err := CallActor(ctx, actor, path, string(payload), "application/kar+json", "", "POST", "")
+	reply, err := CallActor(ctx, actor, path, string(payload), "application/kar+json", "", "POST", "", false)
 	if err != nil {
 		logger.Error("error invoking the actor: %v", err)
 		exitCode = 1

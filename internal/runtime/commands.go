@@ -34,8 +34,8 @@ var (
 )
 
 // TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service, path, payload, header, method string) error {
-	return pubsub.Send(ctx, map[string]string{
+func TellService(ctx context.Context, service, path, payload, header, method string, direct bool) error {
+	return pubsub.Send(ctx, direct, map[string]string{
 		"protocol": "service",
 		"service":  service,
 		"command":  "tell", // post with no callback expected
@@ -46,8 +46,8 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Actor, path, payload, contentType, method string) error {
-	return pubsub.Send(ctx, map[string]string{
+func TellActor(ctx context.Context, actor Actor, path, payload, contentType, method string, direct bool) error {
+	return pubsub.Send(ctx, direct, map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
 		"id":           actor.ID,
@@ -59,7 +59,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload, contentType, met
 }
 
 func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingID string) error {
-	return pubsub.Send(ctx, map[string]string{
+	return pubsub.Send(ctx, false, map[string]string{
 		"protocol":  "actor",
 		"type":      actor.Type,
 		"id":        actor.ID,
@@ -77,14 +77,14 @@ type Reply struct {
 }
 
 // callHelper makes a call via pubsub to a sidecar and waits for a reply
-func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
+func callHelper(ctx context.Context, msg map[string]string, direct bool) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	msg["from"] = config.ID // this sidecar
 	msg["request"] = request
-	err := pubsub.Send(ctx, msg)
+	err := pubsub.Send(ctx, direct, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -96,14 +96,14 @@ func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	}
 }
 
-func callPromiseHelper(ctx context.Context, msg map[string]string) (string, error) {
+func callPromiseHelper(ctx context.Context, msg map[string]string, direct bool) (string, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
 	msg["from"] = config.ID // this sidecar
 	msg["request"] = request
-	err := pubsub.Send(ctx, msg)
+	err := pubsub.Send(ctx, direct, msg)
 	if err != nil {
 		return "", err
 	}
@@ -125,7 +125,7 @@ func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
 }
 
 // CallService calls a service and waits for a reply
-func CallService(ctx context.Context, service, path, payload, header, method string) (*Reply, error) {
+func CallService(ctx context.Context, service, path, payload, header, method string, direct bool) (*Reply, error) {
 	msg := map[string]string{
 		"protocol": "service",
 		"service":  service,
@@ -134,11 +134,11 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return callHelper(ctx, msg)
+	return callHelper(ctx, msg, direct)
 }
 
 // CallPromiseService calls a service and returns a request id
-func CallPromiseService(ctx context.Context, service, path, payload, header, method string) (string, error) {
+func CallPromiseService(ctx context.Context, service, path, payload, header, method string, direct bool) (string, error) {
 	msg := map[string]string{
 		"protocol": "service",
 		"service":  service,
@@ -147,11 +147,11 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return callPromiseHelper(ctx, msg)
+	return callPromiseHelper(ctx, msg, direct)
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method, session string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method, session string, direct bool) (*Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -163,11 +163,11 @@ func CallActor(ctx context.Context, actor Actor, path, payload, contentType, acc
 		"session":      session,
 		"method":       method,
 		"payload":      payload}
-	return callHelper(ctx, msg)
+	return callHelper(ctx, msg, direct)
 }
 
 // CallPromiseActor calls an actor and returns a request id
-func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method string) (string, error) {
+func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method string, direct bool) (string, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -178,7 +178,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentTy
 		"accept":       accept,
 		"method":       method,
 		"payload":      payload}
-	return callPromiseHelper(ctx, msg)
+	return callPromiseHelper(ctx, msg, direct)
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
@@ -194,14 +194,14 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return callHelper(ctx, msg)
+	return callHelper(ctx, msg, false)
 }
 
 // Broadcast sends a message to all sidecars except for this one
 func Broadcast(ctx context.Context, path, payload, contentType string) {
 	for _, sidecar := range pubsub.Sidecars() {
 		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(ctx, map[string]string{ // TODO log errors
+			pubsub.Send(ctx, false, map[string]string{ // TODO log errors
 				"protocol":     "sidecar",
 				"sidecar":      sidecar,
 				"command":      "tell",
@@ -216,7 +216,7 @@ func Broadcast(ctx context.Context, path, payload, contentType string) {
 // log ignored errors to logger.Error
 
 func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
-	err := pubsub.Send(ctx, map[string]string{
+	err := pubsub.Send(ctx, msg["direct"] == "true", map[string]string{
 		"protocol":     "sidecar",
 		"sidecar":      msg["from"],
 		"command":      "callback",
@@ -357,7 +357,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 }
 
 func forwardToSidecar(ctx context.Context, msg map[string]string) error {
-	err := pubsub.Send(ctx, msg)
+	err := pubsub.Send(ctx, false, msg)
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping message to dead sidecar %s: %v", msg["sidecar"], err)
 		return nil
@@ -379,7 +379,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if msg["service"] == config.ServiceName {
 			err = dispatch(ctx, cancel, msg)
 		} else {
-			err = pubsub.Send(ctx, msg)
+			err = pubsub.Send(ctx, false, msg)
 		}
 	case "sidecar":
 		if msg["sidecar"] == config.ID {
@@ -403,7 +403,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		var fresh bool
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
-			err = pubsub.Send(ctx, msg) // forward
+			err = pubsub.Send(ctx, false, msg) // forward
 		} else if err == nil {
 			if session == "reminder" { // do not activate actor
 				err = dispatch(ctx, cancel, msg)
