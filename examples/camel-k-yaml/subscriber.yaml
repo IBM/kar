@@ -1,0 +1,12 @@
+- from:
+    uri: "kafka:YamlStockEvent"
+    steps:
+      - process:
+          ref: "transformCloudEventToMessage"
+      - filter:
+          expression:
+            simple: "${in.header.redirectToSlack} == 'true'"
+          steps:
+            - to: "slack:#kar-output"
+      - log:
+          message: "${body}"
