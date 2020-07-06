@@ -1,0 +1,20 @@
+- from:
+    uri: "timer:tick"
+    parameters:
+      period: "3000"
+    steps:
+      - set-body:
+          constant: "Tick"
+      - set-header:
+          name: "CamelHttpMethod"
+          constant: "GET"
+      - to: "http://financialmodelingprep.com/api/v3/quote-short/AAPL?apikey=demo"
+      - unmarshal:
+          data-format:
+            json:
+              library: Gson
+      - process:
+          ref: "transformMessageToCloudEvent"
+      - to: "kafka:InputStockEvent"
+      - log:
+          message: "${body}"

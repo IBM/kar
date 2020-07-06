@@ -14,14 +14,24 @@ For the consumer to output to a Slack channel, expose the incoming webhook addre
 
 Export the IP address of KAR's Kafka service via the `KAR_KAFKA_CLUSTER_IP` environemnt variable.
 
+Move to the example folder:
+
+```
+cd examples/kar-kamel
+```
+
+Create topics for this example:
+
+```
+sh createTopics.sh
+```
+
 Run the subscriber:
 ```
-cd examples/camel-k-yaml
 sh run-subscriber.sh
 ```
 
 Run the publisher:
 ```
-cd examples/camel-k-yaml
 sh run-publisher.sh
 ```
