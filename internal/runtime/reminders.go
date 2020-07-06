@@ -144,7 +144,6 @@ func migrateReminders(ctx context.Context, actor Actor) {
 // ProcessReminders causes all reminders with a targetTime before fireTime to be scheduled for execution.
 func processReminders(ctx context.Context, fireTime time.Time) {
 	arMutex.Lock()
-	logger.Debug("ProcessReminders: begin for time %v", fireTime)
 
 	for {
 		r, valid := activeReminders.nextReminderBefore(fireTime)
@@ -172,6 +171,5 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		}
 	}
 
-	logger.Debug("ProcessReminders: completed for time %v", fireTime)
 	arMutex.Unlock()
 }
