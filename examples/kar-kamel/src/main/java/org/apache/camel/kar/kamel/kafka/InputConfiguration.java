@@ -1,3 +1,5 @@
+// camel-k: dependency=github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626
+
 package org.apache.camel.kar.kamel.kafka;
 
 import org.apache.camel.BindToRegistry;
@@ -17,16 +19,14 @@ class TransformMessageToCloudEvent implements Processor {
     private static final Logger LOG = LoggerFactory.getLogger(TransformMessageToCloudEvent.class);
 
     public void process(Exchange exchange) throws Exception {
-        String body = exchange.getIn().getBody().toString();
+        String body = exchange.getIn().getBody(String.class);
         LOG.info("Received message from console with body: {}", body);
 
         // Create a Cloud Event:
-        // - The event type of the event is the stock name.
-        // - The event data is the stock price.
         CloudEvent event = CloudEventBuilder.v1()
-                .withId("stockID")
-                .withType("stock.input")
-                .withSource(URI.create("http://financialmodelingprep.com"))
+                .withId(exchange.getExchangeId())
+                .withType(exchange.getProperty("cloudevent.type", String.class))
+                .withSource(URI.create(exchange.getProperty("cloudevent.source", String.class)))
                 .withData("text/plain", body.getBytes())
                 .build();
         LOG.info("User generated message packaged as CloudEvent: {}", event.toString());

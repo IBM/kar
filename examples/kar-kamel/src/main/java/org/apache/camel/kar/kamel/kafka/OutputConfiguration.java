@@ -1,3 +1,5 @@
+// camel-k: dependency=github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626
+
 package org.apache.camel.kar.kamel.kafka;
 
 import org.apache.camel.BindToRegistry;
@@ -20,12 +22,6 @@ class TransformCloudEventToMessage implements Processor {
         // Deserialize event.
         EventFormat format = EventFormatProvider.getInstance().resolveFormat("application/cloudevents+json");
         CloudEvent event = format.deserialize(exchangeBody.getBytes());
-
-        exchange.getIn().setHeader("redirectToSlack", "true");
-        String outputSlackWebhook = System.getenv("SLACK_KAR_OUTPUT_WEBHOOK");
-        if (outputSlackWebhook == null) {
-            exchange.getIn().setHeader("redirectToSlack", "false");
-        }
 
         // Set Exchange body to CloudEvent and send it along.
         exchange.getIn().setBody(event.getData());
