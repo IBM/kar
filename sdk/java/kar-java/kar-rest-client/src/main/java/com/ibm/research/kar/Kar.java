@@ -46,8 +46,6 @@ public class Kar {
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	private static KarRest buildRestClient() {
-
-
 		String baseURIStr = "http://localhost";
 
 		String port = System.getenv("KAR_RUNTIME_PORT");
@@ -180,15 +178,207 @@ public class Kar {
 	 * Public methods
 	 ******************/
 
+	/*
+	 * Lower-level REST operations on a KAR Service
+	 */
+
 	/**
-	 * Asynchronous service invocation
+	 * Synchronous REST DELETE
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restDelete(String service, String path) throws ProcessingException {
+		return karClient.callDelete(service, path);
+	}
+
+	/**
+	 * Asynchronous REST DELETE
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restDeleteAsync(String service, String path) throws ProcessingException {
+		return karClient.callAsyncDelete(service, path);
+	}
+
+	/**
+	 * Synchronous REST GET
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restGet(String service, String path) throws ProcessingException {
+		return karClient.callGet(service, path);
+	}
+
+	/**
+	 * Asynchronous REST GET
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restGetAsync(String service, String path) throws ProcessingException {
+		return karClient.callAsyncGet(service, path);
+	}
+
+	/**
+	 * Synchronous REST HEAD
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restHead(String service, String path) throws ProcessingException {
+		return karClient.callHead(service, path);
+	}
+
+	/**
+	 * Asynchronous REST HEAD
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restHeadAsync(String service, String path) throws ProcessingException {
+		return karClient.callAsyncHead(service, path);
+	}
+
+	/**
+	 * Synchronous REST OPTIONS
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restOptions(String service, String path) throws ProcessingException {
+		return karClient.callOptions(service, path, JsonValue.NULL);
+	}
+
+	/**
+	 * Synchronous REST OPTIONS
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restOptions(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callOptions(service, path, body);
+	}
+
+	/**
+	 * Asynchronous REST OPTIONS
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restOptionsAsync(String service, String path) throws ProcessingException {
+		return karClient.callAsyncOptions(service, path, JsonValue.NULL);
+	}
+
+	/**
+	 * Asynchronous REST OPTIONS
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restOptionsAsync(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callAsyncOptions(service, path, body);
+	}
+
+	/**
+	 * Synchronous REST PATCH
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restPatch(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callPatch(service, path, body);
+	}
+
+	/**
+	 * Asynchronous REST PATCH
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restPatchAsync(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callAsyncPatch(service, path, body);
+	}
+
+	/**
+	 * Synchronous REST POST
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restPost(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callPost(service, path, body);
+	}
+
+	/**
+	 * Asynchronous REST POST
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restPostAsync(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callAsyncPost(service, path, body);
+	}
+
+	/**
+	 * Synchronous REST PUT
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static Response restPut(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callPut(service, path, body);
+	}
+
+	/**
+	 * Asynchronous REST PUT
+	 *
+	 * @param service The name of the service.
+	 * @param path    The service endpoint.
+	 * @param body    The request body.
+	 * @return The response returned by the target service.
+	 */
+	public static CompletionStage<Response> restPutAsync(String service, String path, JsonValue body) throws ProcessingException {
+		return karClient.callAsyncPut(service, path, body);
+	}
+
+	/*
+	 * Higher-level Service call/tell operations that hide the REST layer
+	 */
+
+	/**
+	 * Asynchronous service invocation; returns as soon as the invocation has been initiated.
 	 *
 	 * @param service The name of the service to invoke.
 	 * @param path    The service endpoint to invoke.
 	 * @param body    The request body with which to invoke the service endpoint.
 	 */
 	public static void tell(String service, String path, JsonValue body) {
-		karClient.tell(service, path, body);
+		karClient.tellPost(service, path, body);
 	}
 
 	/**
@@ -200,21 +390,20 @@ public class Kar {
 	 * @return The result returned by the target service.
 	 */
 	public static Object call(String service, String path, JsonValue body) {
-		Response resp = karClient.call(service, path, body);
+		Response resp = karClient.callPost(service, path, body);
 		return toValue(resp);
 	}
 
 	/**
-	 * aynchronous service invocation
+	 * Aynchronous service invocation with eventual access to the result of the invocation
 	 *
 	 * @param service The name of the service to invoke.
 	 * @param path    The service endpoint to invoke.
 	 * @param body    The request body with which to invoke the service endpoint.
-	 * @return The result returned by the target service.
+	 * @return A CompletionStage containing the result of invoking the target service.
 	 */
 	public static CompletionStage<Object> callAsync(String service, String path, JsonValue body) {
-
-		return karClient.callAsync(service, path, body).thenApply(response -> toValue(response));
+		return karClient.callAsyncPut(service, path, body).thenApply(response -> toValue(response));
 	}
 
 	/**
@@ -229,7 +418,7 @@ public class Kar {
 	}
 
 	/**
-	 * Asynchronous actor invocation
+	 * Asynchronous actor invocation; returns as soon as the invocation has been initiated.
 	 *
 	 * @param actor The target actor.
 	 * @param path  The actor method to invoke.
@@ -279,12 +468,12 @@ public class Kar {
 	}
 
 	/**
-	 * Asynchronous actor invocation where the invoked method will execute in a new session.
+	 * Asynchronous actor invocation with eventual access to the result of the invocation.
 	 *
 	 * @param actor The target Actor.
 	 * @param path  The actor method to invoke.
 	 * @param args  The arguments with which to invoke the actor method.
-	 * @return The result of the invoked actor method.
+	 * @return A CompletionStage containing the result of invoking the target service.
 	 */
 	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
 		return karClient.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));

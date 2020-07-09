@@ -8,6 +8,9 @@ import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -19,7 +22,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
-import org.eclipse.microprofile.faulttolerance.Timeout; 
+import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 
@@ -38,26 +41,107 @@ public interface KarRest extends AutoCloseable {
 	 * Services
 	 */
 
-	// asynchronous service invocation, returns  returns (202, "OK")
+	// asynchronous service invocation, returns (202, "OK")
+	@DELETE
+	@Path("service/{service}/call/{path}")
+	@ClientHeaderParam(name="Pragma", value="async")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response tellDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@PATCH
+	@Path("service/{service}/call/{path}")
+	@ClientHeaderParam(name="Pragma", value="async")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response tellPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
 	@POST
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name="Pragma", value="async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tell(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response tellPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
+	@PUT
+	@Path("service/{service}/call/{path}")
+	@ClientHeaderParam(name="Pragma", value="async")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response tellPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
 
 	// synchronous service invocation, returns invocation result
+	@DELETE
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@GET
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callGet(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@HEAD
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callHead(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@OPTIONS
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callOptions(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
+	@PATCH
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response call(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response callPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
-	// asynchronous service invocation, returns invocation result
+	@PUT
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response callPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
+	// asynchronous service invocation, returns CompletionStage that will contain the eventual invocation result
+	@DELETE
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@GET
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncGet(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@HEAD
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncHead(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+
+	@OPTIONS
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncOptions(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
+	@PATCH
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response> callAsync(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public CompletionStage<Response>  callAsyncPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
+	@PUT
+	@Path("service/{service}/call/{path}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public CompletionStage<Response>  callAsyncPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
 
 	/*
 	 * Actors
