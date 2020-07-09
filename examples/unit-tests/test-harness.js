@@ -180,12 +180,6 @@ async function pubSubTests () {
   const a = actor.proxy('Foo', 456)
   let failure = false
 
-  const v = await call('myService', 'pubsub', 'topic1')
-  if (v !== 'OK') {
-    console.log('Failed: pubsub')
-    failure = true
-  }
-
   const v1 = await actor.call(a, 'pubsub', 'topic2')
   if (v1 !== 'OK') {
     console.log('Failed: pubsub')

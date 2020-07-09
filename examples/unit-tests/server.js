@@ -30,50 +30,6 @@ app.post('/shutdown', async (_reg, res) => {
   server.close(() => process.exit())
 })
 
-app.post('/pubsub', async (req, res) => {
-  const topic = req.body
-  const source = 'numServer'
-  const type = 'number'
-  const promise = new Promise(resolve => { success = resolve })
-
-  await subscribe(topic, 'accumulate') // subscribe service to topic
-
-  // Create event 1:
-  const e1 = cloudevents.event()
-    .type(type)
-    .source(source)
-    .id(1)
-    .data(1)
-  await publish(topic, e1)
-
-  // Create event 2:
-  const e2 = cloudevents.event()
-    .type(type)
-    .source(source)
-    .id(2)
-    .data(2)
-  await publish(topic, e2)
-
-  // Create event 3:
-  const e3 = cloudevents.event()
-    .type(type)
-    .source(source)
-    .id(3)
-    .data(3)
-  await publish(topic, e3)
-
-  await promise
-  await unsubscribe(req.body)
-  res.sendStatus(200)
-})
-
-app.post('/accumulate', (req, res) => {
-  const payload = req.body.data
-  count += payload
-  if (count >= 6) success()
-  res.sendStatus(200)
-})
-
 // example actor
 
 class Foo {
