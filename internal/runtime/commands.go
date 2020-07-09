@@ -197,21 +197,6 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	return callHelper(ctx, msg, false)
 }
 
-// Broadcast sends a message to all sidecars except for this one
-func Broadcast(ctx context.Context, path, payload, contentType string) {
-	for _, sidecar := range pubsub.Sidecars() {
-		if sidecar != config.ID { // send to all other sidecars
-			pubsub.Send(ctx, false, map[string]string{ // TODO log errors
-				"protocol":     "sidecar",
-				"sidecar":      sidecar,
-				"command":      "tell",
-				"path":         path,
-				"content-type": contentType,
-				"payload":      payload})
-		}
-	}
-}
-
 // helper methods to handle incoming messages
 // log ignored errors to logger.Error
 
@@ -595,6 +580,7 @@ func Subscribe(ctx context.Context, topic, options string) (string, error) {
 }
 
 // Migrate migrates an actor and associated reminders to a new sidecar
+// NOTE: This method is currently unused and not exposed via the KAR REST API.
 func Migrate(ctx context.Context, actor Actor, sidecar string) error {
 	e, fresh, err := actor.acquire(ctx, "exclusive")
 	if err != nil {

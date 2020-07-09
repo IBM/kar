@@ -227,29 +227,10 @@ export namespace sys {
   export function h2c (app: Application): Server;
 
   /**
-   * Logging middleware
-   * TODO: proper type & documentation
-   */
-  export const logger: any;
-
-  /**
    * Error handling middleware
    * TODO: proper type & documentation
    */
   export const errorHandler: any;
-
-  /**
-   * JSON parser
-   * TODO: proper type & documentation
-   */
-  export const jsonParser: any;
-
-  /**
-  * Broadcast a message to all sidecars except for ours.
-  * @param path the endpoint to invoke in each sidecar.
-  * @param body the request body to pass to `path` when invoking it.
-  */
-  export function broadcast (path: string, body: any): Promise<void>;
 
   /**
    * Kill this sidecar

@@ -158,8 +158,6 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-// const broadcast = (path, args) => post(`system/broadcast/${path}`, args, { 'Content-Type': 'application/json' })
-
 const shutdown = () => post('system/shutdown').then(() => agent.close())
 
 function publish (topic, event) {

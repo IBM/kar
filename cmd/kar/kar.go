@@ -121,11 +121,6 @@ func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	}
 }
 
-func broadcast(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	runtime.Broadcast(ctx, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"))
-	fmt.Fprint(w, "OK")
-}
-
 // swagger:route POST /v1/service/{service}/call/{path} services idServiceCall
 //
 // call
@@ -356,19 +351,6 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Add("Content-Type", reply.ContentType)
 		w.WriteHeader(reply.StatusCode)
 		fmt.Fprint(w, reply.Payload)
-	}
-}
-
-func migrate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := runtime.Migrate(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, "")
-	if err != nil {
-		if err == ctx.Err() {
-			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-		} else {
-			http.Error(w, fmt.Sprintf("failed to migrate actor: %v", err), http.StatusInternalServerError)
-		}
-	} else {
-		fmt.Fprint(w, "OK")
 	}
 }
 
@@ -908,12 +890,10 @@ func server(listener net.Listener) http.Server {
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
-	router.POST(base+"/event/:topic/subscribe", subscribe)
-	router.POST(base+"/event/:topic/unsubscribe", unsubscribe)
 
 	// deprecated
-	router.POST(base+"/system/broadcast/*path", broadcast)
-	router.POST(base+"/actor/:type/:id/migrate", migrate)
+	router.POST(base+"/event/:topic/subscribe", subscribe)
+	router.POST(base+"/event/:topic/unsubscribe", unsubscribe)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
