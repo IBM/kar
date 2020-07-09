@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.ibm.com/solsa/kar.git/internal/pubsub"
@@ -110,19 +111,28 @@ func (c sources) load(actor Actor, id, key string, m map[string]string) (binding
 }
 
 func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
-	contentType := s.ContentType
-	if contentType == "" {
-		contentType = "application/cloudevents+json"
-	}
+	jsonType := s.ContentType == "" || // default is "application/cloudevents+json"
+		s.ContentType == "text/json" ||
+		s.ContentType == "application/json" ||
+		strings.HasSuffix(s.ContentType, "+json")
 	group := s.Group
 	if group == "" {
 		group = s.ID
 	}
 
 	f := func(msg pubsub.Message) {
-		err := TellActor(ctx, s.Actor, s.Path, "["+string(msg.Value)+"]", contentType, "POST", false)
+		arg := string(msg.Value)
+		if !jsonType { // encode event payload as json string
+			buf, err := json.Marshal(string(msg.Value))
+			if err != nil {
+				logger.Error("failed to marshall event from topic %s: %v", s.Topic, err)
+				return
+			}
+			arg = string(buf)
+		}
+		err := TellActor(ctx, s.Actor, s.Path, "["+arg+"]", "application/kar+json", "POST", false)
 		if err != nil {
-			logger.Error("failed to post event to %s: %v", s.Path, err)
+			logger.Error("failed to post event from topic %s: %v", s.Topic, err)
 		} else {
 			msg.Mark()
 		}
