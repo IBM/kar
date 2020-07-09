@@ -6,7 +6,8 @@ public class ActorMethodNotFoundException extends ActorException {
 	public ActorMethodNotFoundException() {
 		super();
 	}
+
 	public ActorMethodNotFoundException(String errorMessage) {
-        super(errorMessage);
-    }
+		super(errorMessage);
+	}
 }

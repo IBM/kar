@@ -17,7 +17,7 @@ mvn clean install
 In one terminal start the server
 ```shell
 cd ./kar-actor-example
-kar -app actor -service dummy -actors dummy,dummy2,calculator mvn liberty:run
+kar -app example -actors sample,calculator mvn liberty:run
 ```
 
 Wait a few seconds until you see something similar to:
@@ -30,35 +30,34 @@ Wait a few seconds until you see something similar to:
 ### Use kar
 You can use the `kar` cli to invoke an actor method
 ```shell
-kar -app actor -invoke dummy dummyid canBeInvoked '{"number":10}'
+kar -app example -invoke sample abc canBeInvoked '{"number":10}'
 ```
 
 You should see output like:
 ```shell
-2020/06/26 11:09:36.397079 [STDOUT] {"value":{"number":12}}
+2020/06/26 11:09:36.397079 [STDOUT] {"value":{"number":11}}
 ```
 
 #### Use kar+curl (lower-level)
 You can use the `kar` cli to wrap a curl command that directly invokes the lower-level KAR REST API:
 ```shell
-kar -runtime_port 32123 -app actor curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/dummy/dummyid/call/canBeInvoked -d '[{ "number": 10}]'
+kar -runtime_port 32123 -app example curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/sample/abc/call/canBeInvoked -d '[{ "number": 10}]'
 ```
 
 You should see output like:
 ```shell
-2020/05/15 10:47:09 [STDOUT] {"value":{"number":12}}
+2020/05/15 10:47:09 [STDOUT] {"value":{"number":11}}
 ```
 
 #### Use Java example
 You can run a simple test Java application packaged with `kar-rest-client` that uses the KAR Java SDK to call an actor:
 
 ```shell
-$ cd ./sdk/java/kar-java/kar-rest-client/scripts/
-$ ./runKar.sh
+$ ../../../sdk/java/kar-java/kar-rest-client/scripts/runactor.sh
 ```
 You should see output like:
 ```shell
-2020/06/17 15:02:09.032753 [STDOUT] {"number":44}
+2020/06/17 15:02:09.032753 [STDOUT] {"number":43}
 ```
 
 ## Microprofile Open Tracing

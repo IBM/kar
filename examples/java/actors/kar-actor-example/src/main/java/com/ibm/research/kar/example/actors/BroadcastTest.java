@@ -11,14 +11,18 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
 import com.ibm.research.kar.actor.exceptions.ActorException;
 
+/**
+ * An actor to test the performance of broadcast communication patterns
+ */
 @Actor
-public class BroadcastTest extends ActorBoilerplate {
+public class BroadcastTest extends ActorSkeleton {
 
 	@Activate
 	public void init() {

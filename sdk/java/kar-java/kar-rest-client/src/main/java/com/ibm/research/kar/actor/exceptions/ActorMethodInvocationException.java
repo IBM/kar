@@ -6,7 +6,8 @@ public class ActorMethodInvocationException extends ActorException {
 	public ActorMethodInvocationException() {
 		super();
 	}
+
 	public ActorMethodInvocationException(String errorMessage) {
-        super(errorMessage);
-    }
+		super(errorMessage);
+	}
 }

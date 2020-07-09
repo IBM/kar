@@ -13,9 +13,8 @@ public class RunActor {
 
 	public static void main(String[] args) {
 		JsonObject params = Json.createObjectBuilder().add("number", 42).build();
-
-		ActorRef dummy = actorRef("dummy", "dummyid");
-		JsonValue result = actorCall(dummy, "canBeInvoked", params);
+		ActorRef a = actorRef("sample", "abc");
+		JsonValue result = actorCall(a, "canBeInvoked", params);
 		System.out.println(result);
 	}
 

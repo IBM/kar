@@ -14,14 +14,14 @@
 	</context-param>
 	<context-param>
 		<param-name>kar-actor-classes</param-name>
-		<param-value>com.ibm.research.kar.example.actors.Dummy,
-			com.ibm.research.kar.example.actors.Dummy2,
+		<param-value>
+      com.ibm.research.kar.example.actors.Sample,
 			com.ibm.research.kar.example.actors.Calculator,
 			com.ibm.research.kar.example.actors.TreeTest,
 			com.ibm.research.kar.example.actors.BroadcastTest</param-value>
 	</context-param>
 		<context-param>
 			<param-name>kar-actor-types</param-name>
-			<param-value>dummy, dummy2, calculator, treetest, broadcast</param-value>
+			<param-value>sample, calculator, treetest, broadcast</param-value>
 		</context-param>
 </web-app>

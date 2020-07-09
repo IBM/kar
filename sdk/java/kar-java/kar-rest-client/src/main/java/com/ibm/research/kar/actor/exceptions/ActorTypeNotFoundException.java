@@ -6,7 +6,8 @@ public class ActorTypeNotFoundException extends ActorException {
 	public ActorTypeNotFoundException() {
 		super();
 	}
+
 	public ActorTypeNotFoundException(String errorMessage) {
-        super(errorMessage);
-    }
+		super(errorMessage);
+	}
 }
