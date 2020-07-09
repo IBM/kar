@@ -487,6 +487,106 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events actors idActorSubscriptionCancelAll
+//
+// events
+//
+// ### Cancel all subscriptions
+//
+// This operation cancels all subscriptions for the actor instance specified in the path.
+// The number of subscriptions cancelled is returned as the result of the operation.
+//
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionCancelAllResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscriptionCancel
+//
+// events/id
+//
+// ### Cancel a subscription
+//
+// This operation cancels the subscription for the actor instance specified in the path.
+// If the subscription is successfully cancelled a `200` response with a body of `1` will be returned.
+// If the subscription is not found, a `404` response will be returned unless
+// the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+// is sent to true the `404` response will instead be a `200` with a body containing `0`.
+//
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionCancelResult
+//       404: response404
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events actors idActorSubscriptionGetAll
+//
+// events
+//
+// ### Get all subscriptions
+//
+// This operation returns all subscriptions for the actor instance specified in the path.
+//
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionGetAllResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscriptionGet
+//
+// events/id
+//
+// ### Get a subscription
+//
+// This operation returns the subscription for the actor instance specified in the path.
+// If there is no subscription with the id `subscriptionId` a `404` response will be returned
+// unless the boolean query parameter `nilOnAbsent` is set to `true`.
+// If `nilOnAbsent` is true the `404` response will be replaced with
+// a `200` response with a `nil` response body.
+//
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionGetResult
+//       404: response404
+//       500: response500
+//       503: response503
+//
+
+// swagger:route POST /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscribe
+//
+// events
+//
+// ### Subscribe to a topic
+//
+// This operation subscribes an actor instance to a topic.
+// If there is already a subscription for the target actor instance with the same subscriptionId,
+// that existing subscription will be updated based on the request body.
+// The operation will not return until after the actor instance is subscribed.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200
+//       500: response500
+//       503: response503
+//
 func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var action string
 	body := ""
@@ -496,6 +596,8 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		action = "get"
 		noa = r.FormValue("nilOnAbsent")
 	case "POST":
+		// FIXME: https://github.ibm.com/solsa/kar/issues/31
+		//        Should return a 404 if topic doesn't exist.
 		action = "set"
 		body = runtime.ReadAll(r)
 	case "DELETE":
@@ -763,6 +865,8 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // eventually be published to the targeted topic.
 //
 //     Schemes: http
+//     Consumes:
+//     - application
 //     Responses:
 //       200: response200
 //       500: response500
@@ -779,24 +883,8 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /v1/event/{topic}/subscribe events idEventSubscribe
-//
-// subscribe
-//
-// ### Subscribe to a topic
-//
-// Subscribe an application endpoint to be invoked when events are delivered to
-// the targeted `topic`.  The endpoint is described in the request body and
-// may be either a service endpoint or an actor method.
-//
-//     Schemes: http
-//     Responses:
-//       200: response200
-//       500: response500
-//
+// deprecated
 func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// FIXME: https://github.ibm.com/solsa/kar/issues/31
-	//        Should return a 404 if topic doesn't exist.
 	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
@@ -805,27 +893,8 @@ func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /v1/event/{topic}/unsubscribe events idEventUnsubscribe
-//
-// unsubscribe
-//
-// ### Unsubscribe from a topic
-//
-// Unsubscribe an application endpoint described by the request body from `topic`.
-// The operation may return before it actually completes, but upon
-// success it is guaranteed that the endpoint will eventually stop receive
-// events from the topic.
-//
-//     Schemes: http
-//     Consumes:
-//     - application/json
-//     Responses:
-//       200: response200
-//       500: response500
-//
+// deprecated
 func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// FIXME: https://github.ibm.com/solsa/kar/issues/31
-	//        Should return a 404 if topic doesn't exist.
 	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("unsubscribe error: %v", err), http.StatusInternalServerError)

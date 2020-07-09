@@ -40,58 +40,6 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
-  cloudeventWrapper:
-    properties:
-      data:
-        description: The event payload
-        type: object
-        x-go-name: Data
-      datacontenttype:
-        description: RFC-2046 encoding of data type
-        example: application/json
-        type: string
-        x-go-name: DataContentType
-      dataschema:
-        description: URI identifying the schema that `data` adheres to
-        format: uri
-        type: string
-        x-go-name: DataSchema
-      id:
-        description: An event identifier
-        type: string
-        x-go-name: ID
-      source:
-        description: A URI identifying the event source
-        format: uri
-        type: string
-        x-go-name: Source
-      specversion:
-        description: The version of the CloudEvent spec being used.
-        example: "1.0"
-        type: string
-        x-go-name: SpecVersion
-      subject:
-        description: Describes the subject of the event in the context of the event
-          producer
-        type: string
-        x-go-name: Subject
-      time:
-        description: Time when the event occurred
-        format: date-time
-        type: string
-        x-go-name: Time
-      type:
-        description: The type of the event
-        example: com.github.pull.create
-        type: string
-        x-go-name: Type
-    required:
-    - id
-    - source
-    - specversion
-    - type
-    type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a
       new reminder
@@ -125,16 +73,35 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+  source:
+    properties:
+      Actor:
+        $ref: '#/definitions/Actor'
+      ContentType:
+        type: string
+      Group:
+        type: string
+      ID:
+        type: string
+      OffsetOldest:
+        type: boolean
+      Path:
+        type: string
+      Topic:
+        type: string
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
 info:
   description: |-
     This document describes the RESTful API provided by the
     Kubernetes Application Runtime (KAR). It consists of
     five logical sets of sub-APIs that can be used by applications:
-    + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+    + **Actors**: APIs to invoke actor methods, access actor state, schedule
+    reminders, and subscribe to event sources.
     + **Callbacks**: APIs to await the response to an actor or service invocation.
-    + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
-    + **Services**: APIs to invoke service endpoints
-    + **System**: APIs for controlling the KAR runtime mesh
+    + **Events**: APIs to to publish to event sinks.
+    + **Services**: APIs to invoke service endpoints.
+    + **System**: APIs for controlling the KAR runtime mesh.
 
     The **Impl** set of endpoints is not intended for application use.
     It is used by KAR runtime components for internal communication.
@@ -276,6 +243,210 @@ paths:
       schemes:
       - http
       summary: call
+      tags:
+      - actors
+  /v1/actor/{actorType}/{actorId}/events:
+    delete:
+      description: |-
+        ### Cancel all subscriptions
+
+        This operation cancels all subscriptions for the actor instance specified in the path.
+        The number of subscriptions cancelled is returned as the result of the operation.
+      operationId: idActorSubscriptionCancelAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionCancelAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: events
+      tags:
+      - actors
+    get:
+      description: |-
+        ### Get all subscriptions
+
+        This operation returns all subscriptions for the actor instance specified in the path.
+      operationId: idActorSubscriptionGetAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionGetAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: events
+      tags:
+      - actors
+  /v1/actor/{actorType}/{actorId}/events/{subscriptionId}:
+    delete:
+      description: |-
+        ### Cancel a subscription
+
+        This operation cancels the subscription for the actor instance specified in the path.
+        If the subscription is successfully cancelled a `200` response with a body of `1` will be returned.
+        If the subscription is not found, a `404` response will be returned unless
+        the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+        is sent to true the `404` response will instead be a `200` with a body containing `0`.
+      operationId: idActorSubscriptionCancel
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific subscription being targeted
+        in: path
+        name: subscriptionID
+        required: true
+        type: string
+        x-go-name: SubscriptionID
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionCancelResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: events/id
+      tags:
+      - actors
+    get:
+      description: |-
+        ### Get a subscription
+
+        This operation returns the subscription for the actor instance specified in the path.
+        If there is no subscription with the id `subscriptionId` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`.
+        If `nilOnAbsent` is true the `404` response will be replaced with
+        a `200` response with a `nil` response body.
+      operationId: idActorSubscriptionGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific subscription being targeted
+        in: path
+        name: subscriptionID
+        required: true
+        type: string
+        x-go-name: SubscriptionID
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: events/id
+      tags:
+      - actors
+    post:
+      consumes:
+      - application/json
+      description: |-
+        ### Subscribe to a topic
+
+        This operation subscribes an actor instance to a topic.
+        If there is already a subscription for the target actor instance with the same subscriptionId,
+        that existing subscription will be updated based on the request body.
+        The operation will not return until after the actor instance is subscribed.
+      operationId: idActorSubscribe
+      parameters:
+      - description: The request body describes the subscription
+        in: body
+        name: Body
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: events
       tags:
       - actors
   /v1/actor/{actorType}/{actorId}/reminders:
@@ -741,6 +912,8 @@ paths:
       - callbacks
   /v1/event/{topic}/publish:
     post:
+      consumes:
+      - application
       description: |-
         ### Publish an event to a topic
 
@@ -755,11 +928,11 @@ paths:
         required: true
         type: string
         x-go-name: Topic
-      - description: A JSON value conforming to the CloudEvent specification
+      - description: An arbitrary request body to publish unchanged to the topic
         in: body
         name: Event
         schema:
-          $ref: '#/definitions/cloudeventWrapper'
+          type: object
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -770,22 +943,31 @@ paths:
       summary: publish
       tags:
       - events
-  /v1/event/{topic}/subscribe:
-    post:
+  /v1/service/{service}/call/{path}:
+    delete:
+      consumes:
+      - application
       description: |-
-        ### Subscribe to a topic
+        ### Invoke a service endpoint
 
-        Subscribe an application endpoint to be invoked when events are delivered to
-        the targeted `topic`.  The endpoint is described in the request body and
-        may be either a service endpoint or an actor method.
-      operationId: idEventSubscribe
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
       parameters:
-      - description: The topic name
+      - description: The service name
         in: path
-        name: topic
+        name: service
         required: true
         type: string
-        x-go-name: Topic
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
       - description: The target endpoint to be invoked by the operation
         example: an/arbitrary/valid/pathSegment
         in: path
@@ -793,101 +975,312 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - in: body
-        name: Body
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
         schema:
-          properties:
-            actorId:
-              description: The subscribing actor instance id
-              type: string
-              x-go-name: ActorID
-            actorType:
-              description: The subscribing actor type
-              type: string
-              x-go-name: ActorType
-            id:
-              description: |-
-                A optional unique id to use for this subscrition.
-                If not id is provided, the `topic` will be used as the id.
-              type: string
-              x-go-name: ID
-            oldest:
-              description: |-
-                Should the subscription start with the oldest available event or
-                only include events published after the subscription operation?
-              type: boolean
-              x-go-name: Oldest
-            path:
-              description: The target endpoint to which events will be delivered
-              example: an/arbitrary/valid/pathSegment
-              type: string
-              x-go-name: Path
-            service:
-              description: The subscribing service name
-              type: string
-              x-go-name: Service
-          required:
-          - path
           type: object
+      produces:
+      - application
       responses:
         "200":
-          $ref: '#/responses/response200'
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
         "500":
           $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
       schemes:
       - http
-      summary: subscribe
+      summary: call
       tags:
-      - events
-  /v1/event/{topic}/unsubscribe:
-    post:
+      - services
+    get:
       consumes:
-      - application/json
+      - application
       description: |-
-        �### Unsubscribe from a topic
+        ### Invoke a service endpoint
 
-        Unsubscribe an application endpoint described by the request body from `topic`.
-        The operation may return before it actually completes, but upon
-        success it is guaranteed that the endpoint will eventually stop receive
-        events from the topic.
-      operationId: idEventUnsubscribe
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
       parameters:
-      - description: The topic name
+      - description: The service name
         in: path
-        name: topic
+        name: service
         required: true
         type: string
-        x-go-name: Topic
-      - in: body
-        name: Body
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
         schema:
-          properties:
-            id:
-              description: |-
-                The id of the subscription to be removed.
-                If not id is provided, the `topic` will be used as the id.
-              type: string
-              x-go-name: ID
           type: object
+      produces:
+      - application
       responses:
         "200":
-          $ref: '#/responses/response200'
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
         "500":
           $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
       schemes:
       - http
-      summary: unsubscribe
+      summary: call
       tags:
-      - events
-  /v1/service/{service}/call/{path}:
+      - services
+    head:
+      consumes:
+      - application
+      description: |-
+        ### Invoke a service endpoint
+
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      produces:
+      - application
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    options:
+      consumes:
+      - application
+      description: |-
+        ### Invoke a service endpoint
+
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      produces:
+      - application
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    patch:
+      consumes:
+      - application
+      description: |-
+        ### Invoke a service endpoint
+
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      produces:
+      - application
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
     post:
       consumes:
       - application
       description: |-
         ### Invoke a service endpoint
 
-        Call executes a `POST` to the `path` endpoint of `service`.
-        The request body is passed through to the target endpoint.
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
+        The result of the call is the result of invoking the target service endpoint
+        unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceCall
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      produces:
+      - application
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    put:
+      consumes:
+      - application
+      description: |-
+        ### Invoke a service endpoint
+
+        Call executes a `OPTIONS` to the `path` endpoint of `service`.
         The result of the call is the result of invoking the target service endpoint
         unless the `async` or `promise` pragma header is specified.
       operationId: idServiceCall
@@ -1050,6 +1443,33 @@ responses:
           was created
         format: int64
         type: integer
+  response200SubscriptionCancelAllResult:
+    headers:
+      NumberCancelled:
+        description: The number of subscriptions that were actually cancelled
+        example: 3
+        format: int64
+        type: integer
+  response200SubscriptionCancelResult:
+    headers:
+      NumberCancelled:
+        description: Returns 1 if a subscription was cancelled, 0 if not found and
+          `nilOnError` was true
+        format: int64
+        type: integer
+  response200SubscriptionGetAllResult:
+    headers:
+      Body:
+        description: An array containing all matching subscriptions
+        items:
+          $ref: '#/definitions/source'
+        type: array
+  response200SubscriptionGetResult:
+    headers:
+      Body:
+        description: The subscription
+    schema:
+      $ref: '#/definitions/source'
   response202CallResult:
     description: Indicates that a non-blocking call has been accepted for eventual
       execution

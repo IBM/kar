@@ -20,11 +20,12 @@
 // This document describes the RESTful API provided by the
 // Kubernetes Application Runtime (KAR). It consists of
 // five logical sets of sub-APIs that can be used by applications:
-// + **Actors**: APIs to invoke actor methods, access actor state, and schedule reminders.
+// + **Actors**: APIs to invoke actor methods, access actor state, schedule
+// reminders, and subscribe to event sources.
 // + **Callbacks**: APIs to await the response to an actor or service invocation.
-// + **Events**: APIs to subscribe and unsubscribe from event sources and to publish to event sinks
-// + **Services**: APIs to invoke service endpoints
-// + **System**: APIs for controlling the KAR runtime mesh
+// + **Events**: APIs to to publish to event sinks.
+// + **Services**: APIs to invoke service endpoints.
+// + **System**: APIs for controlling the KAR runtime mesh.
 //
 // The **Impl** set of endpoints is not intended for application use.
 // It is used by KAR runtime components for internal communication.
@@ -37,8 +38,6 @@
 //
 // swagger:meta
 package runtime
-
-import "time"
 
 /*******************************************************************
  * Swagger specification for language-level actor runtime implementation
@@ -106,6 +105,11 @@ func dummy3() {}
 // swagger:parameters idActorReminderSchedule
 // swagger:parameters idActorReminderCancel
 // swagger:parameters idActorReminderCancelAll
+// swagger:parameters idActorSubscriptionGet
+// swagger:parameters idActorSubscriptionGetAll
+// swagger:parameters idActorSubscriptionSchedule
+// swagger:parameters idActorSubscriptionCancel
+// swagger:parameters idActorSubscriptionCancelAll
 // swagger:parameters idActorStateDelete
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
@@ -139,8 +143,6 @@ type asyncParam struct {
 }
 
 // swagger:parameters idEventPublish
-// swagger:parameters idEventSubscribe
-// swagger:parameters idEventUnsubscribe
 type topicParam struct {
 	// The topic name
 	// in:path
@@ -149,7 +151,6 @@ type topicParam struct {
 
 // swagger:parameters idActorCall
 // swagger:parameters idServiceCall
-// swagger:parameters idEventSubscribe
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path
@@ -181,6 +182,21 @@ type reminderScheduleParamWrapper struct {
 	Body scheduleReminderPayload
 }
 
+// swagger:parameters idActorSubscriptionGet
+// swagger:parameters idActorSubscriptionCancel
+type subscriptionIDParam struct {
+	// The id of the specific subscription being targeted
+	// in:path
+	SubscriptionID string `json:"subscriptionID"`
+}
+
+// swagger:parameters idActorSubscribe
+type subscriptionParamWrapper struct {
+	// The request body describes the subscription
+	// in:body
+	Body map[string]string
+}
+
 // swagger:parameters idAwait
 type awaitParameter struct {
 	// The request id
@@ -206,6 +222,8 @@ type actorCallRequestBody struct {
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorReminderCancel
 // swagger:parameters idActorReminderGet
+// swagger:parameters idActorSubscriptionCancel
+// swagger:parameters idActorSubscriptionGet
 type actorStateGetParamWrapper struct {
 	// Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
 	// in:query
@@ -213,84 +231,11 @@ type actorStateGetParamWrapper struct {
 	ErrorOnAbsent bool `json:"nilOnAbsent"`
 }
 
-type cloudeventWrapper struct {
-	// An event identifier
-	// required:true
-	ID string `json:"id"`
-	// A URI identifying the event source
-	// required:true
-	// swagger:strfmt uri
-	Source string `json:"source"`
-	// The version of the CloudEvent spec being used.
-	// required:true
-	// example: 1.0
-	SpecVersion string `json:"specversion"`
-	// The type of the event
-	// required:true
-	// example: com.github.pull.create
-	Type string `json:"type"`
-	// RFC-2046 encoding of data type
-	// required:false
-	// example: application/json
-	DataContentType string `json:"datacontenttype"`
-	// URI identifying the schema that `data` adheres to
-	// required: false
-	// swagger:strfmt uri
-	DataSchema string `json:"dataschema"`
-	// Describes the subject of the event in the context of the event producer
-	// required: false
-	Subject string `json:"subject"`
-	// Time when the event occurred
-	// required:false
-	Time time.Time `json:"time"`
-	// The event payload
-	Data interface{} `json:"data"`
-}
-
 // swagger:parameters idEventPublish
-type eventPublishRequestWrapper struct {
-	// A JSON value conforming to the CloudEvent specification
+type eventPublishRequestBody struct {
+	// An arbitrary request body to publish unchanged to the topic
 	// in:body
-	Event cloudeventWrapper
-}
-
-// swagger:parameters idEventSubscribe
-type eventSubscribeRequestWrapper struct {
-	// in:body
-	Body struct {
-		// A optional unique id to use for this subscrition.
-		// If not id is provided, the `topic` will be used as the id.
-		// required:false
-		ID string `json:"id"`
-		// The subscribing actor type
-		// required:false
-		ActorType string `json:"actorType"`
-		// The subscribing actor instance id
-		// required:false
-		ActorID string `json:"actorId"`
-		// The subscribing service name
-		// required:false
-		Service string `json:"service"`
-		// The target endpoint to which events will be delivered
-		// Example: an/arbitrary/valid/pathSegment
-		// required:true
-		Path string `json:"path"`
-		// Should the subscription start with the oldest available event or
-		// only include events published after the subscription operation?
-		// required:false
-		Oldest bool `json:"oldest"`
-	}
-}
-
-// swagger:parameters idEventUnsubscribe
-type eventUnsubscribeRequestWrapper struct {
-	// in:body
-	Body struct {
-		// The id of the subscription to be removed.
-		// If not id is provided, the `topic` will be used as the id.
-		// required: false
-		ID string `json:"id"`
-	}
+	Event interface{}
 }
 
 // swagger:parameters idActorStateSetMultiple
@@ -344,6 +289,31 @@ type response200ReminderGetAllResult struct {
 	// An array containing all matching reminders
 	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', targetTime: '2020-04-14T14:20:00Z', encodedData: '{"msg":"carpe diem"}' }]
 	Body []Reminder
+}
+
+// swagger:response response200SubscriptionCancelResult
+type response200SubscriptionCancelResult struct {
+	// Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true
+	NumberCancelled int
+}
+
+// swagger:response response200SubscriptionCancelAllResult
+type response200SubscriptionCancelAllResult struct {
+	// The number of subscriptions that were actually cancelled
+	// Example: 3
+	NumberCancelled int
+}
+
+// swagger:response response200SubscriptionGetResult
+type response200SubscriptionGetResult struct {
+	// The subscription
+	Body source
+}
+
+// swagger:response response200SubscriptionGetAllResult
+type response200SubscriptionGetAllResult struct {
+	// An array containing all matching subscriptions
+	Body []source
 }
 
 // swagger:response response200StateGetResult
