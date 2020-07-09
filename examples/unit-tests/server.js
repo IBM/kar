@@ -1,12 +1,8 @@
 const express = require('express')
-const { actor, publish, subscribe, unsubscribe, sys } = require('kar')
+const { actor, publish, sys } = require('kar')
 const cloudevents = require('cloudevents-sdk/v1')
 
 const app = express()
-
-// pubsub test
-let success
-let count = 0
 
 // parse arguments of service invocations
 app.use(express.json({ strict: false }))
