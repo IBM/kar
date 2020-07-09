@@ -37,6 +37,9 @@ func init() {
 		transport = t1
 	}
 	client = http.Client{Transport: transport} // TODO adjust timeout
+	if config.RequestTimeout >= 0 {
+		client.Timeout = config.RequestTimeout
+	}
 }
 
 // ReadAll converts the body of a request to a string
@@ -76,17 +79,38 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		}
 	}
 	var reply *Reply
+	b := backoff.NewExponentialBackOff()
+	if config.RequestTimeout >= 0 {
+		b.MaxElapsedTime = config.RequestTimeout
+	}
 	err = backoff.Retry(func() error {
 		var res *http.Response
-		res, err = client.Do(req) // TODO adjust timeout
+		res, err = client.Do(req)
 		if err != nil {
-			logger.Warning("failed to invoke %s: %v", msg["path"], err)
-			if err == ctx.Err() {
-				return backoff.Permanent(err)
+			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				return nil
+			} else {
+				logger.Warning("failed to invoke %s: %v", msg["path"], err)
+				if err == ctx.Err() {
+					return backoff.Permanent(err)
+				}
+				return err
 			}
-			return err
 		}
-		buf, _ := ioutil.ReadAll(res.Body) // TODO size limit?
+		buf, err := ioutil.ReadAll(res.Body) // TODO size limit?
+		if err != nil {
+			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
+				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				return nil
+			} else {
+				logger.Warning("failed to invoke %s: %v", msg["path"], err)
+				if err == ctx.Err() {
+					return backoff.Permanent(err)
+				}
+				return err
+			}
+		}
 		res.Body.Close()
 		if length, err := strconv.Atoi(res.Header.Get("Content-Length")); err == nil && len(buf) != length {
 			logger.Warning("failed to invoke %s: unexpected content length (%d != %d)", msg["path"], length, len(buf))
@@ -94,7 +118,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		}
 		reply = &Reply{StatusCode: res.StatusCode, Payload: string(buf), ContentType: res.Header.Get("Content-Type")}
 		return nil
-	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx)) // TODO adjust timeout
+	}, backoff.WithContext(b, ctx))
 	if ctx.Err() != nil {
 		CloseIdleConnections() // don't keep connection alive once ctx is cancelled
 	}

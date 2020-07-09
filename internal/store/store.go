@@ -172,6 +172,11 @@ func Dial() error {
 	if config.RedisPassword != "" {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
 	}
+	if config.RequestTimeout >= 0 {
+		redisOptions = append(redisOptions, redis.DialConnectTimeout(config.RequestTimeout))
+		redisOptions = append(redisOptions, redis.DialReadTimeout(config.RequestTimeout))
+		redisOptions = append(redisOptions, redis.DialWriteTimeout(config.RequestTimeout))
+	}
 	var err error
 	conn, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
 	return err

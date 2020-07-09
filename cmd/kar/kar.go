@@ -1022,6 +1022,7 @@ func main() {
 
 	runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 	appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
+	requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestTimeout.Milliseconds())
 	logger.Info("%s %s", runtimePort, appPort)
 
 	args := flag.Args()
@@ -1030,7 +1031,7 @@ func main() {
 		if config.Invoke {
 			exitCode = runtime.Invoke(ctx9, args)
 		} else {
-			exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort))
+			exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
 		}
 		cancel()
 	}

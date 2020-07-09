@@ -89,10 +89,14 @@ var (
 
 	// Hostname is the name of the host
 	Hostname string
+
+	// RequestTimeout is how long to wait in a Kafka/Redis/http call before timing out
+	// Time of 0s means apply default durations
+	RequestTimeout time.Duration
 )
 
 func init() {
-	var kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay string
+	var kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay, timeoutTime string
 	var err error
 
 	flag.StringVar(&AppName, "app", "", "The name of the application")
@@ -120,6 +124,7 @@ func init() {
 	flag.BoolVar(&Drain, "drain", false, "Drain the application messages and exit")
 	flag.BoolVar(&Invoke, "invoke", false, "Invoke <actor type> <actor id> <method> [<1st argument> [<2nd argument> [...]]]")
 	flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
+	flag.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
 
 	flag.Parse()
 
@@ -242,6 +247,11 @@ func init() {
 
 	if Invoke && len(flag.Args()) < 3 {
 		logger.Fatal("invoke expects at least three arguments")
+	}
+
+	RequestTimeout, err = time.ParseDuration(timeoutTime)
+	if err != nil {
+		logger.Fatal("error parsing timeout time %s", timeoutTime)
 	}
 }
 

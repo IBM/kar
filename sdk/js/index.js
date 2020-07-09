@@ -214,7 +214,6 @@ const errorHandler = [
 
 // h2c protocol wrapper
 const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
-
 /***************************************************
  * Start of Actor runtime implementation
  ***************************************************/
