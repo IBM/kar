@@ -17,11 +17,6 @@ import (
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
-type subscription struct {
-	cancel context.CancelFunc // to cancel subscription
-	closed <-chan struct{}
-}
-
 const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
 )
@@ -29,8 +24,6 @@ const (
 var (
 	// pending requests: map request uuid (string) to channel (chan Reply)
 	requests = sync.Map{}
-
-	subscriptions = sync.Map{}
 )
 
 // TellService sends a message to a service and does not wait for a reply
@@ -507,76 +500,6 @@ func ManageBindings(ctx context.Context) {
 			return
 		}
 	}
-}
-
-// Unsubscribe unsubscribes from topic
-func Unsubscribe(ctx context.Context, topic, options string) (string, error) {
-	var m map[string]string
-	if options != "" {
-		err := json.Unmarshal([]byte(options), &m)
-		if err != nil {
-			return "", err
-		}
-	}
-	id := m["id"]
-	if id == "" {
-		id = topic
-	}
-	if v, ok := subscriptions.Load(id); ok {
-		s := v.(subscription)
-		s.cancel()
-		<-s.closed
-		subscriptions.Delete(id)
-		return "OK", nil
-	}
-	return "", fmt.Errorf("no subscription with id %s", id)
-}
-
-// Subscribe posts each message on a topic to the specified path until cancelled
-func Subscribe(ctx context.Context, topic, options string) (string, error) {
-	var m map[string]string
-	if options != "" {
-		err := json.Unmarshal([]byte(options), &m)
-		if err != nil {
-			return "", err
-		}
-	}
-	id := m["id"]
-	if id == "" {
-		id = topic
-	}
-	path := m["path"]
-	contentType := m["contentType"]
-	if contentType == "" {
-		contentType = "application/cloudevents+json"
-	}
-	if v, ok := subscriptions.Load(id); ok {
-		s := v.(subscription)
-		s.cancel()
-		<-s.closed
-		subscriptions.Delete(id)
-	}
-	context, cancel := context.WithCancel(ctx)
-	f := func(msg pubsub.Message) {
-		reply, err := invoke(ctx, "POST", map[string]string{"path": path, "payload": string(msg.Value), "content-type": contentType})
-		msg.Mark()
-		if err != nil {
-			logger.Error("failed to post to %s: %v", path, err)
-		} else {
-			if reply.StatusCode >= http.StatusBadRequest {
-				logger.Error("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-			} else {
-				logger.Debug("subscriber returned status %v with body %s", reply.StatusCode, reply.Payload)
-			}
-		}
-	}
-	closed, err := pubsub.Subscribe(context, topic, id, &pubsub.Options{OffsetOldest: m["oldest"] != ""}, f)
-	if err != nil {
-		cancel()
-		return "", err
-	}
-	subscriptions.Store(id, subscription{cancel: cancel, closed: closed})
-	return "OK", nil
 }
 
 // Migrate migrates an actor and associated reminders to a new sidecar

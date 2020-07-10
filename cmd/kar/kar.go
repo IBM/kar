@@ -862,26 +862,6 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// deprecated
-func subscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := runtime.Subscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("subscribe error: %v", err), http.StatusInternalServerError)
-	} else {
-		fmt.Fprint(w, reply)
-	}
-}
-
-// deprecated
-func unsubscribe(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := runtime.Unsubscribe(ctx, ps.ByName("topic"), runtime.ReadAll(r))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("unsubscribe error: %v", err), http.StatusInternalServerError)
-	} else {
-		fmt.Fprint(w, reply)
-	}
-}
-
 // post handles a direct http request from a peer sidecar
 // TODO swagger
 func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -938,10 +918,6 @@ func server(listener net.Listener) http.Server {
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
-
-	// deprecated
-	router.POST(base+"/event/:topic/subscribe", subscribe)
-	router.POST(base+"/event/:topic/unsubscribe", unsubscribe)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
