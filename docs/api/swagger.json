@@ -343,6 +343,31 @@
         "operationId": "idActorSubscribe",
         "parameters": [
           {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
             "description": "The request body describes the subscription",
             "name": "Body",
             "in": "body",

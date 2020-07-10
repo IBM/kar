@@ -105,6 +105,7 @@ func dummy3() {}
 // swagger:parameters idActorReminderSchedule
 // swagger:parameters idActorReminderCancel
 // swagger:parameters idActorReminderCancelAll
+// swagger:parameters idActorSubscribe
 // swagger:parameters idActorSubscriptionGet
 // swagger:parameters idActorSubscriptionGetAll
 // swagger:parameters idActorSubscriptionSchedule
@@ -162,6 +163,7 @@ type topicParam struct {
 }
 
 // swagger:parameters idActorCall
+// swagger:parameters idActorSubscribe
 // swagger:parameters idServiceDelete
 // swagger:parameters idServiceGet
 // swagger:parameters idServiceHead
@@ -169,7 +171,6 @@ type topicParam struct {
 // swagger:parameters idServicePatch
 // swagger:parameters idServicePost
 // swagger:parameters idServicePut
-// swagger:parameters idEventSubscribe
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path

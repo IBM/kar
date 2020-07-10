@@ -428,6 +428,25 @@ paths:
         The operation will not return until after the actor instance is subscribed.
       operationId: idActorSubscribe
       parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
       - description: The request body describes the subscription
         in: body
         name: Body
