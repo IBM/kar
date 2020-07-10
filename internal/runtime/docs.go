@@ -124,7 +124,13 @@ type actorParam struct {
 	ActorID string `json:"actorId"`
 }
 
-// swagger:parameters idServiceCall
+// swagger:parameters idServiceDelete
+// swagger:parameters idServiceGet
+// swagger:parameters idServiceHead
+// swagger:parameters idServiceOptions
+// swagger:parameters idServicePatch
+// swagger:parameters idServicePost
+// swagger:parameters idServicePut
 type serviceParam struct {
 	// The service name
 	// in:path
@@ -132,7 +138,13 @@ type serviceParam struct {
 }
 
 // swagger:parameters idActorCall
-// swagger:parameters idServiceCall
+// swagger:parameters idServiceDelete
+// swagger:parameters idServiceGet
+// swagger:parameters idServiceHead
+// swagger:parameters idServiceOptions
+// swagger:parameters idServicePatch
+// swagger:parameters idServicePost
+// swagger:parameters idServicePut
 type asyncParam struct {
 	// Optionally specify the `async` pragma to make a non-blocking call.
 	// Optionally specify the `promise` pragma to make a non-blocking call and
@@ -150,7 +162,14 @@ type topicParam struct {
 }
 
 // swagger:parameters idActorCall
-// swagger:parameters idServiceCall
+// swagger:parameters idServiceDelete
+// swagger:parameters idServiceGet
+// swagger:parameters idServiceHead
+// swagger:parameters idServiceOptions
+// swagger:parameters idServicePatch
+// swagger:parameters idServicePost
+// swagger:parameters idServicePut
+// swagger:parameters idEventSubscribe
 type pathParam struct {
 	// The target endpoint to be invoked by the operation
 	// in:path
@@ -204,7 +223,10 @@ type awaitParameter struct {
 	Body string
 }
 
-// swagger:parameters idServiceCall
+// swagger:parameters idServiceOptions
+// swagger:parameters idServicePatch
+// swagger:parameters idServicePost
+// swagger:parameters idServicePut
 type endpointRequestBody struct {
 	// An arbitrary request body to be passed through unchanged to the target endpoint
 	// in:body
@@ -261,6 +283,13 @@ type success200 struct {
 // swagger:response response200CallResult
 type response200CallResult struct {
 	// The response body returned by the invoked endpoint
+	Body interface{} `json:"body"`
+}
+
+// The result of invoking the actor method
+// swagger:response response200CallActorResult
+type response200CallActorResult struct {
+	// The result returned by the actor method
 	Body interface{} `json:"body"`
 }
 

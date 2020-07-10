@@ -173,7 +173,7 @@ paths:
   /v1/actor/{actorType}/{actorId}/call/{path}:
     post:
       consumes:
-      - application
+      - application/kar+json
       description: |-
         ### Invoke an actor method
 
@@ -228,18 +228,18 @@ paths:
             type: object
           type: array
       produces:
-      - application
+      - application/kar+json
       responses:
         "200":
-          $ref: '#/responses/response200CallResult'
+          $ref: '#/responses/response200CallActorResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
           $ref: '#/responses/response503'
-        default:
-          $ref: '#/responses/responseGenericEndpointError'
       schemes:
       - http
       summary: call
@@ -945,15 +945,13 @@ paths:
       - events
   /v1/service/{service}/call/{path}:
     delete:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform a DELETE on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `DELETE` operation on the `path` endpoint of `service`.
+        The result of performing a DELETE on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceDelete
       parameters:
       - description: The service name
         in: path
@@ -975,19 +973,13 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1000,15 +992,13 @@ paths:
       tags:
       - services
     get:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform a GET on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `GET` operation on the `path` endpoint of `service`.
+        The result of performing a GET on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceGet
       parameters:
       - description: The service name
         in: path
@@ -1030,19 +1020,13 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1055,15 +1039,13 @@ paths:
       tags:
       - services
     head:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform a HEAD on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `HEAD` operation on the `path` endpoint of `service`.
+        The result of performing a HEAD on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceHead
       parameters:
       - description: The service name
         in: path
@@ -1085,19 +1067,13 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
-        in: body
-        name: TargetRequestBody
-        schema:
-          type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1110,15 +1086,14 @@ paths:
       tags:
       - services
     options:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform an OPTIONS on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute an `OPTIONS` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing an OPTIONS on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceOptions
       parameters:
       - description: The service name
         in: path
@@ -1146,13 +1121,13 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1165,15 +1140,14 @@ paths:
       tags:
       - services
     patch:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform a PATCH on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `PATCH` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a PATCH on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePatch
       parameters:
       - description: The service name
         in: path
@@ -1201,13 +1175,13 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1220,15 +1194,14 @@ paths:
       tags:
       - services
     post:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perform a POST on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `POST` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a POST on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePost
       parameters:
       - description: The service name
         in: path
@@ -1256,13 +1229,13 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1275,15 +1248,14 @@ paths:
       tags:
       - services
     put:
-      consumes:
-      - application
       description: |-
-        ### Invoke a service endpoint
+        ### Perfrom a PUT on a service endpoint
 
-        Call executes a `OPTIONS` to the `path` endpoint of `service`.
-        The result of the call is the result of invoking the target service endpoint
-        unless the `async` or `promise` pragma header is specified.
-      operationId: idServiceCall
+        Execute a `PUT` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a PUT on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePut
       parameters:
       - description: The service name
         in: path
@@ -1311,13 +1283,13 @@ paths:
         name: TargetRequestBody
         schema:
           type: object
-      produces:
-      - application
       responses:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1367,6 +1339,13 @@ responses:
         description: A success message
         example: OK
         type: string
+  response200CallActorResult:
+    description: The result of invoking the actor method
+    headers:
+      body:
+        description: The result returned by the actor method
+    schema:
+      type: object
   response200CallResult:
     description: The response body returned by the invoked endpoint
     headers:

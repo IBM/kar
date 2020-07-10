@@ -90,10 +90,10 @@
       "post": {
         "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.",
         "consumes": [
-          "application"
+          "application/kar+json"
         ],
         "produces": [
-          "application"
+          "application/kar+json"
         ],
         "schemes": [
           "http"
@@ -158,19 +158,19 @@
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/response200CallResult"
+            "$ref": "#/responses/response200CallActorResult"
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
           },
           "503": {
             "$ref": "#/responses/response503"
-          },
-          "default": {
-            "$ref": "#/responses/responseGenericEndpointError"
           }
         }
       }
@@ -1039,13 +1039,7 @@
     },
     "/v1/service/{service}/call/{path}": {
       "get": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform a GET on a service endpoint\n\nExecute a `GET` operation on the `path` endpoint of `service`.\nThe result of performing a GET on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1053,7 +1047,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServiceGet",
         "parameters": [
           {
             "type": "string",
@@ -1077,14 +1071,6 @@
             "name": "path",
             "in": "path",
             "required": true
-          },
-          {
-            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
-            "in": "body",
-            "schema": {
-              "type": "object"
-            }
           }
         ],
         "responses": {
@@ -1093,6 +1079,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1106,13 +1095,7 @@
         }
       },
       "put": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perfrom a PUT on a service endpoint\n\nExecute a `PUT` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a PUT on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1120,7 +1103,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServicePut",
         "parameters": [
           {
             "type": "string",
@@ -1160,6 +1143,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1173,13 +1159,7 @@
         }
       },
       "post": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform a POST on a service endpoint\n\nExecute a `POST` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a POST on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1187,7 +1167,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServicePost",
         "parameters": [
           {
             "type": "string",
@@ -1227,6 +1207,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1240,13 +1223,7 @@
         }
       },
       "delete": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform a DELETE on a service endpoint\n\nExecute a `DELETE` operation on the `path` endpoint of `service`.\nThe result of performing a DELETE on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1254,7 +1231,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServiceDelete",
         "parameters": [
           {
             "type": "string",
@@ -1278,14 +1255,6 @@
             "name": "path",
             "in": "path",
             "required": true
-          },
-          {
-            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
-            "in": "body",
-            "schema": {
-              "type": "object"
-            }
           }
         ],
         "responses": {
@@ -1294,6 +1263,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1307,13 +1279,7 @@
         }
       },
       "options": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform an OPTIONS on a service endpoint\n\nExecute an `OPTIONS` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing an OPTIONS on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1321,7 +1287,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServiceOptions",
         "parameters": [
           {
             "type": "string",
@@ -1361,6 +1327,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1374,13 +1343,7 @@
         }
       },
       "head": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform a HEAD on a service endpoint\n\nExecute a `HEAD` operation on the `path` endpoint of `service`.\nThe result of performing a HEAD on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1388,7 +1351,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServiceHead",
         "parameters": [
           {
             "type": "string",
@@ -1412,14 +1375,6 @@
             "name": "path",
             "in": "path",
             "required": true
-          },
-          {
-            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
-            "name": "TargetRequestBody",
-            "in": "body",
-            "schema": {
-              "type": "object"
-            }
           }
         ],
         "responses": {
@@ -1428,6 +1383,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1441,13 +1399,7 @@
         }
       },
       "patch": {
-        "description": "### Invoke a service endpoint\n\nCall executes a `OPTIONS` to the `path` endpoint of `service`.\nThe result of the call is the result of invoking the target service endpoint\nunless the `async` or `promise` pragma header is specified.",
-        "consumes": [
-          "application"
-        ],
-        "produces": [
-          "application"
-        ],
+        "description": "### Perform a PATCH on a service endpoint\n\nExecute a `PATCH` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a PATCH on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
         "schemes": [
           "http"
         ],
@@ -1455,7 +1407,7 @@
           "services"
         ],
         "summary": "call",
-        "operationId": "idServiceCall",
+        "operationId": "idServicePatch",
         "parameters": [
           {
             "type": "string",
@@ -1495,6 +1447,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1662,6 +1617,17 @@
           "type": "string",
           "example": "OK",
           "description": "A success message"
+        }
+      }
+    },
+    "response200CallActorResult": {
+      "description": "The result of invoking the actor method",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The result returned by the actor method"
         }
       }
     },

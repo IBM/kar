@@ -121,166 +121,145 @@ func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	}
 }
 
-// swagger:route POST /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route POST /v1/service/{service}/call/{path} services idServicePost
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perform a POST on a service endpoint
 //
-// Call executes a `POST` to the `path` endpoint of `service`.
+// Execute a `POST` operation on the `path` endpoint of `service`.
 // The request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// The result of performing a POST on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
 //
 
-// swagger:route GET /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route GET /v1/service/{service}/call/{path} services idServiceGet
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perform a GET on a service endpoint
 //
-// Call executes a `POST` to the `path` endpoint of `service`.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// Execute a `GET` operation on the `path` endpoint of `service`.
+// The result of performing a GET on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
 //
 
-// swagger:route HEAD /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route HEAD /v1/service/{service}/call/{path} services idServiceHead
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perform a HEAD on a service endpoint
 //
-// Call executes a `HEAD` to the `path` endpoint of `service`.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// Execute a `HEAD` operation on the `path` endpoint of `service`.
+// The result of performing a HEAD on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
 //
 
-// swagger:route PUT /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route PUT /v1/service/{service}/call/{path} services idServicePut
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perfrom a PUT on a service endpoint
 //
-// Call executes a `PUT` to the `path` endpoint of `service`.
+// Execute a `PUT` operation on the `path` endpoint of `service`.
 // The request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// The result of performing a PUT on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
 //
 
-// swagger:route PATCH /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route PATCH /v1/service/{service}/call/{path} services idServicePatch
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perform a PATCH on a service endpoint
 //
-// Call executes a `PATCH` to the `path` endpoint of `service`.
+// Execute a `PATCH` operation on the `path` endpoint of `service`.
 // The request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// The result of performing a PATCH on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
 //
 
-// swagger:route DELETE /v1/service/{service}/call/{path} services idServiceCall
+// swagger:route DELETE /v1/service/{service}/call/{path} services idServiceDelete
 //
 // call
 //
-// ### Invoke a service endpoint
+// ### Perform a DELETE on a service endpoint
 //
-// Call executes a `DELETE` to the `path` endpoint of `service`.
+// Execute a `DELETE` operation on the `path` endpoint of `service`.
+// The result of performing a DELETE on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
+//
+//     Schemes: http
+//     Responses:
+//       200: response200CallResult
+//       202: response202CallResult
+//       404: response404
+//       500: response500
+//       503: response503
+//       default: responseGenericEndpointError
+//
+
+// swagger:route OPTIONS /v1/service/{service}/call/{path} services idServiceOptions
+//
+// call
+//
+// ### Perform an OPTIONS on a service endpoint
+//
+// Execute an `OPTIONS` operation on the `path` endpoint of `service`.
 // The request body is passed through to the target endpoint.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
+// The result of performing an OPTIONS on the target service endpoint
+// is returned unless the `async` or `promise` pragma header is specified.
 //
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
 //       202: response202CallResult
-//       500: response500
-//       503: response503
-//       default: responseGenericEndpointError
-//
-
-// swagger:route OPTIONS /v1/service/{service}/call/{path} services idServiceCall
-//
-// call
-//
-// ### Invoke a service endpoint
-//
-// Call executes a `OPTIONS` to the `path` endpoint of `service`.
-// The result of the call is the result of invoking the target service endpoint
-// unless the `async` or `promise` pragma header is specified.
-//
-//     Consumes:
-//     - application
-//     Produces:
-//     - application
-//     Schemes: http
-//     Responses:
-//       200: response200CallResult
-//       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
 //       default: responseGenericEndpointError
@@ -300,16 +279,16 @@ func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 // unless the `async` or `promise` pragma header is specified.
 //
 //     Consumes:
-//     - application
+//     - application/kar+json
 //     Produces:
-//     - application
+//     - application/kar+json
 //     Schemes: http
 //     Responses:
-//       200: response200CallResult
+//       200: response200CallActorResult
 //       202: response202CallResult
+//       404: response404
 //       500: response500
 //       503: response503
-//       default: responseGenericEndpointError
 //
 func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	direct := false
