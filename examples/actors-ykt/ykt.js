@@ -1,6 +1,9 @@
 const express = require('express')
 
-const { actor, sys } = require('kar')
+const { actor, sys, publish } = require('kar')
+
+// CloudEvents SDK for defining a structured HTTP request receiver.
+const cloudevents = require('cloudevents-sdk/v1')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -182,8 +185,19 @@ class Site {
       }
       console.log(status)
     }
-    // TODO: publish siteReport event to company channel via KAR pub-sub
-    // await publish('siteReport', status)
+
+    // Construct Cloud Event containing the status report.
+    var reportEvent = cloudevents.event()
+      .type('site.report')
+      .source('javascript.client')
+
+    // Add report data to event payload.
+    reportEvent.data(status)
+    console.log(`Send purchase event: ${reportEvent}`)
+
+    // Publish report as an event.
+    publish('siteReport', reportEvent)
+
     return status
   }
 

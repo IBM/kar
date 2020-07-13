@@ -1,0 +1,8 @@
+- from:
+    uri: "kafka:outputReport"
+    steps:
+      - process:
+          ref: "transformCloudEventToMessage"
+      - to: "slack:#kar-output"
+      - log:
+          message: "${body}"

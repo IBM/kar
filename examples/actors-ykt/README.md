@@ -263,6 +263,44 @@ Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh
 
 ```
 
+### Running the site report publication to Slack
+
+The site report can be aggregated and published to Slack. To do so, all site reports
+are published to the `siteReport` Kafka topic, an aggregator process will consume
+the reports and send update messages on the `outputReport` topic to Slack.
+
+To set up this part of the example a valid kamel installation is required as detailed
+in the camel-k example.
+
+To output to Slack export the Slack webhook to the following environment variable:
+
+```
+export SLACK_KAR_OUTPUT_WEBHOOK=<webhook-url>
+```
+
+To Slack component also needs to connect to KAR's Kafka instance. To do so, export the
+following environment variables to contain the cluster IP address of the service:
+
+```
+export KAR_KAFKA_CLUSTER_IP=X.X.X.X
+```
+
+Create the Kafka topics used by this part fo the example:
+
+```
+sh createTopics.sh
+```
+
+To start the Slack output process run:
+```
+./deploy/runOutputToSlack.sh
+```
+
+To run the aggregator process:
+```
+./deploy/runReportAggregator.sh
+```
+
 ## Running in Kubernetes
 
 There is a Helm chart to deploy the simulation on Kubernetes.  By
