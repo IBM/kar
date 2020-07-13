@@ -4,7 +4,7 @@
   ],
   "swagger": "2.0",
   "info": {
-    "description": "This document describes the RESTful API provided by the\nKubernetes Application Runtime (KAR). It consists of\nfive logical sets of sub-APIs that can be used by applications:\n+ **Actors**: APIs to invoke actor methods, access actor state, schedule\nreminders, and subscribe to event sources.\n+ **Callbacks**: APIs to await the response to an actor or service invocation.\n+ **Events**: APIs to to publish to event sinks.\n+ **Services**: APIs to invoke service endpoints.\n+ **System**: APIs for controlling the KAR runtime mesh.\n\nThe **Impl** set of endpoints is not intended for application use.\nIt is used by KAR runtime components for internal communication.\n\nAll operations are scoped to a single instance of an application.",
+    "description": "This document describes the RESTful APIs provided or assumed by the\nKubernetes Application Runtime (KAR). It consists of two sets of APIs:\n+ The **sidecar** APIs are implemented by the KAR sidecar.\n+ The **component** APIs are meant to be implemented by application components.\n\nThe **sidecar** APIs are divided into logical groups:\n+ **Actors**: APIs to invoke actor methods.\n+ **Services**: APIs to invoke service endpoints.\n+ **Callbacks**: APIs to await the response to an asynchronous actor or service invocation.\n+ **Events**: APIs to publish to event sinks or subscribe actors to event sources.\n+ **Reminders**: APIs to schedule future actor invocations.\n+ **State**: APIs to manage the persistent state of actors.\n+ **System**: APIs for controlling the KAR runtime mesh.\n\nThe **component** APIs are divided into logical groups:\n+ **Actor runtime**: APIs invoked by the sidecar to manage actor instances\nhosted by the component.",
     "title": "KAR",
     "version": "v1"
   },
@@ -17,7 +17,7 @@
           "http"
         ],
         "tags": [
-          "impl"
+          "actor-runtime"
         ],
         "summary": "actor allocation",
         "operationId": "idImplActorGet",
@@ -39,7 +39,7 @@
           "http"
         ],
         "tags": [
-          "impl"
+          "actor-runtime"
         ],
         "summary": "actor deallocation",
         "operationId": "idImplActorDelete",
@@ -69,7 +69,7 @@
           "http"
         ],
         "tags": [
-          "impl"
+          "actor-runtime"
         ],
         "summary": "actor invocation",
         "operationId": "idImplActorPost",
@@ -185,9 +185,9 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "events"
         ],
-        "summary": "events",
+        "summary": "subscriptions",
         "operationId": "idActorSubscriptionGetAll",
         "parameters": [
           {
@@ -228,9 +228,9 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "events"
         ],
-        "summary": "events",
+        "summary": "subscriptions",
         "operationId": "idActorSubscriptionCancelAll",
         "parameters": [
           {
@@ -273,9 +273,9 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "events"
         ],
-        "summary": "events/id",
+        "summary": "subscriptions/id",
         "operationId": "idActorSubscriptionGet",
         "parameters": [
           {
@@ -337,9 +337,9 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "events"
         ],
-        "summary": "events",
+        "summary": "subscriptions",
         "operationId": "idActorSubscribe",
         "parameters": [
           {
@@ -400,9 +400,9 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "events"
         ],
-        "summary": "events/id",
+        "summary": "subscriptions/id",
         "operationId": "idActorSubscriptionCancel",
         "parameters": [
           {
@@ -463,7 +463,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "reminders"
         ],
         "summary": "reminders",
         "operationId": "idActorReminderGetAll",
@@ -506,7 +506,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "reminders"
         ],
         "summary": "reminders",
         "operationId": "idActorReminderCancelAll",
@@ -551,7 +551,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "reminders"
         ],
         "summary": "reminders/id",
         "operationId": "idActorReminderGet",
@@ -615,7 +615,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "reminders"
         ],
         "summary": "reminders",
         "operationId": "idActorReminderSchedule",
@@ -666,7 +666,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "reminders"
         ],
         "summary": "reminders/id",
         "operationId": "idActorReminderCancel",
@@ -729,7 +729,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state",
         "operationId": "idActorStateGetAll",
@@ -772,7 +772,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state",
         "operationId": "idActorStateSetMultiple",
@@ -807,7 +807,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state",
         "operationId": "idActorStateDeleteAll",
@@ -852,7 +852,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state/key",
         "operationId": "idActorStateGet",
@@ -905,7 +905,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state/key",
         "operationId": "idActorStateSet",
@@ -945,7 +945,7 @@
           "http"
         ],
         "tags": [
-          "actors"
+          "state"
         ],
         "summary": "state/key",
         "operationId": "idActorStateDelete",
@@ -1853,5 +1853,25 @@
         }
       }
     }
-  }
+  },
+  "x-tagGroups": [
+    {
+      "name": "sidecar",
+      "tags": [
+        "actors",
+        "callbacks",
+        "events",
+        "actor-reminders",
+        "services",
+        "state",
+        "system"
+      ]
+    },
+    {
+      "name": "application component",
+      "tags": [
+        "actor-runtime"
+      ]
+    }
+  ]
 }

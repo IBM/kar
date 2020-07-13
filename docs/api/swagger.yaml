@@ -93,20 +93,23 @@ definitions:
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
 info:
   description: |-
-    This document describes the RESTful API provided by the
-    Kubernetes Application Runtime (KAR). It consists of
-    five logical sets of sub-APIs that can be used by applications:
-    + **Actors**: APIs to invoke actor methods, access actor state, schedule
-    reminders, and subscribe to event sources.
-    + **Callbacks**: APIs to await the response to an actor or service invocation.
-    + **Events**: APIs to to publish to event sinks.
+    This document describes the RESTful APIs provided or assumed by the
+    Kubernetes Application Runtime (KAR). It consists of two sets of APIs:
+    + The **sidecar** APIs are implemented by the KAR sidecar.
+    + The **application component** APIs are meant to be implemented by application components.
+
+    The **sidecar** APIs are divided into logical groups:
+    + **Actors**: APIs to invoke actor methods.
     + **Services**: APIs to invoke service endpoints.
+    + **Callbacks**: APIs to await the response to an asynchronous actor or service invocation.
+    + **Events**: APIs to publish to event sinks or subscribe actors to event sources.
+    + **Reminders**: APIs to schedule future actor invocations.
+    + **State**: APIs to manage the persistent state of actors.
     + **System**: APIs for controlling the KAR runtime mesh.
 
-    The **Impl** set of endpoints is not intended for application use.
-    It is used by KAR runtime components for internal communication.
-
-    All operations are scoped to a single instance of an application.
+    The **application component** APIs are divided into logical groups:
+    + **Actor runtime**: APIs invoked by the sidecar to manage actor instances
+    hosted by the application component.
   title: KAR
   version: v1
 paths:
@@ -128,7 +131,7 @@ paths:
       - http
       summary: actor deallocation
       tags:
-      - impl
+      - actor-runtime
     get:
       description: |-
         ### Allocate the language-level state for the specified actor instance
@@ -146,7 +149,7 @@ paths:
       - http
       summary: actor allocation
       tags:
-      - impl
+      - actor-runtime
   /impl/v1/actor/{type}/{id}/{session}/{method}:
     post:
       consumes:
@@ -169,7 +172,7 @@ paths:
       - http
       summary: actor invocation
       tags:
-      - impl
+      - actor-runtime
   /v1/actor/{actorType}/{actorId}/call/{path}:
     post:
       consumes:
@@ -277,9 +280,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: events
+      summary: subscriptions
       tags:
-      - actors
+      - events
     get:
       description: |-
         ### Get all subscriptions
@@ -310,9 +313,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: events
+      summary: subscriptions
       tags:
-      - actors
+      - events
   /v1/actor/{actorType}/{actorId}/events/{subscriptionId}:
     delete:
       description: |-
@@ -362,9 +365,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: events/id
+      summary: subscriptions/id
       tags:
-      - actors
+      - events
     get:
       description: |-
         ### Get a subscription
@@ -413,9 +416,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: events/id
+      summary: subscriptions/id
       tags:
-      - actors
+      - events
     post:
       consumes:
       - application/json
@@ -465,9 +468,9 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: events
+      summary: subscriptions
       tags:
-      - actors
+      - events
   /v1/actor/{actorType}/{actorId}/reminders:
     delete:
       description: |-
@@ -502,7 +505,7 @@ paths:
       - http
       summary: reminders
       tags:
-      - actors
+      - reminders
     get:
       description: |-
         ### Get all reminders
@@ -535,7 +538,7 @@ paths:
       - http
       summary: reminders
       tags:
-      - actors
+      - reminders
   /v1/actor/{actorType}/{actorId}/reminders/{reminderId}:
     delete:
       description: |-
@@ -587,7 +590,7 @@ paths:
       - http
       summary: reminders/id
       tags:
-      - actors
+      - reminders
     get:
       description: |-
         ### Get a reminder
@@ -638,7 +641,7 @@ paths:
       - http
       summary: reminders/id
       tags:
-      - actors
+      - reminders
     post:
       consumes:
       - application/json
@@ -682,7 +685,7 @@ paths:
       - http
       summary: reminders
       tags:
-      - actors
+      - reminders
   /v1/actor/{actorType}/{actorId}/state:
     delete:
       description: |-
@@ -715,7 +718,7 @@ paths:
       - http
       summary: state
       tags:
-      - actors
+      - state
     get:
       description: |-
         ### Get an actor's state
@@ -747,7 +750,7 @@ paths:
       - http
       summary: state
       tags:
-      - actors
+      - state
     post:
       consumes:
       - application/json
@@ -781,7 +784,7 @@ paths:
       - http
       summary: state
       tags:
-      - actors
+      - state
   /v1/actor/{actorType}/{actorId}/state/{key}:
     delete:
       description: |-
@@ -817,7 +820,7 @@ paths:
       - http
       summary: state/key
       tags:
-      - actors
+      - state
     get:
       description: |-
         ### Get a single entry of an actor's state
@@ -860,7 +863,7 @@ paths:
       - http
       summary: state/key
       tags:
-      - actors
+      - state
     put:
       consumes:
       - application/json
@@ -896,7 +899,7 @@ paths:
       - http
       summary: state/key
       tags:
-      - actors
+      - state
   /v1/await:
     post:
       consumes:
@@ -1508,3 +1511,16 @@ responses:
 schemes:
 - http
 swagger: "2.0"
+x-tagGroups:
+- name: sidecar
+  tags:
+  - actors
+  - callbacks
+  - events
+  - reminders
+  - services
+  - state
+  - system
+- name: application component
+  tags:
+  - actor-runtime

@@ -333,7 +333,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/reminders actors idActorReminderCancelAll
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/reminders reminders idActorReminderCancelAll
 //
 // reminders
 //
@@ -351,7 +351,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/reminders/{reminderId} actors idActorReminderCancel
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/reminders/{reminderId} reminders idActorReminderCancel
 //
 // reminders/id
 //
@@ -373,7 +373,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/reminders actors idActorReminderGetAll
+// swagger:route GET /v1/actor/{actorType}/{actorId}/reminders reminders idActorReminderGetAll
 //
 // reminders
 //
@@ -390,7 +390,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/reminders/{reminderId} actors idActorReminderGet
+// swagger:route GET /v1/actor/{actorType}/{actorId}/reminders/{reminderId} reminders idActorReminderGet
 //
 // reminders/id
 //
@@ -412,7 +412,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/reminders/{reminderId} actors idActorReminderSchedule
+// swagger:route POST /v1/actor/{actorType}/{actorId}/reminders/{reminderId} reminders idActorReminderSchedule
 //
 // reminders
 //
@@ -466,9 +466,9 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events actors idActorSubscriptionCancelAll
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionCancelAll
 //
-// events
+// subscriptions
 //
 // ### Cancel all subscriptions
 //
@@ -484,9 +484,9 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscriptionCancel
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscriptionCancel
 //
-// events/id
+// subscriptions/id
 //
 // ### Cancel a subscription
 //
@@ -506,9 +506,9 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/events actors idActorSubscriptionGetAll
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionGetAll
 //
-// events
+// subscriptions
 //
 // ### Get all subscriptions
 //
@@ -523,9 +523,9 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscriptionGet
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscriptionGet
 //
-// events/id
+// subscriptions/id
 //
 // ### Get a subscription
 //
@@ -545,9 +545,9 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/events/{subscriptionId} actors idActorSubscribe
+// swagger:route POST /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscribe
 //
-// events
+// subscriptions
 //
 // ### Subscribe to a topic
 //
@@ -604,7 +604,7 @@ func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
-// swagger:route PUT /v1/actor/{actorType}/{actorId}/state/{key} actors idActorStateSet
+// swagger:route PUT /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateSet
 //
 // state/key
 //
@@ -632,7 +632,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/state/{key} actors idActorStateGet
+// swagger:route GET /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateGet
 //
 // state/key
 //
@@ -667,7 +667,7 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key} actors idActorStateDelete
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateDelete
 //
 // state/key
 //
@@ -694,7 +694,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route GET /v1/actor/{actorType}/{actorId}/state actors idActorStateGetAll
+// swagger:route GET /v1/actor/{actorType}/{actorId}/state state idActorStateGetAll
 //
 // state
 //
@@ -728,7 +728,7 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/state actors idActorStateSetMultiple
+// swagger:route POST /v1/actor/{actorType}/{actorId}/state state idActorStateSetMultiple
 //
 // state
 //
@@ -774,7 +774,7 @@ func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-// swagger:route DELETE /v1/actor/{actorType}/{actorId}/state actors idActorStateDeleteAll
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/state state idActorStateDeleteAll
 //
 // state
 //

@@ -17,24 +17,41 @@
 
 // Package classification KAR
 //
-// This document describes the RESTful API provided by the
-// Kubernetes Application Runtime (KAR). It consists of
-// five logical sets of sub-APIs that can be used by applications:
-// + **Actors**: APIs to invoke actor methods, access actor state, schedule
-// reminders, and subscribe to event sources.
-// + **Callbacks**: APIs to await the response to an actor or service invocation.
-// + **Events**: APIs to to publish to event sinks.
+// This document describes the RESTful APIs provided or assumed by the
+// Kubernetes Application Runtime (KAR). It consists of two sets of APIs:
+// + The **sidecar** APIs are implemented by the KAR sidecar.
+// + The **application component** APIs are meant to be implemented by application components.
+//
+// The **sidecar** APIs are divided into logical groups:
+// + **Actors**: APIs to invoke actor methods.
 // + **Services**: APIs to invoke service endpoints.
+// + **Callbacks**: APIs to await the response to an asynchronous actor or service invocation.
+// + **Events**: APIs to publish to event sinks or subscribe actors to event sources.
+// + **Reminders**: APIs to schedule future actor invocations.
+// + **State**: APIs to manage the persistent state of actors.
 // + **System**: APIs for controlling the KAR runtime mesh.
 //
-// The **Impl** set of endpoints is not intended for application use.
-// It is used by KAR runtime components for internal communication.
-//
-// All operations are scoped to a single instance of an application.
+// The **application component** APIs are divided into logical groups:
+// + **Actor runtime**: APIs invoked by the sidecar to manage actor instances
+// hosted by the application component.
 //
 //     Schemes: http
 //     BasePath: /kar
 //     Version: v1
+//     Extensions:
+//     x-tagGroups:
+//     - name: sidecar
+//       tags:
+//       - actors
+//       - callbacks
+//       - events
+//       - reminders
+//       - services
+//       - state
+//       - system
+//     - name: application component
+//       tags:
+//       - actor-runtime
 //
 // swagger:meta
 package runtime
@@ -43,7 +60,7 @@ package runtime
  * Swagger specification for language-level actor runtime implementation
  *******************************************************************/
 
-// swagger:route GET /impl/v1/actor/{type}/{id} impl idImplActorGet
+// swagger:route GET /impl/v1/actor/{type}/{id} actor-runtime idImplActorGet
 //
 // actor allocation
 //
@@ -59,7 +76,7 @@ package runtime
 //
 func dummy1() {}
 
-// swagger:route DELETE /impl/v1/actor/{type}/{id} impl idImplActorDelete
+// swagger:route DELETE /impl/v1/actor/{type}/{id} actor-runtime idImplActorDelete
 //
 // actor deallocation
 //
@@ -75,7 +92,7 @@ func dummy1() {}
 //
 func dummy2() {}
 
-// swagger:route POST /impl/v1/actor/{type}/{id}/{session}/{method} impl idImplActorPost
+// swagger:route POST /impl/v1/actor/{type}/{id}/{session}/{method} actor-runtime idImplActorPost
 //
 // actor invocation
 //
