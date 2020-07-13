@@ -14,6 +14,9 @@ function rawFetch (path, options) {
   return new Promise((resolve, reject) => {
     const req = options.agent.request(obj)
     req.setEncoding('utf8')
+    if (Number(process.env.KAR_REQUEST_TIMEOUT) >= 0) {
+      req.setTimeout(Number(process.env.KAR_REQUEST_TIMEOUT))
+    }
     let ok = true
     let text = ''
     req.on('response', headers => { ok = headers[':status'] < 300 })
