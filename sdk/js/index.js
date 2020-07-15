@@ -5,18 +5,15 @@ const spdy = require('spdy')
 
 const session = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT || 3500}`)
 
-function rawFetch (path, options = {}) {
+// assumes utf8
+function rawFetch (path, { method, headers, body } = {}) {
   const obj = { ':path': path }
-  if (options.method) {
-    obj[':method'] = options.method
-  }
-  Object.assign(obj, options.headers)
+  if (method) obj[':method'] = method
+  Object.assign(obj, headers)
   return new Promise((resolve, reject) => {
     const req = session.request(obj)
     req.setEncoding('utf8')
-    if (Number(process.env.KAR_REQUEST_TIMEOUT) >= 0) {
-      req.setTimeout(Number(process.env.KAR_REQUEST_TIMEOUT))
-    }
+    if (Number(process.env.KAR_REQUEST_TIMEOUT) >= 0) req.setTimeout(Number(process.env.KAR_REQUEST_TIMEOUT))
     let text = ''
     const res = { ok: true, text: () => Promise.resolve(text) }
     req.on('response', headers => {
@@ -27,7 +24,7 @@ function rawFetch (path, options = {}) {
     req.on('data', s => { text += s })
     req.on('error', reject)
     req.on('end', () => resolve(res))
-    if (options.body) req.write(options.body, 'utf8')
+    if (body) req.write(body, 'utf8')
     req.end()
   })
 }
@@ -167,7 +164,7 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const shutdown = () => post('system/shutdown').then(() => session.close())
+const shutdown = () => post('system/shutdown').then(_ => session.close())
 
 function publish (topic, event) {
   // Ensure event is of the correct type.
@@ -206,7 +203,7 @@ function actorUnsubscribe (actor, topic, params = {}) {
 
 const errorHandler = [
   (err, req, res, next) => Promise.resolve()
-    .then(() => {
+    .then(_ => {
       err.stack += `\n    at <kar> ${req.originalUrl}` // add request url to stack trace
       const body = { error: true } // sanitize error object
       body.message = typeof err.message === 'string' ? err.message : typeof err === 'string' ? err : 'Internal Server Error'
@@ -233,9 +230,9 @@ function actorRuntime (actors) {
   // actor activation route
   router.get('/kar/impl/v1/actor/:type/:id', (req, res, next) => {
     const Actor = actors[req.params.type]
-    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
+    if (Actor == null) return res.status(404).type('text/plain').send(`no actor type ${req.params.type}`)
     if (table[req.params.type] && table[req.params.type][req.params.id]) {
-      return res.status(200).send('existing instance')
+      return res.status(200).type('text/plain').send('existing instance')
     }
     return Promise.resolve()
       .then(_ => {
@@ -254,9 +251,9 @@ function actorRuntime (actors) {
   // actor deactivation route
   router.delete('/kar/impl/v1/actor/:type/:id', (req, res, next) => {
     const Actor = actors[req.params.type]
-    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
-    const actor = table[req.params.type][req.params.id]
-    if (actor == null) return res.status(404).send(`no actor with type ${req.params.type} and id ${req.params.id}`)
+    if (Actor == null) return res.status(404).type('text/plain').send(`no actor type ${req.params.type}`)
+    const actor = (table[req.params.type] || {})[req.params.id]
+    if (actor == null) return res.status(404).type('text/plain').send(`no actor with type ${req.params.type} and id ${req.params.id}`)
     return Promise.resolve()
       .then(_ => { // run optional deactivate callback
         delete actor.kar.session
@@ -270,24 +267,20 @@ function actorRuntime (actors) {
   // method invocation route
   router.post('/kar/impl/v1/actor/:type/:id/:session/:method', (req, res, next) => {
     const Actor = actors[req.params.type]
-    if (Actor == null) return res.status(404).send(`no actor type ${req.params.type}`)
-    const actor = table[req.params.type][req.params.id]
-    if (actor == null) return res.status(404).send(`no actor with type ${req.params.type} and id ${req.params.id}`)
+    if (Actor == null) return res.status(404).type('text/plain').send(`no actor type ${req.params.type}`)
+    const actor = (table[req.params.type] || {})[req.params.id]
+    if (actor == null) return res.status(404).type('text/plain').send(`no actor with type ${req.params.type} and id ${req.params.id}`)
+    if (!(req.params.method in actor)) return res.status(404).type('text/plain').send(`no ${req.params.method} in actor with type ${req.params.type} and id ${req.params.id}`)
     return Promise.resolve()
       .then(_ => {
-        if (req.params.method in actor) {
-          // NOTE: session intentionally not cleared before return (could be nested call in same session)
-          actor.kar.session = req.params.session
-          if (typeof actor[req.params.method] === 'function') {
-            return actor[req.params.method](...req.body)
-          }
-          return actor[req.params.method]
-        }
-        throw new Error(`${req.params.method} is not defined on actor with type ${req.params.type} and id ${req.params.id}`)
+        // NOTE: session intentionally not cleared before return (could be nested call in same session)
+        actor.kar.session = req.params.session
+        if (typeof actor[req.params.method] === 'function') return actor[req.params.method](...req.body)
+        return actor[req.params.method]
       }) // invoke method on actor
       .then(value => res.json({ value })) // stringify invocation result
       .catch(next)
-  }) // delegate error handling to postprocessor
+  })
 
   router.use(errorHandler)
 
