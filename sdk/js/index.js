@@ -3,26 +3,30 @@ const http2 = require('http2')
 const morgan = require('morgan') // for logging http requests and responses
 const spdy = require('spdy')
 
-const agent = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT || 3500}`)
+const session = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT || 3500}`)
 
-function rawFetch (path, options) {
+function rawFetch (path, options = {}) {
   const obj = { ':path': path }
   if (options.method) {
     obj[':method'] = options.method
   }
   Object.assign(obj, options.headers)
   return new Promise((resolve, reject) => {
-    const req = options.agent.request(obj)
+    const req = session.request(obj)
     req.setEncoding('utf8')
     if (Number(process.env.KAR_REQUEST_TIMEOUT) >= 0) {
       req.setTimeout(Number(process.env.KAR_REQUEST_TIMEOUT))
     }
-    let ok = true
     let text = ''
-    req.on('response', headers => { ok = headers[':status'] < 300 })
+    const res = { ok: true, text: () => Promise.resolve(text) }
+    req.on('response', headers => {
+      res.headers = headers
+      res.status = headers[':status']
+      res.ok = headers[':status'] >= 200 && headers[':status'] < 300
+    })
     req.on('data', s => { text += s })
     req.on('error', reject)
-    req.on('end', () => resolve({ ok, text: () => Promise.resolve(text) }))
+    req.on('end', () => resolve(res))
     if (options.body) req.write(options.body, 'utf8')
     req.end()
   })
@@ -63,27 +67,27 @@ const parseActor = res => res.text().then(text => { // parse to string first
 
 // http post: json stringify request body, parse response body
 function post (api, body, headers) {
-  return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers, agent }).then(parse)
+  return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers }).then(parse)
 }
 
 // http post: json stringify request body, parse response body
 function postActor (api, body, headers) {
-  return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers, agent }).then(parseActor)
+  return fetch(url + api, { method: 'POST', body: JSON.stringify(body), headers }).then(parseActor)
 }
 
 // http put: json stringify request body, parse response body
 function put (api, body, headers) {
-  return fetch(url + api, { method: 'PUT', body: JSON.stringify(body), headers, agent }).then(parse)
+  return fetch(url + api, { method: 'PUT', body: JSON.stringify(body), headers }).then(parse)
 }
 
 // http get: parse response body
 function get (api) {
-  return fetch(url + api, { agent }).then(parse)
+  return fetch(url + api).then(parse)
 }
 
 // http del: parse response body
 function del (api) {
-  return fetch(url + api, { method: 'DELETE', agent }).then(parse)
+  return fetch(url + api, { method: 'DELETE' }).then(parse)
 }
 
 // check if string value is truthy
@@ -94,13 +98,15 @@ const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
  * API Documentation is located in index.d.ts
  ***************************************************/
 
+const invoke = (service, path, options) => fetch(url + `service/${service}/call/${path}`, options)
+
 const tell = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json', Pragma: 'async' })
 
 const call = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json' })
 
-const resolver = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' }, agent }).then(parse)
+const resolver = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' } }).then(parse)
 
-const resolverActor = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' }, agent }).then(parseActor)
+const resolverActor = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' } }).then(parseActor)
 
 function asyncCall (service, path, body) {
   return post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json', Pragma: 'promise' }).then(resolver)
@@ -161,7 +167,7 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const shutdown = () => post('system/shutdown').then(() => agent.close())
+const shutdown = () => post('system/shutdown').then(() => session.close())
 
 function publish (topic, event) {
   // Ensure event is of the correct type.
@@ -183,10 +189,6 @@ function publish (topic, event) {
 
   return post(`event/${topic}/publish`, payload)
 }
-
-const subscribe = (topic, path, opts) => post(`event/${topic}/subscribe`, Object.assign({ path: `/${path}` }, opts))
-
-const unsubscribe = (topic, opts) => post(`event/${topic}/unsubscribe`, opts)
 
 function actorSubscribe (actor, topic, path, params = {}) {
   const id = params.id || topic
@@ -298,12 +300,11 @@ function actorRuntime (actors) {
 
 // exports
 module.exports = {
+  invoke,
   tell,
   call,
   asyncCall,
   publish,
-  subscribe,
-  unsubscribe,
   actor: {
     proxy: actorProxy,
     tell: actorTell,
