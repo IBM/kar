@@ -12,27 +12,23 @@ class SiteReportManager {
   }
 
   async activate () {
-    console.log('Activate Stock Manager')
-    // TODO: Remove this, for dev only.
-    actor.state.removeAll(this)
     const state = await actor.state.getAll(this)
     this.counter = state.counter || 0
     this.sites = state.sites || {}
   }
 
   async deactivate () {
-    console.log('Deactivate Stock Manager')
     const state = {
       counter: this.counter,
       sites: this.sites
     }
-    console.log(state)
     await actor.state.setMultiple(this, state)
   }
 
   async manageReport (reportEvent) {
-    console.log(`New report event ${this.counter}`)
     var report = reportEvent.data
+    console.log(`Event ${this.counter}: ${JSON.stringify(report)}`)
+    // console.log(report)
 
     // Add report to Company records.
     var sites = this.sites

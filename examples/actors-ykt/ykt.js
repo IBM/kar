@@ -193,7 +193,7 @@ class Site {
 
     // Add report data to event payload.
     reportEvent.data(status)
-    console.log(`Send purchase event: ${reportEvent}`)
+    if (verbose) console.log(`Publish event: ${reportEvent}`)
 
     // Publish report as an event.
     publish('siteReport', reportEvent)

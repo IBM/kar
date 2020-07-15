@@ -4,6 +4,8 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
+const verbose = process.env.VERBOSE
+
 async function testTermination (failure) {
   if (failure) {
     console.log('FAILED; setting non-zero exit code')
@@ -30,6 +32,21 @@ function prettyPrintHistogram (header, bucketSizeInMS, histogram) {
   }
 }
 
+async function summaryReport (division) {
+  const summary = { onboarding: 0, home: 0, commuting: 0, working: 0, meeting: 0, coffee: 0, lunch: 0 }
+  for (const site of division) {
+    const sr = await actor.call(site.proxy, 'siteReport')
+    summary.onboarding += sr.onboarding || 0
+    summary.home += sr.home || 0
+    summary.commuting += sr.commuting || 0
+    summary.working += sr.working || 0
+    summary.meeting += sr.meeting || 0
+    summary.coffee += sr.coffee || 0
+    summary.lunch += sr.lunch || 0
+  }
+  return summary
+}
+
 async function main () {
   let failure = false
 
@@ -47,7 +64,7 @@ async function main () {
 
   for (const site of researchDivision) {
     await actor.call(site.proxy, 'resetDelayStats')
-    await actor.call(site.proxy, 'siteReport')
+    await actor.reminders.schedule(site.proxy, 'siteReport', { id: 'clientSiteReport', targetTime: new Date(Date.now() + 1000), period: '1s' })
     await actor.call(ibm, 'hire', Object.assign({ site: site.proxy.kar.id }, site.params))
   }
 
@@ -83,18 +100,8 @@ async function main () {
       prettyPrintHistogram('Tell Latency', bucketSizeInMS, summary.tellLatencies)
 
       break
-    } else {
-      const summary = { onboarding: 0, home: 0, commuting: 0, working: 0, meeting: 0, coffee: 0, lunch: 0 }
-      for (const site of researchDivision) {
-        const sr = await actor.call(site.proxy, 'siteReport')
-        summary.onboarding += sr.onboarding || 0
-        summary.home += sr.home || 0
-        summary.commuting += sr.commuting || 0
-        summary.working += sr.working || 0
-        summary.meeting += sr.meeting || 0
-        summary.coffee += sr.coffee || 0
-        summary.lunch += sr.lunch || 0
-      }
+    } else if (verbose) {
+      const summary = await summaryReport(researchDivision)
       console.log(summary)
     }
   }
