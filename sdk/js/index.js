@@ -48,17 +48,18 @@ const parse = res => res.text().then(text => { // parse to string first
 // parse actor response
 const parseActor = res => res.text().then(text => { // parse to string first
   if (!res.ok) throw new Error(text) // if error response return error string
+  let obj
   try { // try parsing to json object
-    const obj = JSON.parse(text)
-    if (obj.error) {
-      const err = new Error(obj.message)
-      err.stack = obj.stack
-      throw err
-    } else {
-      return obj.value
-    }
+    obj = JSON.parse(text)
   } catch (err) {
     throw new Error(text)
+  }
+  if (obj.error) {
+    const err = new Error(obj.message)
+    err.stack = obj.stack
+    throw err
+  } else {
+    return obj.value
   }
 })
 
