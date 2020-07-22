@@ -27,8 +27,9 @@ type actorEntry struct {
 }
 
 var (
-	actorTable       = sync.Map{} // actor table: Actor -> *actorEntry
-	errActorHasMoved = errors.New("actor has moved")
+	actorTable             = sync.Map{} // actor table: Actor -> *actorEntry
+	errActorHasMoved       = errors.New("actor has moved")
+	errActorAcquireTimeout = errors.New("timeout occured while acquiring actor")
 )
 
 // acquire locks the actor, session must be not be ""
@@ -61,6 +62,8 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				case <-busy: // wait
 				case <-ctx.Done():
 					return nil, false, ctx.Err()
+				case <-time.After(config.ActorTimeout):
+					return nil, false, errActorAcquireTimeout
 				}
 				// loop around
 				// no fairness issue trying to reacquire because we waited on busy

@@ -382,6 +382,15 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
 			err = pubsub.Send(ctx, false, msg) // forward
+		} else if err == errActorAcquireTimeout {
+			if msg["command"] == "call" {
+				logger.Debug("acquire %v timed out, aborting call %s", actor, msg["path"])
+				var reply *Reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				err = respond(ctx, msg, reply)
+			} else {
+				logger.Error("acquire %v timed out, aborting tell %s", actor, msg["path"])
+				err = nil
+			}
 		} else if err == nil {
 			if session == "reminder" { // do not activate actor
 				err = dispatch(ctx, cancel, msg)
