@@ -24,13 +24,15 @@ To pass an environment variable to the `kamel run` invocation use:
 
 ## Installing Camel K
 
-### Option 1: Installing from scratch (advanced)
-
 To run Camel K, the `kamel` executable is needed. The executable used in this example has been built from source to include the latest changes to camel-k trunk which are required for handling the dependencies.
 
 ```
-git clone git@github.com:apache/camel-k.git@5bb92cf0b8df25787a134bc478620252adddf10f
+git clone git@github.com:apache/camel-k.git
+cd camel-k
+git checkout 5bb92cf0b8df25787a134bc478620252adddf10f
 ```
+
+### Option 1: Installing from scratch (advanced)
 
 Make sure your system satisfies the Camel K dependencies detailed here: https://camel.apache.org/camel-k/latest/developers.html
 
@@ -74,13 +76,19 @@ Then build the `kamel` executable by running:
 make
 ```
 
+### Option 3: Use a pre-existing Camel K executable
+
+Camel K is written in Go and self-contained so one can reuse the executable obtained following Options 1 or 2 on another machine. This is the one built by us: https://ibm.box.com/s/meszq51n9reix4yecx6iy60k1e69k5e7
+
 ### Final installation step (regardless which option you used)
 
-To install Camel K run the following command:
+To install Camel K as part of your kind cluster run the following command:
 
 ```
 kamel install --registry=registry:5000 --registry-insecure
 ```
+
+This command assumes that the registry exists. The registry is created when invoking the `start-kind.sh` script.
 
 This will deploy a camel-k operator inside your kind cluster.
 
