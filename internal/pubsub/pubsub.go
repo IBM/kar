@@ -4,6 +4,7 @@ package pubsub
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
@@ -131,6 +132,56 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 		}
 	}
 	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+}
+
+
+// CreateTopic attempts to create the specified topic using the given parameters
+func CreateTopic(topic string, parameters string) error {
+	var params sarama.TopicDetail
+	var err error
+
+	if (parameters != "") {
+		err = json.Unmarshal([]byte(parameters), &params)
+		if err != nil {
+			logger.Debug("Error unmarshaling parameters to createTopic %v: %v", topic, err)
+			return err
+		}
+	}
+
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		return err
+	}
+
+	if (parameters == "") { // No parameters given, attempt default creation values
+		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+		if err != nil {
+			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
+		}
+	} else {
+		err = admin.CreateTopic(topic, &params, false)
+	}
+	if err != nil {
+		logger.Debug("failed to create Kafka topic %v: %v", topic, err)
+		return err
+	}
+	return nil
+}
+
+// DeleteTopic attempts to delete the specified topic
+func DeleteTopic(topic string) error {
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		return err
+	}
+	err = admin.DeleteTopic(topic)
+	if err != nil {
+		logger.Debug("failed to delete Kafka topic %v: %v", topic, err)
+		return err
+	}
+	return nil
 }
 
 // Purge deletes the application topic

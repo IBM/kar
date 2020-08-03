@@ -872,6 +872,58 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
+
+// swagger:route POST /v1/event/{topic} events idTopicCreate
+//
+// createTopic
+//
+// ### Creates given topic
+//
+// Parameters are specified in the body of the post, as stringified JSON.
+// No body passed causes a default creation.
+//
+//     Schemes: http
+//     Consumes:
+//     - application
+//     Responses:
+//       200: response200
+//       500: response500
+//
+func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	params := runtime.ReadAll(r)
+	err := pubsub.CreateTopic(ps.ByName("topic"), params)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err ), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, "OK")
+	}
+}
+
+
+// swagger:route DELETE /v1/event/{topic} events idTopicDelete
+//
+// deleteTopic
+//
+// ### Deletes given topic
+//
+// Deletes kafka topic specified in route.
+//
+//     Schemes: http
+//     Consumes:
+//     - application
+//     Responses:
+//       200: response200
+//       500: response500
+//
+func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	err := pubsub.DeleteTopic(ps.ByName("topic"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err ), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, "OK")
+	}
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
@@ -918,6 +970,8 @@ func server(listener net.Listener) http.Server {
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
+	router.POST(base+"/event/:topic/", createTopic)
+	router.DELETE(base+"/event/:topic/", deleteTopic)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
