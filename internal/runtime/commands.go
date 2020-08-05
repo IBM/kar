@@ -468,9 +468,7 @@ func Collect(ctx context.Context) {
 		case now := <-ticker.C:
 			select {
 			case lock <- struct{}{}:
-				logger.Debug("starting collection")
 				collect(ctx, now.Add(-config.ActorCollectorInterval))
-				logger.Debug("finishing collection")
 				<-lock
 			default: // skip this collection if collection is already in progress
 			}
