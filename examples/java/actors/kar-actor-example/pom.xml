@@ -13,8 +13,8 @@
 		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
+		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+		<version.java-compiler>11</version.java-compiler>
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
 		<version.microprofile>3.3</version.microprofile>
@@ -46,6 +46,14 @@
 	<build>
 		<finalName>${project.artifactId}</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.maven-compiler-plugin}</version>
+				<configuration>
+					<release>${version.java-compiler}</release>
+				</configuration>
+			</plugin>
 			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
 				<version>${version.maven-war-plugin}</version>

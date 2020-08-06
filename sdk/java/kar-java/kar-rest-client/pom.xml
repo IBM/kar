@@ -7,13 +7,13 @@
 	<version>1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<properties>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
 		<version.maven-jar-plugin>3.2.0</version.maven-jar-plugin>
 		<version.microprofile>3.3</version.microprofile>
 		<version.cxf-rt-rs-mp-client>3.3.6</version.cxf-rt-rs-mp-client>
 		<version.glassfish-json>1.1.4</version.glassfish-json>
 		<version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+		<version.java-compiler>11</version.java-compiler>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -53,6 +53,14 @@
 	<build>
 		<finalName>kar-rest-client</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.maven-compiler-plugin}</version>
+				<configuration>
+					<release>${version.java-compiler}</release>
+				</configuration>
+			</plugin>
 			<plugin>
 				<artifactId>maven-jar-plugin</artifactId>
 				<version>${version.maven-jar-plugin}</version>

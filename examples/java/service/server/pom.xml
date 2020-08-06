@@ -12,8 +12,6 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>1.8</maven.compiler.source>
-		<maven.compiler.target>1.8</maven.compiler.target>
 		<failOnMissingWebXml>false</failOnMissingWebXml>
 
 		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
@@ -25,6 +23,8 @@
 		<liberty.var.default.http.port>8080</liberty.var.default.http.port>
 		<liberty.var.default.https.port>8443</liberty.var.default.https.port>
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
+		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+		<version.java-compiler>11</version.java-compiler>
 	</properties>
 
 	<dependencies>
@@ -53,6 +53,14 @@
 	<build>
 		<finalName>${project.artifactId}</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${version.maven-compiler-plugin}</version>
+				<configuration>
+					<release>${version.java-compiler}</release>
+				</configuration>
+			</plugin>
 			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
 				<version>${version.maven-war-plugin}</version>
