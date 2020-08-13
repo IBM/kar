@@ -136,7 +136,6 @@ import com.ibm.research.kar.actor.KarSessionListener;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
-import com.ibm.research.kar.actor.annotations.LockPolicy;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor
