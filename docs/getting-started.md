@@ -20,6 +20,8 @@
 
 3. You will need the `helm` (Helm 3) cli installed locally.
 
+4. You will need the `s2i` (source-2-image) cli installed locally. See [these install options](https://github.com/openshift/source-to-image#installation).
+
 # Getting Started with KAR
 
 In the sections below, the sample commands are meant to be executed in
@@ -49,10 +51,10 @@ When deploying on `kind` you will be using locally built images
 for all KAR runtime components and examples. You do not need
 access to the IBM Cloud Container Registry when using kind.
 
-First, build your docker images and push them to kind's internal
-docker registry with:
+First, build the docker images and push them to a local
+registry that is accessible to kind with:
 ```shell
-make kindPushDev
+make dockerDev
 ```
 Next, deploy KAR in dev mode by doing:
 ```shell

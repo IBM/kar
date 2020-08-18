@@ -16,4 +16,4 @@ spec:
     image: {{ .Values.image }}
     env:
     - name: MAIN
-      value: unit-tests/test-harness.js
+      value: test-harness.js

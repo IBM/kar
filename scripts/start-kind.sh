@@ -36,14 +36,24 @@ fi
 # Boot cluster
 kind create cluster --config ${SCRIPTDIR}/kind/kind-cluster.yaml --name kind --image kindest/node:${KIND_NODE_TAG} --wait 10m || exit 1
 
+########
+# Begin script from https://kind.sigs.k8s.io/docs/user/local-registry/
+########
+
 # Connect the registry to the cluster network
 if [ "${running}" != 'true' ]; then
-  docker network connect kind registry
+  docker network connect kind "${reg_name}"
 fi
 
 for node in $(kind get nodes --name kind); do
   docker exec ${node} sh -c "echo $(docker inspect --format '{{.NetworkSettings.IPAddress }}' registry) registry >> /etc/hosts"
+  kubectl annotate node "${node}" "kind.x-k8s.io/registry=registry:5000";
 done
+
+########
+# End of script from https://kind.sigs.k8s.io/docs/user/local-registry/
+########
+
 
 echo "KIND cluster is running and reachable"
 kubectl get nodes

@@ -24,4 +24,4 @@ spec:
         image: {{ .Values.image }}
         env:
         - name: MAIN
-          value: unit-tests/server.js
+          value: server.js

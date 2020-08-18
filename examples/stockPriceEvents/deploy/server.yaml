@@ -11,7 +11,7 @@ spec:
   restartPolicy: Never
   containers:
   - name: stock-server
-    image: examples-js:dev
+    image: us.icr.io/research/kar-dev/examples/js/stock-prices
     env:
     - name: MAIN
-      value: stockPriceEvents/stock-server.js
+      value: stock-server.js

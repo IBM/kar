@@ -26,8 +26,7 @@ while [ -n "$1" ]; do
     case "$1" in
         -h|-help|--help) help="1"; break;;
         -d|-dev|--dev)
-            kartag="dev"
-            helmargs="$helmargs --set-string kar.injector.imageName=kar-injector --set-string kar.injector.sidecarImageName=kar"
+            helmargs="$helmargs --set-string kar.injector.imageName=registry:5000/kar-injector --set-string kar.injector.sidecarImageName=registry:5000/kar"
             icr="disabled"
             ;;
         -m|-managed|--managed)
@@ -67,7 +66,7 @@ where [options] includes:
     -m -managed <service-key> use managed EventStreams and Redis accessed via service-key
     -c -crkey <apikey.json>   apikey.json to read images from us.icr.io/research/kar-dev
     -s -set key=value         pass `--set key=value to `helm install kar`
-    -d -dev                   pass `-f kar-dev.yaml` to helm install kar`
+    -d -dev                   disable configuring access to the IBM Cloud Container Registry
     -r -release <version>     deploy a specific version of kar
 EOF
     exit 0

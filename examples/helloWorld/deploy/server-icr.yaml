@@ -10,7 +10,7 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: us.icr.io/research/kar-dev/examples-js:latest
+    image: us.icr.io/research/kar-dev/examples/js/hello-world
     env:
     - name: MAIN
-      value: helloWorld/server.js
+      value: server.js

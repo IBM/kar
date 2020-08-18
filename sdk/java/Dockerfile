@@ -1,7 +1,13 @@
 ARG KAR_BASE=us.icr.io/research/kar-dev/kar
 
 FROM $KAR_BASE as kar
-FROM node:12-alpine
+FROM adoptopenjdk/openjdk11:alpine
+
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+RUN apk add --update maven && apk update && apk upgrade
 
 # S2I setup
 COPY ./s2i/bin/ /s2i
@@ -11,8 +17,10 @@ LABEL io.openshift.s2i.scripts-url=image:///s2i
 RUN mkdir -p /kar/bin
 COPY --from=kar /kar/kar /kar/bin/kar
 
-WORKDIR /kar/sdk/js
+WORKDIR /kar/sdk/java
 
-COPY *.js *.json ./
+COPY kar-java ./kar-java
 
-RUN npm install --prod
+WORKDIR /kar/sdk/java/kar-java
+
+RUN mvn install

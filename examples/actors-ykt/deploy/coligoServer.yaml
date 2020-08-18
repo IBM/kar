@@ -13,7 +13,7 @@ spec:
       imagePullSecrets:
       - name: kar.ibm.com.image-pull
       containers:
-      - image: us.icr.io/research/kar-dev/examples-js
+      - image: us.icr.io/research/kar-dev/examples/js/actors-ykt
         name: user-container
         resources:
           limits:
@@ -22,7 +22,7 @@ spec:
             cpu: "2"
         env:
         - name: MAIN
-          value: actors-ykt/ykt.js
+          value: ykt.js
 
         - name: KAR_APP_PORT
           value: "8080"

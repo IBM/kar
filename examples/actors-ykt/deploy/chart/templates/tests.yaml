@@ -24,7 +24,7 @@ spec:
     image: {{ .Values.image }}
     env:
     - name: MAIN
-      value: actors-ykt/ykt-client.js
+      value: ykt-client.js
 {{ if .Values.localMode }}
     - name: KAR_LOCAL_MODE
       value: "true"

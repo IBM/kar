@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
   - name: stock-event-sender
-    image: examples-js:dev
+    image: us.icr.io/research/kar-dev/examples/js/stock-prices
     env:
     - name: MAIN
-      value: stockPriceEvents/stock-event-sender.js
+      value: stock-event-sender.js

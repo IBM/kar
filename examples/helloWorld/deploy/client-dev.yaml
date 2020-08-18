@@ -11,9 +11,11 @@ spec:
         kar.ibm.com/app: helloWorld
     spec:
       restartPolicy: OnFailure
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
       containers:
       - name: client
-        image: examples-js:dev
+        image: registry:5000/examples/js/hello-world
         env:
         - name: MAIN
-          value: helloWorld/client.js
+          value: client.js
