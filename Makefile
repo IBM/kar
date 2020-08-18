@@ -47,6 +47,12 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_STOCK)
 	docker push $(KAR_EXAMPLE_JS_TESTS)
 
+dockerBuildAndPush:
+	make dockerCore
+	make dockerExamples
+	make dockerPushCore
+	make dockerPushExamples
+
 dockerDev:
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerCore dockerExamples
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
