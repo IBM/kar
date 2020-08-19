@@ -15,7 +15,7 @@ ROOTDIR="$SCRIPTDIR/.."
 echo "Running KAR setup ...."
 cd $ROOTDIR
 $SCRIPTDIR/start-kind.sh
-make kindPushDev
+make dockerDev
 $SCRIPTDIR/kar-deploy.sh -dev
 
 echo "Building kar CLI"
