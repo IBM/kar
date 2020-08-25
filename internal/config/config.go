@@ -96,6 +96,14 @@ var (
 
 	// ActorTimeout is how long to wait on a busy actor before timing it out and returning the error.
 	ActorTimeout time.Duration
+
+	// OutputStyle is whether to print a human readable output, or return a JSON string of data.
+	// Currently only applies to calling system/information/
+	OutputStyle string
+
+	// Outputs information on running systems, like calling system/information/<Get>
+	// Currently supported: Sidecars
+	Get string
 )
 
 func init() {
@@ -129,6 +137,8 @@ func init() {
 	flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 	flag.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
 	flag.StringVar(&actorTimeoutTime, "actor_timeout", "2m", "Time to wait on busy actors before timing out")
+	flag.StringVar(&OutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting.")
+	flag.StringVar(&Get, "get", "", "Get <system>")
 
 	flag.Parse()
 
@@ -262,6 +272,8 @@ func init() {
 	if err != nil {
 		logger.Fatal("error parsing actor timeout time %s", actorTimeoutTime)
 	}
+
+	OutputStyle = strings.ToLower(OutputStyle)
 }
 
 func loadStringFromConfig(path string, file string) string {

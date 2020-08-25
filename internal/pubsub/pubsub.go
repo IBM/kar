@@ -6,8 +6,10 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Shopify/sarama"
@@ -182,6 +184,53 @@ func DeleteTopic(topic string) error {
 		return err
 	}
 	return nil
+}
+
+type sidecarData struct {
+	Partitions []int32 `json:"partitions"`
+	Address string `json:"address"`
+	Actors []string `json:"actors"`
+	Services []string `json:"services"`
+}
+
+func GetSidecars(format string) (string, error) {	
+	information := make(map[string]*sidecarData)
+
+	mu.RLock()
+	for sidecar, partitions := range routes {
+		information[sidecar] = &sidecarData{}
+		information[sidecar].Partitions = append(information[sidecar].Partitions, partitions...)
+	}
+	for actor, sidecars := range hosts {
+		for _, sidecar := range sidecars {
+			information[sidecar].Actors = append(information[sidecar].Actors, actor)
+		}
+	}
+	for service, sidecars := range replicas {
+		for _, sidecar := range sidecars {
+			information[sidecar].Services = append(information[sidecar].Services, service)
+		}
+	}
+	for sidecar, address := range addresses {
+		information[sidecar].Address = address
+	}
+	mu.RUnlock()
+
+	if (format == "json" || format == "application/json") {
+		m, err := json.Marshal(information)
+		if err != nil {
+			logger.Debug("Error marshaling sidecar information data: %v", err)
+			return "", err
+		}
+		return string(m), nil
+	}
+
+	var str strings.Builder
+	fmt.Fprint(&str, "\nSidecar\n : Actors\n : Services")
+	for sidecar, sidecarInfo := range information {
+		fmt.Fprintf(&str, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+	}
+	return str.String(), nil
 }
 
 // Purge deletes the application topic

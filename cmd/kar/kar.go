@@ -924,6 +924,21 @@ func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
+
+func getSidecars(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	format := "text/plain"
+	if (r.Header.Get("Accept") == "application/json") {
+		format = "application/json"
+	}
+	data, err := pubsub.GetSidecars(format)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to acquire information: %v", err), http.StatusInternalServerError)
+	} else {
+		w.Header().Add("Content-Type", format)
+		fmt.Fprint(w, data)
+	}
+}
+
 // server implements the HTTP server
 func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
@@ -967,6 +982,7 @@ func server(listener net.Listener) http.Server {
 	router.GET(base+"/system/health", health)
 	router.POST(base+"/system/shutdown", shutdown)
 	router.POST(base+"/system/post", post)
+	router.GET(base+"/system/information/sidecars", getSidecars)
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
@@ -1085,12 +1101,14 @@ func main() {
 
 	args := flag.Args()
 
-	if len(args) > 0 {
-		if config.Invoke {
-			exitCode = runtime.Invoke(ctx9, args)
-		} else {
-			exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
-		}
+	if config.Invoke {
+		exitCode = runtime.Invoke(ctx9, args)
+		cancel()
+	} else if (config.Get != "") {
+		exitCode = runtime.GetInformation(ctx9, args)
+		cancel()
+	} else if (len(args) > 0) {
+		exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
 		cancel()
 	}
 

@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.ibm.com/solsa/kar.git/internal/config"
+	"github.ibm.com/solsa/kar.git/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/pkg/logger"
 )
 
@@ -37,6 +40,26 @@ func Invoke(ctx context.Context, args []string) (exitCode int) {
 		log.Printf("[STDERR] %v", reply.Payload)
 	} else {
 		log.Printf("[STDOUT] %v", reply.Payload)
+	}
+	return
+}
+
+// Perform information methods
+func GetInformation(ctx context.Context, args []string) (exitCode int) {
+	option := strings.ToLower(config.Get)
+	switch option {
+	case "sidecar", "sidecars":
+		str, err := pubsub.GetSidecars(config.OutputStyle)
+		if err != nil {
+			logger.Error("error in Inform on %v: %v", option, err)
+			exitCode = 1
+			return
+		}
+		log.Printf(str)
+	default:
+		logger.Error("invalid argument <%v> to call Inform", option)
+		exitCode = 1
+		return
 	}
 	return
 }
