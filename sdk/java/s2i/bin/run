@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd /kar/app/java/$KAR_APP_LAUNCH_PATH
+cd /kar/app/src/$KAR_APP_LAUNCH_PATH
 
 if [ -z "$KAR_LOCAL_MODE" ]; then
     exec mvn liberty:run

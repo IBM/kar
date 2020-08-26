@@ -21,6 +21,10 @@ ROOTDIR="$SCRIPTDIR/../.."
 . $ROOTDIR/scripts/kar-kind-env.sh
 
 echo "Building Java KAR SDK"
+cd $ROOTDIR/sdk/java/kar-java
+mvn clean install
+
+echo "Building Java Actors sample application"
 cd $ROOTDIR/examples/java/actors
 mvn clean install
 

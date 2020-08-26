@@ -12,7 +12,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>../../../sdk/java/kar-java</module>
         <module>kar-actor-example</module>
     </modules>
 

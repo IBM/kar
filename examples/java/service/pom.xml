@@ -12,7 +12,7 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>../../../sdk/java/kar-java</module>
+        <module>com.ibm.research.kar/kar-java</module>
         <module>server</module>
         <module>client</module>
     </modules>

@@ -19,8 +19,6 @@ COPY --from=kar /kar/kar /kar/bin/kar
 
 WORKDIR /kar/sdk/java
 
-COPY kar-java ./kar-java
-
-WORKDIR /kar/sdk/java/kar-java
+COPY kar-java .
 
 RUN mvn install
