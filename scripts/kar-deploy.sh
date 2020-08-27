@@ -26,7 +26,7 @@ while [ -n "$1" ]; do
     case "$1" in
         -h|-help|--help) help="1"; break;;
         -d|-dev|--dev)
-            helmargs="$helmargs --set-string kar.injector.imageName=registry:5000/kar-injector --set-string kar.injector.sidecarImageName=registry:5000/kar"
+            helmargs="$helmargs --set-string kar.injector.imageName=localhost:5000/kar-injector --set-string kar.injector.sidecarImageName=localhost:5000/kar"
             icr="disabled"
             ;;
         -m|-managed|--managed)

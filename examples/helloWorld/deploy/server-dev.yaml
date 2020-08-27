@@ -10,7 +10,7 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: registry:5000/examples/js/hello-world
+    image: localhost:5000/examples/js/hello-world
     env:
     - name: MAIN
       value: server.js

@@ -46,8 +46,7 @@ if [ "${running}" != 'true' ]; then
 fi
 
 for node in $(kind get nodes --name kind); do
-  docker exec ${node} sh -c "echo $(docker inspect --format '{{.NetworkSettings.IPAddress }}' registry) registry >> /etc/hosts"
-  kubectl annotate node "${node}" "kind.x-k8s.io/registry=registry:5000";
+  kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:5000";
 done
 
 ########
