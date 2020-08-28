@@ -1,0 +1,15 @@
+#!/bin/sh
+#
+# The 'assemble-runtime' script installs the application artifacts into a runtime image
+#
+# This script assumes it is being executed as root.
+#
+# For more information refer to the documentation:
+#	https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
+#
+
+# s2i installs the artifacts with ownership 501:20; we need them to be 1001:0
+cd /config && chown -R default . && chgrp -R root .
+
+# Run Open Liberty configure script; doing this now reduces startup time of the output image
+cd / && su -s /opt/ol/helpers/build/configure.sh default

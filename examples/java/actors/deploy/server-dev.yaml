@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-actor-server
+  labels:
+    app: java-actors
+spec:
+  selector:
+    matchLabels:
+      app: java-actors
+  template:
+    metadata:
+      labels:
+        app: java-actors
+      annotations:
+        kar.ibm.com/app: example
+        kar.ibm.com/actors: sample,calculator
+        kar.ibm.com/appPort: "8080"
+    spec:
+      containers:
+      - name: actor-server
+        image: localhost:5000/examples/java/actors
+        ports:
+        - containerPort: 8080

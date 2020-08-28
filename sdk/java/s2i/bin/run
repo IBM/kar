@@ -1,9 +1,7 @@
 #!/bin/sh
 
-cd /kar/app/src/$KAR_APP_LAUNCH_PATH
-
 if [ -z "$KAR_LOCAL_MODE" ]; then
-    exec mvn liberty:run
+    exec /opt/ol/wlp/bin/server run defaultServer
 else
-    exec /kar/bin/kar -app $KAR_APP $KAR_EXTRA_ARGS mvn liberty:run
+    exec /kar/bin/kar -app $KAR_APP $KAR_EXTRA_ARGS /opt/ol/wlp/bin/server run defaultServer
 fi

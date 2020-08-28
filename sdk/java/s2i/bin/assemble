@@ -7,8 +7,8 @@
 #	https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
 #
 
-mkdir -p /kar/app/src
-cd /kar/app/src
+mkdir -p /kar/app
+cd /kar/app
 
 echo "---> Installing application source..."
 cp -Rf /tmp/src/. ./
