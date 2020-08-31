@@ -4,7 +4,7 @@ services:
 sudo: required
 
 go:
-  - 1.13
+  - 1.15.x
 
 before_install:
   - ./build/ci/setup.sh && ./scripts/start-kind.sh

@@ -1,5 +1,5 @@
 # Build KAR
-FROM golang:1.13 as builder
+FROM golang:1.15 as builder
 
 RUN mkdir -p $GOPATH/src/github.ibm.com/solsa/kar
 WORKDIR $GOPATH/src/github.ibm.com/solsa/kar
