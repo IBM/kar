@@ -1,5 +1,10 @@
 const express = require('express')
 
+if (!process.env.KAR_APP_PORT) {
+  console.error('KAR_APP_PORT must be set. Aborting.')
+  process.exit(1)
+}
+
 // create an express application
 const app = express()
 

@@ -1,6 +1,11 @@
 // retry http requests up to 10 times over 10s
 const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
 
+if (!process.env.KAR_RUNTIME_PORT) {
+  console.error('KAR_RUNTIME_PORT must be set. Aborting.')
+  process.exit(1)
+}
+
 // request url for a given KAR service and route on that service
 function url (service, route) {
   return `http://127.0.0.1:${process.env.KAR_RUNTIME_PORT}/kar/v1/service/${service}/call/${route}`

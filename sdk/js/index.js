@@ -3,7 +3,12 @@ const http2 = require('http2')
 const morgan = require('morgan') // for logging http requests and responses
 const spdy = require('spdy')
 
-const session = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT || 3500}`)
+if (!process.env.KAR_RUNTIME_PORT) {
+  console.error('KAR_RUNTIME_PORT must be set. Aborting.')
+  process.exit(1)
+}
+
+const session = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT}`)
 
 // assumes utf8
 function rawFetch (path, { method, headers, body } = {}) {
