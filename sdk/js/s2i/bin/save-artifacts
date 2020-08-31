@@ -9,5 +9,6 @@
 #
 cd /kar/app/src >/dev/null
 if [ -d node_modules ]; then
-    tar cf - node_modules
+    cd node_modules
+    tar cf - .
 fi

@@ -11,9 +11,9 @@ mkdir -p /kar/app/src
 cd /kar/app/src
 
 # Restore node_modules subdir from the previous build (if it exists).
-if [ "$(ls /tmp/artifacts/node_modules 2>/dev/null)" ]; then
+if [ "$(ls /tmp/artifacts 2>/dev/null)" ]; then
   echo "---> Restoring node_modules..."
-  mv /tmp/artifacts/node_modules /kar/app/src
+  mv /tmp/artifacts /kar/app/src/node_modules
 fi
 
 echo "---> Installing application source..."
