@@ -816,8 +816,10 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			if subkey == config.Separator {
 				m[key] = v
 			} else {
-				// FIXME: This is where we have to play with submaps
-				logger.Error("subkey get all not implemented; dropping value!!!")
+				if m[key] == nil {
+					m[key] = map[string]interface{}{}
+				}
+				(m[key].(map[string]interface{}))[subkey] = v
 			}
 
 		}
