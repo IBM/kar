@@ -71,7 +71,7 @@ async function actorTests () {
       v3.key2 !== 'abc123' ||
       v3.key3.field !== 'value' ||
       v3.key4 != null) {
-      console.log(`Failed: getAll ${v3}`)
+      console.log(`Failed: getAll ${JSON.stringify(v3)}`)
       failure = true
     }
   } catch (err) {
@@ -92,12 +92,27 @@ async function actorTests () {
       v3a.key3.field !== 'value' ||
       v3a.key4 != null ||
       v3a.key10.myData !== 1234) {
-      console.log(`Failed: getAll ${v3a}`)
+      console.log(`Failed: getAll ${JSON.stringify(v3a)}`)
       failure = true
     }
   } catch (err) {
     console.log(`Failed during validation of getAll after setMultiple: ${err}.`)
     console.log(`    value was ${v3a}`)
+    failure = true
+  }
+  await actor.state.setWithSubkey(a, 'famous', 'Turing', 'Alan')
+  await actor.state.setWithSubkey(a, 'famous', 'Allen', 'Fran')
+  await actor.state.setWithSubkey(a, 'famous', 'Knuth', 'Don')
+  const fa = await actor.state.get(a, 'famous', 'Allen')
+  const dk = await actor.state.get(a, 'famous', 'Knuth')
+  if (fa !== 'Fran' || dk !== 'Don') {
+    console.log(`Failed to look up famous people: ${fa} or ${dk}`)
+    failure = true
+  }
+  await actor.state.remove(a, 'famous', 'Knuth')
+  const dk2 = await actor.state.get(a, 'famous', 'Knuth')
+  if (dk2) {
+    console.log('Failed to remove Don Knuth from famous map')
     failure = true
   }
 
@@ -111,7 +126,7 @@ async function actorTests () {
   await actor.state.removeAll(a)
   const v5 = await actor.state.getAll(a)
   if (Object.keys(v5).length !== 0) {
-    console.log(`Failed to delete all keys: ${v5}`)
+    console.log(`Failed to delete all keys: ${JSON.stringify(v5)}`)
     failure = true
   }
 

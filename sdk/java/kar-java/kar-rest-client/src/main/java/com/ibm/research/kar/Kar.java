@@ -654,6 +654,38 @@ public class Kar {
 		return toInt(response);
 	}
 
+/* WIP
+	public static void actorMapPut(ActorRef actor, String mapName, String key, JsonValue value) {
+	}
+
+	public static JsonValue actorMapGet(ActorRef actor, String mapName, String key) {
+		return null;
+	}
+
+	public static JsonValue actorMapContainsKey(ActorRef actor, String mapName, String key) {
+		return null;
+	}
+
+	public static void actorMapRemove(ActorRef actor, String mapName, String key) {
+	}
+
+	public static int actorMapSize(ActorRef actor, String mapName) {
+		return 0;
+	}
+
+	public static void actorMapClear(ActorRef actor, String mapName) {
+	}
+
+	public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String mapName) {
+		return null;
+	}
+
+	public static void actorMapPutAll(ActorRef actor, String mapName, Map<String,JsonValue> map) {
+
+	}
+
+*/
+
 	/*
 	 * Events
 	 */

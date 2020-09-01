@@ -18,8 +18,7 @@ definitions:
     type: integer
     x-go-package: time
   Reminder:
-    description: Reminder describes a time-triggered asynchronous invocation of a
-      Path on an Actor
+    description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
     properties:
       Actor:
         $ref: '#/definitions/Actor'
@@ -41,8 +40,7 @@ definitions:
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
   scheduleReminderPayload:
-    description: ScheduleReminderPayload is the JSON request body for scheduling a
-      new reminder
+    description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
       data:
         description: |-
@@ -52,8 +50,7 @@ definitions:
         type: object
         x-go-name: Data
       path:
-        description: The path to invoke on the actor instance when the reminder is
-          fired
+        description: The path to invoke on the actor instance when the reminder is fired
         example: sayHello
         type: string
         x-go-name: Path
@@ -66,8 +63,7 @@ definitions:
         type: string
         x-go-name: Period
       targetTime:
-        description: The time at which the reminder should first fire, specified as
-          a string in an ISO-8601 compliant format
+        description: The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
         format: date-time
         type: string
         x-go-name: TargetTime
@@ -214,15 +210,13 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: Optionally specific the session to use when performing the call.  Enables
-          re-entrancy for nested actor calls.
+      - description: Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
         format: uuid
         in: query
         name: session
         type: string
         x-go-name: Session
-      - description: A possibly empty array containing the arguments with which to
-          invoke the target actor method.
+      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
         example: '[3, ''hello'', { msg: ''Greetings'' }]'
         in: body
         name: ActorMethodArguments
@@ -346,8 +340,7 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response
-          body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -397,8 +390,7 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response
-          body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -569,8 +561,7 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response
-          body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -620,8 +611,7 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response
-          body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -844,8 +834,7 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: Replace a REST-style `404` response with a `200` and nil response
-          body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -900,6 +889,76 @@ paths:
       summary: state/key
       tags:
       - state
+  /v1/actor/{actorType}/{actorId}/state/{key}/{subkey}:
+    delete:
+      description: |-
+        ### Remove a single entry in an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`, and `key`
+        will be updated by removing the entry for `key/subkey`.
+        The operation will not return until the state has been updated.
+        The result of the operation is `1` if an entry was actually removed and
+        `0` if there was no entry for `key`.
+      operationId: idActorStateSubkeyDelete
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200StateDeleteResult'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    get:
+      description: |-
+        ### Get a single entry of an actor's state
+
+        The `key/subkey` entry of the state of the actor instance indicated by `actorType` and `actorId`
+        will be returned as the response body.
+        If there is no entry for  `key/subkey` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`,
+        in which case a `200` reponse with a `nil` response body will be returned.
+      operationId: idActorStateSubkeyGet
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Update a single entry of a sub-map of an actor's state
+
+        The map state of the actor instance indicated by `actorType` and `actorId`
+        will be updated by setting `key`/`subkey` to contain the JSON request body.
+        The operation will not return until the state has been updated.
+        The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
+      operationId: idActorStateSubkeySet
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200StateSetResult'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
   /v1/await:
     post:
       consumes:
@@ -932,6 +991,44 @@ paths:
       summary: await
       tags:
       - callbacks
+  /v1/event/{topic}:
+    delete:
+      consumes:
+      - application
+      description: |-
+        ### Deletes given topic
+
+        Deletes kafka topic specified in route.
+      operationId: idTopicDelete
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: deleteTopic
+      tags:
+      - events
+    post:
+      consumes:
+      - application
+      description: |-
+        ### Creates given topic
+
+        Parameters are specified in the body of the post, as stringified JSON.
+        No body passed causes a default creation.
+      operationId: idTopicCreate
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: createTopic
+      tags:
+      - events
   /v1/event/{topic}/publish:
     post:
       consumes:
@@ -1137,8 +1234,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1191,8 +1287,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1245,8 +1340,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1299,8 +1393,7 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the
-          target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1385,19 +1478,14 @@ responses:
   response200ReminderCancelResult:
     headers:
       NumberCancelled:
-        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError`
-          was true
+        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true
         format: int64
         type: integer
   response200ReminderGetAllResult:
     headers:
       Body:
         description: An array containing all matching reminders
-        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
-          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
-          ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'',
-          path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe
-          diem"}'' }]'
+        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'', path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe diem"}'' }]'
         items:
           $ref: '#/definitions/Reminder'
         type: array
@@ -1405,9 +1493,7 @@ responses:
     headers:
       Body:
         description: The reminder
-        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
-          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
-          ''{"msg":"hello"}'' }'
+        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }'
     schema:
       $ref: '#/definitions/Reminder'
   response200StateDeleteResult:
@@ -1440,8 +1526,7 @@ responses:
   response200StateSetResult:
     headers:
       NumberCreated:
-        description: Returns 0 if an existing entry was updated and 1 if a new entry
-          was created
+        description: Returns 0 if an existing entry was updated and 1 if a new entry was created
         format: int64
         type: integer
   response200SubscriptionCancelAllResult:
@@ -1454,8 +1539,7 @@ responses:
   response200SubscriptionCancelResult:
     headers:
       NumberCancelled:
-        description: Returns 1 if a subscription was cancelled, 0 if not found and
-          `nilOnError` was true
+        description: Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true
         format: int64
         type: integer
   response200SubscriptionGetAllResult:
@@ -1472,8 +1556,7 @@ responses:
     schema:
       $ref: '#/definitions/source'
   response202CallResult:
-    description: Indicates that a non-blocking call has been accepted for eventual
-      execution
+    description: Indicates that a non-blocking call has been accepted for eventual execution
   response400:
     description: Response indicating a bad request
     headers:

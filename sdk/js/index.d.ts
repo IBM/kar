@@ -166,17 +166,27 @@ export namespace actor {
      * Get one value from an Actor's state
      * @param actor The Actor instance.
      * @param key The key to get from the instance's state
-     * @returns The value associated with `key`
+     * @param subkey The optional subkey to get from the instance's state
+     * @returns The value associated with `key` or `key/subkey`
      */
-    export function get (actor: Actor, key: string): Promise<any>;
+    export function get (actor: Actor, key: string, subkey: string?): Promise<any>;
 
     /**
      * Store one value to an Actor's state
      * @param actor The Actor instance.
-     * @param key The key to get from the instance's state
+     * @param key The key to update in the instance's state
      * @param value The value to store
      */
     export function set (actor: Actor, key: string, value: any): Promise<void>;
+
+    /**
+     * Store one value to an Actor's state
+     * @param actor The Actor instance.
+     * @param key The key to update in the instance's state
+     * @param subkey The optional subkey to update in the instance's state
+     * @param value The value to store
+     */
+    export function setWithSubkey (actor: Actor, key: string, subkey: string, value: any): Promise<void>;
 
     /**
      * Store multiple values to an Actor's state
@@ -189,8 +199,9 @@ export namespace actor {
      * Remove one value from an Actor's state
      * @param actor The Actor instance.
      * @param key The key to delete
+     * @param subkey The optional subkey to delete
      */
-    export function remove (actor: Actor, key: string): Promise<void>;
+    export function remove (actor: Actor, key: string, subkey: string?): Promise<void>;
 
     /**
      * Get all the key value pairs from an Actor's state

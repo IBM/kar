@@ -604,6 +604,14 @@ func stateKey(t, id string) string {
 	return "main" + config.Separator + "state" + config.Separator + t + config.Separator + id
 }
 
+func flatEntryKey(key string) string {
+	return key + config.Separator + config.Separator
+}
+
+func nestedEntryKey(key string, subkey string) string {
+	return key + config.Separator + subkey
+}
+
 // swagger:route PUT /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateSet
 //
 // state/key
@@ -624,8 +632,36 @@ func stateKey(t, id string) string {
 //       200: response200StateSetResult
 //       500: response500
 //
+
+// swagger:route PUT /v1/actor/{actorType}/{actorId}/state/{key}/{subkey} state idActorStateSubkeySet
+//
+// state/key/subkey
+//
+// ### Update a single entry of a sub-map of an actor's state
+//
+// The map state of the actor instance indicated by `actorType` and `actorId`
+// will be updated by setting `key`/`subkey` to contain the JSON request body.
+// The operation will not return until the state has been updated.
+// The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200StateSetResult
+//       500: response500
+//
 func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key"), runtime.ReadAll(r)); err != nil {
+	var mangledEntryKey string
+	if subkey := ps.ByName("subkey"); subkey != "" {
+		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
+	} else {
+		mangledEntryKey = flatEntryKey(ps.ByName("key"))
+	}
+
+	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, runtime.ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -652,8 +688,36 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       404: response404
 //       500: response500
 //
+
+// swagger:route GET /v1/actor/{actorType}/{actorId}/state/{key}/{subkey} state idActorStateSubkeyGet
+//
+// state/key/subkey
+//
+// ### Get a single entry of an actor's state
+//
+// The `key/subkey` entry of the state of the actor instance indicated by `actorType` and `actorId`
+// will be returned as the response body.
+// If there is no entry for  `key/subkey` a `404` response will be returned
+// unless the boolean query parameter `nilOnAbsent` is set to `true`,
+// in which case a `200` reponse with a `nil` response body will be returned.
+//
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200StateGetResult
+//       404: response404
+//       500: response500
+//
 func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err == store.ErrNil {
+	var mangledEntryKey string
+	if subkey := ps.ByName("subkey"); subkey != "" {
+		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
+	} else {
+		mangledEntryKey = flatEntryKey(ps.ByName("key"))
+	}
+
+	if reply, err := store.HGet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err == store.ErrNil {
 		if noa := r.FormValue("nilOnAbsent"); noa == "true" {
 			fmt.Fprint(w, reply)
 		} else {
@@ -686,8 +750,34 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200StateDeleteResult
 //       500: response500
 //
+
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key}/{subkey} state idActorStateSubkeyDelete
+//
+// state/key/subkey
+//
+// ### Remove a single entry in an actor's state
+//
+// The state of the actor instance indicated by `actorType` and `actorId`, and `key`
+// will be updated by removing the entry for `key/subkey`.
+// The operation will not return until the state has been updated.
+// The result of the operation is `1` if an entry was actually removed and
+// `0` if there was no entry for `key`.
+//
+//     Schemes: http
+//     Produces:
+//     - text/plain
+//     Responses:
+//       200: response200StateDeleteResult
+//       500: response500
+//
 func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), ps.ByName("key")); err != nil {
+	var mangledEntryKey string
+	if subkey := ps.ByName("subkey"); subkey != "" {
+		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
+	} else {
+		mangledEntryKey = flatEntryKey(ps.ByName("key"))
+	}
+	if reply, err := store.HDel(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
 		http.Error(w, fmt.Sprintf("HDEL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -720,7 +810,16 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		for i, s := range reply {
 			var v interface{}
 			json.Unmarshal([]byte(s), &v)
-			m[i] = v
+			splitKeys := strings.SplitN(i, config.Separator, 2)
+			key := splitKeys[0]
+			subkey := splitKeys[1]
+			if subkey == config.Separator {
+				m[key] = v
+			} else {
+				// FIXME: This is where we have to play with submaps
+				logger.Error("subkey get all not implemented; dropping value!!!")
+			}
+
 		}
 		b, _ := json.Marshal(m)
 		w.Header().Add("Content-Type", "application/json")
@@ -765,7 +864,7 @@ func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 			http.Error(w, fmt.Sprintf("Unable to re-serialize value %v", v), http.StatusInternalServerError)
 			return
 		}
-		m[i] = string(s)
+		m[flatEntryKey(i)] = string(s)
 	}
 	if reply, err := store.HSetMultiple(sk, m); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
@@ -872,7 +971,6 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-
 // swagger:route POST /v1/event/{topic} events idTopicCreate
 //
 // createTopic
@@ -893,12 +991,11 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	params := runtime.ReadAll(r)
 	err := pubsub.CreateTopic(ps.ByName("topic"), params)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err ), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, "OK")
 	}
 }
-
 
 // swagger:route DELETE /v1/event/{topic} events idTopicDelete
 //
@@ -918,16 +1015,15 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := pubsub.DeleteTopic(ps.ByName("topic"))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err ), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, "OK")
 	}
 }
 
-
 func getSidecars(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	format := "text/plain"
-	if (r.Header.Get("Accept") == "application/json") {
+	if r.Header.Get("Accept") == "application/json" {
 		format = "application/json"
 	}
 	data, err := pubsub.GetSidecars(format)
@@ -971,6 +1067,9 @@ func server(listener net.Listener) http.Server {
 	router.DELETE(base+"/actor/:type/:id/events", subscription)
 
 	// actor state
+	router.GET(base+"/actor/:type/:id/state/:key/:subkey", get)
+	router.PUT(base+"/actor/:type/:id/state/:key/:subkey", set)
+	router.DELETE(base+"/actor/:type/:id/state/:key/:subkey", del)
 	router.GET(base+"/actor/:type/:id/state/:key", get)
 	router.PUT(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
@@ -1104,10 +1203,10 @@ func main() {
 	if config.Invoke {
 		exitCode = runtime.Invoke(ctx9, args)
 		cancel()
-	} else if (config.Get != "") {
+	} else if config.Get != "" {
 		exitCode = runtime.GetInformation(ctx9, args)
 		cancel()
-	} else if (len(args) > 0) {
+	} else if len(args) > 0 {
 		exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
 		cancel()
 	}

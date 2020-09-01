@@ -158,12 +158,25 @@ function actorScheduleReminder (actor, path, options, ...args) {
   return post(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${options.id}`, opts)
 }
 
-const actorGetState = (actor, key) => get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
+function actorGetState (actor, key, subkey) {
+  if (subkey) {
+    return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}?nilOnAbsent=true`)
+  } else {
+    return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
+  }
+}
 
 const actorSetState = (actor, key, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, value)
 
-const actorRemoveState = (actor, key) => del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
+const actorSetWithSubkeyState = (actor, key, subkey, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`, value)
 
+function actorRemoveState (actor, key, subkey) {
+  if (subkey) {
+    return del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`)
+  } else {
+    return del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
+  }
+}
 const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
 const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, state)
@@ -319,6 +332,7 @@ module.exports = {
     state: {
       get: actorGetState,
       set: actorSetState,
+      setWithSubkey: actorSetWithSubkeyState,
       setMultiple: actorSetStateMultiple,
       remove: actorRemoveState,
       getAll: actorGetAllState,
