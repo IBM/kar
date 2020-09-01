@@ -210,6 +210,23 @@ public interface KarRest extends AutoCloseable {
 	//
 
 	@GET
+	@Path("actor/{type}/{id}/state/{key}/{subkey}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorGetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+
+	@PUT
+	@Path("actor/{type}/{id}/state/{key}/{subkey}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response actorSetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, JsonValue params) throws ProcessingException;
+
+	@DELETE
+	@Path("actor/{type}/{id}/state/{key}/{subkey}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response actorDeleteWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+
+	@GET
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;

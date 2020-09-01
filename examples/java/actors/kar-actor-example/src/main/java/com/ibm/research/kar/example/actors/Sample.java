@@ -81,6 +81,17 @@ public class Sample extends ActorSkeleton {
 	}
 
 	@Remote
+	public JsonNumber setStateSubkey(JsonString key, JsonString subkey, JsonValue value) {
+		int numNew = actorSetState(this, key.getString(), subkey.getString(), value);
+		return Json.createValue(numNew);
+	}
+
+	@Remote
+	public JsonValue getStateSubkey(JsonString key, JsonString subkey) {
+		return actorGetState(this, key.getString(), subkey.getString());
+	}
+
+	@Remote
 	public JsonValue getStateElement(JsonString key) {
 		return actorGetState(this, key.getString());
 	}

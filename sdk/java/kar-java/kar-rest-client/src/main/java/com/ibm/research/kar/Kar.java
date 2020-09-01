@@ -572,7 +572,7 @@ public class Kar {
 	 * Get one value from an Actor's state
 	 *
 	 * @param actor The Actor instance.
-	 * @param key   The key to get from the instance's state
+	 * @param key   The key to use to access the instance's state
 	 * @return The value associated with `key`
 	 */
 	public static JsonValue actorGetState(ActorRef actor, String key) {
@@ -587,15 +587,48 @@ public class Kar {
 	}
 
 	/**
+	 * Get one value from an Actor's state
+	 *
+	 * @param actor The Actor instance.
+	 * @param key   The key to use to access the instance's state
+	 * @param subkey The subkey to use to access the instance's state
+	 * @return The value associated with `key/subkey`
+	 */
+	public static JsonValue actorGetState(ActorRef actor, String key, String subkey) {
+		JsonValue value;
+		try {
+			Response resp = karClient.actorGetWithSubkeyState(actor.getType(), actor.getId(), key, subkey, true);
+			return (JsonValue)toValue(resp);
+		} catch (ProcessingException e) {
+			value = JsonValue.NULL;
+		}
+		return value;
+	}
+
+	/**
 	 * Store one value to an Actor's state
 	 *
 	 * @param actor The Actor instance.
-	 * @param key   The key to get from the instance's state
+	 * @param key   The key to use to access the instance's state
 	 * @param value The value to store
 	 * @return The number of new state entries created by this store (0 or 1)
 	 */
 	public static int actorSetState(ActorRef actor, String key, JsonValue value) {
 		Response response = karClient.actorSetState(actor.getType(), actor.getId(), key, value);
+		return toInt(response);
+	}
+
+	/**
+	 * Store one value to an Actor's state
+	 *
+	 * @param actor The Actor instance.
+	 * @param key   The key to use to access the instance's state
+	 * @param subkey The subkey to use to access the instance's state
+	 * @param value The value to store at `key/subkey`
+	 * @return The number of new state entries created by this store (0 or 1)
+	 */
+	public static int actorSetState(ActorRef actor, String key, String subkey, JsonValue value) {
+		Response response = karClient.actorSetWithSubkeyState(actor.getType(), actor.getId(), key, subkey, value);
 		return toInt(response);
 	}
 
@@ -629,7 +662,20 @@ public class Kar {
 	}
 
 	/**
-	 * Get all the key value pairs from an Actor's state
+	 * Remove one value from an Actor's state
+	 *
+	 * @param actor  The Actor instance.
+	 * @param key    The key of the entry to delete
+	 * @param subkey The subkey of the entry to delete
+	 * @return  `1` if an entry was actually removed and `0` if there was no entry for `key`.
+	 */
+	public static int actorDeleteState(ActorRef actor, String key, String subkey) {
+		Response response = karClient.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), key, subkey, true);
+		return toInt(response);
+	}
+
+	/**
+	 * Get all the key-value mappings from an Actor's state
 	 *
 	 * @param actor The Actor instance.
 	 * @return A map representing the Actor's state
@@ -644,7 +690,7 @@ public class Kar {
 	}
 
 	/**
-	 * Remove all key value pairs from an Actor's state
+	 * Remove all key-value pairs from an Actor's state
 	 *
 	 * @param actor The Actor instance.
 	 * @return The number of removed key/value pairs
@@ -654,19 +700,9 @@ public class Kar {
 		return toInt(response);
 	}
 
-/* WIP
-	public static void actorMapPut(ActorRef actor, String mapName, String key, JsonValue value) {
-	}
-
-	public static JsonValue actorMapGet(ActorRef actor, String mapName, String key) {
-		return null;
-	}
-
+/* WIP -- pieces of subkey API that still need to be added.  FIXME!
 	public static JsonValue actorMapContainsKey(ActorRef actor, String mapName, String key) {
 		return null;
-	}
-
-	public static void actorMapRemove(ActorRef actor, String mapName, String key) {
 	}
 
 	public static int actorMapSize(ActorRef actor, String mapName) {
@@ -681,7 +717,6 @@ public class Kar {
 	}
 
 	public static void actorMapPutAll(ActorRef actor, String mapName, Map<String,JsonValue> map) {
-
 	}
 
 */
