@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "kar": "../../sdk/js"
+    "kar": "file:.yalc/kar"
   },
   "devDependencies": {
     "mocha": "^7.1.1",

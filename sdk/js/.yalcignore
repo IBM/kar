@@ -1,0 +1,4 @@
+s2i
+*.md
+.*ignore
+Dockerfile

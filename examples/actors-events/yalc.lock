@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "kar": {
+      "signature": "69926b29bbf46b818bc2f3f7b88c8ca0",
+      "file": true,
+      "replaced": "../../sdk/js"
+    }
+  }
+}

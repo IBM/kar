@@ -192,3 +192,22 @@ $ kar -app helloWorld node client.js
 $ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted
 ```
+
+# Local Development - JavaScript SDK - Yalc
+
+We use [yalc](https://www.npmjs.com/package/yalc) to keep the example packages
+and the JavaScript SDK package in sync. When making and testing local changes to
+the JavaScript SDK these changes need to be propagated to the examples projects
+using `yalc`. First install `yalc`:
+```shell
+$ npm i -g yalc
+```
+Then configure `yalc` for `KAR`:
+```shell
+./scripts/setup-yalc.sh
+```
+Finally, whenever a change is made to the JavaScript SDK run:
+```shell
+cd sdk/js
+yalc push
+```
