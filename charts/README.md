@@ -1,6 +1,6 @@
 A Helm Chart to deploy a dev-mode KAR runtime onto a cluster.
 
-For detailed instructions, see [deploying.md](../docs/deploying.md).
+For detailed instructions, see [getting-started.md](../docs/getting-started.md).
 
 ### Components deployed
 
