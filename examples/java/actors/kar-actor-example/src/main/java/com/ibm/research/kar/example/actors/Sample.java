@@ -96,6 +96,18 @@ public class Sample extends ActorSkeleton {
 		return actorGetState(this, key.getString());
 	}
 
+
+	@Remote
+	public JsonValue hasStateSubkey(JsonString key, JsonString subkey) {
+		return actorContainsState(this, key.getString(), subkey.getString()) ? JsonValue.TRUE : JsonValue.FALSE;
+	}
+
+	@Remote
+	public JsonValue hasStateElement(JsonString key) {
+		return actorContainsState(this, key.getString()) ? JsonValue.TRUE : JsonValue.FALSE;
+	}
+
+
 	@Remote
 	public JsonObject getState() {
 		Map<String,JsonValue> state = actorGetAllState(this);

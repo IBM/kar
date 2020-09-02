@@ -606,6 +606,39 @@ public class Kar {
 	}
 
 	/**
+	 * Check to see if an entry exists in an Actor's state
+	 *
+	 * @param actor The Actor instance.
+	 * @param key   The key to check against the instance's state
+	 * @return `true` if the actor instance has a value defined for `key`, `false` otherwise.
+	 */
+	public static boolean actorContainsState(ActorRef actor, String key) {
+		try {
+			Response resp = karClient.actorHeadState(actor.getType(), actor.getId(), key);
+			return resp.getStatus() == Status.OK.getStatusCode();
+		} catch (ActorMethodNotFoundException e) { // FIXME: This is an artifact of overly broad exceptiob remapping.
+			return false;
+		}
+	}
+
+	/**
+	 * Check to see if an entry exists in an Actor's state
+	 *
+	 * @param actor The Actor instance.
+	 * @param key   The key to check against the instance's state
+	 * @param subkey The subkey to check against the instance's state
+	 * @return `true` if the actor instance has a value defined for `key/subkey`, `false` otherwise.
+	 */
+	public static boolean actorContainsState(ActorRef actor, String key, String subkey) {
+		try {
+			Response resp = karClient.actorHeadWithSubkeyState(actor.getType(), actor.getId(), key, subkey);
+			return resp.getStatus() == Status.OK.getStatusCode();
+		} catch (ActorMethodNotFoundException e) { // FIXME: This is an artifact of overly broad exceptiob remapping.
+			return false;
+		}
+	}
+
+	/**
 	 * Store one value to an Actor's state
 	 *
 	 * @param actor The Actor instance.
@@ -701,9 +734,6 @@ public class Kar {
 	}
 
 /* WIP -- pieces of subkey API that still need to be added.  FIXME!
-	public static JsonValue actorMapContainsKey(ActorRef actor, String mapName, String key) {
-		return null;
-	}
 
 	public static int actorMapSize(ActorRef actor, String mapName) {
 		return 0;

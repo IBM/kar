@@ -214,6 +214,11 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
+	@HEAD
+	@Path("actor/{type}/{id}/state/{key}/{subkey}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorHeadWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey) throws ProcessingException;
+
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}/{subkey}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
@@ -230,6 +235,11 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+
+	@HEAD
+	@Path("actor/{type}/{id}/state/{key}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorHeadState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key) throws ProcessingException;
 
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}")
