@@ -61,7 +61,7 @@ dockerDev:
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
 
 installJavaSDK:
-	cd sdk/java/kar-java && mvn install
+	cd sdk/java && mvn install
 
 swagger-gen:
 	swagger generate spec -o docs/api/swagger.yaml

@@ -12,7 +12,7 @@ The Java SDK provides:
 2. `kar-actor-runtime` - classes that implement the KAR actor runtime in Java
 
 # Building
-To build these packages, run `mvn install` in the `kar-java` directory.  This will build both `kar-rest-client` and `kar-actor-runtime`.  
+To build these packages, run `mvn install`.  This will build both `kar-rest-client` and `kar-actor-runtime`.
 
 # Basic KAR SDK usage
 The basic KAR SDK is in `kar-rest-client`. After building, add `target/kar-rest-client.jar` and `target/libs` to the CLASSPATH of your application. Note: `target/libs` contains dependent jars required by `target/kar-rest-client.jar`, which is implemented using the [Microprofile 3.3 Rest Client](https://github.com/eclipse/microprofile-rest-client).
@@ -194,8 +194,6 @@ We have tested the Java actor runtime using openliberty. `kar-actor-runtime` wil
     <packaging>pom</packaging>
 
     <modules>
-        <!-- Path to KAR SDK  -->
-        <module>path/to/sdk/java/kar-java</module>
         <!-- Your application -->
         <module>kar-actor-example</module>
     </modules>

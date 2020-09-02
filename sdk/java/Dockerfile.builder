@@ -12,6 +12,8 @@ LABEL io.openshift.s2i.scripts-url=image:///s2i
 
 WORKDIR /kar/sdk/java
 
-COPY kar-java .
+COPY pom.xml pom.xml
+COPY kar-actor-runtime kar-actor-runtime
+COPY kar-rest-client kar-rest-client
 
 RUN mvn install
