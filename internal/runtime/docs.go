@@ -129,8 +129,13 @@ func dummy3() {}
 // swagger:parameters idActorSubscriptionCancel
 // swagger:parameters idActorSubscriptionCancelAll
 // swagger:parameters idActorStateDelete
+// swagger:parameters idActorStateExists
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
+// swagger:parameters idActorStateSubkeyDelete
+// swagger:parameters idActorStateSubkeyExists
+// swagger:parameters idActorStateSubkeyGet
+// swagger:parameters idActorStateSubkeySet
 // swagger:parameters idActorStateGetAll
 // swagger:parameters idActorStateDeleteAll
 type actorParam struct {
@@ -140,6 +145,30 @@ type actorParam struct {
 	// The actor instance id
 	// in:path
 	ActorID string `json:"actorId"`
+}
+
+// swagger:parameters idActorStateDelete
+// swagger:parameters idActorStateExists
+// swagger:parameters idActorStateGet
+// swagger:parameters idActorStateSet
+// swagger:parameters idActorStateSubkeyDelete
+// swagger:parameters idActorStateSubkeyExists
+// swagger:parameters idActorStateSubkeyGet
+// swagger:parameters idActorStateSubkeySet
+type keyParam struct {
+	// The key
+	// in:path
+	Key string `json:"key"`
+}
+
+// swagger:parameters idActorStateSubkeyDelete
+// swagger:parameters idActorStateSubkeyExists
+// swagger:parameters idActorStateSubkeyGet
+// swagger:parameters idActorStateSubkeySet
+type subkeyParam struct {
+	// The subkey
+	// in:path
+	Subkey string `json:"subkey"`
 }
 
 // swagger:parameters idServiceDelete
@@ -361,6 +390,10 @@ type response200SubscriptionGetResult struct {
 type response200SubscriptionGetAllResult struct {
 	// An array containing all matching subscriptions
 	Body []source
+}
+
+// swagger:response response200StateExistsResult
+type response200StateExistsResult struct {
 }
 
 // swagger:response response200StateGetResult

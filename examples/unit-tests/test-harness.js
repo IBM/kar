@@ -109,6 +109,16 @@ async function actorTests () {
     console.log(`Failed to look up famous people: ${fa} or ${dk}`)
     failure = true
   }
+  const fae = await actor.state.contains(a, 'famous', 'Allen')
+  if (fae !== true) {
+    console.log('did not find contained key famous/Allen')
+    failure = true
+  }
+  const fjd = await actor.state.contains(a, 'famous', 'Doe')
+  if (fjd !== false) {
+    console.log('found non-contained key famous/Doe')
+    failure = true
+  }
   await actor.state.remove(a, 'famous', 'Knuth')
   const dk2 = await actor.state.get(a, 'famous', 'Knuth')
   if (dk2) {

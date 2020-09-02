@@ -172,6 +172,15 @@ export namespace actor {
     export function get (actor: Actor, key: string, subkey: string?): Promise<any>;
 
     /**
+     * Check to see if an Actor's state contains an entry
+     * @param actor The Actor instance.
+     * @param key The key to check for in the instance's state
+     * @param subkey The optional subkey to check for in the instance's state
+     * @returns `true` if the actor has a state entry for `key` or `key/subkey` and `false` if it does not
+     */
+    export function contains (actor: Actor, key: string, subkey: string?): Promise<boolean>;
+
+    /**
      * Store one value to an Actor's state
      * @param actor The Actor instance.
      * @param key The key to update in the instance's state

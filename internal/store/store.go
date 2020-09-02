@@ -145,6 +145,16 @@ func HGetAll(hash string) (map[string]string, error) {
 	return redis.StringMap(do("HGETALL", hash))
 }
 
+// HExists hash key
+func HExists(hash string, key string) (int, error) {
+	return redis.Int(do("HEXISTS", hash, key))
+}
+
+// HKeys hash key
+func HKeys(hash string) ([]string, error) {
+	return redis.Strings(do("HKEYS", hash))
+}
+
 // Sorted sets
 
 // ZAdd adds an element to a sorted set.

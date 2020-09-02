@@ -612,6 +612,60 @@ func nestedEntryKey(key string, subkey string) string {
 	return key + config.Separator + subkey
 }
 
+// swagger:route HEAD /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateExists
+//
+// state/key
+//
+// ### Check to see if single entry of an actor's state is defined
+//
+// Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+// contains an entry for `key`.
+//
+//     Consumes:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200StateExistsResult
+//       404: response404
+//       500: response500
+//
+
+// swagger:route HEAD /v1/actor/{actorType}/{actorId}/state/{key}/{subkey} state idActorStateSubkeyExists
+//
+// state/key/subkey
+//
+// ### Check to see if single entry of an actor's state is defined
+//
+// Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+// contains an entry for `key`/`subkey`.
+//
+//     Consumes:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200StateExistsResult
+//       404: response404
+//       500: response500
+//
+func containsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var mangledEntryKey string
+	if subkey := ps.ByName("subkey"); subkey != "" {
+		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
+	} else {
+		mangledEntryKey = flatEntryKey(ps.ByName("key"))
+	}
+
+	if reply, err := store.HExists(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
+		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
+	} else {
+		if reply == 0 {
+			http.Error(w, "key not present", http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	}
+}
+
 // swagger:route PUT /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateSet
 //
 // state/key
@@ -1072,9 +1126,11 @@ func server(listener net.Listener) http.Server {
 	router.GET(base+"/actor/:type/:id/state/:key/:subkey", get)
 	router.PUT(base+"/actor/:type/:id/state/:key/:subkey", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key/:subkey", del)
+	router.HEAD(base+"/actor/:type/:id/state/:key/:subkey", containsKey)
 	router.GET(base+"/actor/:type/:id/state/:key", get)
 	router.PUT(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
+	router.HEAD(base+"/actor/:type/:id/state/:key", containsKey)
 	router.GET(base+"/actor/:type/:id/state", getAll)
 	router.POST(base+"/actor/:type/:id/state", setMultiple)
 	router.DELETE(base+"/actor/:type/:id/state", delAll)

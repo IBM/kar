@@ -88,6 +88,11 @@ function get (api) {
   return fetch(url + api).then(parse)
 }
 
+// http head: return response headers
+function head (api) {
+  return fetch(url + api, { method: 'HEAD' }).then(res => res.headers)
+}
+
 // http del: parse response body
 function del (api) {
   return fetch(url + api, { method: 'DELETE' }).then(parse)
@@ -163,6 +168,14 @@ function actorGetState (actor, key, subkey) {
     return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}?nilOnAbsent=true`)
   } else {
     return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
+  }
+}
+
+function actorContainsState (actor, key, subkey) {
+  if (subkey) {
+    return head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`).then(headers => headers[':status'] === 200)
+  } else {
+    return head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`).status === 200
   }
 }
 
@@ -331,6 +344,7 @@ module.exports = {
     },
     state: {
       get: actorGetState,
+      contains: actorContainsState,
       set: actorSetState,
       setWithSubkey: actorSetWithSubkeyState,
       setMultiple: actorSetStateMultiple,

@@ -799,6 +799,12 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
       produces:
       - text/plain
       responses:
@@ -834,6 +840,12 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
       - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
         in: query
         name: nilOnAbsent
@@ -844,6 +856,46 @@ paths:
       responses:
         "200":
           $ref: '#/responses/response200StateGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+    head:
+      consumes:
+      - application/json
+      description: |-
+        ### Check to see if single entry of an actor's state is defined
+
+        Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+        contains an entry for `key`.
+      operationId: idActorStateExists
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      responses:
+        "200":
+          $ref: '#/responses/response200StateExistsResult'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -877,6 +929,12 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
       produces:
       - text/plain
       responses:
@@ -900,6 +958,31 @@ paths:
         The result of the operation is `1` if an entry was actually removed and
         `0` if there was no entry for `key`.
       operationId: idActorStateSubkeyDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
       produces:
       - text/plain
       responses:
@@ -922,11 +1005,82 @@ paths:
         unless the boolean query parameter `nilOnAbsent` is set to `true`,
         in which case a `200` reponse with a `nil` response body will be returned.
       operationId: idActorStateSubkeyGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
       produces:
       - application/json
       responses:
         "200":
           $ref: '#/responses/response200StateGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    head:
+      consumes:
+      - application/json
+      description: |-
+        ### Check to see if single entry of an actor's state is defined
+
+        Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+        contains an entry for `key`/`subkey`.
+      operationId: idActorStateSubkeyExists
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
+      responses:
+        "200":
+          $ref: '#/responses/response200StateExistsResult'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -947,6 +1101,31 @@ paths:
         The operation will not return until the state has been updated.
         The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
       operationId: idActorStateSubkeySet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
       produces:
       - text/plain
       responses:
@@ -1503,6 +1682,7 @@ responses:
         example: 3
         format: int64
         type: integer
+  response200StateExistsResult: {}
   response200StateGetAllResult:
     headers:
       Response:

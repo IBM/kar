@@ -874,6 +874,14 @@
             "required": true
           },
           {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
             "type": "boolean",
             "x-go-name": "ErrorOnAbsent",
             "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
@@ -925,6 +933,14 @@
             "name": "actorId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
@@ -965,11 +981,70 @@
             "name": "actorId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
           }
         ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "head": {
+        "description": "### Check to see if single entry of an actor's state is defined\n\nCheck to see if the state of the actor instance indicated by `actorType` and `actorId`\ncontains an entry for `key`.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateExists",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateExistsResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -991,6 +1066,40 @@
         ],
         "summary": "state/key/subkey",
         "operationId": "idActorStateSubkeyGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200StateGetResult"
@@ -1019,6 +1128,40 @@
         ],
         "summary": "state/key/subkey",
         "operationId": "idActorStateSubkeySet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200StateSetResult"
@@ -1041,9 +1184,102 @@
         ],
         "summary": "state/key/subkey",
         "operationId": "idActorStateSubkeyDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "head": {
+        "description": "### Check to see if single entry of an actor's state is defined\n\nCheck to see if the state of the actor instance indicated by `actorType` and `actorId`\ncontains an entry for `key`/`subkey`.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key/subkey",
+        "operationId": "idActorStateSubkeyExists",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateExistsResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1839,6 +2075,7 @@
         }
       }
     },
+    "response200StateExistsResult": {},
     "response200StateGetAllResult": {
       "schema": {
         "type": "object",
