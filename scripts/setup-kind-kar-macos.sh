@@ -19,7 +19,7 @@ make dockerDev
 $SCRIPTDIR/kar-deploy.sh -dev
 
 echo "Building kar CLI"
-go install ./...
+make install
 
 echo "Setting up namespace and environment"
 $SCRIPTDIR/kar-enable-namespace.sh default

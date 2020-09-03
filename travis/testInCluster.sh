@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../.."
+ROOTDIR="$SCRIPTDIR/.."
 
 echo "*** Running in-cluster unit tests ***"
 helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=localhost:5000/examples/js/unit-tests

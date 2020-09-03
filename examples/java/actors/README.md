@@ -53,7 +53,7 @@ You should see output like:
 You can run a simple test Java application packaged with `kar-rest-client` that uses the KAR Java SDK to call an actor:
 
 ```shell
-$ ../../../sdk/java/kar-rest-client/scripts/runactor.sh
+$ ../../../sdk-java/kar-rest-client/scripts/runactor.sh
 ```
 You should see output like:
 ```shell

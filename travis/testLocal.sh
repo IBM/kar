@@ -14,7 +14,7 @@ run () {
 }
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../.."
+ROOTDIR="$SCRIPTDIR/.."
 
 . $ROOTDIR/scripts/kar-kind-env.sh
 

@@ -11,8 +11,4 @@ LABEL io.openshift.s2i.scripts-url=image:///s2i
 RUN mkdir -p /kar/bin
 COPY --from=kar /kar/kar /kar/bin/kar
 
-WORKDIR /kar/sdk/js
-
-COPY *.js *.json ./
-
-RUN npm install --prod
+WORKDIR /kar

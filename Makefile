@@ -19,14 +19,14 @@ KAR_EXAMPLE_JAVA_ACTORS=$(DOCKER_IMAGE_PREFIX)examples/java/actors:$(DOCKER_IMAG
 all: install
 
 install:
-	go install ./...
+	cd core && go install ./...
 
 dockerCore:
-	docker build -f build/Dockerfile --build-arg KAR_BINARY=kar -t $(KAR_BASE) .
-	docker build -f build/Dockerfile --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
-	cd sdk/js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
-	cd sdk/java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .
-	cd sdk/java && docker build -f Dockerfile.runtime -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
+	cd core && docker build --build-arg KAR_BINARY=kar -t $(KAR_BASE) .
+	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
+	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
+	cd sdk-java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .
+	cd sdk-java && docker build -f Dockerfile.runtime -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 
 dockerExamples:
 	s2i build examples/actors-events $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_EVENTS) --copy
@@ -61,7 +61,7 @@ dockerDev:
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
 
 installJavaSDK:
-	cd sdk/java && mvn install
+	cd sdk-java && mvn install
 
 swagger-gen:
 	swagger generate spec -o docs/api/swagger.yaml

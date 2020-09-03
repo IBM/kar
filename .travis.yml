@@ -7,25 +7,25 @@ go:
   - 1.15.x
 
 before_install:
-  - ./build/ci/setup.sh && ./scripts/start-kind.sh
+  - ./travis/setup.sh && ./scripts/start-kind.sh
 
 script:
-  - (./build/ci/build.sh && ./build/ci/start-kar.sh) || travis_terminate 1
-  - ./build/ci/createTestTopic.sh
+  - (./travis/build.sh && ./travis/start-kar.sh) || travis_terminate 1
+  - ./travis/createTestTopic.sh
   - ./examples/actors-ykt/createTopics.sh
-  - ./build/ci/testLocal.sh
-  - ./build/ci/testJavaLocal.sh
-  - ./build/ci/testInCluster.sh
+  - ./travis/testLocal.sh
+  - ./travis/testJavaLocal.sh
+  - ./travis/testInCluster.sh
 
 deploy:
   - provider: script
-    script: "./build/ci/pushImages.sh ${TRAVIS_BRANCH} ${TRAVIS_TAG}"
+    script: "./travis/pushImages.sh ${TRAVIS_BRANCH} ${TRAVIS_TAG}"
     on:
       tags: true
       all_branches: true
       repo: solsa/kar
   - provider: script
-    script: "./build/ci/pushImages.sh master latest"
+    script: "./travis/pushImages.sh master latest"
     on:
       branch: master
       repo: solsa/kar

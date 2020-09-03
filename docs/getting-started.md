@@ -208,6 +208,6 @@ Then configure `yalc` for `KAR`:
 ```
 Finally, whenever a change is made to the JavaScript SDK run:
 ```shell
-cd sdk/js
+cd sdk-js
 yalc push
 ```

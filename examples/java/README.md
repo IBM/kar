@@ -8,7 +8,7 @@ Note: the SDK and example code have been tested using MicroProfile 3.3 and the O
 
 ## Overview of Java Exapmle
 
-More details on the SDK can be found in the [Java SDK Documentation](https://github.ibm.com/solsa/kar/tree/master/sdk/java).
+More details on the SDK can be found in the [Java SDK Documentation](https://github.ibm.com/solsa/kar/tree/master/sdk-java).
 
 The Java examples are:
 

@@ -1,7 +1,0 @@
-.git
-dist
-docs
-sdk
-node_modules
-**/node_modules
-**/target

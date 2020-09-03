@@ -3,7 +3,7 @@
 set -eu
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../.."
+ROOTDIR="$SCRIPTDIR/.."
 
 $ROOTDIR/scripts/kar-deploy.sh -dev
 

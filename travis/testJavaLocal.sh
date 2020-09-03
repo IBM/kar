@@ -16,12 +16,12 @@ run () {
 echo "Executing Java Actor test"
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/../.."
+ROOTDIR="$SCRIPTDIR/.."
 
 . $ROOTDIR/scripts/kar-kind-env.sh
 
 echo "Building Java KAR SDK"
-cd $ROOTDIR/sdk/java
+cd $ROOTDIR/sdk-java
 mvn clean install
 
 echo "Building Java Actors sample application"
