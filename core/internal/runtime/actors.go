@@ -16,6 +16,11 @@ type Actor struct {
 	ID   string // actor instance id
 }
 
+// MapOp describes the requested map operation on an Actors state
+type MapOp struct {
+	Op string `json:"op"`
+}
+
 type actorEntry struct {
 	actor   Actor
 	time    time.Time     // last release time

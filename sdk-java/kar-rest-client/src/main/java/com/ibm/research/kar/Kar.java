@@ -40,7 +40,8 @@ public class Kar {
 
 	private static KarRest karClient = buildRestClient();
 
-	private Kar() { }
+	private Kar() {
+	}
 
 	/*
 	 * Generate REST client (used when injection not possible, e.g. tests)
@@ -65,13 +66,10 @@ public class Kar {
 
 		// If running in standalone mode, add JsonValue serializers by hand
 		if (!isRunningEmbedded()) {
-			builder
-			.register(JsonValueBodyReader.class)
-			.register(JsonValueBodyWriter.class);
+			builder.register(JsonValueBodyReader.class).register(JsonValueBodyWriter.class);
 		}
 
-		return builder
-				.register(ActorExceptionMapper.class)
+		return builder.register(ActorExceptionMapper.class)
 				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 	}
@@ -93,7 +91,7 @@ public class Kar {
 		if (o.containsKey("error")) {
 			String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
 			String stack = o.containsKey("stack") ? o.getString("stack") : "";
-			throw new ActorMethodInvocationException(message + ": "+stack);
+			throw new ActorMethodInvocationException(message + ": " + stack);
 		} else {
 			return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
 		}
@@ -125,7 +123,7 @@ public class Kar {
 	private static Reminder[] toReminderArray(Response response) {
 		try {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
-			JsonArray ja = ((JsonValue)toValue(response)).asJsonArray();
+			JsonArray ja = ((JsonValue) toValue(response)).asJsonArray();
 			for (JsonValue jv : ja) {
 				try {
 					JsonObject jo = jv.asJsonObject();
@@ -137,14 +135,14 @@ public class Kar {
 					Instant targetTime = Instant.parse(targetTimeString);
 					Duration period = null;
 					if (jo.get("period") != null) {
-						long nanos = ((JsonNumber)jo.get("period")).longValueExact();
+						long nanos = ((JsonNumber) jo.get("period")).longValueExact();
 						period = Duration.ofNanos(nanos);
 					}
 					String encodedData = jo.getString("encodedData");
 					Reminder r = new Reminder(actorRef(actorType, actorId), id, path, targetTime, period, encodedData);
 					res.add(r);
 				} catch (ClassCastException e) {
-					logger.warning("toReminderArray: Dropping unexpected element "+jv);
+					logger.warning("toReminderArray: Dropping unexpected element " + jv);
 				}
 			}
 			return res.toArray(new Reminder[res.size()]);
@@ -172,7 +170,6 @@ public class Kar {
 			return id;
 		}
 	}
-
 
 	/******************
 	 * Public methods
@@ -290,7 +287,8 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restOptionsAsync(String service, String path, JsonValue body) throws ProcessingException {
+	public static CompletionStage<Response> restOptionsAsync(String service, String path, JsonValue body)
+			throws ProcessingException {
 		return karClient.callAsyncOptions(service, path, body);
 	}
 
@@ -314,7 +312,8 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPatchAsync(String service, String path, JsonValue body) throws ProcessingException {
+	public static CompletionStage<Response> restPatchAsync(String service, String path, JsonValue body)
+			throws ProcessingException {
 		return karClient.callAsyncPatch(service, path, body);
 	}
 
@@ -338,7 +337,8 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPostAsync(String service, String path, JsonValue body) throws ProcessingException {
+	public static CompletionStage<Response> restPostAsync(String service, String path, JsonValue body)
+			throws ProcessingException {
 		return karClient.callAsyncPost(service, path, body);
 	}
 
@@ -362,7 +362,8 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPutAsync(String service, String path, JsonValue body) throws ProcessingException {
+	public static CompletionStage<Response> restPutAsync(String service, String path, JsonValue body)
+			throws ProcessingException {
 		return karClient.callAsyncPut(service, path, body);
 	}
 
@@ -371,7 +372,8 @@ public class Kar {
 	 */
 
 	/**
-	 * Asynchronous service invocation; returns as soon as the invocation has been initiated.
+	 * Asynchronous service invocation; returns as soon as the invocation has been
+	 * initiated.
 	 *
 	 * @param service The name of the service to invoke.
 	 * @param path    The service endpoint to invoke.
@@ -395,12 +397,14 @@ public class Kar {
 	}
 
 	/**
-	 * Aynchronous service invocation with eventual access to the result of the invocation
+	 * Aynchronous service invocation with eventual access to the result of the
+	 * invocation
 	 *
 	 * @param service The name of the service to invoke.
 	 * @param path    The service endpoint to invoke.
 	 * @param body    The request body with which to invoke the service endpoint.
-	 * @return A CompletionStage containing the result of invoking the target service.
+	 * @return A CompletionStage containing the result of invoking the target
+	 *         service.
 	 */
 	public static CompletionStage<Object> callAsync(String service, String path, JsonValue body) {
 		return karClient.callAsyncPut(service, path, body).thenApply(response -> toValue(response));
@@ -418,7 +422,8 @@ public class Kar {
 	}
 
 	/**
-	 * Asynchronous actor invocation; returns as soon as the invocation has been initiated.
+	 * Asynchronous actor invocation; returns as soon as the invocation has been
+	 * initiated.
 	 *
 	 * @param actor The target actor.
 	 * @param path  The actor method to invoke.
@@ -429,53 +434,62 @@ public class Kar {
 	}
 
 	/**
-	 * Synchronous actor invocation where the invoked method will execute as part of the current session.
+	 * Synchronous actor invocation where the invoked method will execute as part of
+	 * the current session.
 	 *
 	 * @param caller The calling actor.
-	 * @param actor The target actor.
-	 * @param path  The actor method to invoke.
-	 * @param args  The arguments with which to invoke the actor method.
+	 * @param actor  The target actor.
+	 * @param path   The actor method to invoke.
+	 * @param args   The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException {
+	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args)
+			throws ActorMethodNotFoundException, ActorMethodInvocationException {
 		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args)));
 
 	}
 
 	/**
-	 * Synchronous actor invocation where the invoked method will execute as part of the specified session.
+	 * Synchronous actor invocation where the invoked method will execute as part of
+	 * the specified session.
 	 *
 	 * @param session The session in which to execute the actor method
-	 * @param actor The target actor.
-	 * @param path  The actor method to invoke.
-	 * @param args  The arguments with which to invoke the actor method.
+	 * @param actor   The target actor.
+	 * @param path    The actor method to invoke.
+	 * @param args    The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException{
+	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args)
+			throws ActorMethodNotFoundException, ActorMethodInvocationException {
 		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args)));
 	}
 
 	/**
-	 * Synchronous actor invocation where the invoked method will execute in a new session.
+	 * Synchronous actor invocation where the invoked method will execute in a new
+	 * session.
 	 *
 	 * @param actor The target Actor.
 	 * @param path  The actor method to invoke.
 	 * @param args  The arguments with which to invoke the actor method.
 	 * @return The result of the invoked actor method.
 	 */
-	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException, ActorMethodInvocationException {
+	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args)
+			throws ActorMethodNotFoundException, ActorMethodInvocationException {
 		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args)));
 	}
 
 	/**
-	 * Asynchronous actor invocation with eventual access to the result of the invocation.
+	 * Asynchronous actor invocation with eventual access to the result of the
+	 * invocation.
 	 *
 	 * @param actor The target Actor.
 	 * @param path  The actor method to invoke.
 	 * @param args  The arguments with which to invoke the actor method.
-	 * @return A CompletionStage containing the result of invoking the target service.
+	 * @return A CompletionStage containing the result of invoking the target
+	 *         service.
 	 */
-	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args) throws ActorMethodNotFoundException {
+	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args)
+			throws ActorMethodNotFoundException {
 		return karClient.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
 	}
 
@@ -509,7 +523,7 @@ public class Kar {
 	/**
 	 * Get all reminders for an Actor instance.
 	 *
-	 * @param actor      The Actor instance.
+	 * @param actor The Actor instance.
 	 * @return An array of matching reminders
 	 */
 	public static Reminder[] actorGetAllReminders(ActorRef actor) {
@@ -536,26 +550,29 @@ public class Kar {
 	 * @param path       The actor method to invoke when the reminder fires.
 	 * @param reminderId The id of the reminder being scheduled
 	 * @param targetTime The earliest time at which the reminder should be delivered
-	 * @param period     For periodic reminders, a String that is compatible with GoLang's Duration
+	 * @param period     For periodic reminders, a String that is compatible with
+	 *                   GoLang's Duration
 	 * @param args       The arguments with which to invoke the actor method.
 	 */
-	public static void actorScheduleReminder(ActorRef actor, String path, String reminderId, Instant targetTime, Duration period, JsonValue... args) {
+	public static void actorScheduleReminder(ActorRef actor, String path, String reminderId, Instant targetTime,
+			Duration period, JsonValue... args) {
 		JsonObjectBuilder builder = Json.createObjectBuilder();
 		builder.add("path", "/" + path);
 		builder.add("targetTime", targetTime.toString());
 
 		if (period != null) {
-			// Sigh.  Encode in a way that GoLang will understand since it sadly doesn't actually implement ISO-8601
+			// Sigh. Encode in a way that GoLang will understand since it sadly doesn't
+			// actually implement ISO-8601
 			String goPeriod = "";
 			if (period.toHours() > 0) {
-				goPeriod += period.toHours()+"h";
+				goPeriod += period.toHours() + "h";
 				period.minusHours(period.toHours());
 			}
 			if (period.toMinutes() > 0) {
-				goPeriod += period.toMinutes()+"m";
+				goPeriod += period.toMinutes() + "m";
 				period.minusMinutes(period.toMinutes());
 			}
-			goPeriod += period.getSeconds()+"s";
+			goPeriod += period.getSeconds() + "s";
 			builder.add("period", goPeriod);
 		}
 		builder.add("data", packArgs(args));
@@ -579,7 +596,7 @@ public class Kar {
 		JsonValue value;
 		try {
 			Response resp = karClient.actorGetState(actor.getType(), actor.getId(), key, true);
-			return (JsonValue)toValue(resp);
+			return (JsonValue) toValue(resp);
 		} catch (ProcessingException e) {
 			value = JsonValue.NULL;
 		}
@@ -589,8 +606,8 @@ public class Kar {
 	/**
 	 * Get one value from an Actor's state
 	 *
-	 * @param actor The Actor instance.
-	 * @param key   The key to use to access the instance's state
+	 * @param actor  The Actor instance.
+	 * @param key    The key to use to access the instance's state
 	 * @param subkey The subkey to use to access the instance's state
 	 * @return The value associated with `key/subkey`
 	 */
@@ -598,7 +615,7 @@ public class Kar {
 		JsonValue value;
 		try {
 			Response resp = karClient.actorGetWithSubkeyState(actor.getType(), actor.getId(), key, subkey, true);
-			return (JsonValue)toValue(resp);
+			return (JsonValue) toValue(resp);
 		} catch (ProcessingException e) {
 			value = JsonValue.NULL;
 		}
@@ -610,7 +627,8 @@ public class Kar {
 	 *
 	 * @param actor The Actor instance.
 	 * @param key   The key to check against the instance's state
-	 * @return `true` if the actor instance has a value defined for `key`, `false` otherwise.
+	 * @return `true` if the actor instance has a value defined for `key`, `false`
+	 *         otherwise.
 	 */
 	public static boolean actorContainsState(ActorRef actor, String key) {
 		try {
@@ -624,10 +642,11 @@ public class Kar {
 	/**
 	 * Check to see if an entry exists in an Actor's state
 	 *
-	 * @param actor The Actor instance.
-	 * @param key   The key to check against the instance's state
+	 * @param actor  The Actor instance.
+	 * @param key    The key to check against the instance's state
 	 * @param subkey The subkey to check against the instance's state
-	 * @return `true` if the actor instance has a value defined for `key/subkey`, `false` otherwise.
+	 * @return `true` if the actor instance has a value defined for `key/subkey`,
+	 *         `false` otherwise.
 	 */
 	public static boolean actorContainsState(ActorRef actor, String key, String subkey) {
 		try {
@@ -654,10 +673,10 @@ public class Kar {
 	/**
 	 * Store one value to an Actor's state
 	 *
-	 * @param actor The Actor instance.
-	 * @param key   The key to use to access the instance's state
+	 * @param actor  The Actor instance.
+	 * @param key    The key to use to access the instance's state
 	 * @param subkey The subkey to use to access the instance's state
-	 * @param value The value to store at `key/subkey`
+	 * @param value  The value to store at `key/subkey`
 	 * @return The number of new state entries created by this store (0 or 1)
 	 */
 	public static int actorSetState(ActorRef actor, String key, String subkey, JsonValue value) {
@@ -668,13 +687,13 @@ public class Kar {
 	/**
 	 * Store multiple values to an Actor's state
 	 *
-	 * @param actor The Actor instance.
+	 * @param actor   The Actor instance.
 	 * @param updates A map containing the state updates to perform
 	 * @return The number of new state entries created by this operation
 	 */
-	public static int actorSetMultipleState(ActorRef actor, Map<String,JsonValue> updates) {
+	public static int actorSetMultipleState(ActorRef actor, Map<String, JsonValue> updates) {
 		JsonObjectBuilder jb = Json.createObjectBuilder();
-		for (Entry<String,JsonValue> e : updates.entrySet()) {
+		for (Entry<String, JsonValue> e : updates.entrySet()) {
 			jb.add(e.getKey(), e.getValue());
 		}
 		JsonObject jup = jb.build();
@@ -687,10 +706,61 @@ public class Kar {
 	 *
 	 * @param actor The Actor instance.
 	 * @param key   The key to delete
-	 * @return  `1` if an entry was actually removed and `0` if there was no entry for `key`.
+	 * @return `1` if an entry was actually removed and `0` if there was no entry
+	 *         for `key`.
 	 */
 	public static int actorDeleteState(ActorRef actor, String key) {
 		Response response = karClient.actorDeleteState(actor.getType(), actor.getId(), key, true);
+		return toInt(response);
+	}
+
+	/**
+	 * Get the subkeys associated with the given key
+	 *
+	 * @param actor The Actor instance
+	 * @param key   The key
+	 * @returns An array containing the currently defined subkeys
+	 */
+	public static String[] actorSubMapKeys(ActorRef actor, String key) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		jb.add("op", Json.createValue("keys"));
+		JsonObject params = jb.build();
+		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
+		Object[] jstrings = ((JsonValue)toValue(response)).asJsonArray().toArray();
+		String[] ans = new String[jstrings.length];
+		for (int i=0; i<jstrings.length; i++) {
+			ans[i] = ((JsonValue)jstrings[i]).toString();
+		}
+		return ans;
+	}
+
+	/**
+	 * Get the number of subkeys associated with the given key
+	 *
+	 * @param actor The Actor instance
+	 * @param key   The key
+	 * @returns The number of currently define subkeys
+	 */
+	public static int actorSubMapSize(ActorRef actor, String key) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		jb.add("op", Json.createValue("size"));
+		JsonObject params = jb.build();
+		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
+		return toInt(response);
+	}
+
+	/**
+	 * Remove all subkeys associated with the given key
+	 *
+	 * @param actor The Actor instance
+	 * @param key   The key
+	 * @returns The number of removed subkey entrys
+	 */
+	public static int actorSubMapClear(ActorRef actor, String key) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		jb.add("op", Json.createValue("clear"));
+		JsonObject params = jb.build();
+		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
 		return toInt(response);
 	}
 
@@ -700,7 +770,8 @@ public class Kar {
 	 * @param actor  The Actor instance.
 	 * @param key    The key of the entry to delete
 	 * @param subkey The subkey of the entry to delete
-	 * @return  `1` if an entry was actually removed and `0` if there was no entry for `key`.
+	 * @return `1` if an entry was actually removed and `0` if there was no entry
+	 *         for `key`.
 	 */
 	public static int actorDeleteState(ActorRef actor, String key, String subkey) {
 		Response response = karClient.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), key, subkey, true);
@@ -708,22 +779,22 @@ public class Kar {
 	}
 
 	/**
-	 * Get all the key-value mappings from an Actor's state
+	 * Get all of an Actor's state
 	 *
 	 * @param actor The Actor instance.
 	 * @return A map representing the Actor's state
 	 */
-	public static Map<String,JsonValue> actorGetAllState(ActorRef actor) {
+	public static Map<String, JsonValue> actorGetAllState(ActorRef actor) {
 		Response response = karClient.actorGetAllState(actor.getType(), actor.getId());
 		try {
-			return ((JsonValue)toValue(response)).asJsonObject();
+			return ((JsonValue) toValue(response)).asJsonObject();
 		} catch (ClassCastException e) {
 			return Collections.emptyMap();
 		}
 	}
 
 	/**
-	 * Remove all key-value pairs from an Actor's state
+	 * Remove an Actor's state
 	 *
 	 * @param actor The Actor instance.
 	 * @return The number of removed key/value pairs
@@ -733,23 +804,16 @@ public class Kar {
 		return toInt(response);
 	}
 
-/* WIP -- pieces of subkey API that still need to be added.  FIXME!
-
-	public static int actorMapSize(ActorRef actor, String mapName) {
-		return 0;
-	}
-
-	public static void actorMapClear(ActorRef actor, String mapName) {
-	}
-
-	public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String mapName) {
-		return null;
-	}
-
-	public static void actorMapPutAll(ActorRef actor, String mapName, Map<String,JsonValue> map) {
-	}
-
-*/
+	/*
+	 * WIP -- pieces of subkey API that still need to be added. FIXME!
+	 *
+	 * public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String
+	 * mapName) { return null; }
+	 *
+	 * public static void actorMapPutAll(ActorRef actor, String mapName,
+	 * Map<String,JsonValue> map) { }
+	 *
+	 */
 
 	/*
 	 * Events
@@ -802,7 +866,7 @@ public class Kar {
 	 */
 
 	/**
-	 * Shutdown this sidecar.  Does not return.
+	 * Shutdown this sidecar. Does not return.
 	 */
 	public static void shutdown() {
 		karClient.shutdown();

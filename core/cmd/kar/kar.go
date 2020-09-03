@@ -612,6 +612,10 @@ func nestedEntryKey(key string, subkey string) string {
 	return key + config.Separator + subkey
 }
 
+func nestedEntryKeyPrefix(key string) string {
+	return key + config.Separator
+}
+
 // swagger:route HEAD /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateExists
 //
 // state/key
@@ -656,7 +660,7 @@ func containsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	if reply, err := store.HExists(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
-		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("HExists failed: %v", err), http.StatusInternalServerError)
 	} else {
 		if reply == 0 {
 			http.Error(w, "key not present", http.StatusNotFound)
@@ -783,6 +787,82 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		w.Header().Add("Content-Type", "application/json")
 		fmt.Fprint(w, reply)
 	}
+}
+
+// swagger:route POST /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateMapOps
+//
+// state/key
+//
+// ### Perform an operation on the actor map `key`
+//
+// The operation indicated by the request body will be performed on the `key` map
+// of the actor instance indicated by `actorType` and `actorId`. The result of the
+// operation will be returned as the response body.
+// If there are no `key/subkey` entries in the actor instance, the operation
+// will be interpreted as being applied to an empty map.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200StateMapOps
+//       404: response404
+//       500: response500
+//
+func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var op runtime.MapOp
+	if err := json.Unmarshal([]byte(runtime.ReadAll(r)), &op); err != nil {
+		http.Error(w, "Request body was not a MapOp", http.StatusBadRequest)
+		return
+	}
+
+	stateKey := stateKey(ps.ByName("type"), ps.ByName("id"))
+	keys, err := store.HKeys(stateKey)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+	mapName := ps.ByName("key")
+	subkeyPrefix := nestedEntryKeyPrefix(mapName)
+	flatKey := flatEntryKey(mapName)
+	mapKeys := []string{}
+	for i := range keys {
+		if keys[i] != flatKey && strings.HasPrefix(keys[i], subkeyPrefix) {
+			mapKeys = append(mapKeys, keys[i])
+		}
+	}
+
+	var response interface{}
+	switch op.Op {
+	case "size":
+		response = len(mapKeys)
+	case "keys":
+		cleanedKeys := make([]string, 0, len(mapKeys))
+		for i := range mapKeys {
+			cleanedKeys = append(cleanedKeys, strings.TrimPrefix(mapKeys[i], subkeyPrefix))
+		}
+		response = cleanedKeys
+	case "clear":
+		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
+		}
+		response = numCleared
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported map operation %v", op.Op), http.StatusBadRequest)
+		return
+	}
+
+	buf, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("mapOps: error marshalling response %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	fmt.Fprint(w, string(buf))
 }
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateDelete
@@ -1131,6 +1211,7 @@ func server(listener net.Listener) http.Server {
 	router.PUT(base+"/actor/:type/:id/state/:key", set)
 	router.DELETE(base+"/actor/:type/:id/state/:key", del)
 	router.HEAD(base+"/actor/:type/:id/state/:key", containsKey)
+	router.POST(base+"/actor/:type/:id/state/:key", mapOps)
 	router.GET(base+"/actor/:type/:id/state", getAll)
 	router.POST(base+"/actor/:type/:id/state", setMultiple)
 	router.DELETE(base+"/actor/:type/:id/state", delAll)

@@ -96,6 +96,23 @@ public class Sample extends ActorSkeleton {
 		return actorGetState(this, key.getString());
 	}
 
+	@Remote
+	public JsonValue subMapSize(JsonString key) {
+		return Json.createValue(actorSubMapSize(this, key.getString()));
+	}
+
+	@Remote
+	public JsonValue subMapClear(JsonString key) {
+		return Json.createValue(actorSubMapClear(this, key.getString()));
+	}
+
+	@Remote
+	public void subMapPrintKeys(JsonString key) {
+		String[] keys = actorSubMapKeys(this, key.getString());
+		for (int i=0; i<keys.length; i++) {
+			System.out.println(keys[i]);
+		}
+	}
 
 	@Remote
 	public JsonValue hasStateSubkey(JsonString key, JsonString subkey) {
@@ -106,7 +123,6 @@ public class Sample extends ActorSkeleton {
 	public JsonValue hasStateElement(JsonString key) {
 		return actorContainsState(this, key.getString()) ? JsonValue.TRUE : JsonValue.FALSE;
 	}
-
 
 	@Remote
 	public JsonObject getState() {

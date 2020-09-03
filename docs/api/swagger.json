@@ -952,6 +952,68 @@
           }
         }
       },
+      "post": {
+        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateMapOps",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the map operation to be performed",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/MapOp"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateMapOps"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
       "delete": {
         "description": "### Remove a single entry in an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by removing the entry for `key`.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if an entry was actually removed and\n`0` if there was no entry for `key`.",
         "produces": [
@@ -1893,13 +1955,24 @@
           "type": "string"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     },
     "Duration": {
       "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
       "type": "integer",
       "format": "int64",
       "x-go-package": "time"
+    },
+    "MapOp": {
+      "description": "MapOp describes the requested map operation on an Actors state",
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "x-go-name": "Op"
+        }
+      },
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     },
     "Reminder": {
       "description": "Reminder describes a time-triggered asynchronous invocation of a Path on an Actor",
@@ -1929,7 +2002,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     },
     "scheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
@@ -1960,7 +2033,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     },
     "source": {
       "type": "object",
@@ -1987,7 +2060,7 @@
           "type": "string"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     }
   },
   "responses": {
@@ -2096,6 +2169,17 @@
       "headers": {
         "Response": {
           "description": "The requested value"
+        }
+      }
+    },
+    "response200StateMapOps": {
+      "description": "The result of performing a map operation on an actor's state",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The result of performing the map operation"
         }
       }
     },

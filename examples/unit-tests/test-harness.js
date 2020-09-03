@@ -119,10 +119,25 @@ async function actorTests () {
     console.log('found non-contained key famous/Doe')
     failure = true
   }
+  const nf = await actor.state.subMapSize(a, 'famous')
+  if (nf !== 3) {
+    console.log(`Unexpected number of famous people: ${nf}`)
+    failure = true
+  }
   await actor.state.remove(a, 'famous', 'Knuth')
   const dk2 = await actor.state.get(a, 'famous', 'Knuth')
   if (dk2) {
     console.log('Failed to remove Don Knuth from famous map')
+    failure = true
+  }
+  const fp = await actor.state.subMapGetKeys(a, 'famous')
+  if (!fp.includes('Allen') || !fp.includes('Turing')) {
+    console.log(`Unexpected set of famous people ${fp}`)
+    failure = true
+  }
+  await actor.state.subMapClear(a, 'famous')
+  if (await actor.state.subMapSize(a, 'famous') !== 0) {
+    console.log('Submap clear did not remove all keys')
     failure = true
   }
 

@@ -8,7 +8,7 @@ definitions:
         type: string
     title: Actor uniquely identifies an actor instance.
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   Duration:
     description: |-
       A Duration represents the elapsed time between two instants
@@ -17,6 +17,14 @@ definitions:
     format: int64
     type: integer
     x-go-package: time
+  MapOp:
+    description: MapOp describes the requested map operation on an Actors state
+    properties:
+      op:
+        type: string
+        x-go-name: Op
+    type: object
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   Reminder:
     description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
     properties:
@@ -38,7 +46,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
@@ -68,7 +76,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   source:
     properties:
       Actor:
@@ -86,7 +94,7 @@ definitions:
       Topic:
         type: string
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
 info:
   description: |-
     This document describes the RESTful APIs provided or assumed by the
@@ -905,6 +913,56 @@ paths:
       summary: state/key
       tags:
       - state
+    post:
+      consumes:
+      - application/json
+      description: |-
+        ### Perform an operation on the actor map `key`
+
+        The operation indicated by the request body will be performed on the `key` map
+        of the actor instance indicated by `actorType` and `actorId`. The result of the
+        operation will be returned as the response body.
+        If there are no `key/subkey` entries in the actor instance, the operation
+        will be interpreted as being applied to an empty map.
+      operationId: idActorStateMapOps
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The request body describes the map operation to be performed
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/MapOp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateMapOps'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
     put:
       consumes:
       - application/json
@@ -1695,6 +1753,13 @@ responses:
     headers:
       Response:
         description: The requested value
+    schema:
+      type: object
+  response200StateMapOps:
+    description: The result of performing a map operation on an actor's state
+    headers:
+      body:
+        description: The result of performing the map operation
     schema:
       type: object
   response200StateSetMultipleResult:

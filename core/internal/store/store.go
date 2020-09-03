@@ -140,6 +140,16 @@ func HDel(hash, key string) (int, error) {
 	return redis.Int(do("HDEL", hash, key))
 }
 
+//HDelMultiple hash key[]
+func HDelMultiple(hash string, keys []string) (int, error) {
+	args := make([]interface{}, len(keys)+1)
+	args[0] = hash
+	for i := range keys {
+		args[i+1] = keys[i]
+	}
+	return redis.Int(do("HDEL", args...))
+}
+
 // HGetAll hash
 func HGetAll(hash string) (map[string]string, error) {
 	return redis.StringMap(do("HGETALL", hash))

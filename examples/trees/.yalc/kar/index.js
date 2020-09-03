@@ -196,6 +196,12 @@ const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.typ
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
+const actorSubMapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
+
+const actorSubMapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
+
+const actorSubMapClear = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
+
 const shutdown = () => post('system/shutdown').then(_ => session.close())
 
 function publish (topic, event) {
@@ -350,7 +356,10 @@ module.exports = {
       setMultiple: actorSetStateMultiple,
       remove: actorRemoveState,
       getAll: actorGetAllState,
-      removeAll: actorRemoveAllState
+      removeAll: actorRemoveAllState,
+      subMapGetKeys: actorSubMapGetKeys,
+      subMapSize: actorSubMapSize,
+      subMapClear: actorSubMapClear
     }
   },
   sys: {

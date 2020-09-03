@@ -132,6 +132,7 @@ func dummy3() {}
 // swagger:parameters idActorStateExists
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
+// swagger:parameters idActorStateMapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
 // swagger:parameters idActorStateSubkeyGet
@@ -151,6 +152,7 @@ type actorParam struct {
 // swagger:parameters idActorStateExists
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
+// swagger:parameters idActorStateMapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
 // swagger:parameters idActorStateSubkeyGet
@@ -239,6 +241,13 @@ type reminderIDParam struct {
 	// The id of the specific reminder being targeted
 	// in:path
 	ReminderID string `json:"reminderId"`
+}
+
+// swagger:parameters idActorStateMapOps
+type mapopsParamWrapper struct {
+	// The request body describes the map operation to be performed
+	// in:body
+	Body MapOp
 }
 
 // swagger:parameters idActorReminderSchedule
@@ -337,6 +346,13 @@ type response200CallResult struct {
 // swagger:response response200CallActorResult
 type response200CallActorResult struct {
 	// The result returned by the actor method
+	Body interface{} `json:"body"`
+}
+
+// The result of performing a map operation on an actor's state
+// swagger:response response200StateMapOps
+type response200StateMapOps struct {
+	// The result of performing the map operation
 	Body interface{} `json:"body"`
 }
 

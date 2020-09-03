@@ -2,7 +2,7 @@
   "version": "v1",
   "packages": {
     "kar": {
-      "signature": "d7104912820c0e02c722bb695d542b54",
+      "signature": "090bd25d827ef5f1c08a5e8f292e645b",
       "file": true,
       "replaced": "../../sdk-js"
     }
