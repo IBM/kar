@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/store"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/internal/store"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // store key for topic, partition

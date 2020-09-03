@@ -11,7 +11,7 @@ import (
 	"strconv"
 
 	"github.com/Shopify/sarama"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // use debug logger for errors returned to caller

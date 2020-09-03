@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
 )
 
 // Actor uniquely identifies an actor instance.

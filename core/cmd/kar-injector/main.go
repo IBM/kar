@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.ibm.com/solsa/kar.git/internal/sidecar"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/internal/sidecar"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 var (

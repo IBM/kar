@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	"github.com/Shopify/sarama"
-	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 var (
@@ -136,13 +136,12 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
 }
 
-
 // CreateTopic attempts to create the specified topic using the given parameters
 func CreateTopic(topic string, parameters string) error {
 	var params sarama.TopicDetail
 	var err error
 
-	if (parameters != "") {
+	if parameters != "" {
 		err = json.Unmarshal([]byte(parameters), &params)
 		if err != nil {
 			logger.Debug("Error unmarshaling parameters to createTopic %v: %v", topic, err)
@@ -156,7 +155,7 @@ func CreateTopic(topic string, parameters string) error {
 		return err
 	}
 
-	if (parameters == "") { // No parameters given, attempt default creation values
+	if parameters == "" { // No parameters given, attempt default creation values
 		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 		if err != nil {
 			err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
@@ -187,13 +186,13 @@ func DeleteTopic(topic string) error {
 }
 
 type sidecarData struct {
-	Partitions []int32 `json:"partitions"`
-	Address string `json:"address"`
-	Actors []string `json:"actors"`
-	Services []string `json:"services"`
+	Partitions []int32  `json:"partitions"`
+	Address    string   `json:"address"`
+	Actors     []string `json:"actors"`
+	Services   []string `json:"services"`
 }
 
-func GetSidecars(format string) (string, error) {	
+func GetSidecars(format string) (string, error) {
 	information := make(map[string]*sidecarData)
 
 	mu.RLock()
@@ -216,7 +215,7 @@ func GetSidecars(format string) (string, error) {
 	}
 	mu.RUnlock()
 
-	if (format == "json" || format == "application/json") {
+	if format == "json" || format == "application/json" {
 		m, err := json.Marshal(information)
 		if err != nil {
 			logger.Debug("Error marshaling sidecar information data: %v", err)

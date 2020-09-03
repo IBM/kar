@@ -1,8 +1,8 @@
 package pubsub
 
 import (
-	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/store"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/internal/store"
 )
 
 func placementKey(t, id string) string {

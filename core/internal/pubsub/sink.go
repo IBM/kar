@@ -2,7 +2,7 @@ package pubsub
 
 import (
 	"github.com/Shopify/sarama"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // Publish publishes a message on a topic

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.ibm.com/solsa/kar.git/internal/config"
-	"github.ibm.com/solsa/kar.git/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/pkg/logger"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // Invoke an actor method
