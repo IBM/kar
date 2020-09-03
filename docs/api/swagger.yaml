@@ -8,7 +8,7 @@ definitions:
         type: string
     title: Actor uniquely identifies an actor instance.
     type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
   Duration:
     description: |-
       A Duration represents the elapsed time between two instants
@@ -38,7 +38,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
@@ -68,7 +68,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
   source:
     properties:
       Actor:
@@ -86,7 +86,7 @@ definitions:
       Topic:
         type: string
     type: object
-    x-go-package: github.ibm.com/solsa/kar.git/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
 info:
   description: |-
     This document describes the RESTful APIs provided or assumed by the

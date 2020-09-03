@@ -1893,7 +1893,7 @@
           "type": "string"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
     },
     "Duration": {
       "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
@@ -1929,7 +1929,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
     },
     "scheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
@@ -1960,7 +1960,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
     },
     "source": {
       "type": "object",
@@ -1987,7 +1987,7 @@
           "type": "string"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar.git/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
     }
   },
   "responses": {
