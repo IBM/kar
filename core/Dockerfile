@@ -1,15 +1,15 @@
 # Build KAR
 FROM golang:1.15 as builder
 
-RUN mkdir -p $GOPATH/src/github.ibm.com/solsa/kar
-WORKDIR $GOPATH/src/github.ibm.com/solsa/kar
+RUN mkdir -p /kar/core
+WORKDIR /kar/core
 
-COPY cmd cmd
+COPY go.mod go.sum ./
+RUN go mod download
+
 COPY pkg pkg
 COPY internal internal
-COPY go.mod go.mod
-COPY go.sum go.sum
-
+COPY cmd cmd
 RUN CGO_ENABLED=0 go install ./...
 
 # Create final image with desired executable
@@ -18,4 +18,3 @@ ARG KAR_BINARY
 
 RUN mkdir -p /kar
 COPY --from=builder /go/bin/$KAR_BINARY /kar
-
