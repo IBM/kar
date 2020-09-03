@@ -5,8 +5,8 @@ FROM $KAR_BASE as kar
 FROM open-liberty:kernel-java11
 
 # S2I setup
-COPY ./s2i/bin/ /s2i
+COPY s2i/bin /s2i
 LABEL io.openshift.s2i.scripts-url=image:///s2i
 
-# Install kar cli to enable "local mode" execution for IBM Code Engine
-COPY --from=kar /kar/kar /kar/bin/kar
+# Copy in kar cli to enable "local mode" style when running under IBM Code Engine
+COPY --from=kar /kar/bin/kar /kar/bin/kar

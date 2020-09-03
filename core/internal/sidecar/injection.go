@@ -117,7 +117,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		sidecar := []corev1.Container{{
 			Name:          sidecarName,
 			Image:         fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
-			Command:       []string{"/kar/kar"},
+			Command:       []string{"/kar/bin/kar"},
 			Args:          cmdLine,
 			Env:           []corev1.EnvVar{{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
 			Ports:         []corev1.ContainerPort{{ContainerPort: int32(runtimePort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
