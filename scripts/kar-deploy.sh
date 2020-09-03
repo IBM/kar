@@ -101,7 +101,7 @@ if [ "$icr" == "enabled" ]; then
     kubectl --namespace kar-system create secret docker-registry kar.ibm.com.image-pull --docker-server=us.icr.io --docker-username=iamapikey --docker-email=kar@ibm.com --docker-password=$KAR_API_KEY
 fi
 
-helm install kar charts/kar -n kar-system $helmargs
+helm install kar scripts/helm/kar -n kar-system $helmargs
 
 if [ "$injectorOnly" == "" ]; then
     statefulsetHealthCheck "kar-redis"
