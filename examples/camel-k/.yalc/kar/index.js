@@ -194,6 +194,8 @@ const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}
 
 const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, state)
 
+const actorSetStateMultipleInSubMap = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
+
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
 const actorSubMapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
@@ -354,6 +356,7 @@ module.exports = {
       set: actorSetState,
       setWithSubkey: actorSetWithSubkeyState,
       setMultiple: actorSetStateMultiple,
+      setMultipleInSubMap: actorSetStateMultipleInSubMap,
       remove: actorRemoveState,
       getAll: actorGetAllState,
       removeAll: actorRemoveAllState,

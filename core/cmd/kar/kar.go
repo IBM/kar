@@ -819,37 +819,51 @@ func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 
 	stateKey := stateKey(ps.ByName("type"), ps.ByName("id"))
-	keys, err := store.HKeys(stateKey)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
-		return
-	}
 	mapName := ps.ByName("key")
-	subkeyPrefix := nestedEntryKeyPrefix(mapName)
-	flatKey := flatEntryKey(mapName)
-	mapKeys := []string{}
-	for i := range keys {
-		if keys[i] != flatKey && strings.HasPrefix(keys[i], subkeyPrefix) {
-			mapKeys = append(mapKeys, keys[i])
-		}
-	}
 
 	var response interface{}
 	switch op.Op {
 	case "size":
+		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
+			return
+		}
 		response = len(mapKeys)
+
 	case "keys":
+		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			return
+		}
 		cleanedKeys := make([]string, 0, len(mapKeys))
+		subkeyPrefix := nestedEntryKeyPrefix(mapName)
 		for i := range mapKeys {
 			cleanedKeys = append(cleanedKeys, strings.TrimPrefix(mapKeys[i], subkeyPrefix))
 		}
 		response = cleanedKeys
+
 	case "clear":
+		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			return
+		}
 		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
 		}
 		response = numCleared
+
+	case "update":
+		numUpdated, err := actorSetMultiple(stateKey, mapName, op.Updates)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: setMultiple failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+		response = numUpdated
+
 	default:
 		http.Error(w, fmt.Sprintf("Unsupported map operation %v", op.Op), http.StatusBadRequest)
 		return
@@ -863,6 +877,25 @@ func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprint(w, string(buf))
+}
+
+func getSubMapKeys(stateKey string, mapName string) ([]string, error) {
+	// TODO: Future performance optimization.
+	//       We should instead use HScan to incrementally accumulate the
+	//       list of keys to avoid long latency operations on Redis.
+	keys, err := store.HKeys(stateKey)
+	if err != nil {
+		return nil, err
+	}
+	subkeyPrefix := nestedEntryKeyPrefix(mapName)
+	flatKey := flatEntryKey(mapName)
+	mapKeys := []string{}
+	for i := range keys {
+		if keys[i] != flatKey && strings.HasPrefix(keys[i], subkeyPrefix) {
+			mapKeys = append(mapKeys, keys[i])
+		}
+	}
+	return mapKeys, nil
 }
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateDelete
@@ -991,22 +1024,29 @@ func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Error(w, "Request body was not a map[string, interface{}]", http.StatusBadRequest)
 		return
 	}
-	sk := stateKey(ps.ByName("type"), ps.ByName("id"))
+	stateKey := stateKey(ps.ByName("type"), ps.ByName("id"))
+	if reply, err := actorSetMultiple(stateKey, config.Separator, updates); err != nil {
+		http.Error(w, fmt.Sprintf("setMultiple failed: %v", err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, reply)
+	}
+}
+
+func actorSetMultiple(stateKey string, key string, updates map[string]interface{}) (int, error) {
 	m := map[string]string{}
 	for i, v := range updates {
 		s, err := json.Marshal(v)
 		if err != nil {
-			logger.Error("setMultiple: %v[%v] = %v failed due to %v", sk, i, v, err)
-			http.Error(w, fmt.Sprintf("Unable to re-serialize value %v", v), http.StatusInternalServerError)
-			return
+			logger.Error("setMultiple: %v[%v] = %v failed due to %v", stateKey, i, v, err)
+			return 0, err
 		}
-		m[flatEntryKey(i)] = string(s)
+		if key == config.Separator {
+			m[flatEntryKey(i)] = string(s)
+		} else {
+			m[nestedEntryKey(key, i)] = string(s)
+		}
 	}
-	if reply, err := store.HSetMultiple(sk, m); err != nil {
-		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
-	} else {
-		fmt.Fprint(w, reply)
-	}
+	return store.HSetMultiple(stateKey, m)
 }
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/state state idActorStateDeleteAll

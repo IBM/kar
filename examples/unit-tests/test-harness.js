@@ -100,9 +100,8 @@ async function actorTests () {
     console.log(`    value was ${v3a}`)
     failure = true
   }
-  await actor.state.setWithSubkey(a, 'famous', 'Turing', 'Alan')
   await actor.state.setWithSubkey(a, 'famous', 'Allen', 'Fran')
-  await actor.state.setWithSubkey(a, 'famous', 'Knuth', 'Don')
+  await actor.state.setMultipleInSubMap(a, 'famous', { Turing: 'Alan', Knuth: 'Don' })
   const fa = await actor.state.get(a, 'famous', 'Allen')
   const dk = await actor.state.get(a, 'famous', 'Knuth')
   if (fa !== 'Fran' || dk !== 'Don') {

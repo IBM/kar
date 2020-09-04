@@ -702,6 +702,28 @@ public class Kar {
 	}
 
 	/**
+	 * Store multiple values to a the Actor sub-map with name `key`
+	 *
+	 * @param actor   The Actor instance.
+	 * @param key  The key of the map to which the updates should be performed
+	 * @param updates A map containing the (subkey, value) pairs to store
+	 * @return The number of new map entries created by this operation
+	 */
+	public static int actorSetMultipleState(ActorRef actor, String key, Map<String, JsonValue> updates) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		for (Entry<String, JsonValue> e : updates.entrySet()) {
+			jb.add(e.getKey(), e.getValue());
+		}
+		JsonObject jup = jb.build();
+		JsonObjectBuilder pb = Json.createObjectBuilder();
+		pb.add("op", Json.createValue("update"));
+		pb.add("updates", jup);
+		JsonObject params = pb.build();
+		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
+		return toInt(response);
+	}
+
+	/**
 	 * Remove one value from an Actor's state
 	 *
 	 * @param actor The Actor instance.
@@ -807,11 +829,7 @@ public class Kar {
 	/*
 	 * WIP -- pieces of subkey API that still need to be added. FIXME!
 	 *
-	 * public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String
-	 * mapName) { return null; }
-	 *
-	 * public static void actorMapPutAll(ActorRef actor, String mapName,
-	 * Map<String,JsonValue> map) { }
+	 * public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String mapName) { return null; }
 	 *
 	 */
 

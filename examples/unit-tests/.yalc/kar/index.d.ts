@@ -205,6 +205,14 @@ export namespace actor {
     export function setMultiple (actor: Actor, updates: Map<string, any>): Promise<void>;
 
     /**
+     * Store multiple (subkey, value) pairs to the `key` map of an Actor's state
+     * @param actor The Actor instance.
+     * @param key the name of the map to which the updates should be performed.
+     * @param updates The updates to make
+     */
+    export function setMultipleInSubMap (actor: Actor, key:string, updates: Map<string, any>): Promise<void>;
+
+    /**
      * Remove one value from an Actor's state
      * @param actor The Actor instance.
      * @param key The key to delete

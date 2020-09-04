@@ -81,6 +81,12 @@ public class Sample extends ActorSkeleton {
 	}
 
 	@Remote
+	public JsonNumber setStateSubMap(JsonString key, JsonObject updates) {
+		int numNew = actorSetMultipleState(this, key.getString(), updates);
+		return Json.createValue(numNew);
+	}
+
+	@Remote
 	public JsonNumber setStateSubkey(JsonString key, JsonString subkey, JsonValue value) {
 		int numNew = actorSetState(this, key.getString(), subkey.getString(), value);
 		return Json.createValue(numNew);
