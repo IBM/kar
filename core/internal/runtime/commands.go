@@ -310,6 +310,18 @@ func tell(ctx context.Context, msg map[string]string) error {
 	return nil
 }
 
+// Returns information about this sidecar's actors
+func getActorInformation(ctx context.Context, msg map[string]string) error {
+	actorInfo, err := GetActors()
+	var reply *Reply
+	if err != nil {
+		reply = &Reply{StatusCode: http.StatusInternalServerError}
+	} else {
+		reply = &Reply{StatusCode: http.StatusOK, Payload: actorInfo, ContentType: "application/json"}
+	}
+	return respond(ctx, msg, reply)
+}
+
 func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]string) error {
 	switch msg["command"] {
 	case "call":
@@ -328,6 +340,8 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 		return bindingTell(ctx, msg)
 	case "tell":
 		return tell(ctx, msg)
+	case "getActors":
+		return getActorInformation(ctx, msg)
 	default:
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
 	}

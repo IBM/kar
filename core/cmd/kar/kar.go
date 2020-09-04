@@ -1157,14 +1157,29 @@ func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 }
 
-func getSidecars(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+// Returns information about a specified component, controlled by the call path
+// Options are given by the cases
+// Format type (text/plain vs application/json) is controlled by Accept header in call
+func getInformation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	format := "text/plain"
 	if r.Header.Get("Accept") == "application/json" {
 		format = "application/json"
 	}
-	data, err := pubsub.GetSidecars(format)
+	component := ps.ByName("component")
+	var data string
+	var err error
+	switch component {
+	case "sidecars", "Sidecars":
+		data, err = pubsub.GetSidecars(format)
+	case "actors", "Actors":
+		data, err = runtime.GetAllActors(ctx, format)
+	case "sidecar_actors":
+		data, err = runtime.GetActors()
+	default:
+		http.Error(w, fmt.Sprintf("Invalid information query: %v", component), http.StatusBadRequest)
+	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to acquire information: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Failed to acquire %v information: %v", component, err), http.StatusInternalServerError)
 	} else {
 		w.Header().Add("Content-Type", format)
 		fmt.Fprint(w, data)
@@ -1220,7 +1235,7 @@ func server(listener net.Listener) http.Server {
 	router.GET(base+"/system/health", health)
 	router.POST(base+"/system/shutdown", shutdown)
 	router.POST(base+"/system/post", post)
-	router.GET(base+"/system/information/sidecars", getSidecars)
+	router.GET(base+"/system/information/:component", getInformation)
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)

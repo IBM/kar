@@ -2,12 +2,16 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"sync"
 	"time"
 
 	"github.ibm.com/solsa/kar.git/core/internal/config"
 	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // Actor uniquely identifies an actor instance.
@@ -145,6 +149,87 @@ func collect(ctx context.Context, time time.Time) error {
 		return ctx.Err() == nil // stop collection if cancelled
 	})
 	return ctx.Err()
+}
+
+// Returns a json map of actor types ->  list of active IDs on a per-sidecar basis
+func GetActors() (string, error) {
+	information := make(map[string][]string)
+	actorTable.Range(func(actor, v interface{}) bool {
+		e := v.(*actorEntry)
+		e.lock <- struct{}{}
+		if e.valid {
+			information[e.actor.Type] = append(information[e.actor.Type], e.actor.ID)
+		}
+		<-e.lock
+		return true
+	})
+	m, err := json.Marshal(information)
+	if err != nil {
+		logger.Debug("Error marshaling actor information data: %v", err)
+		return "", err
+	}
+	return string(m), nil
+}
+
+// Returns map of actor types ->  list of active IDs for all sidecars in the app
+func GetAllActors(ctx context.Context, format string) (string, error) {
+	information := make(map[string][]string)
+	var err error
+	for _, sidecar := range pubsub.Sidecars() {
+		var actorInfo string
+		var actorReply *Reply
+		var actorInformation map[string][]string
+		if sidecar != config.ID {
+			// Make call to other sidecar, returns the result of GetActors() there
+			msg := map[string]string{
+				"protocol": "sidecar",
+				"sidecar":  sidecar,
+				"command":  "getActors",
+			}
+			actorReply, err = callHelper(ctx, msg, false)
+			if err != nil || actorReply.StatusCode != 200 {
+				logger.Debug("Error gathering actor information: %v", err)
+				return "", err
+			}
+			actorInfo = actorReply.Payload
+		} else {
+			actorInfo, err = GetActors()
+		}
+		err = json.Unmarshal([]byte(actorInfo), &actorInformation)
+		if err != nil {
+			logger.Debug("Error unmarshaling actor information: %v", err)
+			return "", err
+		}
+		for actorType, actorIDs := range actorInformation { // accumulate sidecar's info into information
+			information[actorType] = append(information[actorType], actorIDs...)
+		}
+	}
+	//TODO: Sort IDs ?
+	if format == "json" || format == "application/json" {
+		var m []byte
+		m, err = json.Marshal(information)
+		if err != nil {
+			logger.Debug("Error marshaling actors information: %v", err)
+			return "", err
+		}
+		return string(m), nil
+	} else {
+		var str strings.Builder
+		fmt.Fprint(&str, "\nActor Type\n : IDs of actors with type\n")
+		for actorType, actorIDs := range information {
+			fmt.Fprintf(&str, "%v\n : ", actorType)
+			if len(actorIDs) > 10 { // Display up to 10 IDs per actor.
+				fmt.Fprint(&str, "[")
+				for i := 0; i < 10; i++ {
+					fmt.Fprintf(&str, "%v ", actorIDs[i])
+				}
+				fmt.Fprintf(&str, "... and %v more]\n", len(actorIDs)-10)
+			} else {
+				fmt.Fprintf(&str, "%v\n", actorIDs)
+			}
+		}
+		return str.String(), nil
+	}
 }
 
 // migrate releases the actor lock and updates the sidecar for the actor

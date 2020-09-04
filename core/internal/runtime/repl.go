@@ -47,19 +47,23 @@ func Invoke(ctx context.Context, args []string) (exitCode int) {
 // Perform information methods
 func GetInformation(ctx context.Context, args []string) (exitCode int) {
 	option := strings.ToLower(config.Get)
+	var str string
+	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err := pubsub.GetSidecars(config.OutputStyle)
-		if err != nil {
-			logger.Error("error in Inform on %v: %v", option, err)
-			exitCode = 1
-			return
-		}
-		log.Printf(str)
+		str, err = pubsub.GetSidecars(config.OutputStyle)
+	case "actor", "actors":
+		str, err = GetAllActors(ctx, config.OutputStyle)
 	default:
 		logger.Error("invalid argument <%v> to call Inform", option)
 		exitCode = 1
 		return
 	}
+	if err != nil {
+		logger.Error("error in Get on %v: %v", option, err)
+		exitCode = 1
+		return
+	}
+	log.Printf("%s", str)
 	return
 }
