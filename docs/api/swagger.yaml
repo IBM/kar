@@ -23,6 +23,11 @@ definitions:
       op:
         type: string
         x-go-name: Op
+      updates:
+        additionalProperties:
+          type: object
+        type: object
+        x-go-name: Updates
     type: object
     x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   Reminder:
@@ -919,11 +924,20 @@ paths:
       description: |-
         ### Perform an operation on the actor map `key`
 
-        The operation indicated by the request body will be performed on the `key` map
+        The operation indicated by the `op` field of the request body will be performed on the `key` map
         of the actor instance indicated by `actorType` and `actorId`. The result of the
         operation will be returned as the response body.
         If there are no `key/subkey` entries in the actor instance, the operation
         will be interpreted as being applied to an empty map.
+
+        The valid values for `op` are:
+        <ul>
+        <li>clear: remove all entires in the key actor map</li>
+        <li>get: get the entire key actor map</li>
+        <li>keys: return a list of subkeys that are defined in the key actor map</li>
+        <li>size: return the number of entries the key actor map</li>
+        <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
+        </ul>
       operationId: idActorStateMapOps
       parameters:
       - description: The actor type

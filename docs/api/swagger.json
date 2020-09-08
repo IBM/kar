@@ -953,7 +953,7 @@
         }
       },
       "post": {
-        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.",
+        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the `op` field of the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclear: remove all entires in the key actor map\u003c/li\u003e\n\u003cli\u003eget: get the entire key actor map\u003c/li\u003e\n\u003cli\u003ekeys: return a list of subkeys that are defined in the key actor map\u003c/li\u003e\n\u003cli\u003esize: return the number of entries the key actor map\u003c/li\u003e\n\u003cli\u003eupdate: update the key actor map to contain all the subkey to value mappings contained in updates\u003c/li\u003e\n\u003c/ul\u003e",
         "consumes": [
           "application/json"
         ],
@@ -1970,6 +1970,13 @@
         "op": {
           "type": "string",
           "x-go-name": "Op"
+        },
+        "updates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Updates"
         }
       },
       "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"

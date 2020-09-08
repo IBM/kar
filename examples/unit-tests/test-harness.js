@@ -123,6 +123,11 @@ async function actorTests () {
     console.log(`Unexpected number of famous people: ${nf}`)
     failure = true
   }
+  const fpm = await actor.state.subMapGet(a, 'famous')
+  if (fpm.Allen !== 'Fran' || fpm.Turing !== 'Alan' || fpm.Knuth !== 'Don') {
+    console.log('Missing famous person entry from subMapGet')
+    failure = true
+  }
   await actor.state.remove(a, 'famous', 'Knuth')
   const dk2 = await actor.state.get(a, 'famous', 'Knuth')
   if (dk2) {

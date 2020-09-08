@@ -795,11 +795,20 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Perform an operation on the actor map `key`
 //
-// The operation indicated by the request body will be performed on the `key` map
+// The operation indicated by the `op` field of the request body will be performed on the `key` map
 // of the actor instance indicated by `actorType` and `actorId`. The result of the
 // operation will be returned as the response body.
 // If there are no `key/subkey` entries in the actor instance, the operation
 // will be interpreted as being applied to an empty map.
+//
+// The valid values for `op` are:
+// <ul>
+// <li>clear: remove all entires in the key actor map</li>
+// <li>get: get the entire key actor map</li>
+// <li>keys: return a list of subkeys that are defined in the key actor map</li>
+// <li>size: return the number of entries the key actor map</li>
+// <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
+// </ul>
 //
 //     Consumes:
 //     - application/json
@@ -823,13 +832,45 @@ func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	var response interface{}
 	switch op.Op {
-	case "size":
+	case "clear":
+		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
+		}
+		response = numCleared
+
+	case "get":
 		mapKeys, err := getSubMapKeys(stateKey, mapName)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		response = len(mapKeys)
+
+		// Construct the response map by looking up each subkey
+		subkeyPrefix := nestedEntryKeyPrefix(mapName)
+		m := map[string]interface{}{}
+		for i := range mapKeys {
+			if vstr, err := store.HGet(stateKey, mapKeys[i]); err == store.ErrNil {
+				// Map contains nil for this key; elide the entry
+			} else if err != nil {
+				http.Error(w, fmt.Sprintf("HKEY failed: %v", err), http.StatusInternalServerError)
+				return
+			} else {
+				userSubkey := strings.TrimPrefix(mapKeys[i], subkeyPrefix)
+				var userValue interface{}
+				if json.Unmarshal([]byte(vstr), &userValue) != nil {
+					http.Error(w, fmt.Sprintf("Failed to deserialize result of HGET: %v", err), http.StatusInternalServerError)
+					return
+				}
+				m[userSubkey] = userValue
+			}
+		}
+		response = m
 
 	case "keys":
 		mapKeys, err := getSubMapKeys(stateKey, mapName)
@@ -844,17 +885,13 @@ func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 		response = cleanedKeys
 
-	case "clear":
+	case "size":
 		mapKeys, err := getSubMapKeys(stateKey, mapName)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
-		}
-		response = numCleared
+		response = len(mapKeys)
 
 	case "update":
 		numUpdated, err := actorSetMultiple(stateKey, mapName, op.Updates)

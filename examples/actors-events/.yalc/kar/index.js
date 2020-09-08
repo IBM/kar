@@ -200,6 +200,8 @@ const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.
 
 const actorSubMapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
 
+const actorSubMapGet = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
+
 const actorSubMapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
 
 const actorSubMapClear = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
@@ -361,6 +363,7 @@ module.exports = {
       getAll: actorGetAllState,
       removeAll: actorRemoveAllState,
       subMapGetKeys: actorSubMapGetKeys,
+      subMapGet: actorSubMapGet,
       subMapSize: actorSubMapSize,
       subMapClear: actorSubMapClear
     }

@@ -113,6 +113,20 @@ public class Sample extends ActorSkeleton {
 	}
 
 	@Remote
+	public JsonValue subMapGet(JsonString key) {
+		Map<String,JsonValue> state = actorSubMapGet(this, key.getString());
+		if (state instanceof JsonObject) {
+			return (JsonObject)state;
+		} else {
+			JsonObjectBuilder builder = Json.createObjectBuilder();
+			for (Entry<String,JsonValue> e: state.entrySet()) {
+				builder.add(e.getKey(), e.getValue());
+			}
+			return builder.build();
+		}
+	}
+
+	@Remote
 	public void subMapPrintKeys(JsonString key) {
 		String[] keys = actorSubMapKeys(this, key.getString());
 		for (int i=0; i<keys.length; i++) {

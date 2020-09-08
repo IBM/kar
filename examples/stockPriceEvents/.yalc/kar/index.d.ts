@@ -228,6 +228,14 @@ export namespace actor {
     export function getAll (actor: Actor): Promise<Map<string, any>>;
 
     /**
+     * Get the contents of the `key` map of an Actor's state
+     * @param actor The Actor instance.
+     * @param key The name of the map to get
+     * @returns A contents of the map `key`
+     */
+    export function getSubmap (actor: Actor, key:String): Promise<Map<string, any>>;
+
+    /**
      * Remove an Actor's state
      * @param actor The Actor instance.
      */

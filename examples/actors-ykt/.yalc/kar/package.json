@@ -1,7 +1,7 @@
 {
   "name": "kar",
   "main": "index.js",
-  "version": "0.1.1+ad55beb5",
+  "version": "0.1.1+32f32169",
   "scripts": {
     "test": "standard"
   },

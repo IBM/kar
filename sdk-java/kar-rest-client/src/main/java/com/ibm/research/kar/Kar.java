@@ -757,6 +757,25 @@ public class Kar {
 	}
 
 	/**
+	 * Get the map associated with the given key
+	 *
+	 * @param actor The Actor instance
+	 * @param key   The key
+	 * @returns An array containing the currently defined subkeys
+	 */
+	public static Map<String, JsonValue> actorSubMapGet(ActorRef actor, String key) {
+		JsonObjectBuilder jb = Json.createObjectBuilder();
+		jb.add("op", Json.createValue("get"));
+		JsonObject params = jb.build();
+		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
+		try {
+			return ((JsonValue) toValue(response)).asJsonObject();
+		} catch (ClassCastException e) {
+			return Collections.emptyMap();
+		}
+	}
+
+	/**
 	 * Get the number of subkeys associated with the given key
 	 *
 	 * @param actor The Actor instance
