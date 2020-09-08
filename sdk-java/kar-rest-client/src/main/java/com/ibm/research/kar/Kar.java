@@ -846,13 +846,6 @@ public class Kar {
 	}
 
 	/*
-	 * WIP -- pieces of subkey API that still need to be added. FIXME!
-	 *
-	 * public static Map<String, JsonValue> actorMapGetMap(ActorRef actor, String mapName) { return null; }
-	 *
-	 */
-
-	/*
 	 * Events
 	 */
 
