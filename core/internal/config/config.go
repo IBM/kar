@@ -150,25 +150,29 @@ Available commands:
 
 	options := ""
 
+	writer := os.Stderr
+
+	// print usage to writer
 	flag.Usage = func() {
 		// print command usage and description
-		fmt.Fprintf(os.Stderr, "Usage:\n  %s\n\n%s\n\n", usage, description)
+		fmt.Fprintf(writer, "Usage:\n  %s\n\n%s\n\n", usage, description)
 
 		// print command-specific options if any
 		if options != "" {
-			fmt.Fprintf(os.Stderr, "Options:\n%s\n", options)
+			fmt.Fprintf(writer, "Options:\n%s\n", options)
 		}
 
 		// print global options by creating a dummy flag set
-		fmt.Fprintln(os.Stderr, "Global Options:")
+		fmt.Fprintln(writer, "Global Options:")
 		f := flag.NewFlagSet("", flag.ContinueOnError)
 		globalOptions(f)
+		f.SetOutput(writer)
 		f.PrintDefaults()
 	}
 
 	// missing command
 	if len(os.Args) < 2 {
-		fmt.Println("invalid command")
+		fmt.Fprintln(os.Stderr, "invalid command")
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -219,12 +223,15 @@ Available commands:
 		fallthrough
 	case "-h":
 		fallthrough
+	case "--h":
+		fallthrough
 	case "help":
+		writer = os.Stdout
 		flag.Usage()
 		os.Exit(0)
 
 	default:
-		fmt.Println("invalid command")
+		fmt.Fprintln(os.Stderr, "invalid command")
 		flag.Usage()
 		os.Exit(2)
 	}
@@ -236,10 +243,20 @@ Available commands:
 	options = b.String()
 	flag.CommandLine.SetOutput(os.Stderr)
 
+	help := false
+	flag.BoolVar(&help, "help", false, "")
+	flag.BoolVar(&help, "h", false, "")
+
 	// add global options
 	globalOptions(flag.CommandLine)
 
 	flag.CommandLine.Parse(os.Args[2:])
+
+	if help {
+		writer = os.Stdout
+		flag.Usage()
+		os.Exit(0)
+	}
 
 	logger.SetVerbosity(verbosity)
 
