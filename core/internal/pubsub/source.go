@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"net/http"
 	"strconv"
 	"sync"
 
@@ -270,13 +271,13 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, error) {
+func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, int, error) {
 	if ctx.Err() != nil { // fail fast
-		return nil, ctx.Err()
+		return nil, http.StatusServiceUnavailable, ctx.Err()
 	}
 	conf, err := newConfig()
 	if err != nil {
-		return nil, err
+		return nil, http.StatusInternalServerError, err
 	}
 	if options.master {
 		conf.Consumer.Group.Rebalance.Strategy = &customStrategy{}
@@ -291,13 +292,17 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka client: %v", err)
-		return nil, err
+		return nil, http.StatusInternalServerError, err
+	}
+	_, err = client.Partitions(topic)
+	if err != nil {
+		return nil, http.StatusNotFound, err
 	}
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
 		logger.Debug("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
 		handler.client.Close()
-		return nil, err
+		return nil, http.StatusInternalServerError, err
 	}
 
 	closed := make(chan struct{})
@@ -324,7 +329,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	case <-closed:
 	}
 
-	return closed, nil
+	return closed, http.StatusOK, nil
 }
 
 type entry struct {

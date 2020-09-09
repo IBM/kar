@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -35,21 +36,21 @@ func init() {
 }
 
 // add binding to collection
-func (c sources) add(ctx context.Context, b binding) error {
+func (c sources) add(ctx context.Context, b binding) (int, error) {
 	s := b.(source)
 	if _, ok := c[s.Actor]; !ok {
 		c[s.Actor] = map[string]source{}
 	}
 	context, cancel := context.WithCancel(ctx)
-	closed, err := subscribe(context, s)
+	closed, code, err := subscribe(context, s)
 	if err != nil {
 		cancel()
-		return err
+		return code, err
 	}
 	s.cancel = cancel
 	s.closed = closed
 	c[s.Actor][s.ID] = s
-	return nil
+	return http.StatusOK, nil
 }
 
 // find bindings in collection
@@ -110,7 +111,7 @@ func (c sources) load(actor Actor, id, key string, m map[string]string) (binding
 	}, nil
 }
 
-func subscribe(ctx context.Context, s source) (<-chan struct{}, error) {
+func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 	jsonType := s.ContentType == "" || // default is "application/cloudevents+json"
 		s.ContentType == "text/json" ||
 		s.ContentType == "application/json" ||

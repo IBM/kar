@@ -274,11 +274,11 @@ func bindingGet(ctx context.Context, msg map[string]string) error {
 func bindingSet(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	err := postBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
+	code, err := postBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
-		reply = &Reply{StatusCode: http.StatusBadRequest, Payload: err.Error(), ContentType: "text/plain"}
+		reply = &Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = &Reply{StatusCode: http.StatusOK, Payload: "OK", ContentType: "text/plain"}
+		reply = &Reply{StatusCode: code, Payload: "OK", ContentType: "text/plain"}
 	}
 	return respond(ctx, msg, reply)
 }

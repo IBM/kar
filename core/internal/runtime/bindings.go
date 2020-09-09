@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"math/rand"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,7 +22,7 @@ type binding interface {
 // in-memory collection of bindings
 // assumes exclusive access
 type bindings interface {
-	add(ctx context.Context, b binding) error
+	add(ctx context.Context, b binding) (int, error)
 	cancel(actor Actor, id string) []binding
 	find(actor Actor, id string) []binding
 
@@ -84,7 +85,7 @@ func loadBinding(ctx context.Context, kind string, actor Actor, partition, id st
 	if err != nil {
 		return err
 	}
-	err = pair.bindings.add(ctx, b)
+	_, err = pair.bindings.add(ctx, b)
 	if err != nil {
 		return err
 	}
@@ -116,7 +117,7 @@ func getBindings(kind string, actor Actor, id string) []binding {
 }
 
 // add binding in redis and memory
-func postBinding(ctx context.Context, kind string, actor Actor, id, payload string) error {
+func postBinding(ctx context.Context, kind string, actor Actor, id, payload string) (int, error) {
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
@@ -131,16 +132,16 @@ func postBinding(ctx context.Context, kind string, actor Actor, id, payload stri
 	}
 	b, m, err := pair.bindings.parse(actor, id, key, payload)
 	if err != nil {
-		return err
+		return http.StatusBadRequest, err
 	}
 	pair.bindings.cancel(actor, id)
-	err = pair.bindings.add(ctx, b)
+	code, err := pair.bindings.add(ctx, b)
 	if err != nil {
-		return err
+		return code, err
 	}
 	store.HSetMultiple(key, m)
 	logger.Debug("created binding %v", b)
-	return nil
+	return http.StatusOK, nil
 }
 
 // ensure bindings for this partition are loaded from redis in memory

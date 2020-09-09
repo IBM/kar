@@ -133,7 +133,8 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 			return nil, err
 		}
 	}
-	return Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+	ch, _, err := Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+	return ch, err
 }
 
 // CreateTopic attempts to create the specified topic using the given parameters

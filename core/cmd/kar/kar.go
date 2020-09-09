@@ -1166,9 +1166,9 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	// FIXME: https://github.ibm.com/solsa/kar/issues/30
 	//        Should return a 404 if topic doesn't exist.
 	buf, _ := ioutil.ReadAll(r.Body)
-	err := pubsub.Publish(ps.ByName("topic"), buf)
+	code, err := pubsub.Publish(ps.ByName("topic"), buf)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("publish error: %v", err), code)
 	} else {
 		fmt.Fprint(w, "OK")
 	}

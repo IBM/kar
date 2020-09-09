@@ -3,6 +3,7 @@ package runtime
 import (
 	"container/heap"
 	"context"
+	"net/http"
 	"time"
 )
 
@@ -43,9 +44,9 @@ func (rq *reminderQueue) Pop() interface{} {
 	return r
 }
 
-func (rq *reminderQueue) add(ctx context.Context, b binding) error {
+func (rq *reminderQueue) add(ctx context.Context, b binding) (int, error) {
 	heap.Push(rq, &reminderEntry{r: b.(Reminder)})
-	return nil
+	return http.StatusOK, nil
 }
 
 func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {
