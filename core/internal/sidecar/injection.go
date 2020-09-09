@@ -188,7 +188,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
-	cmd := []string{"-kubernetes_mode", "-config_dir", karRTConfigMount, "-app", appName}
+	cmd := []string{"run", "-kubernetes_mode", "-config_dir", karRTConfigMount, "-app", appName}
 	appEnv := []corev1.EnvVar{}
 
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {

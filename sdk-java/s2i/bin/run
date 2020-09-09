@@ -3,5 +3,5 @@
 if [ -z "$KAR_LOCAL_MODE" ]; then
     exec /opt/ol/wlp/bin/server run defaultServer
 else
-    exec /kar/bin/kar -app $KAR_APP $KAR_EXTRA_ARGS /opt/ol/wlp/bin/server run defaultServer
+    exec /kar/bin/kar run -app $KAR_APP $KAR_EXTRA_ARGS /opt/ol/wlp/bin/server run defaultServer
 fi

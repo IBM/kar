@@ -3,6 +3,7 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -18,6 +19,9 @@ import (
 const Separator = "_" // must not be a legal DNS name character
 
 var (
+	// CmdName is the name of the kar command
+	CmdName string
+
 	// AppName is the name of the application
 	AppName string
 
@@ -104,43 +108,138 @@ var (
 	// Outputs information on running systems, like calling system/information/<Get>
 	// Currently supported: Sidecars
 	Get string
+
+	// temporary variables to parse command line options
+	kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay, timeoutTime, actorTimeoutTime string
 )
 
+// define the flags available on all commands
+func globalOptions(f *flag.FlagSet) {
+	f.StringVar(&AppName, "app", "", "The name of the application (required)")
+
+	f.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
+	f.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
+	f.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
+	f.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
+	f.StringVar(&KafkaVersion, "kafka_version", "", "Kafka cluster version")
+
+	f.StringVar(&RedisHost, "redis_host", "", "The Redis host")
+	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
+	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
+	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
+
+	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
+
+	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
+}
+
 func init() {
-	var kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay, timeoutTime, actorTimeoutTime string
 	var err error
 
-	flag.StringVar(&AppName, "app", "", "The name of the application")
-	flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
-	flag.StringVar(&actorTypes, "actors", "", "The actor types provided by this process, as a comma separated list")
-	flag.StringVar(&collectInterval, "actor_collector_interval", "10s", "Actor collector interval")
-	flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval")
-	flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
-	flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
-	flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
-	flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
-	flag.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
-	flag.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
-	flag.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
-	flag.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
-	flag.StringVar(&KafkaVersion, "kafka_version", "", "Kafka cluster version")
-	flag.StringVar(&RedisHost, "redis_host", "", "The Redis host")
-	flag.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
-	flag.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
-	flag.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
-	flag.StringVar(&verbosity, "v", "error", "Logging verbosity")
-	flag.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
-	flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
-	flag.BoolVar(&Purge, "purge", false, "Purge the application state and messages and exit")
-	flag.BoolVar(&Drain, "drain", false, "Drain the application messages and exit")
-	flag.BoolVar(&Invoke, "invoke", false, "Invoke <actor type> <actor id> <method> [<1st argument> [<2nd argument> [...]]]")
-	flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
-	flag.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
-	flag.StringVar(&actorTimeoutTime, "actor_timeout", "2m", "Time to wait on busy actors before timing out")
-	flag.StringVar(&OutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting.")
-	flag.StringVar(&Get, "get", "", "Get <system>")
+	usage := `kar COMMAND ...
 
-	flag.Parse()
+Available commands:
+  run     run application component
+  get     query running application
+  invoke  invoke actor instance
+  purge   purge application messages and state
+  drain   drain application messages
+  help    print help message`
+
+	description := `Use "kar COMMAND -h" for more information about a command`
+
+	options := ""
+
+	flag.Usage = func() {
+		// print command usage and description
+		fmt.Fprintf(os.Stderr, "Usage:\n  %s\n\n%s\n\n", usage, description)
+
+		// print command-specific options if any
+		if options != "" {
+			fmt.Fprintf(os.Stderr, "Options:\n%s\n", options)
+		}
+
+		// print global options by creating a dummy flag set
+		fmt.Fprintln(os.Stderr, "Global Options:")
+		f := flag.NewFlagSet("", flag.ContinueOnError)
+		globalOptions(f)
+		f.PrintDefaults()
+	}
+
+	// missing command
+	if len(os.Args) < 2 {
+		fmt.Println("invalid command")
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	CmdName := os.Args[1]
+
+	switch CmdName {
+	case "run":
+		usage = "kar run [OPTIONS] [-- [COMMAND]]"
+		description = "Run application component"
+		flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
+		flag.StringVar(&actorTypes, "actors", "", "The actor types provided by this process, as a comma separated list")
+		flag.StringVar(&collectInterval, "actor_collector_interval", "10s", "Actor collector interval")
+		flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval")
+		flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
+		flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
+		flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
+		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
+		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
+		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
+		flag.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
+		flag.StringVar(&actorTimeoutTime, "actor_timeout", "2m", "Time to wait on busy actors before timing out")
+
+	case "get":
+		usage = "kar get [OPTIONS]"
+		description = "Query running application"
+		flag.StringVar(&Get, "s", "sidecars", "Information requested")
+		flag.StringVar(&OutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
+
+	case "invoke":
+		usage = "kar invoke [OPTIONS] ACTOR_TYPE ACTOR_ID METHOD [ARGS]"
+		description = "Invoke actor instance"
+		Invoke = true
+
+	case "purge":
+		usage = "kar purge [OPTIONS]"
+		description = "Purge application messages and state"
+		Purge = true
+
+	case "drain":
+		usage = "kar drain [OPTIONS]"
+		description = "Drain application messages"
+		Drain = true
+
+	case "-help":
+		fallthrough
+	case "--help":
+		fallthrough
+	case "-h":
+		fallthrough
+	case "help":
+		flag.Usage()
+		os.Exit(0)
+
+	default:
+		fmt.Println("invalid command")
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	// capture command-specific options before adding global options
+	b := &strings.Builder{}
+	flag.CommandLine.SetOutput(b)
+	flag.PrintDefaults()
+	options = b.String()
+	flag.CommandLine.SetOutput(os.Stderr)
+
+	// add global options
+	globalOptions(flag.CommandLine)
+
+	flag.CommandLine.Parse(os.Args[2:])
 
 	logger.SetVerbosity(verbosity)
 
@@ -148,29 +247,41 @@ func init() {
 		logger.Fatal("app name is required")
 	}
 
-	if ServiceName == "" {
-		ServiceName = "kar.none"
-	}
+	if CmdName == "run" {
+		if ServiceName == "" {
+			ServiceName = "kar.none"
+		}
 
-	if actorTypes == "" {
-		ActorTypes = []string{}
-	} else {
-		ActorTypes = strings.Split(actorTypes, ",")
-	}
+		if actorTypes == "" {
+			ActorTypes = []string{}
+		} else {
+			ActorTypes = strings.Split(actorTypes, ",")
+		}
 
-	ActorCollectorInterval, err = time.ParseDuration(collectInterval)
-	if err != nil {
-		logger.Fatal("error parsing actor_collector_interval %s", collectInterval)
-	}
+		ActorCollectorInterval, err = time.ParseDuration(collectInterval)
+		if err != nil {
+			logger.Fatal("error parsing actor_collector_interval %s", collectInterval)
+		}
 
-	ActorReminderInterval, err = time.ParseDuration(remindInterval)
-	if err != nil {
-		logger.Fatal("error parsing actor_reminder_interval %s", remindInterval)
-	}
+		ActorReminderInterval, err = time.ParseDuration(remindInterval)
+		if err != nil {
+			logger.Fatal("error parsing actor_reminder_interval %s", remindInterval)
+		}
 
-	ActorReminderAcceptableDelay, err = time.ParseDuration(remindDelay)
-	if err != nil {
-		logger.Fatal("error parsing actor_reminder_acceptable_delay %s", remindDelay)
+		ActorReminderAcceptableDelay, err = time.ParseDuration(remindDelay)
+		if err != nil {
+			logger.Fatal("error parsing actor_reminder_acceptable_delay %s", remindDelay)
+		}
+
+		RequestTimeout, err = time.ParseDuration(timeoutTime)
+		if err != nil {
+			logger.Fatal("error parsing timeout time %s", timeoutTime)
+		}
+
+		ActorTimeout, err = time.ParseDuration(actorTimeoutTime)
+		if err != nil {
+			logger.Fatal("error parsing actor timeout time %s", actorTimeoutTime)
+		}
 	}
 
 	if !KafkaEnableTLS {
@@ -261,16 +372,6 @@ func init() {
 
 	if Invoke && len(flag.Args()) < 3 {
 		logger.Fatal("invoke expects at least three arguments")
-	}
-
-	RequestTimeout, err = time.ParseDuration(timeoutTime)
-	if err != nil {
-		logger.Fatal("error parsing timeout time %s", timeoutTime)
-	}
-
-	ActorTimeout, err = time.ParseDuration(actorTimeoutTime)
-	if err != nil {
-		logger.Fatal("error parsing actor timeout time %s", actorTimeoutTime)
 	}
 
 	OutputStyle = strings.ToLower(OutputStyle)

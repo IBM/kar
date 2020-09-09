@@ -15,11 +15,11 @@ Assuming you have [KAR installed](https://github.ibm.com/solsa/kar/blob/master/d
 
 #### 1. Launch Number Service
 Inside the `service/server` directory:
-`kar -app example -service number mvn liberty:run`
+`kar run -app example -service number mvn liberty:run`
 
 #### 2. Launch Client Service
 Inside the `service/client` directory:
-`kar -app_port 9090 -app example -service client mvn liberty:run`
+`kar run -app_port 9090 -app example -service client mvn liberty:run`
 
 #### 3. Invoke the Client using curl
 Inside the `service/scripts` directory run the script that contains the curl request:

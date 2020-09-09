@@ -61,23 +61,23 @@ We can now start each component of the application individually. You can do this
 
 SERVER:
 ```shell
-kar -v info -app stocks -runtime_port 3502 -app_port 8082 -service price-printer -actors Portfolio -- node stock-server.js
+kar run -v info -app stocks -runtime_port 3502 -app_port 8082 -service price-printer -actors Portfolio -- node stock-server.js
 ```
 
 EVENT EMITTER:
 ```shell
-kar -v info -app stocks --runtime_port 3501 -app_port 8081 -service price-sender node stock-event-sender.js
+kar run -v info -app stocks --runtime_port 3501 -app_port 8081 -service price-sender node stock-event-sender.js
 ```
 
 CLIENT (get stock price):
 ```shell
-kar -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js -s GOOG
+kar run -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js -s GOOG
 ```
 or
 
 CLIENT (create portfolio):
 ```shell
-kar -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js
+kar run -v info -app stocks -runtime_port 3503 -app_port 8083 -service stock-client -- node stock-client.js
 ```
 
 Notes:

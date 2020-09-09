@@ -17,7 +17,7 @@ mvn clean install
 In one terminal start the server
 ```shell
 cd ./kar-actor-example
-kar -app example -actors sample,calculator mvn liberty:run
+kar run -app example -actors sample,calculator mvn liberty:run
 ```
 
 Wait a few seconds until you see something similar to:
@@ -30,7 +30,7 @@ Wait a few seconds until you see something similar to:
 ### Use kar
 You can use the `kar` cli to invoke an actor method
 ```shell
-kar -app example -invoke sample abc canBeInvoked '{"number":10}'
+kar run -app example -invoke sample abc canBeInvoked '{"number":10}'
 ```
 
 You should see output like:
@@ -41,7 +41,7 @@ You should see output like:
 #### Use kar+curl (lower-level)
 You can use the `kar` cli to wrap a curl command that directly invokes the lower-level KAR REST API:
 ```shell
-kar -runtime_port 32123 -app example curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/sample/abc/call/canBeInvoked -d '[{ "number": 10}]'
+kar run -runtime_port 32123 -app example curl -s -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/sample/abc/call/canBeInvoked -d '[{ "number": 10}]'
 ```
 
 You should see output like:

@@ -47,7 +47,7 @@ sh run-sink.sh
 
 Run the user-defined component:
 ```
-kar -app stock-price-manager -runtime_port 3502 -app_port 8082 -service stock-manager -actors StockManager -- node kar-server.js
+kar run -app stock-price-manager -runtime_port 3502 -app_port 8082 -service stock-manager -actors StockManager -- node kar-server.js
 ```
 For additional output details pass `-v info` to the kar CLI.
 

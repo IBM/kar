@@ -7,4 +7,4 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 TARGETDIR=$SCRIPTDIR/../target
 CLASSPATH=$TARGETDIR/kar-rest-client.jar:$TARGETDIR/libs/*
 
- kar -runtime_port 32123 -app example java -cp $CLASSPATH test.RunActor
+ kar run -runtime_port 32123 -app example java -cp $CLASSPATH test.RunActor

@@ -24,8 +24,8 @@ echo "*** Executing unit-tests/test-harness.js ***"
 cd $ROOTDIR/examples/unit-tests
 npm install --prod
 
-kar -app myApp -service myService -actors Foo node server.js &
-run $! kar -app myApp node test-harness.js
+kar run -app myApp -service myService -actors Foo node server.js &
+run $! kar run -app myApp node test-harness.js
 
 # Run actors-ykt locally
 echo "*** Executing actors-ykt/ykt-client.js ***"

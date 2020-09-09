@@ -22,17 +22,17 @@ npm install --prod
 ```
 Run actor runtime with:
 ```shell
-kar -h2c -actor_collector_interval 120s -v info -app tree -actors Sync,Async,Par -- node server.js
+kar run -h2c -actor_collector_interval 120s -v info -app tree -actors Sync,Async,Par -- node server.js
 ```
 Run synchronous tree example with:
 ```shell
-kar -v info -app tree -- node test-sync.js 10
+kar run -v info -app tree -- node test-sync.js 10
 ```
 Run asynchronous tree example with:
 ```shell
-kar -v info -app tree -- node test-async.js 10
+kar run -v info -app tree -- node test-async.js 10
 ```
 Run parallel tree example with:
 ```shell
-kar -v info -app tree -- node test-par.js 10
+kar run -v info -app tree -- node test-par.js 10
 ```

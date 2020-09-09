@@ -6,13 +6,13 @@
 npm install
 
 # run server
-kar -app myApp -service myService -actors Foo node server.js &
+kar run -app myApp -service myService -actors Foo node server.js &
 
 # run a trivial client
-kar -app myApp node client.js
+kar run -app myApp node client.js
 
 # run the test suite client
-kar -app myApp node test-harness.js
+kar run -app myApp node test-harness.js
 ```
 
 ### Running on Kubernetes
