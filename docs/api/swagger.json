@@ -325,8 +325,8 @@
           }
         }
       },
-      "post": {
-        "description": "### Subscribe to a topic\n\nThis operation subscribes an actor instance to a topic.\nIf there is already a subscription for the target actor instance with the same subscriptionId,\nthat existing subscription will be updated based on the request body.\nThe operation will not return until after the actor instance is subscribed.",
+      "put": {
+        "description": "### Subscribe to a topic\n\nSubscribe the actor instance using the subscriptionId specified in the path\nas described by the data provided in the request body.\nIf there is already a subscription for the target actor instance with the same subscriptionId,\nthat existing subscription will be updated based on the request body.\nThe operation will not return until after the actor instance is subscribed.",
         "consumes": [
           "application/json"
         ],
@@ -599,8 +599,8 @@
           }
         }
       },
-      "post": {
-        "description": "### Schedule a reminder\n\nThis operation schedules a reminder for the actor instance specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance with the same reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
+      "put": {
+        "description": "### Schedule a reminder\n\nSchedule the reminder for the actor instance and reminderId specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance and reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
         "consumes": [
           "application/json"
         ],
@@ -613,7 +613,7 @@
         "tags": [
           "reminders"
         ],
-        "summary": "reminders",
+        "summary": "reminders/id",
         "operationId": "idActorReminderSchedule",
         "parameters": [
           {
@@ -629,6 +629,14 @@
             "x-go-name": "ActorID",
             "description": "The actor instance id",
             "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
             "in": "path",
             "required": true
           },
@@ -1389,8 +1397,8 @@
       }
     },
     "/v1/event/{topic}": {
-      "post": {
-        "description": "### Creates given topic\n\nParameters are specified in the body of the post, as stringified JSON.\nNo body passed causes a default creation.",
+      "put": {
+        "description": "### Creates or updates a given topic\n\nParameters are specified in the body of the post, as stringified JSON.\nNo body passed causes a default creation.",
         "consumes": [
           "application/json"
         ],
@@ -1400,7 +1408,7 @@
         "tags": [
           "events"
         ],
-        "summary": "createTopic",
+        "summary": "topic",
         "operationId": "idTopicCreate",
         "parameters": [
           {
@@ -1432,7 +1440,7 @@
         "tags": [
           "events"
         ],
-        "summary": "deleteTopic",
+        "summary": "topic",
         "operationId": "idTopicDelete",
         "responses": {
           "200": {

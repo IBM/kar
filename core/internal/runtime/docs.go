@@ -234,6 +234,7 @@ type sessionParam struct {
 	Session string `json:"session"`
 }
 
+// swagger:parameters idActorReminderSchedule
 // swagger:parameters idActorReminderGet
 // swagger:parameters idActorReminderCancel
 type reminderIDParam struct {

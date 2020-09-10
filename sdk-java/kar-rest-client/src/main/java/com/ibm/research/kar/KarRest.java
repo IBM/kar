@@ -198,7 +198,7 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
 
-	@POST
+	@PUT
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
@@ -280,20 +280,7 @@ public interface KarRest extends AutoCloseable {
 	 * Events
 	 */
 
-	@POST
-	@Path("event/{topic}/publish")
-	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response publish(@PathParam("topic") String topic) throws ProcessingException;
-
-	@POST
-	@Path("event/{topic}/subscribe")
-	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response subscribe(@PathParam("topic") String topic) throws ProcessingException;
-
-	@POST
-	@Path("event/{topic}/unsubscribe")
-	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response unsubscribe(@PathParam("topic") String topic) throws ProcessingException;
+	 // FIXME: implement event APIs
 
 	/*
 	 * System

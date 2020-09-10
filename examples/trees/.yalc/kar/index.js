@@ -160,7 +160,7 @@ const actorGetReminder = (actor, reminderId) => reminderId ? get(`actor/${actor.
 
 function actorScheduleReminder (actor, path, options, ...args) {
   const opts = { path: `/${path}`, targetTime: options.targetTime, period: options.period, data: args }
-  return post(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${options.id}`, opts)
+  return put(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${options.id}`, opts)
 }
 
 function actorGetState (actor, key, subkey) {
@@ -231,7 +231,7 @@ function publish (topic, event) {
 
 function actorSubscribe (actor, topic, path, params = {}) {
   const id = params.id || topic
-  return post(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ path: `/${path}`, topic }, params))
+  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ path: `/${path}`, topic }, params))
 }
 
 function actorUnsubscribe (actor, topic, params = {}) {

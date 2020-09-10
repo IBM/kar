@@ -412,15 +412,15 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/reminders/{reminderId} reminders idActorReminderSchedule
+// swagger:route PUT /v1/actor/{actorType}/{actorId}/reminders/{reminderId} reminders idActorReminderSchedule
 //
-// reminders
+// reminders/id
 //
 // ### Schedule a reminder
 //
-// This operation schedules a reminder for the actor instance specified in the path
+// Schedule the reminder for the actor instance and reminderId specified in the path
 // as described by the data provided in the request body.
-// If there is already a reminder for the target actor instance with the same reminderId,
+// If there is already a reminder for the target actor instance and reminderId,
 // that existing reminder's schedule will be updated based on the request body.
 // The operation will not return until after the reminder is scheduled.
 //
@@ -442,7 +442,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case "GET":
 		action = "get"
 		noa = r.FormValue("nilOnAbsent")
-	case "POST":
+	case "PUT":
 		action = "set"
 		body = runtime.ReadAll(r)
 	case "DELETE":
@@ -545,13 +545,14 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       503: response503
 //
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscribe
+// swagger:route PUT /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscribe
 //
 // subscriptions/id
 //
 // ### Subscribe to a topic
 //
-// This operation subscribes an actor instance to a topic.
+// Subscribe the actor instance using the subscriptionId specified in the path
+// as described by the data provided in the request body.
 // If there is already a subscription for the target actor instance with the same subscriptionId,
 // that existing subscription will be updated based on the request body.
 // The operation will not return until after the actor instance is subscribed.
@@ -574,7 +575,7 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	case "GET":
 		action = "get"
 		noa = r.FormValue("nilOnAbsent")
-	case "POST":
+	case "PUT":
 		action = "set"
 		body = runtime.ReadAll(r)
 	case "DELETE":
@@ -1181,11 +1182,11 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
-// swagger:route POST /v1/event/{topic} events idTopicCreate
+// swagger:route PUT /v1/event/{topic} events idTopicCreate
 //
-// createTopic
+// topic
 //
-// ### Creates given topic
+// ### Creates or updates a given topic
 //
 // Parameters are specified in the body of the post, as stringified JSON.
 // No body passed causes a default creation.
@@ -1210,7 +1211,7 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route DELETE /v1/event/{topic} events idTopicDelete
 //
-// deleteTopic
+// topic
 //
 // ### Deletes given topic
 //
@@ -1281,14 +1282,14 @@ func server(listener net.Listener) http.Server {
 	// reminders
 	router.GET(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.GET(base+"/actor/:type/:id/reminders", reminder)
-	router.POST(base+"/actor/:type/:id/reminders/:reminderId", reminder)
+	router.PUT(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders/:reminderId", reminder)
 	router.DELETE(base+"/actor/:type/:id/reminders", reminder)
 
 	// events
 	router.GET(base+"/actor/:type/:id/events/:subscriptionId", subscription)
 	router.GET(base+"/actor/:type/:id/events", subscription)
-	router.POST(base+"/actor/:type/:id/events/:subscriptionId", subscription)
+	router.PUT(base+"/actor/:type/:id/events/:subscriptionId", subscription)
 	router.DELETE(base+"/actor/:type/:id/events/:subscriptionId", subscription)
 	router.DELETE(base+"/actor/:type/:id/events", subscription)
 
@@ -1314,7 +1315,7 @@ func server(listener net.Listener) http.Server {
 
 	// events
 	router.POST(base+"/event/:topic/publish", publish)
-	router.POST(base+"/event/:topic/", createTopic)
+	router.PUT(base+"/event/:topic/", createTopic)
 	router.DELETE(base+"/event/:topic/", deleteTopic)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}

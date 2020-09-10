@@ -849,47 +849,7 @@ public class Kar {
 	 * Events
 	 */
 
-	/**
-	 * Subscribe a Service endpoint to a topic.
-	 *
-	 * @param topic The topic to which to subscribe
-	 * @param path  The endpoint to invoke for each event received on the topic
-	 * @param opts  TODO: Document expected structure
-	 */
-	public static Response subscribe(String topic) throws ProcessingException {
-		return karClient.subscribe(topic); // FIXME: actually implement
-	}
-
-	/**
-	 * Subscribe an Actor instance method to a topic.
-	 *
-	 * @param actor The Actor instance to subscribe
-	 * @param topic The topic to which to subscribe
-	 * @param path  The endpoint to invoke for each event received on the topic
-	 * @param opts  TODO: Document expected structure
-	 */
-	public static Response actorSubscribe(String topic) throws ProcessingException {
-		return karClient.subscribe(topic); // FIXME: actually implement
-	}
-
-	/**
-	 * Unsubscribe from a topic.
-	 *
-	 * @param topic The topic to which to subscribe
-	 * @param opts  TODO: Document expected structure
-	 */
-	public static Response unsubscribe(String topic) throws ProcessingException {
-		return karClient.unsubscribe(topic); // FIXME: actually implement
-	}
-
-	/**
-	 * Publish a CloudEvent to a topic
-	 *
-	 * TODO: Document this API when it stabalizes
-	 */
-	public static Response publish(String topic) throws ProcessingException {
-		return karClient.publish(topic); // FIXME: actually implement
-	}
+	// FIXME: implement event APIs
 
 	/*
 	 * System
