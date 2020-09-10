@@ -22,11 +22,13 @@
 
 4. You will need the `s2i` (source-2-image) cli installed locally. See [these install options](https://github.com/openshift/source-to-image#installation).
 
-5. Optionally, you will need Node v10.13.0 (LTS) and NPM v6.4.1 or more recent
-   versions to run the JavaScript SDK and examples.
+5. Optionally, you will need Go 1.15+ to build KAR.
 
-6. Optionally, you will need Java 1.8.X or 1.11.X and Maven 3.6.X to run
-   the Java SDK and examples.
+6. Optionally, you will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
+   SDK and examples.
+
+7. Optionally, you will need Java 11 and Maven 3.6+ to run the Java SDK and
+   examples.
 
 # Getting Started with KAR
 
