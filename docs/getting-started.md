@@ -22,6 +22,12 @@
 
 4. You will need the `s2i` (source-2-image) cli installed locally. See [these install options](https://github.com/openshift/source-to-image#installation).
 
+5. Optionally, you will need Node v10.13.0 (LTS) and NPM v6.4.1 to run the
+   JavaScript SDK and examples.
+
+6. Optionally, you will need Java 1.8.X and Maven 3.6.X to run the
+   Java SDK and examples.
+
 # Getting Started with KAR
 
 In the sections below, the sample commands are meant to be executed in
