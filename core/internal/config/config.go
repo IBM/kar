@@ -128,6 +128,8 @@ func globalOptions(f *flag.FlagSet) {
 	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
 
+	f.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
+
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
@@ -193,7 +195,6 @@ Available commands:
 		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
-		flag.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
 		flag.StringVar(&actorTimeoutTime, "actor_timeout", "2m", "Time to wait on busy actors before timing out")
 
 	case "get":
@@ -264,11 +265,16 @@ Available commands:
 		logger.Fatal("app name is required")
 	}
 
-	if CmdName == "run" {
-		if ServiceName == "" {
-			ServiceName = "kar.none"
-		}
+	if ServiceName == "" {
+		ServiceName = "kar.none"
+	}
 
+	RequestTimeout, err = time.ParseDuration(timeoutTime)
+	if err != nil {
+		logger.Fatal("error parsing timeout time %s", timeoutTime)
+	}
+
+	if CmdName == "run" {
 		if actorTypes == "" {
 			ActorTypes = []string{}
 		} else {
@@ -288,11 +294,6 @@ Available commands:
 		ActorReminderAcceptableDelay, err = time.ParseDuration(remindDelay)
 		if err != nil {
 			logger.Fatal("error parsing actor_reminder_acceptable_delay %s", remindDelay)
-		}
-
-		RequestTimeout, err = time.ParseDuration(timeoutTime)
-		if err != nil {
-			logger.Fatal("error parsing timeout time %s", timeoutTime)
 		}
 
 		ActorTimeout, err = time.ParseDuration(actorTimeoutTime)

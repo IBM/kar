@@ -1386,49 +1386,6 @@ func main() {
 		logger.Fatal("join failed: %v", err)
 	}
 
-	srv := server(listener)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := srv.Serve(listener); err != http.ErrServerClosed {
-			logger.Fatal("HTTP server failed: %v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		<-ctx.Done() // wait
-		if err := srv.Shutdown(context.Background()); err != nil {
-			logger.Error("failed to shutdown HTTP server: %v", err)
-		}
-		runtime.CloseIdleConnections()
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		runtime.Collect(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		runtime.ProcessReminders(ctx)
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		runtime.ManageBindings(ctx)
-	}()
-
-	runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
-	appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
-	requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestTimeout.Milliseconds())
-	logger.Info("%s %s", runtimePort, appPort)
-
 	args := flag.Args()
 
 	if config.Invoke {
@@ -1437,9 +1394,55 @@ func main() {
 	} else if config.Get != "" {
 		exitCode = runtime.GetInformation(ctx9, args)
 		cancel()
-	} else if len(args) > 0 {
-		exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
-		cancel()
+	} else {
+		// start server and background tasks
+		srv := server(listener)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := srv.Serve(listener); err != http.ErrServerClosed {
+				logger.Fatal("HTTP server failed: %v", err)
+			}
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-ctx.Done() // wait
+			if err := srv.Shutdown(context.Background()); err != nil {
+				logger.Error("failed to shutdown HTTP server: %v", err)
+			}
+			runtime.CloseIdleConnections()
+		}()
+
+		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
+		appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
+		requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestTimeout.Milliseconds())
+		logger.Info("%s %s", runtimePort, appPort)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runtime.Collect(ctx)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runtime.ProcessReminders(ctx)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			runtime.ManageBindings(ctx)
+		}()
+
+		if len(args) > 0 {
+			exitCode = runtime.Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
+			cancel()
+		}
 	}
 
 	<-closed // wait for closed consumer first since process adds to WaitGroup

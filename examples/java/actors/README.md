@@ -30,7 +30,7 @@ Wait a few seconds until you see something similar to:
 ### Use kar
 You can use the `kar` cli to invoke an actor method
 ```shell
-kar run -app example -invoke sample abc canBeInvoked '{"number":10}'
+kar invoke -app example sample abc canBeInvoked '{"number":10}'
 ```
 
 You should see output like:
