@@ -11,7 +11,7 @@ before_install:
 
 script:
   - (./travis/build.sh && ./travis/start-kar.sh) || travis_terminate 1
-  - ./travis/createTestTopic.sh
+  - ./examples/unit-tests/createTopics.sh
   - ./examples/actors-ykt/createTopics.sh
   - ./travis/testLocal.sh
   - ./travis/testJavaLocal.sh
