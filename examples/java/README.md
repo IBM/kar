@@ -1,7 +1,7 @@
 # Java KAR Examples
 
 ## Prerequisites:
-- Java 1.8.X
+- Java 1.8.X or Java 1.11.X
 - Maven 3.6.X
 
 Note: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty)
