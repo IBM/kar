@@ -1,8 +1,8 @@
 # Java Actors example
 
 ## Prerequisites
-- Java 8 or 11
-- Maven 3.6.x
+- Java 11
+- Maven 3.6+
 
 Note: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty)
 

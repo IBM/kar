@@ -4,8 +4,8 @@
 This example demonstrates how to use the Java Microprofile KAR SDK to make synchronous and asynchronous calls between microservices. The Server provides a number service that increments numbers.  The Client acts as a proxy to the Server (just to demonstrate KAR, obviously you can directly invoke the Server if you want to).  The Client uses the `kar-rest-client` library to call the Server.
 
 ### Prerequisites
-- Apache Maven 3.6.3 or above
-- Java 1.8.0 or above
+- Java 11
+- Maven 3.6+
 
 ### Building
 Inside `example/java/service` run `mvn install`.  This will build the Client and Server as well as `kar-rest-client` and manage the packaging.
