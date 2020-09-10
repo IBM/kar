@@ -339,7 +339,7 @@
         "tags": [
           "events"
         ],
-        "summary": "subscriptions",
+        "summary": "subscriptions/id",
         "operationId": "idActorSubscribe",
         "parameters": [
           {
@@ -360,10 +360,9 @@
           },
           {
             "type": "string",
-            "example": "an/arbitrary/valid/pathSegment",
-            "x-go-name": "Path",
-            "description": "The target endpoint to be invoked by the operation",
-            "name": "path",
+            "x-go-name": "SubscriptionID",
+            "description": "The id of the specific subscription being targeted",
+            "name": "subscriptionID",
             "in": "path",
             "required": true
           },
@@ -372,10 +371,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
+              "$ref": "#/definitions/eventSubscribeOptions"
             }
           }
         ],
@@ -1396,7 +1392,7 @@
       "post": {
         "description": "### Creates given topic\n\nParameters are specified in the body of the post, as stringified JSON.\nNo body passed causes a default creation.",
         "consumes": [
-          "application"
+          "application/json"
         ],
         "schemes": [
           "http"
@@ -1406,9 +1402,19 @@
         ],
         "summary": "createTopic",
         "operationId": "idTopicCreate",
+        "parameters": [
+          {
+            "description": "The request body describes the topic to be created",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/topicCreateOptions"
+            }
+          }
+        ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
+          "201": {
+            "$ref": "#/responses/response201"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1416,9 +1422,9 @@
         }
       },
       "delete": {
-        "description": "### Deletes given topic\n\nDeletes kafka topic specified in route.",
+        "description": "### Deletes given topic\n\nDeletes topic specified in route.",
         "consumes": [
-          "application"
+          "application/json"
         ],
         "schemes": [
           "http"
@@ -1442,7 +1448,7 @@
       "post": {
         "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
         "consumes": [
-          "application"
+          "application/*"
         ],
         "schemes": [
           "http"
@@ -1473,6 +1479,9 @@
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -2011,6 +2020,25 @@
       },
       "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
     },
+    "eventSubscribeOptions": {
+      "description": "eventSubscribeOptions documents the request body for subscribing an actor to a topic",
+      "type": "object",
+      "properties": {
+        "contenttype": {
+          "description": "The expected MIME content type of the events that will be produced by this subscription\nIf an explicit value is not provided, the default value of application/json+cloudevent will be used.",
+          "type": "string",
+          "x-go-name": "ContentType",
+          "example": "application/json"
+        },
+        "path": {
+          "description": "The actor method to be invoked with each delivered event",
+          "type": "string",
+          "x-go-name": "Path",
+          "example": "processEvent"
+        }
+      },
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
+    },
     "scheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
       "type": "object",
@@ -2045,26 +2073,62 @@
     "source": {
       "type": "object",
       "properties": {
-        "Actor": {
+        "actor": {
           "$ref": "#/definitions/Actor"
         },
-        "ContentType": {
-          "type": "string"
+        "contenttype": {
+          "description": "The expected MIME type of events delivered by this subsription",
+          "type": "string",
+          "x-go-name": "ContentType"
         },
-        "Group": {
-          "type": "string"
+        "group": {
+          "description": "FIXME: I have no idea what this is.",
+          "type": "string",
+          "x-go-name": "Group"
         },
-        "ID": {
-          "type": "string"
+        "id": {
+          "description": "The subscription id",
+          "type": "string",
+          "x-go-name": "ID"
         },
-        "OffsetOldest": {
-          "type": "boolean"
+        "oldestoffset": {
+          "description": "FIXME: I have no idea what this is.",
+          "type": "boolean",
+          "x-go-name": "OffsetOldest"
         },
-        "Path": {
-          "type": "string"
+        "path": {
+          "description": "The actor method that will be invoked to deliver the event to the actor",
+          "type": "string",
+          "x-go-name": "Path"
         },
-        "Topic": {
-          "type": "string"
+        "topic": {
+          "description": "The topic that is the source of events for this subscription",
+          "type": "string",
+          "x-go-name": "Topic"
+        }
+      },
+      "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
+    },
+    "topicCreateOptions": {
+      "description": "topicCreateOptions documents the request body for creating a topic",
+      "type": "object",
+      "properties": {
+        "configentries": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "ConfigEntries"
+        },
+        "numpartitions": {
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "NumPartitions"
+        },
+        "replicationfactor": {
+          "type": "integer",
+          "format": "int16",
+          "x-go-name": "ReplicationFactor"
         }
       },
       "x-go-package": "_/Users/dgrove/code/kar/kar/core/internal/runtime"
@@ -2245,6 +2309,15 @@
       "headers": {
         "Body": {
           "description": "The subscription"
+        }
+      }
+    },
+    "response201": {
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "\"Created\"",
+          "description": "A success message Indicating that the requested resource has been successfully created"
         }
       }
     },

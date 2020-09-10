@@ -52,6 +52,23 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
+  eventSubscribeOptions:
+    description: eventSubscribeOptions documents the request body for subscribing an actor to a topic
+    properties:
+      contenttype:
+        description: |-
+          The expected MIME content type of the events that will be produced by this subscription
+          If an explicit value is not provided, the default value of application/json+cloudevent will be used.
+        example: application/json
+        type: string
+        x-go-name: ContentType
+      path:
+        description: The actor method to be invoked with each delivered event
+        example: processEvent
+        type: string
+        x-go-name: Path
+    type: object
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
@@ -84,20 +101,50 @@ definitions:
     x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
   source:
     properties:
-      Actor:
+      actor:
         $ref: '#/definitions/Actor'
-      ContentType:
+      contenttype:
+        description: The expected MIME type of events delivered by this subsription
         type: string
-      Group:
+        x-go-name: ContentType
+      group:
+        description: 'FIXME: I have no idea what this is.'
         type: string
-      ID:
+        x-go-name: Group
+      id:
+        description: The subscription id
         type: string
-      OffsetOldest:
+        x-go-name: ID
+      oldestoffset:
+        description: 'FIXME: I have no idea what this is.'
         type: boolean
-      Path:
+        x-go-name: OffsetOldest
+      path:
+        description: The actor method that will be invoked to deliver the event to the actor
         type: string
-      Topic:
+        x-go-name: Path
+      topic:
+        description: The topic that is the source of events for this subscription
         type: string
+        x-go-name: Topic
+    type: object
+    x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
+  topicCreateOptions:
+    description: topicCreateOptions documents the request body for creating a topic
+    properties:
+      configentries:
+        additionalProperties:
+          type: string
+        type: object
+        x-go-name: ConfigEntries
+      numpartitions:
+        format: int32
+        type: integer
+        x-go-name: NumPartitions
+      replicationfactor:
+        format: int16
+        type: integer
+        x-go-name: ReplicationFactor
     type: object
     x-go-package: _/Users/dgrove/code/kar/kar/core/internal/runtime
 info:
@@ -448,20 +495,17 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: The target endpoint to be invoked by the operation
-        example: an/arbitrary/valid/pathSegment
+      - description: The id of the specific subscription being targeted
         in: path
-        name: path
+        name: subscriptionID
         required: true
         type: string
-        x-go-name: Path
+        x-go-name: SubscriptionID
       - description: The request body describes the subscription
         in: body
         name: Body
         schema:
-          additionalProperties:
-            type: string
-          type: object
+          $ref: '#/definitions/eventSubscribeOptions'
       produces:
       - text/plain
       responses:
@@ -473,7 +517,7 @@ paths:
           $ref: '#/responses/response503'
       schemes:
       - http
-      summary: subscriptions
+      summary: subscriptions/id
       tags:
       - events
   /v1/actor/{actorType}/{actorId}/reminders:
@@ -1245,11 +1289,11 @@ paths:
   /v1/event/{topic}:
     delete:
       consumes:
-      - application
+      - application/json
       description: |-
         ### Deletes given topic
 
-        Deletes kafka topic specified in route.
+        Deletes topic specified in route.
       operationId: idTopicDelete
       responses:
         "200":
@@ -1263,16 +1307,22 @@ paths:
       - events
     post:
       consumes:
-      - application
+      - application/json
       description: |-
         ### Creates given topic
 
         Parameters are specified in the body of the post, as stringified JSON.
         No body passed causes a default creation.
       operationId: idTopicCreate
+      parameters:
+      - description: The request body describes the topic to be created
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/topicCreateOptions'
       responses:
-        "200":
-          $ref: '#/responses/response200'
+        "201":
+          $ref: '#/responses/response201'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1283,7 +1333,7 @@ paths:
   /v1/event/{topic}/publish:
     post:
       consumes:
-      - application
+      - application/*
       description: |-
         ### Publish an event to a topic
 
@@ -1306,6 +1356,8 @@ paths:
       responses:
         "200":
           $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1814,6 +1866,12 @@ responses:
         description: The subscription
     schema:
       $ref: '#/definitions/source'
+  response201:
+    headers:
+      body:
+        description: A success message Indicating that the requested resource has been successfully created
+        example: '"Created"'
+        type: string
   response202CallResult:
     description: Indicates that a non-blocking call has been accepted for eventual execution
   response400:

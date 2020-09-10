@@ -12,16 +12,41 @@ import (
 )
 
 type source struct {
-	Actor        Actor
-	ID           string
-	key          string // not serialized
-	Path         string
-	Topic        string
-	Group        string
-	ContentType  string
-	OffsetOldest bool
+	// The actor that is subscribed to this source
+	Actor Actor `json:"actor"`
+	// The subscription id
+	ID  string `json:"id"`
+	key string // not serialized
+	// The actor method that will be invoked to deliver the event to the actor
+	Path string `json:"path"`
+	// The topic that is the source of events for this subscription
+	Topic string `json:"topic"`
+	// FIXME: I have no idea what this is.
+	Group string `json:"group"`
+	// The expected MIME type of events delivered by this subsription
+	ContentType string `json:"contenttype,omitempty"`
+	// FIXME: I have no idea what this is.
+	OffsetOldest bool               `json:"oldestoffset"`
 	cancel       context.CancelFunc // not serialized
-	closed       <-chan struct{}
+	closed       <-chan struct{}    // not serialized
+}
+
+// eventSubscribeOptions documents the request body for subscribing an actor to a topic
+type eventSubscribeOptions struct {
+	// The expected MIME content type of the events that will be produced by this subscription
+	// If an explicit value is not provided, the default value of application/json+cloudevent will be used.
+	// Example: application/json
+	ContentType string `json:"contenttype,omitempty"`
+	// The actor method to be invoked with each delivered event
+	// Example: processEvent
+	Path string `json:"path"`
+}
+
+// topicCreateOptions documents the request body for creating a topic
+type topicCreateOptions struct {
+	NumPartitions     int32              `json:"numpartitions,omitempty"`
+	ReplicationFactor int16              `json:"replicationfactor,omitempty"`
+	ConfigEntries     map[string]*string `json:"configentries,omitempty"`
 }
 
 func (s source) k() string {

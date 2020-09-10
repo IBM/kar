@@ -211,7 +211,6 @@ type topicParam struct {
 }
 
 // swagger:parameters idActorCall
-// swagger:parameters idActorSubscribe
 // swagger:parameters idServiceDelete
 // swagger:parameters idServiceGet
 // swagger:parameters idServiceHead
@@ -257,6 +256,7 @@ type reminderScheduleParamWrapper struct {
 	Body scheduleReminderPayload
 }
 
+// swagger:parameters idActorSubscribe
 // swagger:parameters idActorSubscriptionGet
 // swagger:parameters idActorSubscriptionCancel
 type subscriptionIDParam struct {
@@ -269,7 +269,14 @@ type subscriptionIDParam struct {
 type subscriptionParamWrapper struct {
 	// The request body describes the subscription
 	// in:body
-	Body map[string]string
+	Body eventSubscribeOptions
+}
+
+// swagger:parameters idTopicCreate
+type topicCreateParamWrapper struct {
+	// The request body describes the topic to be created
+	// in:body
+	Body topicCreateOptions
 }
 
 // swagger:parameters idAwait
@@ -442,6 +449,13 @@ type response200StateSetResult struct {
 type response200StateSetMultipleResult struct {
 	// Returns the number of new entries created by the operation
 	NumberCreated int
+}
+
+// swagger:response response201
+type success201 struct {
+	// A success message Indicating that the requested resource has been successfully created
+	// Example: "Created"
+	Body string `json:"body"`
 }
 
 // Indicates that a non-blocking call has been accepted for eventual execution

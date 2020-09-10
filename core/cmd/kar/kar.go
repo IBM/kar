@@ -547,7 +547,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 // swagger:route POST /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscribe
 //
-// subscriptions
+// subscriptions/id
 //
 // ### Subscribe to a topic
 //
@@ -575,8 +575,6 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		action = "get"
 		noa = r.FormValue("nilOnAbsent")
 	case "POST":
-		// FIXME: https://github.ibm.com/solsa/kar/issues/31
-		//        Should return a 404 if topic doesn't exist.
 		action = "set"
 		body = runtime.ReadAll(r)
 	case "DELETE":
@@ -1157,14 +1155,13 @@ func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Schemes: http
 //     Consumes:
-//     - application
+//     - application/*
 //     Responses:
 //       200: response200
+//       404: response404
 //       500: response500
 //
 func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	// FIXME: https://github.ibm.com/solsa/kar/issues/30
-	//        Should return a 404 if topic doesn't exist.
 	buf, _ := ioutil.ReadAll(r.Body)
 	code, err := pubsub.Publish(ps.ByName("topic"), buf)
 	if err != nil {
@@ -1195,9 +1192,9 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 //     Schemes: http
 //     Consumes:
-//     - application
+//     - application/json
 //     Responses:
-//       200: response200
+//       201: response201
 //       500: response500
 //
 func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -1206,7 +1203,8 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
 	} else {
-		fmt.Fprint(w, "OK")
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, "Created")
 	}
 }
 
@@ -1216,11 +1214,11 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //
 // ### Deletes given topic
 //
-// Deletes kafka topic specified in route.
+// Deletes topic specified in route.
 //
 //     Schemes: http
 //     Consumes:
-//     - application
+//     - application/json
 //     Responses:
 //       200: response200
 //       500: response500
