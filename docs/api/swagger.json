@@ -1972,7 +1972,7 @@
           "type": "string"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "Duration": {
       "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
@@ -1996,7 +1996,7 @@
           "x-go-name": "Updates"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "Reminder": {
       "description": "Reminder describes a time-triggered asynchronous invocation of a Path on an Actor",
@@ -2026,7 +2026,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "eventSubscribeOptions": {
       "description": "eventSubscribeOptions documents the request body for subscribing an actor to a topic",
@@ -2045,7 +2045,7 @@
           "example": "processEvent"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "scheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
@@ -2076,7 +2076,7 @@
           "x-go-name": "TargetTime"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "source": {
       "type": "object",
@@ -2115,7 +2115,7 @@
           "x-go-name": "Topic"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
     "topicCreateOptions": {
       "description": "topicCreateOptions documents the request body for creating a topic",
@@ -2139,7 +2139,7 @@
           "x-go-name": "ReplicationFactor"
         }
       },
-      "x-go-package": "github.ibm.com/solsa/kar/core/internal/runtime"
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     }
   },
   "responses": {

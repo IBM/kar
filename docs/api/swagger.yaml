@@ -8,7 +8,7 @@ definitions:
         type: string
     title: Actor uniquely identifies an actor instance.
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   Duration:
     description: |-
       A Duration represents the elapsed time between two instants
@@ -29,7 +29,7 @@ definitions:
         type: object
         x-go-name: Updates
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   Reminder:
     description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
     properties:
@@ -51,7 +51,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   eventSubscribeOptions:
     description: eventSubscribeOptions documents the request body for subscribing an actor to a topic
     properties:
@@ -68,7 +68,7 @@ definitions:
         type: string
         x-go-name: Path
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   scheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
@@ -98,7 +98,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   source:
     properties:
       actor:
@@ -128,7 +128,7 @@ definitions:
         type: string
         x-go-name: Topic
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   topicCreateOptions:
     description: topicCreateOptions documents the request body for creating a topic
     properties:
@@ -146,7 +146,7 @@ definitions:
         type: integer
         x-go-name: ReplicationFactor
     type: object
-    x-go-package: github.ibm.com/solsa/kar/core/internal/runtime
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
 info:
   description: |-
     This document describes the RESTful APIs provided or assumed by the

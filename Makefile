@@ -64,8 +64,8 @@ installJavaSDK:
 	cd sdk-java && mvn install
 
 swagger-gen:
-	swagger generate spec -o docs/api/swagger.yaml
-	swagger generate spec -o docs/api/swagger.json
+	cd core && swagger generate spec -o ../docs/api/swagger.yaml
+	cd core && swagger generate spec -o ../docs/api/swagger.json
 
 swagger-serve:
 	swagger serve docs/api/swagger.yaml
