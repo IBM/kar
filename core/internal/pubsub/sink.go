@@ -8,7 +8,7 @@ import (
 )
 
 // Publish publishes a message on a topic
-func Publish(topic string, message []byte) (int, error) {
+func Publish(topic string, message []byte) ( /* httpStatusCode */ int, error) {
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(message),

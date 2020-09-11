@@ -21,6 +21,7 @@ func GetSidecar(t, id string) (string, error) {
 // CompareAndSetSidecar atomically updates the sidecar for the given actor type and id.
 // Use old = "" to atomically set the initial placement.
 // Use new = "" to atomically delete the current placement.
+// Returns 0 if unsuccessful, 1 if successful.
 func CompareAndSetSidecar(t, id, old, new string) (int, error) {
 	o := &old
 	if old == "" {
