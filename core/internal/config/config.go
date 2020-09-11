@@ -110,7 +110,7 @@ var (
 	Get string
 
 	// temporary variables to parse command line options
-	kafkaBrokers, verbosity, configDir, actorTypes, collectInterval, remindInterval, remindDelay, timeoutTime, actorTimeoutTime string
+	kafkaBrokers, verbosity, configDir, actorTypes string
 )
 
 // define the flags available on all commands
@@ -128,7 +128,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
 
-	f.StringVar(&timeoutTime, "timeout", "-1s", "Time to wait before timing out calls")
+	f.DurationVar(&RequestTimeout, "timeout", -1*time.Second, "Time to wait before timing out calls")
 
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
 
@@ -187,15 +187,15 @@ Available commands:
 		description = "Run application component"
 		flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
 		flag.StringVar(&actorTypes, "actors", "", "The actor types provided by this process, as a comma separated list")
-		flag.StringVar(&collectInterval, "actor_collector_interval", "10s", "Actor collector interval")
-		flag.StringVar(&remindInterval, "actor_reminder_interval", "100ms", "Actor reminder processing interval")
-		flag.StringVar(&remindDelay, "actor_reminder_acceptable_delay", "3s", "Threshold at which reminders are logged as being late")
+		flag.DurationVar(&ActorCollectorInterval, "actor_collector_interval", 10*time.Second, "Actor collector interval")
+		flag.DurationVar(&ActorReminderInterval, "actor_reminder_interval", 100*time.Millisecond, "Actor reminder processing interval")
+		flag.DurationVar(&ActorReminderAcceptableDelay, "actor_reminder_acceptable_delay", 3*time.Second, "Threshold at which reminders are logged as being late")
 		flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
 		flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
 		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
-		flag.StringVar(&actorTimeoutTime, "actor_timeout", "2m", "Time to wait on busy actors before timing out")
+		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy actors before timing out")
 
 	case "get":
 		usage = "kar get [OPTIONS]"
@@ -269,38 +269,7 @@ Available commands:
 		ServiceName = "kar.none"
 	}
 
-	RequestTimeout, err = time.ParseDuration(timeoutTime)
-	if err != nil {
-		logger.Fatal("error parsing timeout time %s", timeoutTime)
-	}
-
-	if CmdName == "run" {
-		if actorTypes == "" {
-			ActorTypes = []string{}
-		} else {
-			ActorTypes = strings.Split(actorTypes, ",")
-		}
-
-		ActorCollectorInterval, err = time.ParseDuration(collectInterval)
-		if err != nil {
-			logger.Fatal("error parsing actor_collector_interval %s", collectInterval)
-		}
-
-		ActorReminderInterval, err = time.ParseDuration(remindInterval)
-		if err != nil {
-			logger.Fatal("error parsing actor_reminder_interval %s", remindInterval)
-		}
-
-		ActorReminderAcceptableDelay, err = time.ParseDuration(remindDelay)
-		if err != nil {
-			logger.Fatal("error parsing actor_reminder_acceptable_delay %s", remindDelay)
-		}
-
-		ActorTimeout, err = time.ParseDuration(actorTimeoutTime)
-		if err != nil {
-			logger.Fatal("error parsing actor timeout time %s", actorTimeoutTime)
-		}
-	}
+	ActorTypes = strings.Split(actorTypes, ",")
 
 	if !KafkaEnableTLS {
 		ktmp := os.Getenv("KAFKA_ENABLE_TLS")
