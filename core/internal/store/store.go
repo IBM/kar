@@ -9,7 +9,6 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 var (
@@ -68,6 +67,7 @@ func Del(key string) (int, error) {
 
 // CompareAndSet sets the value associated with a key if its current value is
 // equal to the expected value. Use nil values to create or delete the key.
+// Returns 0 if unsuccessful, 1 if successful.
 func CompareAndSet(key string, expected, value *string) (int, error) {
 	if expected == nil && value == nil {
 		_, err := redis.String(do("GET", key))
@@ -97,6 +97,36 @@ func Keys(pattern string) ([]string, error) {
 		}
 	}
 	return mangledKeys, err
+}
+
+// Purge deletes all keys that match the argument pattern
+func Purge(pattern string) (int, error) {
+	pattern = mangle(pattern)
+	bags := [][]interface{}{}
+	cursor := 0
+	for {
+		reply, err := redis.Values(doRaw("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
+		if err != nil {
+			return 0, err
+		}
+		cursor, _ = strconv.Atoi(string(reply[0].([]byte)))
+		keys := reply[1].([]interface{})
+		if len(keys) > 0 {
+			bags = append(bags, keys)
+		}
+		if cursor == 0 {
+			break
+		}
+	}
+	count := 0
+	for _, keys := range bags {
+		n, err := redis.Int(doRaw("DEL", keys...))
+		count += n
+		if err != nil {
+			return count, err
+		}
+	}
+	return count, nil
 }
 
 // Hashes
@@ -182,6 +212,8 @@ func ZRemRangeByScore(key string, min, max int64) (int, error) {
 	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
 }
 
+// Connection
+
 // Dial establishes a connection to the store.
 func Dial() error {
 	redisOptions := []redis.DialOption{}
@@ -208,35 +240,4 @@ func Close() error {
 	// terminate pending requests as well as prevent new commands to be sent to
 	// redis so there is no need for synchronization here
 	return conn.Close()
-}
-
-// Purge deletes all keys for the application
-func Purge(pattern string) error {
-	pattern = mangle(pattern)
-	bags := [][]interface{}{}
-	cursor := 0
-	for {
-		reply, err := redis.MultiBulk(doRaw("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
-		if err != nil {
-			return err
-		}
-		cursor, _ = strconv.Atoi(string(reply[0].([]byte)))
-		keys := reply[1].([]interface{})
-		if len(keys) > 0 {
-			bags = append(bags, keys)
-		}
-		if cursor == 0 {
-			break
-		}
-	}
-	count := 0
-	for _, keys := range bags {
-		n, err := redis.Int(doRaw("DEL", keys...))
-		count += n
-		if err != nil {
-			return err
-		}
-	}
-	logger.Info("%v deleted keys", count)
-	return nil
 }
