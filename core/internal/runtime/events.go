@@ -21,11 +21,11 @@ type source struct {
 	Path string `json:"path"`
 	// The topic that is the source of events for this subscription
 	Topic string `json:"topic"`
-	// FIXME: I have no idea what this is.
+	// The group ID for this consumer
 	Group string `json:"group"`
-	// The expected MIME type of events delivered by this subsription
+	// The expected MIME type of events delivered by this subscription
 	ContentType string `json:"contenttype,omitempty"`
-	// FIXME: I have no idea what this is.
+	// Use the oldest available offset if no offset was previously committed
 	OffsetOldest bool               `json:"oldestoffset"`
 	cancel       context.CancelFunc // not serialized
 	closed       <-chan struct{}    // not serialized
