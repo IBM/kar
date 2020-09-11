@@ -156,7 +156,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 			}
 			arg = string(buf)
 		}
-		err := TellActor(ctx, s.Actor, s.Path, "["+arg+"]", "application/kar+json", "POST", false)
+		err := TellActor(ctx, s.Actor, s.Path, "["+arg+"]", false)
 		if err != nil {
 			logger.Error("failed to post event from topic %s: %v", s.Topic, err)
 		} else {

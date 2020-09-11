@@ -46,7 +46,7 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct b
 		}
 		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Method, direct)
+		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -71,7 +71,7 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, d
 		}
 		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
-		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, direct)
+		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -318,7 +318,7 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
 	} else {
 		session := r.FormValue("session")
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), r.Header.Get("Content-Type"), r.Header.Get("Accept"), r.Method, session, direct)
+		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), session, direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {

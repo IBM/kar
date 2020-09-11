@@ -39,16 +39,14 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Actor, path, payload, contentType, method string, direct bool) error {
+func TellActor(ctx context.Context, actor Actor, path, payload string, direct bool) error {
 	return pubsub.Send(ctx, direct, map[string]string{
-		"protocol":     "actor",
-		"type":         actor.Type,
-		"id":           actor.ID,
-		"command":      "tell", // post with no callback expected
-		"path":         path,
-		"content-type": contentType,
-		"method":       method,
-		"payload":      payload})
+		"protocol": "actor",
+		"type":     actor.Type,
+		"id":       actor.ID,
+		"command":  "tell", // post with no callback expected
+		"path":     path,
+		"payload":  payload})
 }
 
 func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingID string) error {
@@ -144,33 +142,27 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method, session string, direct bool) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, session string, direct bool) (*Reply, error) {
 	msg := map[string]string{
-		"protocol":     "actor",
-		"type":         actor.Type,
-		"id":           actor.ID,
-		"command":      "call",
-		"path":         path,
-		"content-type": contentType,
-		"accept":       accept,
-		"session":      session,
-		"method":       method,
-		"payload":      payload}
+		"protocol": "actor",
+		"type":     actor.Type,
+		"id":       actor.ID,
+		"command":  "call",
+		"path":     path,
+		"session":  session,
+		"payload":  payload}
 	return callHelper(ctx, msg, direct)
 }
 
 // CallPromiseActor calls an actor and returns a request id
-func CallPromiseActor(ctx context.Context, actor Actor, path, payload, contentType, accept, method string, direct bool) (string, error) {
+func CallPromiseActor(ctx context.Context, actor Actor, path, payload string, direct bool) (string, error) {
 	msg := map[string]string{
-		"protocol":     "actor",
-		"type":         actor.Type,
-		"id":           actor.ID,
-		"command":      "call",
-		"path":         path,
-		"content-type": contentType,
-		"accept":       accept,
-		"method":       method,
-		"payload":      payload}
+		"protocol": "actor",
+		"type":     actor.Type,
+		"id":       actor.ID,
+		"command":  "call",
+		"path":     path,
+		"payload":  payload}
 	return callPromiseHelper(ctx, msg, direct)
 }
 
@@ -428,6 +420,8 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				e.release(session, false)
 			} else { // invoke actor method
 				msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+				msg["content-type"] = "application/kar+json"
+				msg["method"] = "POST"
 				err = dispatch(ctx, cancel, msg)
 				e.release(session, true)
 			}
