@@ -1,6 +1,6 @@
 const express = require('express')
 
-const { actor, sys, publish } = require('kar')
+const { actor, events, sys } = require('kar')
 
 // CloudEvents SDK for defining a structured HTTP request receiver.
 const cloudevents = require('cloudevents-sdk/v1')
@@ -196,7 +196,7 @@ class Site {
     if (verbose) console.log(`Publish event: ${reportEvent}`)
 
     // Publish report as an event.
-    publish('siteReport', reportEvent)
+    events.publish('siteReport', reportEvent)
 
     return status
   }

@@ -2032,7 +2032,7 @@
       "description": "eventSubscribeOptions documents the request body for subscribing an actor to a topic",
       "type": "object",
       "properties": {
-        "contenttype": {
+        "contentType": {
           "description": "The expected MIME content type of the events that will be produced by this subscription\nIf an explicit value is not provided, the default value of application/json+cloudevent will be used.",
           "type": "string",
           "x-go-name": "ContentType",
@@ -2043,6 +2043,11 @@
           "type": "string",
           "x-go-name": "Path",
           "example": "processEvent"
+        },
+        "topic": {
+          "description": "The name of the topic being subscribed to",
+          "type": "string",
+          "x-go-name": "Topic"
         }
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
@@ -2121,19 +2126,19 @@
       "description": "topicCreateOptions documents the request body for creating a topic",
       "type": "object",
       "properties": {
-        "configentries": {
+        "configEntries": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
           "x-go-name": "ConfigEntries"
         },
-        "numpartitions": {
+        "numPartitions": {
           "type": "integer",
           "format": "int32",
           "x-go-name": "NumPartitions"
         },
-        "replicationfactor": {
+        "replicationFactor": {
           "type": "integer",
           "format": "int16",
           "x-go-name": "ReplicationFactor"

@@ -1,7 +1,7 @@
 const express = require('express')
 const https = require('https')
 var path = require('path')
-const { sys, publish } = require('kar')
+const { events, sys } = require('kar')
 
 // CloudEvents SDK for constructing the event.
 const v1 = require('cloudevents-sdk/v1')
@@ -50,7 +50,7 @@ app.post('/stockprice/:stock_name', (req, res) => {
       stockEvent.data(openPrices.toString())
 
       // Send CloudEvent on the 'historical-prices' topic.
-      publish('historical-prices', stockEvent)
+      events.publish('historical-prices', stockEvent)
 
       res.send(msg)
     })

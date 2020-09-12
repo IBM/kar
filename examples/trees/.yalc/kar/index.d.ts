@@ -42,9 +42,29 @@ export interface ScheduleReminderOptions {
   /** The id of the reminder being scheduled */
   id: string;
   /** The earliest time at which the reminder should be delivered */
-  targetTime: Date
+  targetTime: Date;
   /**  For periodic reminders, a string encoding a Duration representing the desired gap between successive reminders */
-  period?: string
+  period?: string;
+}
+
+/*
+ * Events
+ */
+
+export interface SubscribeOptions {
+  /** The id of the subscription being created */
+  id?: string;
+  /** The expected MIME content type of events from this subscription.  Defaults to application/json+cloudevent */
+  contentType?: string;
+}
+
+export interface TopicCreationOptions {
+  /** Kafka topic creation config */
+  configEntries?: Map<string,string>;
+  /** The number of Kafka paritions to create */
+  numPartitions?: number;
+  /** The replication factor for this topic */
+  replicationFactor?: number;
 }
 
 /**
@@ -63,27 +83,6 @@ export function tell (service: string, path: string, body: any): Promise<any>;
  * @returns The result returned by the target service.
  */
 export function call (service: string, path: string, body: any): Promise<any>;
-
-/**
- * Publish a CloudEvent to a topic
- * @param {*} TODO: Document this API when it stabalizes
- */
-export function publish ();
-
-/**
- * Subscribe a Service endpoint to a topic.
- * @param topic The topic to which to subscribe
- * @param path The endpoint to invoke for each event received on the topic
- * @param opts TODO: Document expected structure
- */
-export function subscribe (topic: string, path: string, opts: any): Promise<any>;
-
-/**
- * Unsubscribe from a topic.
- * @param topic The topic to which to subscribe
- * @param opts TODO: Document expected structure
- */
-export function unsubscribe (topic: string, opts: any): Promise<any>;
 
 /**
  * Actor operations
@@ -123,15 +122,6 @@ export namespace actor {
    */
   export function call (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
-  /**
-   * Subscribe an Actor instance method to a topic.
-   * @param actor The Actor instance to subscribe
-   * @param topic The topic to which to subscribe
-   * @param path The endpoint to invoke for each event received on the topic
-   * @param opts TODO: Document expected structure
-   */
-  export function subscribe (actor: Actor, topic: string, path: string, opts: any): Promise<any>
-
   namespace reminders {
     /**
      * Cancel matching reminders for an Actor instance.
@@ -144,7 +134,7 @@ export namespace actor {
     /**
      * Get matching reminders for an Actor instance.
      * @param actor The Actor instance.
-     * @param reminderId The id of a specific reminder to cancel
+     * @param reminderId The id of a specific reminder to get
      * @returns An array of matching reminders
      */
     export function get (actor: Actor, reminderId?: string): Promise<Reminder | Array<Reminder>>;
@@ -210,7 +200,7 @@ export namespace actor {
      * @param key the name of the map to which the updates should be performed.
      * @param updates The updates to make
      */
-    export function setMultipleInSubMap (actor: Actor, key:string, updates: Map<string, any>): Promise<void>;
+    export function setMultipleInSubMap (actor: Actor, key: string, updates: Map<string, any>): Promise<void>;
 
     /**
      * Remove one value from an Actor's state
@@ -233,7 +223,7 @@ export namespace actor {
      * @param key The name of the map to get
      * @returns A contents of the map `key`
      */
-    export function getSubmap (actor: Actor, key:String): Promise<Map<string, any>>;
+    export function getSubmap (actor: Actor, key: String): Promise<Map<string, any>>;
 
     /**
      * Remove an Actor's state
@@ -247,7 +237,7 @@ export namespace actor {
      * @param key The key
      * @returns An array containing the currently defined subkeys
      */
-    export function subMapGetKeys(actor: Actor, key: string):Promise<Array<string>>;
+    export function subMapGetKeys (actor: Actor, key: string): Promise<Array<string>>;
 
     /**
      * Get the number of subkeys associated with the given key
@@ -255,7 +245,7 @@ export namespace actor {
      * @param key The key
      * @returns The number of currently define subkeys
      */
-    export function subMapSize(actor: Actor, key: string):Promise<number>;
+    export function subMapSize (actor: Actor, key: string): Promise<number>;
 
     /**
      * Remove all subkeys associated with the given key
@@ -263,9 +253,60 @@ export namespace actor {
      * @param key The key
      * @returns The number of removed subkey entrys
      */
-    export function subMapClear(actor: Actor, key: string):Promise<number>;
+    export function subMapClear (actor: Actor, key: string): Promise<number>;
   }
 }
+
+export namespace events {
+  /**
+    * Cancel matching subscriptions for an Actor instance.
+    * @param actor The Actor instance.
+    * @param subscriptionId The id of a specific subscription to cancel
+    * @returns The number of subscriptions that were cancelled.
+    */
+  export function cancelSubscription (actor: Actor, subscriptionId?: string): Promise<number>;
+
+  /**
+   * Get matching subscription(s) for an Actor instance.
+   * @param actor The Actor instance.
+   * @param subscriptionId The id of a specific subscription to get
+   * @returns The matching subscription(s)
+   */
+  export function getSubscription (actor: Actor, subscriptionId?: string): Promise<Reminder | Array<Reminder>>;
+
+  /**
+   * Subscribe an Actor instance method to a topic.
+   * @param actor The Actor instance to subscribe
+   * @param path The actor method to invoke on each event received on the topic
+   * @param topic The topic to which to subscribe
+   * @param options.contentType The expected MIME content type of events (defaults to application/json+cloudevents)
+   * @param options.id The subscription id; defaults to the topic name.
+   */
+  export function subscribe (actor: Actor, path: string, topic: string, options: SubscribeOptions): Promise<any>
+
+  /**
+   * Create a topic
+   * @param topic The name of the topic to create
+   * @param options.configEntries A map of kafka topic configuration options
+   * @param options.numPartitions The number of partitions for the topic
+   * @param options.replicationFactor The replication factor for the topic
+   */
+  export function createTopic (topic: string, options: TopicCreationOptions): Promise<any>
+
+  /**
+   * Delete a topic
+   * @param topic the name of the topic to delete
+   */
+  export function deleteTopic (topic: string): Promise<any>
+
+  /**
+   * Publish an event on a topic
+   * @param topic
+   * @param event
+   */
+  export function publish (topic: string, event: any): Promise<void>
+}
+
 
 /**
  * Application configuration and system operations
@@ -277,7 +318,7 @@ export namespace sys {
    * @param actors The actor types implemented by this application component.
    * @returns Router that will serve routes designated for the actor runtime
    */
-  export function actorRuntime (actors:  { [k:string]: ()=>Object }): Router;
+  export function actorRuntime (actors: { [k: string]: () => Object }): Router;
 
   /**
    * Wrap an Express App in an http/2 server.

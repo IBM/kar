@@ -55,7 +55,7 @@ definitions:
   eventSubscribeOptions:
     description: eventSubscribeOptions documents the request body for subscribing an actor to a topic
     properties:
-      contenttype:
+      contentType:
         description: |-
           The expected MIME content type of the events that will be produced by this subscription
           If an explicit value is not provided, the default value of application/json+cloudevent will be used.
@@ -67,6 +67,10 @@ definitions:
         example: processEvent
         type: string
         x-go-name: Path
+      topic:
+        description: The name of the topic being subscribed to
+        type: string
+        x-go-name: Topic
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   scheduleReminderPayload:
@@ -132,16 +136,16 @@ definitions:
   topicCreateOptions:
     description: topicCreateOptions documents the request body for creating a topic
     properties:
-      configentries:
+      configEntries:
         additionalProperties:
           type: string
         type: object
         x-go-name: ConfigEntries
-      numpartitions:
+      numPartitions:
         format: int32
         type: integer
         x-go-name: NumPartitions
-      replicationfactor:
+      replicationFactor:
         format: int16
         type: integer
         x-go-name: ReplicationFactor

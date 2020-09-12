@@ -208,36 +208,21 @@ const actorSubMapClear = (actor, key) => post(`actor/${actor.kar.type}/${actor.k
 
 const shutdown = () => post('system/shutdown').then(_ => session.close())
 
-function publish (topic, event) {
-  // Ensure event is of the correct type.
-  if (typeof event !== 'object') throw new Error('publish: event must be of type "object"')
-  if (typeof event.spec !== 'object') throw new Error('publish: event.spec must be of type "object"')
-  if (typeof event.spec.payload !== 'object') throw new Error('publish: event.spec.payload must be of type "object"')
+const eventsCancelSubscription = (actor, id) => id ? del(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`) : del(`actor/${actor.kar.type}/${actor.kar.id}/events`)
 
-  // Construct POST request from input Cloudevent.
-  const payload = event.spec.payload
+const eventsGetSubscription = (actor, id) => id ? get(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`) : get(`actor/${actor.kar.type}/${actor.kar.id}/events`)
 
-  // Check mandatory fields for a Cloudevent are present.
-  if (typeof topic === 'undefined') throw new Error('publish: must define "topic"')
-  if (typeof payload.id === 'undefined') throw new Error('publish: must define "id"')
-  if (typeof payload.source === 'undefined') throw new Error('publish: must define "source"')
-  if (typeof payload.type === 'undefined') throw new Error('publish: must define "type"')
-
-  // Set specversion if not set.
-  if (typeof payload.specversion === 'undefined') payload.specversion = '1.0'
-
-  return post(`event/${topic}/publish`, payload)
+function eventsCreateSubscription (actor, path, topic, options = {}) {
+  const id = options.id || topic
+  const contentType = options.contentType
+  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic /* contentType */ })
 }
 
-function actorSubscribe (actor, topic, path, params = {}) {
-  const id = params.id || topic
-  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ path: `/${path}`, topic }, params))
-}
+const eventsCreateTopic = (topic, options = {}) => put(`event/${topic}`, options)
 
-function actorUnsubscribe (actor, topic, params = {}) {
-  const id = params.id || topic
-  return del(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, Object.assign({ topic }, params))
-}
+const eventsDeleteTopic = (topic) => del(`event/${topic}`)
+
+const eventsPublish = (topic, event) => post(`event/${topic}/publish`, event)
 
 /***************************************************
  * End of public methods intended for application programming
@@ -339,14 +324,11 @@ module.exports = {
   tell,
   call,
   asyncCall,
-  publish,
   actor: {
     proxy: actorProxy,
     tell: actorTell,
     call: actorCall,
     asyncCall: actorAsyncCall,
-    subscribe: actorSubscribe,
-    unsubscribe: actorUnsubscribe,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,
@@ -367,6 +349,14 @@ module.exports = {
       subMapSize: actorSubMapSize,
       subMapClear: actorSubMapClear
     }
+  },
+  events: {
+    cancelSubscription: eventsCancelSubscription,
+    getSubscription: eventsGetSubscription,
+    subscribe: eventsCreateSubscription,
+    createTopic: eventsCreateTopic,
+    deleteTopic: eventsDeleteTopic,
+    publish: eventsPublish
   },
   sys: {
     actorRuntime,

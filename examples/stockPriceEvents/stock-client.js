@@ -1,4 +1,4 @@
-const { actor, call, publish } = require('kar')
+const { actor, call, events } = require('kar')
 const yargs = require('yargs')
 const cloudevents = require('cloudevents-sdk/v1')
 
@@ -74,7 +74,7 @@ async function main () {
       buyStockEvent.data(JSON.parse(JSON.stringify(purchaseData)))
 
       console.log(`Send purchase event for ${stock} (QTY = ${quantity}, PPS = ${response}).`)
-      publish('buy-stock', buyStockEvent)
+      events.publish('buy-stock', buyStockEvent)
     }
   }
 }

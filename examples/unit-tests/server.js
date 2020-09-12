@@ -1,5 +1,5 @@
 const express = require('express')
-const { actor, publish, sys } = require('kar')
+const { actor, events, sys } = require('kar')
 const cloudevents = require('cloudevents-sdk/v1')
 
 const app = express()
@@ -36,13 +36,13 @@ class Foo {
   }
 
   accumulate (event) {
-    this.count += event.data
+    this.count += event.spec.payload.data
   }
 
   async pubsub (topic) {
     const source = 'numServer'
     const type = 'number'
-    await actor.subscribe(this, topic, 'accumulate') // subscribe service to topic
+    await events.subscribe(this, 'accumulate', topic) // subscribe actor to topic
 
     // Create event 1:
     const e1 = cloudevents.event()
@@ -50,7 +50,7 @@ class Foo {
       .source(source)
       .id(1)
       .data(1)
-    await publish(topic, e1)
+    await events.publish(topic, e1)
 
     // Create event 2:
     const e2 = cloudevents.event()
@@ -58,7 +58,7 @@ class Foo {
       .source(source)
       .id(2)
       .data(2)
-    await publish(topic, e2)
+    await events.publish(topic, e2)
 
     // Create event 3:
     const e3 = cloudevents.event()
@@ -66,13 +66,14 @@ class Foo {
       .source(source)
       .id(3)
       .data(3)
-    await publish(topic, e3)
+    await events.publish(topic, e3)
+
     return 'OK'
   }
 
   async check (topic) {
     if (this.count >= 6) {
-      await actor.unsubscribe(this, topic)
+      await events.cancelSubscription(this, topic)
       return true
     }
     return false

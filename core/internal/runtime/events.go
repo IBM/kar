@@ -36,17 +36,19 @@ type eventSubscribeOptions struct {
 	// The expected MIME content type of the events that will be produced by this subscription
 	// If an explicit value is not provided, the default value of application/json+cloudevent will be used.
 	// Example: application/json
-	ContentType string `json:"contenttype,omitempty"`
+	ContentType string `json:"contentType,omitempty"`
 	// The actor method to be invoked with each delivered event
 	// Example: processEvent
 	Path string `json:"path"`
+	// The name of the topic being subscribed to
+	Topic string `json:"topic"`
 }
 
 // topicCreateOptions documents the request body for creating a topic
 type topicCreateOptions struct {
-	NumPartitions     int32              `json:"numpartitions,omitempty"`
-	ReplicationFactor int16              `json:"replicationfactor,omitempty"`
-	ConfigEntries     map[string]*string `json:"configentries,omitempty"`
+	NumPartitions     int32              `json:"numPartitions,omitempty"`
+	ReplicationFactor int16              `json:"replicationFactor,omitempty"`
+	ConfigEntries     map[string]*string `json:"configEntries,omitempty"`
 }
 
 func (s source) k() string {
