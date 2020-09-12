@@ -15,7 +15,8 @@ SHORT_COMMIT=`git rev-parse --short HEAD`
 
 if [ ${BRANCH} == "master" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push commit hash tagged images
-    DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make dockerBuildAndPush
+    # disable because can't auto-delete old images in RIS namespace
+    # DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make dockerBuildAndPush
 
     # push `latest` tag images
     DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=latest make dockerBuildAndPush
