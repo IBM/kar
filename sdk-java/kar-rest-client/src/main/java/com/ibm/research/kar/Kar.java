@@ -26,6 +26,7 @@ import javax.ws.rs.core.Response.Status;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.Reminder;
+import com.ibm.research.kar.actor.Subscription;
 import com.ibm.research.kar.actor.exceptions.ActorExceptionMapper;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
@@ -148,6 +149,30 @@ public class Kar {
 			return res.toArray(new Reminder[res.size()]);
 		} catch (ClassCastException e) {
 			return new Reminder[0];
+		}
+	}
+
+	private static Subscription[] toSubscriptionArray(Response response) {
+		try {
+			ArrayList<Subscription> res = new ArrayList<Subscription>();
+			JsonArray ja = ((JsonValue) toValue(response)).asJsonArray();
+			for (JsonValue jv : ja) {
+				try {
+					JsonObject jo = jv.asJsonObject();
+					String actorType = jo.getJsonObject("Actor").getString("Type");
+					String actorId = jo.getJsonObject("Actor").getString("ID");
+					String id = jo.getString("id");
+					String path = jo.getString("path");
+					String topic = jo.getString("topic");
+					Subscription s = new Subscription(actorRef(actorType, actorId), id, path, topic);
+					res.add(s);
+				} catch (ClassCastException e) {
+					logger.warning("toReminderArray: Dropping unexpected element " + jv);
+				}
+			}
+			return res.toArray(new Subscription[res.size()]);
+		} catch (ClassCastException e) {
+			return new Subscription[0];
 		}
 	}
 
@@ -705,7 +730,7 @@ public class Kar {
 	 * Store multiple values to a the Actor sub-map with name `key`
 	 *
 	 * @param actor   The Actor instance.
-	 * @param key  The key of the map to which the updates should be performed
+	 * @param key     The key of the map to which the updates should be performed
 	 * @param updates A map containing the (subkey, value) pairs to store
 	 * @return The number of new map entries created by this operation
 	 */
@@ -748,10 +773,10 @@ public class Kar {
 		jb.add("op", Json.createValue("keys"));
 		JsonObject params = jb.build();
 		Response response = karClient.actorMapOp(actor.getType(), actor.getId(), key, params);
-		Object[] jstrings = ((JsonValue)toValue(response)).asJsonArray().toArray();
+		Object[] jstrings = ((JsonValue) toValue(response)).asJsonArray().toArray();
 		String[] ans = new String[jstrings.length];
-		for (int i=0; i<jstrings.length; i++) {
-			ans[i] = ((JsonValue)jstrings[i]).toString();
+		for (int i = 0; i < jstrings.length; i++) {
+			ans[i] = ((JsonValue) jstrings[i]).toString();
 		}
 		return ans;
 	}
@@ -849,7 +874,106 @@ public class Kar {
 	 * Events
 	 */
 
-	// FIXME: implement event APIs
+	/**
+	 * Cancel all subscriptions for an Actor instance.
+	 *
+	 * @param actor          The Actor instance.
+	 * @return The number of subscriptions that were cancelled.
+	 */
+	public static int actorCancelAllSubscriptions(ActorRef actor) {
+		Response response = karClient.actorCancelAllSubscriptions(actor.getType(), actor.getId());
+		return toInt(response);
+	}
+
+	/**
+	 * Cancel a specific subscription for an Actor instance.
+	 *
+	 * @param actor          The Actor instance.
+	 * @param subscriptionId The id of a specific subscription to cancel
+	 * @return The number of subscriptions that were cancelled.
+	 */
+	public static int actorCancelSubscription(ActorRef actor, String subscriptionId) {
+		Response response = karClient.actorCancelSubscription(actor.getType(), actor.getId(), subscriptionId);
+		return toInt(response);
+	}
+
+	/**
+	 * Get all subscriptions for an Actor instance.
+	 *
+	 * @param actor          The Actor instance.
+	 * @return An array of subscriptions
+	 */
+	public static Subscription[] actorGetSubscriptions(ActorRef actor) {
+		Response response = karClient.actorGetAllSubscriptions(actor.getType(), actor.getId());
+		return toSubscriptionArray(response);
+	}
+
+	/**
+	 * Get a specific subscription for an Actor instance.
+	 *
+	 * @param actor          The Actor instance.
+	 * @param subscriptionId The id of a specific subscription to get
+	 * @return An array of zero or one subscription
+	 */
+	public static Subscription[] actorGetSubscription(ActorRef actor, String subscriptionId) {
+		Response response = karClient.actorGetSubscription(actor.getType(), actor.getId(), subscriptionId);
+		return toSubscriptionArray(response);
+	}
+
+	/**
+	 * Subscribe an Actor instance method to a topic.
+	 *
+	 * @param actor               The Actor instance to subscribe
+	 * @param path                The actor method to invoke on each event received on the topic
+	 * @param topic               The topic to which to subscribe
+	 */
+	public static void actorSubscribe(ActorRef actor, String path, String topic) {
+		actorSubscribe(actor, path, topic, topic);
+	}
+
+	/**
+	 * Subscribe an Actor instance method to a topic.
+	 *
+	 * @param actor               The Actor instance to subscribe
+	 * @param path                The actor method to invoke on each event received on the topic
+	 * @param topic               The topic to which to subscribe
+	 * @param subscriptionId	    The subscriptionId to use for this subscription
+	 */
+	public static void actorSubscribe(ActorRef actor, String path, String topic, String subscriptionId) {
+		JsonObjectBuilder builder = Json.createObjectBuilder();
+		builder.add("path", "/" + path);
+		builder.add("topic", topic);
+		JsonObject data = builder.build();
+		karClient.actorSubscribe(actor.getType(), actor.getId(), subscriptionId, data);
+	}
+
+	/**
+	 * Create a topic using the default Kafka configuration options
+	 *
+	 * @param topic The name of the topic to create
+	 */
+	public static void eventCreateTopic(String topic) {
+		karClient.eventCreateTopic(topic, JsonValue.EMPTY_JSON_OBJECT);
+	}
+
+	/**
+	 * Delete a topic
+	 *
+	 * @param topic the name of the topic to delete
+	 */
+	public static void eventDeleteTopic(String topic) {
+		karClient.eventDeleteTopic(topic);
+	}
+
+	/**
+	 * Publish an event on a topic
+	 *
+	 * @param topic
+	 * @param event
+	 */
+	public static void eventPublish(String topic, JsonValue event) {
+		karClient.eventPublish(topic, event);
+	}
 
 	/*
 	 * System

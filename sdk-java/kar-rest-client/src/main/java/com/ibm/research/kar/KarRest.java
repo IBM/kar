@@ -280,7 +280,45 @@ public interface KarRest extends AutoCloseable {
 	 * Events
 	 */
 
-	 // FIXME: implement event APIs
+	@GET
+	@Path("actor/{type}/{id}/events")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorGetAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+
+	@DELETE
+	@Path("actor/{type}/{id}/events")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorCancelAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+
+	@GET
+	@Path("actor/{type}/{id}/events/{subscriptionId}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorGetSubscription(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId) throws ProcessingException;
+
+	@DELETE
+	@Path("actor/{type}/{id}/events/{subscriptionId}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorCancelSubscription(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId) throws ProcessingException;
+
+	@PUT
+	@Path("actor/{type}/{id}/events/{subscriptionId}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response actorSubscribe(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId, JsonValue data) throws ProcessingException;
+
+	@PUT
+	@Path("event/{topic}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response eventCreateTopic(@PathParam("topic") String topic, JsonValue configuration) throws ProcessingException;
+
+	@DELETE
+	@Path("event/{topic}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response eventDeleteTopic(@PathParam("topic") String topic) throws ProcessingException;
+
+	@POST
+	@Path("event/{topic}/publish")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	public Response eventPublish(@PathParam("topic") String topic, JsonValue event) throws ProcessingException;
 
 	/*
 	 * System
