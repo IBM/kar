@@ -1,0 +1,228 @@
+package main
+
+/*
+ * This file contains the implementation of the portion of the
+ * KAR REST API related to events.
+ */
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/core/internal/runtime"
+)
+
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionCancelAll
+//
+// subscriptions
+//
+// ### Cancel all subscriptions
+//
+// This operation cancels all subscriptions for the actor instance specified in the path.
+// The number of subscriptions cancelled is returned as the result of the operation.
+//
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionCancelAllResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route DELETE /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscriptionCancel
+//
+// subscriptions/id
+//
+// ### Cancel a subscription
+//
+// This operation cancels the subscription for the actor instance specified in the path.
+// If the subscription is successfully cancelled a `200` response with a body of `1` will be returned.
+// If the subscription is not found, a `404` response will be returned unless
+// the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+// is sent to true the `404` response will instead be a `200` with a body containing `0`.
+//
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionCancelResult
+//       404: response404
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionGetAll
+//
+// subscriptions
+//
+// ### Get all subscriptions
+//
+// This operation returns all subscriptions for the actor instance specified in the path.
+//
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionGetAllResult
+//       500: response500
+//       503: response503
+//
+
+// swagger:route GET /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscriptionGet
+//
+// subscriptions/id
+//
+// ### Get a subscription
+//
+// This operation returns the subscription for the actor instance specified in the path.
+// If there is no subscription with the id `subscriptionId` a `404` response will be returned
+// unless the boolean query parameter `nilOnAbsent` is set to `true`.
+// If `nilOnAbsent` is true the `404` response will be replaced with
+// a `200` response with a `nil` response body.
+//
+//     Produces:
+//     - application/json
+//     Schemes: http
+//     Responses:
+//       200: response200SubscriptionGetResult
+//       404: response404
+//       500: response500
+//       503: response503
+//
+
+// swagger:route PUT /v1/actor/{actorType}/{actorId}/events/{subscriptionId} events idActorSubscribe
+//
+// subscriptions/id
+//
+// ### Subscribe to a topic
+//
+// Subscribe the actor instance using the subscriptionId specified in the path
+// as described by the data provided in the request body.
+// If there is already a subscription for the target actor instance with the same subscriptionId,
+// that existing subscription will be updated based on the request body.
+// The operation will not return until after the actor instance is subscribed.
+//
+//     Consumes:
+//     - application/json
+//     Produces:
+//     - text/plain
+//     Schemes: http
+//     Responses:
+//       200: response200
+//       500: response500
+//       503: response503
+//
+func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var action string
+	body := ""
+	noa := "false"
+	switch r.Method {
+	case "GET":
+		action = "get"
+		noa = r.FormValue("nilOnAbsent")
+	case "PUT":
+		action = "set"
+		body = runtime.ReadAll(r)
+	case "DELETE":
+		action = "del"
+		noa = r.FormValue("nilOnAbsent")
+	default:
+		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
+		return
+	}
+	reply, err := runtime.Bindings(ctx, "subscriptions", runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("subscriptionId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		w.Header().Add("Content-Type", reply.ContentType)
+		w.WriteHeader(reply.StatusCode)
+		fmt.Fprint(w, reply.Payload)
+	}
+}
+
+// swagger:route POST /v1/event/{topic}/publish events idEventPublish
+//
+// publish
+//
+// ### Publish an event to a topic
+//
+// The event provided as the request body will be published on `topic`.
+// When the operation returns successfully, the event is guaranteed to
+// eventually be published to the targeted topic.
+//
+//     Schemes: http
+//     Consumes:
+//     - application/*
+//     Responses:
+//       200: response200
+//       404: response404
+//       500: response500
+//
+func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	buf, _ := ioutil.ReadAll(r.Body)
+	code, err := pubsub.Publish(ps.ByName("topic"), buf)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("publish error: %v", err), code)
+	} else {
+		fmt.Fprint(w, "OK")
+	}
+}
+
+// swagger:route PUT /v1/event/{topic} events idTopicCreate
+//
+// topic
+//
+// ### Creates or updates a given topic
+//
+// Parameters are specified in the body of the post, as stringified JSON.
+// No body passed causes a default creation.
+//
+//     Schemes: http
+//     Consumes:
+//     - application/json
+//     Responses:
+//       201: response201
+//       500: response500
+//
+func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	params := runtime.ReadAll(r)
+	err := pubsub.CreateTopic(ps.ByName("topic"), params)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
+	} else {
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprint(w, "Created")
+	}
+}
+
+// swagger:route DELETE /v1/event/{topic} events idTopicDelete
+//
+// topic
+//
+// ### Deletes given topic
+//
+// Deletes topic specified in route.
+//
+//     Schemes: http
+//     Consumes:
+//     - application/json
+//     Responses:
+//       200: response200
+//       500: response500
+//
+func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	err := pubsub.DeleteTopic(ps.ByName("topic"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
+	} else {
+		fmt.Fprint(w, "OK")
+	}
+}
