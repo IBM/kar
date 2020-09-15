@@ -11,7 +11,8 @@ import (
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
-type source struct {
+// Source describes an event source (subscription)
+type Source struct {
 	// The actor that is subscribed to this source
 	Actor Actor `json:"actor"`
 	// The subscription id
@@ -31,8 +32,8 @@ type source struct {
 	closed       <-chan struct{}    // not serialized
 }
 
-// eventSubscribeOptions documents the request body for subscribing an actor to a topic
-type eventSubscribeOptions struct {
+// EventSubscribeOptions documents the request body for subscribing an actor to a topic
+type EventSubscribeOptions struct {
 	// The expected MIME content type of the events that will be produced by this subscription
 	// If an explicit value is not provided, the default value of application/json+cloudevent will be used.
 	// Example: application/json
@@ -44,19 +45,19 @@ type eventSubscribeOptions struct {
 	Topic string `json:"topic"`
 }
 
-// topicCreateOptions documents the request body for creating a topic
-type topicCreateOptions struct {
+// TopicCreateOptions documents the request body for creating a topic
+type TopicCreateOptions struct {
 	NumPartitions     int32              `json:"numPartitions,omitempty"`
 	ReplicationFactor int16              `json:"replicationFactor,omitempty"`
 	ConfigEntries     map[string]*string `json:"configEntries,omitempty"`
 }
 
-func (s source) k() string {
+func (s Source) k() string {
 	return s.key
 }
 
 // a collection of event sources
-type sources map[Actor]map[string]source
+type sources map[Actor]map[string]Source
 
 func init() {
 	pairs["subscriptions"] = pair{bindings: sources{}, mu: &sync.Mutex{}}
@@ -64,9 +65,9 @@ func init() {
 
 // add binding to collection
 func (c sources) add(ctx context.Context, b binding) (int, error) {
-	s := b.(source)
+	s := b.(Source)
 	if _, ok := c[s.Actor]; !ok {
-		c[s.Actor] = map[string]source{}
+		c[s.Actor] = map[string]Source{}
 	}
 	context, cancel := context.WithCancel(ctx)
 	closed, code, err := subscribe(context, s)
@@ -126,7 +127,7 @@ func (c sources) parse(actor Actor, id, key, payload string) (binding, map[strin
 }
 
 func (c sources) load(actor Actor, id, key string, m map[string]string) (binding, error) {
-	return source{
+	return Source{
 		Actor:        actor,
 		ID:           id,
 		key:          key,
@@ -138,7 +139,7 @@ func (c sources) load(actor Actor, id, key string, m map[string]string) (binding
 	}, nil
 }
 
-func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
+func subscribe(ctx context.Context, s Source) (<-chan struct{}, int, error) {
 	jsonType := s.ContentType == "" || // default is "application/cloudevents+json"
 		s.ContentType == "text/json" ||
 		s.ContentType == "application/json" ||

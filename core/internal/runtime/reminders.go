@@ -38,7 +38,7 @@ func (r Reminder) k() string {
 }
 
 // ScheduleReminderPayload is the JSON request body for scheduling a new reminder
-type scheduleReminderPayload struct {
+type ScheduleReminderPayload struct {
 	// The path to invoke on the actor instance when the reminder is fired
 	// Example: sayHello
 	Path string `json:"path"`
@@ -102,7 +102,7 @@ func (rq *reminderQueue) load(actor Actor, id, key string, rMap map[string]strin
 }
 
 func (rq *reminderQueue) parse(actor Actor, id, key, payload string) (binding, map[string]string, error) {
-	var data scheduleReminderPayload
+	var data ScheduleReminderPayload
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
 		return nil, nil, err
 	}

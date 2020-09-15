@@ -17,6 +17,27 @@ definitions:
     format: int64
     type: integer
     x-go-package: time
+  EventSubscribeOptions:
+    description: EventSubscribeOptions documents the request body for subscribing an actor to a topic
+    properties:
+      contentType:
+        description: |-
+          The expected MIME content type of the events that will be produced by this subscription
+          If an explicit value is not provided, the default value of application/json+cloudevent will be used.
+        example: application/json
+        type: string
+        x-go-name: ContentType
+      path:
+        description: The actor method to be invoked with each delivered event
+        example: processEvent
+        type: string
+        x-go-name: Path
+      topic:
+        description: The name of the topic being subscribed to
+        type: string
+        x-go-name: Topic
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   MapOp:
     description: MapOp describes the requested map operation on an Actors state
     properties:
@@ -52,28 +73,7 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  eventSubscribeOptions:
-    description: eventSubscribeOptions documents the request body for subscribing an actor to a topic
-    properties:
-      contentType:
-        description: |-
-          The expected MIME content type of the events that will be produced by this subscription
-          If an explicit value is not provided, the default value of application/json+cloudevent will be used.
-        example: application/json
-        type: string
-        x-go-name: ContentType
-      path:
-        description: The actor method to be invoked with each delivered event
-        example: processEvent
-        type: string
-        x-go-name: Path
-      topic:
-        description: The name of the topic being subscribed to
-        type: string
-        x-go-name: Topic
-    type: object
-    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  scheduleReminderPayload:
+  ScheduleReminderPayload:
     description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
       data:
@@ -103,7 +103,8 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  source:
+  Source:
+    description: Source describes an event source (subscription)
     properties:
       actor:
         $ref: '#/definitions/Actor'
@@ -133,8 +134,8 @@ definitions:
         x-go-name: Topic
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  topicCreateOptions:
-    description: topicCreateOptions documents the request body for creating a topic
+  TopicCreateOptions:
+    description: TopicCreateOptions documents the request body for creating a topic
     properties:
       configEntries:
         additionalProperties:
@@ -510,7 +511,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/eventSubscribeOptions'
+          $ref: '#/definitions/EventSubscribeOptions'
       produces:
       - text/plain
       responses:
@@ -729,7 +730,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/scheduleReminderPayload'
+          $ref: '#/definitions/ScheduleReminderPayload'
       produces:
       - text/plain
       responses:
@@ -1330,7 +1331,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/topicCreateOptions'
+          $ref: '#/definitions/TopicCreateOptions'
       responses:
         "201":
           $ref: '#/responses/response201'
@@ -1869,14 +1870,14 @@ responses:
       Body:
         description: An array containing all matching subscriptions
         items:
-          $ref: '#/definitions/source'
+          $ref: '#/definitions/Source'
         type: array
   response200SubscriptionGetResult:
     headers:
       Body:
         description: The subscription
     schema:
-      $ref: '#/definitions/source'
+      $ref: '#/definitions/Source'
   response201:
     headers:
       body:

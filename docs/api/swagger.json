@@ -371,7 +371,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/eventSubscribeOptions"
+              "$ref": "#/definitions/EventSubscribeOptions"
             }
           }
         ],
@@ -645,7 +645,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/scheduleReminderPayload"
+              "$ref": "#/definitions/ScheduleReminderPayload"
             }
           }
         ],
@@ -1416,7 +1416,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/topicCreateOptions"
+              "$ref": "#/definitions/TopicCreateOptions"
             }
           }
         ],
@@ -1980,6 +1980,30 @@
       "format": "int64",
       "x-go-package": "time"
     },
+    "EventSubscribeOptions": {
+      "description": "EventSubscribeOptions documents the request body for subscribing an actor to a topic",
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "description": "The expected MIME content type of the events that will be produced by this subscription\nIf an explicit value is not provided, the default value of application/json+cloudevent will be used.",
+          "type": "string",
+          "x-go-name": "ContentType",
+          "example": "application/json"
+        },
+        "path": {
+          "description": "The actor method to be invoked with each delivered event",
+          "type": "string",
+          "x-go-name": "Path",
+          "example": "processEvent"
+        },
+        "topic": {
+          "description": "The name of the topic being subscribed to",
+          "type": "string",
+          "x-go-name": "Topic"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
     "MapOp": {
       "description": "MapOp describes the requested map operation on an Actors state",
       "type": "object",
@@ -2028,31 +2052,7 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "eventSubscribeOptions": {
-      "description": "eventSubscribeOptions documents the request body for subscribing an actor to a topic",
-      "type": "object",
-      "properties": {
-        "contentType": {
-          "description": "The expected MIME content type of the events that will be produced by this subscription\nIf an explicit value is not provided, the default value of application/json+cloudevent will be used.",
-          "type": "string",
-          "x-go-name": "ContentType",
-          "example": "application/json"
-        },
-        "path": {
-          "description": "The actor method to be invoked with each delivered event",
-          "type": "string",
-          "x-go-name": "Path",
-          "example": "processEvent"
-        },
-        "topic": {
-          "description": "The name of the topic being subscribed to",
-          "type": "string",
-          "x-go-name": "Topic"
-        }
-      },
-      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
-    },
-    "scheduleReminderPayload": {
+    "ScheduleReminderPayload": {
       "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
       "type": "object",
       "properties": {
@@ -2083,7 +2083,8 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "source": {
+    "Source": {
+      "description": "Source describes an event source (subscription)",
       "type": "object",
       "properties": {
         "actor": {
@@ -2122,8 +2123,8 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "topicCreateOptions": {
-      "description": "topicCreateOptions documents the request body for creating a topic",
+    "TopicCreateOptions": {
+      "description": "TopicCreateOptions documents the request body for creating a topic",
       "type": "object",
       "properties": {
         "configEntries": {
@@ -2309,7 +2310,7 @@
         "Body": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/source"
+            "$ref": "#/definitions/Source"
           },
           "description": "An array containing all matching subscriptions"
         }
@@ -2317,7 +2318,7 @@
     },
     "response200SubscriptionGetResult": {
       "schema": {
-        "$ref": "#/definitions/source"
+        "$ref": "#/definitions/Source"
       },
       "headers": {
         "Body": {
