@@ -12,6 +12,10 @@ charts.  See the README.md in each directory for instructions.
 + [Hello World](./helloWorld) extends a simple
   [NodeJS Express server](helloWorld/server.js) to work with KAR.
 
++ [Dining Philosophers](./actors-dp-js) demonstrates using KAR's actor
+  programming model to provide a fault-tolerant implementation of
+  Dijkstra's solution to the Dining Philosophers problem.
+
 + [Yorktown Simulation](./actors-ykt) demonstrates using KAR's agent
   model for virtual stateful services to implement a scalable simulation.
 
