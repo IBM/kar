@@ -41,6 +41,7 @@ dockerPushCore:
 	docker push $(KAR_INJECTOR)
 	docker push $(KAR_JS_SDK)
 	docker push $(KAR_JAVA_SDK)
+	docker push $(KAR_JAVA_RUNTIME)
 
 dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_EVENTS)
