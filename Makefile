@@ -10,6 +10,7 @@ KAR_JAVA_SDK=$(DOCKER_IMAGE_PREFIX)sdk-java-builder-11:$(DOCKER_IMAGE_TAG)
 KAR_JAVA_RUNTIME=$(DOCKER_IMAGE_PREFIX)sdk-java-runtime-11:$(DOCKER_IMAGE_TAG)
 
 KAR_EXAMPLE_JS_YKT=$(DOCKER_IMAGE_PREFIX)examples/js/actors-ykt:$(DOCKER_IMAGE_TAG)
+KAR_EXAMPLE_JS_DP=$(DOCKER_IMAGE_PREFIX)examples/js/actors-dp:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_HELLO=$(DOCKER_IMAGE_PREFIX)examples/js/hello-world:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_EVENTS=$(DOCKER_IMAGE_PREFIX)examples/js/actors-events:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_STOCK=$(DOCKER_IMAGE_PREFIX)examples/js/stock-prices:$(DOCKER_IMAGE_TAG)
@@ -29,11 +30,12 @@ dockerCore:
 	cd sdk-java && docker build -f Dockerfile.runtime -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 
 dockerExamples:
-	s2i build examples/actors-events $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_EVENTS) --copy
-	s2i build examples/actors-ykt $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_YKT) --copy
-	s2i build examples/helloWorld $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_HELLO) --copy
-	s2i build examples/stockPriceEvents $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_STOCK) --copy
-	s2i build examples/unit-tests $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_TESTS) --copy
+	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
+	cd examples/actors-events && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_EVENTS) .
+	cd examples/actors-ykt && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_YKT) .
+	cd examples/helloWorld && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_HELLO) .
+	cd examples/stockPriceEvents && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_STOCK) .
+	cd examples/unit-tests && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_TESTS) . 
 	cd examples/java/actors && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_ACTORS) .
 
 dockerPushCore:

@@ -20,14 +20,12 @@
 
 3. You will need the `helm` (Helm 3) cli installed locally.
 
-4. You will need the `s2i` (source-2-image) cli installed locally. See [these install options](https://github.com/openshift/source-to-image#installation).
+4. Optionally, you will need Go 1.15+ to build KAR.
 
-5. Optionally, you will need Go 1.15+ to build KAR.
-
-6. Optionally, you will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
+5. Optionally, you will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
    SDK and examples.
 
-7. Optionally, you will need Java 11 and Maven 3.6+ to run the Java SDK and
+6. Optionally, you will need Java 11 and Maven 3.6+ to run the Java SDK and
    examples.
 
 # Getting Started with KAR
