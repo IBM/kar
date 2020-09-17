@@ -54,11 +54,7 @@
 //       - actor-runtime
 //
 // swagger:meta
-package main
-
-import (
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
-)
+package runtime
 
 /*******************************************************************
  * Swagger specification for language-level actor runtime implementation
@@ -251,14 +247,14 @@ type reminderIDParam struct {
 type mapopsParamWrapper struct {
 	// The request body describes the map operation to be performed
 	// in:body
-	Body runtime.MapOp
+	Body MapOp
 }
 
 // swagger:parameters idActorReminderSchedule
 type reminderScheduleParamWrapper struct {
 	// The request body describes the reminder to be scheduled
 	// in:body
-	Body runtime.ScheduleReminderPayload
+	Body ScheduleReminderPayload
 }
 
 // swagger:parameters idActorSubscribe
@@ -274,14 +270,14 @@ type subscriptionIDParam struct {
 type subscriptionParamWrapper struct {
 	// The request body describes the subscription
 	// in:body
-	Body runtime.EventSubscribeOptions
+	Body EventSubscribeOptions
 }
 
 // swagger:parameters idTopicCreate
 type topicCreateParamWrapper struct {
 	// The request body describes the topic to be created
 	// in:body
-	Body runtime.TopicCreateOptions
+	Body TopicCreateOptions
 }
 
 // swagger:parameters idAwait
@@ -385,7 +381,7 @@ type response200ReminderCancelAllResult struct {
 type response200ReminderGetResult struct {
 	// The reminder
 	// Example: { Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }
-	Body runtime.Reminder
+	Body Reminder
 }
 
 /* HACK: This should be here, but `swagger` doesn't handle cross-package [] element types.
@@ -394,7 +390,7 @@ type response200ReminderGetResult struct {
 type response200ReminderGetAllResult struct {
 	// An array containing all matching reminders
 	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', targetTime: '2020-04-14T14:20:00Z', encodedData: '{"msg":"carpe diem"}' }]
-	Body []runtime.Reminder
+	Body []Reminder
 }
 */
 
@@ -414,7 +410,7 @@ type response200SubscriptionCancelAllResult struct {
 // swagger:response response200SubscriptionGetResult
 type response200SubscriptionGetResult struct {
 	// The subscription
-	Body runtime.Source
+	Body Source
 }
 
 /* HACK: This should be here, but `swagger` doesn't handle cross-package [] element types.
@@ -422,7 +418,7 @@ type response200SubscriptionGetResult struct {
 // swagger:response response200SubscriptionGetAllResult
 type response200SubscriptionGetAllResult struct {
 	// An array containing all matching subscriptions
-	Body []runtime.Source
+	Body []Source
 }
 */
 

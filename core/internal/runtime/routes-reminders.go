@@ -1,4 +1,4 @@
-package main
+package runtime
 
 /*
  * This file contains the implementation of the portion of the
@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
 )
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/reminders reminders idActorReminderCancelAll
@@ -114,7 +113,7 @@ import (
 //       500: response500
 //       503: response503
 //
-func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplReminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var action string
 	body := ""
 	noa := "false"
@@ -124,7 +123,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		noa = r.FormValue("nilOnAbsent")
 	case "PUT":
 		action = "set"
-		body = runtime.ReadAll(r)
+		body = ReadAll(r)
 	case "DELETE":
 		action = "del"
 		noa = r.FormValue("nilOnAbsent")
@@ -132,7 +131,7 @@ func reminder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
 		return
 	}
-	reply, err := runtime.Bindings(ctx, "reminders", runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("reminderId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := Bindings(ctx, "reminders", Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("reminderId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)

@@ -1,4 +1,4 @@
-package main
+package runtime
 
 /*
  * This file contains the implementation of the portion of the
@@ -12,7 +12,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
@@ -28,7 +27,7 @@ import (
 //     Responses:
 //       200: response200
 //
-func shutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplShutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 	logger.Info("Invoking cancel() in response to shutdown request")
 	cancel()
@@ -46,13 +45,13 @@ func shutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //     Responses:
 //       200: response200
 //
-func health(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplHealth(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	fmt.Fprint(w, "OK")
 }
 
 // post handles a direct http request from a peer sidecar
 // TODO swagger
-func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	value, _ := ioutil.ReadAll(r.Body)
 	m := pubsub.Message{Value: value}
 	process(m)
@@ -63,7 +62,7 @@ func post(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 // Returns information about a specified component, controlled by the call path
 // Options are given by the cases
 // Format type (text/plain vs application/json) is controlled by Accept header in call
-func getInformation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	format := "text/plain"
 	if r.Header.Get("Accept") == "application/json" {
 		format = "application/json"
@@ -75,9 +74,9 @@ func getInformation(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	case "sidecars", "Sidecars":
 		data, err = pubsub.GetSidecars(format)
 	case "actors", "Actors":
-		data, err = runtime.GetAllActors(ctx, format)
+		data, err = GetAllActors(ctx, format)
 	case "sidecar_actors":
-		data, err = runtime.GetActors()
+		data, err = GetActors()
 	default:
 		http.Error(w, fmt.Sprintf("Invalid information query: %v", component), http.StatusBadRequest)
 	}

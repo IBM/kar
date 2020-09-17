@@ -1,4 +1,4 @@
-package main
+package runtime
 
 /*
  * This file contains the implementation of the portion of the
@@ -12,7 +12,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
 )
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionCancelAll
@@ -116,7 +115,7 @@ import (
 //       500: response500
 //       503: response503
 //
-func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplSubscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var action string
 	body := ""
 	noa := "false"
@@ -126,7 +125,7 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		noa = r.FormValue("nilOnAbsent")
 	case "PUT":
 		action = "set"
-		body = runtime.ReadAll(r)
+		body = ReadAll(r)
 	case "DELETE":
 		action = "del"
 		noa = r.FormValue("nilOnAbsent")
@@ -134,7 +133,7 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		http.Error(w, fmt.Sprintf("Unsupported method %v", r.Method), http.StatusMethodNotAllowed)
 		return
 	}
-	reply, err := runtime.Bindings(ctx, "subscriptions", runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("subscriptionId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
+	reply, err := Bindings(ctx, "subscriptions", Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("subscriptionId"), noa, action, body, r.Header.Get("Content-Type"), r.Header.Get("Accept"))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -166,7 +165,7 @@ func subscription(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 //       404: response404
 //       500: response500
 //
-func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buf, _ := ioutil.ReadAll(r.Body)
 	code, err := pubsub.Publish(ps.ByName("topic"), buf)
 	if err != nil {
@@ -192,8 +191,8 @@ func publish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       201: response201
 //       500: response500
 //
-func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	params := runtime.ReadAll(r)
+func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	params := ReadAll(r)
 	err := pubsub.CreateTopic(ps.ByName("topic"), params)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
@@ -218,7 +217,7 @@ func createTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200
 //       500: response500
 //
-func deleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplDeleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	err := pubsub.DeleteTopic(ps.ByName("topic"))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)

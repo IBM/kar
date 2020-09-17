@@ -1,4 +1,4 @@
-package main
+package runtime
 
 /*
  * This file contains the implementation of the portion of the
@@ -13,11 +13,10 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
-func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
+func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
@@ -25,9 +24,9 @@ func tell(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct b
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		err = runtime.TellService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
+		err = TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
 	} else {
-		err = runtime.TellActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), direct)
+		err = TellActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -50,9 +49,9 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, d
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		request, err = runtime.CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
+		request, err = CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
 	} else {
-		request, err = runtime.CallPromiseActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), direct)
+		request, err = CallPromiseActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -87,8 +86,8 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, d
 //       503: response503
 //       default: responseGenericEndpointError
 //
-func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := runtime.AwaitPromise(ctx, runtime.ReadAll(r))
+func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	reply, err := AwaitPromise(ctx, ReadAll(r))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -271,7 +270,7 @@ func awaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 //       500: response500
 //       503: response503
 //
-func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	direct := false
 	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "http" {
@@ -281,14 +280,14 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	}
 	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "async" {
-			tell(w, r, ps, direct)
+			tellHelper(w, r, ps, direct)
 			return
 		} else if strings.ToLower(pragma) == "promise" {
 			callPromise(w, r, ps, direct)
 			return
 		}
 	}
-	var reply *runtime.Reply
+	var reply *Reply
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
@@ -296,10 +295,10 @@ func call(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		reply, err = runtime.CallService(ctx, ps.ByName("service"), ps.ByName("path"), runtime.ReadAll(r), string(m), r.Method, direct)
+		reply, err = CallService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
 	} else {
 		session := r.FormValue("session")
-		reply, err = runtime.CallActor(ctx, runtime.Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), runtime.ReadAll(r), session, direct)
+		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), session, direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {

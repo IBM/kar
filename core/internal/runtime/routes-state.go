@@ -1,4 +1,4 @@
-package main
+package runtime
 
 /*
  * This file contains the implementation of the portion of the
@@ -13,7 +13,6 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/runtime"
 	"github.ibm.com/solsa/kar.git/core/internal/store"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
@@ -69,7 +68,7 @@ func nestedEntryKeyPrefix(key string) string {
 //       404: response404
 //       500: response500
 //
-func containsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
 		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
@@ -129,7 +128,7 @@ func containsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200StateSetResult
 //       500: response500
 //
-func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
 		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
@@ -137,7 +136,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		mangledEntryKey = flatEntryKey(ps.ByName("key"))
 	}
 
-	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, runtime.ReadAll(r)); err != nil {
+	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -185,7 +184,7 @@ func set(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       404: response404
 //       500: response500
 //
-func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
 		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
@@ -238,9 +237,9 @@ func get(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       404: response404
 //       500: response500
 //
-func mapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var op runtime.MapOp
-	if err := json.Unmarshal([]byte(runtime.ReadAll(r)), &op); err != nil {
+func routeImplMapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var op MapOp
+	if err := json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
 		http.Error(w, "Request body was not a MapOp", http.StatusBadRequest)
 		return
 	}
@@ -392,7 +391,7 @@ func getSubMapKeys(stateKey string, mapName string) ([]string, error) {
 //       200: response200StateDeleteResult
 //       500: response500
 //
-func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
 		mangledEntryKey = nestedEntryKey(ps.ByName("key"), subkey)
@@ -422,7 +421,7 @@ func del(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       200: response200StateGetAllResult
 //       500: response500
 //
-func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplGetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
 		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
 	} else {
@@ -473,9 +472,9 @@ func getAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       400: response400
 //       500: response500
 //
-func setMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplSetMultiple(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var updates map[string]interface{}
-	if err := json.Unmarshal([]byte(runtime.ReadAll(r)), &updates); err != nil {
+	if err := json.Unmarshal([]byte(ReadAll(r)), &updates); err != nil {
 		http.Error(w, "Request body was not a map[string, interface{}]", http.StatusBadRequest)
 		return
 	}
@@ -519,7 +518,7 @@ func actorSetMultiple(stateKey string, key string, updates map[string]interface{
 //       404: response404
 //       500: response500
 //
-func delAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func routeImplDelAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Del(stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
