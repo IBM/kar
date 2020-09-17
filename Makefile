@@ -34,7 +34,7 @@ dockerExamples:
 	s2i build examples/helloWorld $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_HELLO) --copy
 	s2i build examples/stockPriceEvents $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_STOCK) --copy
 	s2i build examples/unit-tests $(KAR_JS_SDK) $(KAR_EXAMPLE_JS_TESTS) --copy
-	s2i build examples/java/actors $(KAR_JAVA_SDK) $(KAR_EXAMPLE_JAVA_ACTORS) --runtime-image $(KAR_JAVA_RUNTIME) --assemble-runtime-user root --runtime-artifact /kar/app/kar-actor-example/target/kar-actor-example.war:opt/ol/wlp/usr/servers/defaultServer/apps --runtime-artifact /kar/app/kar-actor-example/src/main/liberty/config/server.xml:opt/ol/wlp/usr/servers/defaultServer --copy
+	cd examples/java/actors && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_ACTORS) .
 
 dockerPushCore:
 	docker push $(KAR_BASE)
