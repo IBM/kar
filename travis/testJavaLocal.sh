@@ -29,11 +29,11 @@ cd $ROOTDIR/examples/java/actors
 mvn clean install
 
 echo "Creating Java actor server"
-cd $ROOTDIR/examples/java/actors/kar-actor-example
+cd $ROOTDIR/examples/java/actors
 mvn liberty:create liberty:install-feature liberty:deploy liberty:package -Dinclude=runnable
 
 echo "Launching Java actor server"
-cd $ROOTDIR/examples/java/actors/kar-actor-example/target
+cd $ROOTDIR/examples/java/actors/target
 kar run -v info -app example -actors sample,calculator java -jar kar-actor-example.jar &
 PID=$!
 

@@ -7,7 +7,8 @@ ARG JAVA_RUNTIME=us.icr.io/research/kar-dev/sdk-java-runtime-11
 FROM $JAVA_BUILDER as builder
 
 WORKDIR /kar/app
-COPY kar-actor-example ./
+COPY pom.xml ./
+COPY src src
 RUN mvn package
 
 #

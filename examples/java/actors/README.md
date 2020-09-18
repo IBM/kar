@@ -16,7 +16,6 @@ mvn clean install
 ## Running the example
 In one terminal start the server
 ```shell
-cd ./kar-actor-example
 kar run -app example -actors sample,calculator mvn liberty:run
 ```
 
