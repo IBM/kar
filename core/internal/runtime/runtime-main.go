@@ -162,10 +162,10 @@ func Main() {
 	args := flag.Args()
 
 	if config.Invoke {
-		exitCode = Invoke(ctx9, args)
+		exitCode = invokeActorMethod(ctx9, args)
 		cancel()
 	} else if config.Get != "" {
-		exitCode = GetInformation(ctx9, args)
+		exitCode = getInformation(ctx9, args)
 		cancel()
 	} else {
 		// start server and background tasks

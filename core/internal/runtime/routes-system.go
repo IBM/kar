@@ -74,9 +74,9 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	case "sidecars", "Sidecars":
 		data, err = pubsub.GetSidecars(format)
 	case "actors", "Actors":
-		data, err = GetAllActors(ctx, format)
+		data, err = getAllActors(ctx, format)
 	case "sidecar_actors":
-		data, err = GetActors()
+		data, err = getActors()
 	default:
 		http.Error(w, fmt.Sprintf("Invalid information query: %v", component), http.StatusBadRequest)
 	}

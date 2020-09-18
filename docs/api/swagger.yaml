@@ -38,19 +38,6 @@ definitions:
         x-go-name: Topic
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  MapOp:
-    description: MapOp describes the requested map operation on an Actors state
-    properties:
-      op:
-        type: string
-        x-go-name: Op
-      updates:
-        additionalProperties:
-          type: object
-        type: object
-        x-go-name: Updates
-    type: object
-    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   Reminder:
     description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
     properties:
@@ -73,8 +60,21 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  ScheduleReminderPayload:
-    description: ScheduleReminderPayload is the JSON request body for scheduling a new reminder
+  mapOp:
+    description: mapOp describes the requested map operation on an Actors state
+    properties:
+      op:
+        type: string
+        x-go-name: Op
+      updates:
+        additionalProperties:
+          type: object
+        type: object
+        x-go-name: Updates
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  scheduleReminderPayload:
+    description: scheduleReminderPayload is the JSON request body for scheduling a new reminder
     properties:
       data:
         description: |-
@@ -103,8 +103,8 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  Source:
-    description: Source describes an event source (subscription)
+  source:
+    description: source describes an event source (subscription)
     properties:
       actor:
         $ref: '#/definitions/Actor'
@@ -134,8 +134,8 @@ definitions:
         x-go-name: Topic
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
-  TopicCreateOptions:
-    description: TopicCreateOptions documents the request body for creating a topic
+  topicCreateOptions:
+    description: topicCreateOptions documents the request body for creating a topic
     properties:
       configEntries:
         additionalProperties:
@@ -730,7 +730,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/ScheduleReminderPayload'
+          $ref: '#/definitions/scheduleReminderPayload'
       produces:
       - text/plain
       responses:
@@ -1018,7 +1018,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/MapOp'
+          $ref: '#/definitions/mapOp'
       produces:
       - application/json
       responses:
@@ -1331,7 +1331,7 @@ paths:
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/TopicCreateOptions'
+          $ref: '#/definitions/topicCreateOptions'
       responses:
         "201":
           $ref: '#/responses/response201'
@@ -1870,14 +1870,14 @@ responses:
       Body:
         description: An array containing all matching subscriptions
         items:
-          $ref: '#/definitions/Source'
+          $ref: '#/definitions/source'
         type: array
   response200SubscriptionGetResult:
     headers:
       Body:
         description: The subscription
     schema:
-      $ref: '#/definitions/Source'
+      $ref: '#/definitions/source'
   response201:
     headers:
       body:

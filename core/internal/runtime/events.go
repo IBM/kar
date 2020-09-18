@@ -11,8 +11,8 @@ import (
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
-// Source describes an event source (subscription)
-type Source struct {
+// source describes an event source (subscription)
+type source struct {
 	// The actor that is subscribed to this source
 	Actor Actor `json:"actor"`
 	// The subscription id
@@ -45,19 +45,19 @@ type EventSubscribeOptions struct {
 	Topic string `json:"topic"`
 }
 
-// TopicCreateOptions documents the request body for creating a topic
-type TopicCreateOptions struct {
+// topicCreateOptions documents the request body for creating a topic
+type topicCreateOptions struct {
 	NumPartitions     int32              `json:"numPartitions,omitempty"`
 	ReplicationFactor int16              `json:"replicationFactor,omitempty"`
 	ConfigEntries     map[string]*string `json:"configEntries,omitempty"`
 }
 
-func (s Source) k() string {
+func (s source) k() string {
 	return s.key
 }
 
 // a collection of event sources
-type sources map[Actor]map[string]Source
+type sources map[Actor]map[string]source
 
 func init() {
 	pairs["subscriptions"] = pair{bindings: sources{}, mu: &sync.Mutex{}}
@@ -65,9 +65,9 @@ func init() {
 
 // add binding to collection
 func (c sources) add(ctx context.Context, b binding) (int, error) {
-	s := b.(Source)
+	s := b.(source)
 	if _, ok := c[s.Actor]; !ok {
-		c[s.Actor] = map[string]Source{}
+		c[s.Actor] = map[string]source{}
 	}
 	context, cancel := context.WithCancel(ctx)
 	closed, code, err := subscribe(context, s)
@@ -127,7 +127,7 @@ func (c sources) parse(actor Actor, id, key, payload string) (binding, map[strin
 }
 
 func (c sources) load(actor Actor, id, key string, m map[string]string) (binding, error) {
-	return Source{
+	return source{
 		Actor:        actor,
 		ID:           id,
 		key:          key,
@@ -139,7 +139,7 @@ func (c sources) load(actor Actor, id, key string, m map[string]string) (binding
 	}, nil
 }
 
-func subscribe(ctx context.Context, s Source) (<-chan struct{}, int, error) {
+func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 	jsonType := s.ContentType == "" || // default is "application/cloudevents+json"
 		s.ContentType == "text/json" ||
 		s.ContentType == "application/json" ||

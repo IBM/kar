@@ -645,7 +645,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/ScheduleReminderPayload"
+              "$ref": "#/definitions/scheduleReminderPayload"
             }
           }
         ],
@@ -1002,7 +1002,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/MapOp"
+              "$ref": "#/definitions/mapOp"
             }
           }
         ],
@@ -1416,7 +1416,7 @@
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/TopicCreateOptions"
+              "$ref": "#/definitions/topicCreateOptions"
             }
           }
         ],
@@ -2004,24 +2004,6 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "MapOp": {
-      "description": "MapOp describes the requested map operation on an Actors state",
-      "type": "object",
-      "properties": {
-        "op": {
-          "type": "string",
-          "x-go-name": "Op"
-        },
-        "updates": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          },
-          "x-go-name": "Updates"
-        }
-      },
-      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
-    },
     "Reminder": {
       "description": "Reminder describes a time-triggered asynchronous invocation of a Path on an Actor",
       "type": "object",
@@ -2052,8 +2034,26 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "ScheduleReminderPayload": {
-      "description": "ScheduleReminderPayload is the JSON request body for scheduling a new reminder",
+    "mapOp": {
+      "description": "mapOp describes the requested map operation on an Actors state",
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "x-go-name": "Op"
+        },
+        "updates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Updates"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "scheduleReminderPayload": {
+      "description": "scheduleReminderPayload is the JSON request body for scheduling a new reminder",
       "type": "object",
       "properties": {
         "data": {
@@ -2083,8 +2083,8 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "Source": {
-      "description": "Source describes an event source (subscription)",
+    "source": {
+      "description": "source describes an event source (subscription)",
       "type": "object",
       "properties": {
         "actor": {
@@ -2123,8 +2123,8 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
-    "TopicCreateOptions": {
-      "description": "TopicCreateOptions documents the request body for creating a topic",
+    "topicCreateOptions": {
+      "description": "topicCreateOptions documents the request body for creating a topic",
       "type": "object",
       "properties": {
         "configEntries": {
@@ -2310,7 +2310,7 @@
         "Body": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/Source"
+            "$ref": "#/definitions/source"
           },
           "description": "An array containing all matching subscriptions"
         }
@@ -2318,7 +2318,7 @@
     },
     "response200SubscriptionGetResult": {
       "schema": {
-        "$ref": "#/definitions/Source"
+        "$ref": "#/definitions/source"
       },
       "headers": {
         "Body": {

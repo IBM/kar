@@ -238,7 +238,7 @@ func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 //       500: response500
 //
 func routeImplMapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var op MapOp
+	var op mapOp
 	if err := json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
 		http.Error(w, "Request body was not a MapOp", http.StatusBadRequest)
 		return

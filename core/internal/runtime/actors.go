@@ -20,9 +20,9 @@ type Actor struct {
 	ID   string // actor instance id
 }
 
-// MapOp describes the requested map operation on an Actors state
-type MapOp struct {
-	Op string `json:"op"`
+// mapOp describes the requested map operation on an Actors state
+type mapOp struct {
+	Op      string                 `json:"op"`
 	Updates map[string]interface{} `json:"updates,omitempty"`
 }
 
@@ -152,8 +152,8 @@ func collect(ctx context.Context, time time.Time) error {
 	return ctx.Err()
 }
 
-// Returns a json map of actor types ->  list of active IDs on a per-sidecar basis
-func GetActors() (string, error) {
+// getActors returns a json map of actor types ->  list of active IDs on a per-sidecar basis
+func getActors() (string, error) {
 	information := make(map[string][]string)
 	actorTable.Range(func(actor, v interface{}) bool {
 		e := v.(*actorEntry)
@@ -172,8 +172,8 @@ func GetActors() (string, error) {
 	return string(m), nil
 }
 
-// Returns map of actor types ->  list of active IDs for all sidecars in the app
-func GetAllActors(ctx context.Context, format string) (string, error) {
+// getAllActors Returns map of actor types ->  list of active IDs for all sidecars in the app
+func getAllActors(ctx context.Context, format string) (string, error) {
 	information := make(map[string][]string)
 	var err error
 	for _, sidecar := range pubsub.Sidecars() {
@@ -194,7 +194,7 @@ func GetAllActors(ctx context.Context, format string) (string, error) {
 			}
 			actorInfo = actorReply.Payload
 		} else {
-			actorInfo, err = GetActors()
+			actorInfo, err = getActors()
 		}
 		err = json.Unmarshal([]byte(actorInfo), &actorInformation)
 		if err != nil {

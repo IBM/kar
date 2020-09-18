@@ -247,14 +247,14 @@ type reminderIDParam struct {
 type mapopsParamWrapper struct {
 	// The request body describes the map operation to be performed
 	// in:body
-	Body MapOp
+	Body mapOp
 }
 
 // swagger:parameters idActorReminderSchedule
 type reminderScheduleParamWrapper struct {
 	// The request body describes the reminder to be scheduled
 	// in:body
-	Body ScheduleReminderPayload
+	Body scheduleReminderPayload
 }
 
 // swagger:parameters idActorSubscribe
@@ -277,7 +277,7 @@ type subscriptionParamWrapper struct {
 type topicCreateParamWrapper struct {
 	// The request body describes the topic to be created
 	// in:body
-	Body TopicCreateOptions
+	Body topicCreateOptions
 }
 
 // swagger:parameters idAwait
@@ -410,7 +410,7 @@ type response200SubscriptionCancelAllResult struct {
 // swagger:response response200SubscriptionGetResult
 type response200SubscriptionGetResult struct {
 	// The subscription
-	Body Source
+	Body source
 }
 
 /* HACK: This should be here, but `swagger` doesn't handle cross-package [] element types.

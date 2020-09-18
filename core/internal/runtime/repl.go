@@ -12,8 +12,8 @@ import (
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
-// Invoke an actor method
-func Invoke(ctx context.Context, args []string) (exitCode int) {
+// invokeActorMethod an actor method
+func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 	actor := Actor{Type: args[0], ID: args[1]}
 	path := "/" + args[2]
 	params := make([]interface{}, len(args[3:]))
@@ -44,8 +44,7 @@ func Invoke(ctx context.Context, args []string) (exitCode int) {
 	return
 }
 
-// Perform information methods
-func GetInformation(ctx context.Context, args []string) (exitCode int) {
+func getInformation(ctx context.Context, args []string) (exitCode int) {
 	option := strings.ToLower(config.Get)
 	var str string
 	var err error
@@ -53,7 +52,7 @@ func GetInformation(ctx context.Context, args []string) (exitCode int) {
 	case "sidecar", "sidecars":
 		str, err = pubsub.GetSidecars(config.OutputStyle)
 	case "actor", "actors":
-		str, err = GetAllActors(ctx, config.OutputStyle)
+		str, err = getAllActors(ctx, config.OutputStyle)
 	default:
 		logger.Error("invalid argument <%v> to call Inform", option)
 		exitCode = 1

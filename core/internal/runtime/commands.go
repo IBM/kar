@@ -304,7 +304,7 @@ func tell(ctx context.Context, msg map[string]string) error {
 
 // Returns information about this sidecar's actors
 func getActorInformation(ctx context.Context, msg map[string]string) error {
-	actorInfo, err := GetActors()
+	actorInfo, err := getActors()
 	var reply *Reply
 	if err != nil {
 		reply = &Reply{StatusCode: http.StatusInternalServerError}

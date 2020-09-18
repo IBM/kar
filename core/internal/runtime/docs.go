@@ -8,7 +8,7 @@ package runtime
 // swagger:response response200SubscriptionGetAllResult
 type response200SubscriptionGetAllResult struct {
 	// An array containing all matching subscriptions
-	Body []Source
+	Body []source
 }
 
 // swagger:response response200ReminderGetAllResult

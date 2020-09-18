@@ -37,8 +37,8 @@ func (r Reminder) k() string {
 	return r.key
 }
 
-// ScheduleReminderPayload is the JSON request body for scheduling a new reminder
-type ScheduleReminderPayload struct {
+// scheduleReminderPayload is the JSON request body for scheduling a new reminder
+type scheduleReminderPayload struct {
 	// The path to invoke on the actor instance when the reminder is fired
 	// Example: sayHello
 	Path string `json:"path"`
@@ -102,7 +102,7 @@ func (rq *reminderQueue) load(actor Actor, id, key string, rMap map[string]strin
 }
 
 func (rq *reminderQueue) parse(actor Actor, id, key, payload string) (binding, map[string]string, error) {
-	var data ScheduleReminderPayload
+	var data scheduleReminderPayload
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
 		return nil, nil, err
 	}
@@ -141,7 +141,7 @@ func migrateReminders(ctx context.Context, actor Actor) {
 }
 */
 
-// ProcessReminders causes all reminders with a targetTime before fireTime to be scheduled for execution.
+// processReminders causes all reminders with a targetTime before fireTime to be scheduled for execution.
 func processReminders(ctx context.Context, fireTime time.Time) {
 	arMutex.Lock()
 
