@@ -16,13 +16,13 @@ A Cafe may contain an arbitrary number of tables of Philosophers. Each
 Cafe tracks its occupancy and generates messages when it seats new
 tables or when a sated Philosopher leaves.
 
-To run the example locally, first do an `npm install`.
+To run the example locally, first do a `mvn package`.
 Then in one window start up the server code:
 ```shell
-kar run -app dpjs -actors Cafe,Fork,Philosopher node philosophers.js
+kar run -app dpj -actors Cafe,Fork,Philosopher mvn liberty:run
 ```
 In a second window, use the `kar` cli to invite some Philosopers to diner:
 ```shell
 # Invite 10 Philosophers to a feast of 20 servings each
-kar invoke -app dpjs Cafe "Cafe de Flore" seatTable 10 20
+kar invoke -app dpj Cafe "Cafe de Flore" seatTable 10 20
 ```

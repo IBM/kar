@@ -16,6 +16,7 @@ KAR_EXAMPLE_JS_EVENTS=$(DOCKER_IMAGE_PREFIX)examples/js/actors-events:$(DOCKER_I
 KAR_EXAMPLE_JS_STOCK=$(DOCKER_IMAGE_PREFIX)examples/js/stock-prices:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)examples/js/unit-tests:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_ACTORS=$(DOCKER_IMAGE_PREFIX)examples/java/actors:$(DOCKER_IMAGE_TAG)
+KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)examples/java/actors-dp:$(DOCKER_IMAGE_TAG)
 
 all: install
 
@@ -37,6 +38,7 @@ dockerExamples:
 	cd examples/stockPriceEvents && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_STOCK) .
 	cd examples/unit-tests && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_TESTS) . 
 	cd examples/java/actors && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_ACTORS) .
+	cd examples/actors-dp-java && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_DP) .
 
 dockerPushCore:
 	docker push $(KAR_BASE)
@@ -47,11 +49,13 @@ dockerPushCore:
 
 dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_EVENTS)
+	docker push $(KAR_EXAMPLE_JS_DP)
 	docker push $(KAR_EXAMPLE_JS_YKT)
 	docker push $(KAR_EXAMPLE_JS_HELLO)
 	docker push $(KAR_EXAMPLE_JS_STOCK)
 	docker push $(KAR_EXAMPLE_JS_TESTS)
 	docker push $(KAR_EXAMPLE_JAVA_ACTORS)
+	docker push $(KAR_EXAMPLE_JAVA_DP)
 
 dockerBuildAndPush:
 	make dockerCore

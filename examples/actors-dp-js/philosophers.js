@@ -50,8 +50,8 @@ class Philosopher {
       cafe: this.cafe,
       firstFork: this.firstFork,
       secondFork: this.secondFork,
-      mealsEaten: this.mealsEaten,
-      targetMeals: this.targetMeals
+      servingsEaten: this.servingsEaten,
+      targetServings: this.targetServings
     }
     await actor.state.setMultiple(this, state)
   }
@@ -61,12 +61,12 @@ class Philosopher {
     return new Date(Date.now() + thinkTime)
   }
 
-  async joinTable (cafe, firstFork, secondFork, targetMeals) {
+  async joinTable (cafe, firstFork, secondFork, targetServings) {
     this.cafe = cafe
     this.firstFork = firstFork
     this.secondFork = secondFork
-    this.mealsEaten = 0
-    this.targetMeals = targetMeals
+    this.servingsEaten = 0
+    this.targetServings = targetServings
     this.checkpointState()
     await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1)
   }
@@ -84,7 +84,7 @@ class Philosopher {
 
   async getSecondFork (attempt) {
     if (await actor.call(actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id)) {
-      await actor.tell(this, 'eat', this.mealsEaten)
+      await actor.tell(this, 'eat', this.servingsEaten)
     } else {
       if (attempt > 5) {
         console.log(`Warning: ${this.kar.id} has failed to acquire his second Fork ${attempt} times`)
@@ -93,13 +93,13 @@ class Philosopher {
     }
   }
 
-  async eat (mealsEaten) {
-    console.log(`${this.kar.id} ate meal number ${mealsEaten}`)
-    this.mealsEaten = mealsEaten + 1
+  async eat (servingsEaten) {
+    console.log(`${this.kar.id} ate serving number ${servingsEaten}`)
+    this.servingsEaten = servingsEaten + 1
     await this.checkpointState()
     await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
     await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
-    if (this.mealsEaten < this.targetMeals) {
+    if (this.servingsEaten < this.targetServings) {
       await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1)
     } else {
       await actor.call(actor.proxy('Cafe', this.cafe), 'doneEating', this.kar.id)
@@ -117,8 +117,8 @@ class Cafe {
     await actor.state.set(this, 'diners', Array.from(this.diners))
   }
 
-  async serveDinner (n = 5, meals = 20) {
-    console.log(`Cafe ${this.kar.id} is seating a new table of ${n} hungry philosphers for ${meals} meals`)
+  async seatTable (n = 5, servings = 20) {
+    console.log(`Cafe ${this.kar.id} is seating a new table of ${n} hungry philosophers for ${servings} servings`)
     var philosophers = []
     var forks = []
     for (var i = 0; i < n; i++) {
@@ -127,9 +127,9 @@ class Cafe {
       forks[i] = uuidv4()
     }
     for (i = 0; i < n - 1; i++) {
-      await actor.call(actor.proxy('Philosopher', philosophers[i]), 'joinTable', this.kar.id, forks[i], forks[i + 1], meals)
+      await actor.call(actor.proxy('Philosopher', philosophers[i]), 'joinTable', this.kar.id, forks[i], forks[i + 1], servings)
     }
-    await actor.call(actor.proxy('Philosopher', philosophers[n - 1]), 'joinTable', this.kar.id, forks[0], forks[n - 1], meals)
+    await actor.call(actor.proxy('Philosopher', philosophers[n - 1]), 'joinTable', this.kar.id, forks[0], forks[n - 1], servings)
     await actor.state.set(this, 'diners', Array.from(this.diners))
   }
 

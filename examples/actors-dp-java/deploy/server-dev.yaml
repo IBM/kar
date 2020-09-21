@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-dining-philosophers
+  labels:
+    app: java-dp
+spec:
+  selector:
+    matchLabels:
+      app: java-dp
+  template:
+    metadata:
+      labels:
+        app: java-dp
+      annotations:
+        kar.ibm.com/app: dp
+        kar.ibm.com/actors: Cafe,Fork,Philosopher
+        kar.ibm.com/appPort: "8080"
+    spec:
+      containers:
+      - name: actors
+        image: localhost:5000/examples/java/actors-dp
+        ports:
+        - containerPort: 8080
