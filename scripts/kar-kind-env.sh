@@ -5,7 +5,7 @@
 # Usage . kar-kind-env.sh
 #
 
-export KAFKA_BROKERS=localhost:31093
+export KAFKA_BROKERS=${KAFKA_DEPLOY_HOST:-localhost}:31093
 export KAFKA_VERSION=2.4.0
 export REDIS_HOST=localhost
 export REDIS_PORT=31379
