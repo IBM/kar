@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-client
+  labels:
+    name: hello-client
+spec:
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: helloWorld
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
+      containers:
+      - name: client
+        image: localhost:5000/examples/js/service-hello
+        env:
+        - name: MAIN
+          value: client.js

@@ -9,15 +9,18 @@ charts.  See the README.md in each directory for instructions.
 
 ### Examples in a Nutshell
 
-+ [Hello World](./helloWorld) extends a simple
-  [NodeJS Express server](helloWorld/server.js) to work with KAR.
++ A small Greeting service sample shows how to to extend standard
+  [Java JAX-RS](./service-hello-java) and
+  [NodeJS Express](./service-hello-js) clients and servers to work
+  with KAR.
 
-+ [Dining Philosophers](./actors-dp-js) demonstrates using KAR's actor
-  programming model to provide a fault-tolerant implementation of
-  Dijkstra's solution to the Dining Philosophers problem.
++ We  use the classic Dining Philosophers problem to introduce KAR's
+  actor programming model by instantiating the same fault-tolerant
+  implementation of Dijkstra's solution to the problem in both
+  [Java](./actors-dp-java) and [JavaScript](./actors-dp-js).
 
-+ [Yorktown Simulation](./actors-ykt) demonstrates using KAR's agent
++ The [Yorktown Simulation](./actors-ykt) demonstrates using KAR's agent
   model for virtual stateful services to implement a scalable simulation.
 
 + [Unit Tests](./unit-tests) contains unit tests and scripts to
-  exeucte them.
+  execute them.

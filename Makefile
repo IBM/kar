@@ -11,11 +11,9 @@ KAR_JAVA_RUNTIME=$(DOCKER_IMAGE_PREFIX)sdk-java-runtime-11:$(DOCKER_IMAGE_TAG)
 
 KAR_EXAMPLE_JS_YKT=$(DOCKER_IMAGE_PREFIX)examples/js/actors-ykt:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_DP=$(DOCKER_IMAGE_PREFIX)examples/js/actors-dp:$(DOCKER_IMAGE_TAG)
-KAR_EXAMPLE_JS_HELLO=$(DOCKER_IMAGE_PREFIX)examples/js/hello-world:$(DOCKER_IMAGE_TAG)
+KAR_EXAMPLE_JS_HELLO=$(DOCKER_IMAGE_PREFIX)examples/js/service-hello:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_EVENTS=$(DOCKER_IMAGE_PREFIX)examples/js/actors-events:$(DOCKER_IMAGE_TAG)
-KAR_EXAMPLE_JS_STOCK=$(DOCKER_IMAGE_PREFIX)examples/js/stock-prices:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)examples/js/unit-tests:$(DOCKER_IMAGE_TAG)
-KAR_EXAMPLE_JAVA_ACTORS=$(DOCKER_IMAGE_PREFIX)examples/java/actors:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)examples/java/actors-dp:$(DOCKER_IMAGE_TAG)
 
 all: install
@@ -34,10 +32,8 @@ dockerExamples:
 	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
 	cd examples/actors-events && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_EVENTS) .
 	cd examples/actors-ykt && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_YKT) .
-	cd examples/helloWorld && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_HELLO) .
-	cd examples/stockPriceEvents && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_STOCK) .
+	cd examples/service-hello-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_HELLO) .
 	cd examples/unit-tests && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_TESTS) . 
-	cd examples/java/actors && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_ACTORS) .
 	cd examples/actors-dp-java && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_DP) .
 
 dockerPushCore:
@@ -52,9 +48,7 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_DP)
 	docker push $(KAR_EXAMPLE_JS_YKT)
 	docker push $(KAR_EXAMPLE_JS_HELLO)
-	docker push $(KAR_EXAMPLE_JS_STOCK)
 	docker push $(KAR_EXAMPLE_JS_TESTS)
-	docker push $(KAR_EXAMPLE_JAVA_ACTORS)
 	docker push $(KAR_EXAMPLE_JAVA_DP)
 
 dockerBuildAndPush:

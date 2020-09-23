@@ -13,7 +13,7 @@ run () {
     return $CODE
 }
 
-echo "Executing Java Actor test"
+echo "Executing Java Hello Service test"
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
@@ -24,22 +24,20 @@ echo "Building Java KAR SDK"
 cd $ROOTDIR/sdk-java
 mvn clean install
 
-echo "Building Java Actors sample application"
-cd $ROOTDIR/examples/java/actors
-mvn clean install
+echo "Building Java Hello Service"
+cd $ROOTDIR/examples/service-hello-java
+mvn clean package
 
-echo "Creating Java actor server"
-cd $ROOTDIR/examples/java/actors
-mvn liberty:create liberty:install-feature liberty:deploy liberty:package -Dinclude=runnable
-
-echo "Launching Java actor server"
-cd $ROOTDIR/examples/java/actors/target
-kar run -v info -app example -actors sample,calculator java -jar kar-actor-example.jar &
+echo "Launching Java Hello Server"
+cd $ROOTDIR/examples/service-hello-java/server
+kar run -v info -app java-hello -service greeter mvn liberty:run &
 PID=$!
 
-echo "Waiting 10 seconds for Java actor server to launch"
+# Sleep 10 seconds to given liberty time to come up
 sleep 10
 
-echo "Invoking actor method on Java actor server"
-run $PID kar run -runtime_port 32123 -app example curl --fail -H "Content-Type: application/kar+json" -X POST http://localhost:32123/kar/v1/actor/sample/abc/call/canBeInvoked -d '[{ "number": 10}]'
+echo "Run the Hello Client to check invoking a route on the Hello Server"
+cd $ROOTDIR/examples/service-hello-java/client
+run $PID kar run -app java-hello java -jar target/kar-hello-client-jar-with-dependencies.jar
+
 
