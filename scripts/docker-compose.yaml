@@ -12,7 +12,7 @@ services:
       - "31093:31093"
     hostname: kafka
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_DEPLOY_HOST:-localhost}
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_PORT: 31093
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
