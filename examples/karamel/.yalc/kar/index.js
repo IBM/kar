@@ -215,7 +215,7 @@ const eventsGetSubscription = (actor, id) => id ? get(`actor/${actor.kar.type}/$
 function eventsCreateSubscription (actor, path, topic, options = {}) {
   const id = options.id || topic
   const contentType = options.contentType
-  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic /* contentType */ })
+  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic, contentType })
 }
 
 const eventsCreateTopic = (topic, options = {}) => put(`event/${topic}`, options)
@@ -307,6 +307,11 @@ function actorRuntime (actors) {
       }) // invoke method on actor
       .then(value => res.json({ value })) // stringify invocation result
       .catch(next)
+  })
+
+  // health route
+  router.get('/kar/impl/v1/system/health', (req, res, next) => {
+    return res.status(200).type('text/plain').send('Peachy Keen!')
   })
 
   router.use(errorHandler)

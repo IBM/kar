@@ -14,13 +14,13 @@ spec:
       labels:
         name: ykt-server
       annotations:
-{{ if not .Values.localMode }}
+{{ if not .Values.noSidecar }}
         kar.ibm.com/app: ykt
         kar.ibm.com/actors: Company,Site,Office,Researcher
         kar.ibm.com/verbose: {{ .Values.verbose }}
 {{ end }}
     spec:
-{{ if .Values.localMode }}
+{{ if .Values.noSidecar }}
       volumes:
       - name: kar-ibm-com-config
         secret:
@@ -33,8 +33,8 @@ spec:
         env:
         - name: MAIN
           value: ykt.js
-{{ if .Values.localMode }}
-        - name: KAR_LOCAL_MODE
+{{ if .Values.noSidecar }}
+        - name: KAR_SIDECAR_IN_CONTAINER
           value: "true"
         - name: KAR_APP
           value: ykt

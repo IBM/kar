@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script enables the current coligo project for
+# This script enables the current code-engine project for
 # running KAR applications by creating a secret that
 # enables the use of "Databases for Redis" and "Event Streams"
 # services on the IBM Cloud.
@@ -12,7 +12,7 @@
 
 if [ $# -lt 1 ];
 then
-   echo "Usage: kar-enable-coligo-project.sh <service-key>"
+   echo "Usage: kar-enable-code-engine-project.sh <service-key>"
    exit 1
 fi
 
@@ -24,8 +24,8 @@ ROOTDIR="$SCRIPTDIR/.."
 echo "Extracting credentials from service key"
 . ${SCRIPTDIR}/kar-cloud-env.sh $1
 
-echo "Creating secret in coligo project"
-ibmcloud coligo secret create --name kar.ibm.com.runtime-config \
+echo "Creating secret in code-engine project"
+ibmcloud code-engine secret create --name kar.ibm.com.runtime-config \
      --from-literal REDIS_ENABLE_TLS=$REDIS_ENABLE_TLS \
      --from-literal REDIS_HOST=$REDIS_HOST \
      --from-literal REDIS_PORT=$REDIS_PORT \

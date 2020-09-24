@@ -1,4 +1,4 @@
 image: us.icr.io/research/kar-dev/examples/js/actors-ykt
 verbose: info
 replicas: 4
-localMode: false
+noSidecar: false

@@ -3,8 +3,7 @@
   "packages": {
     "kar": {
       "signature": "1bf5965cc6f8eed624e66e5a1eae0bcd",
-      "file": true,
-      "replaced": "../../sdk-js"
+      "file": true
     }
   }
 }

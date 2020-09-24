@@ -39,7 +39,7 @@ fi
 
 echo "*** Running in-cluster no-sidecar actors-ykt ***"
 
-helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/examples/js/actors-ykt --set localMode=true
+helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/examples/js/actors-ykt --set noSidecar=true
 
 if helm test ykt-sc; then
     echo "PASSED! In cluster no-sidecar actors-ykt passed."

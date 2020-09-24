@@ -7,12 +7,12 @@ metadata:
   annotations:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded
-{{ if not .Values.localMode }}
+{{ if not .Values.noSidecar }}
     kar.ibm.com/app: ykt
     kar.ibm.com/verbose: {{ .Values.verbose }}
 {{ end }}
 spec:
-{{ if .Values.localMode }}
+{{ if .Values.noSidecar }}
   volumes:
   - name: kar-ibm-com-config
     secret:
@@ -25,8 +25,8 @@ spec:
     env:
     - name: MAIN
       value: ykt-client.js
-{{ if .Values.localMode }}
-    - name: KAR_LOCAL_MODE
+{{ if .Values.noSidecar }}
+    - name: KAR_SIDECAR_IN_CONTAINER
       value: "true"
     - name: KAR_APP
       value: ykt

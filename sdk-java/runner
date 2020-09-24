@@ -3,7 +3,7 @@
 KAR_JAVA_SERVER=${KAR_JAVA_SERVER:="defaultServer"}
 
 
-if [ -z "$KAR_LOCAL_MODE" ]; then
+if [ -z "$KAR_SIDECAR_IN_CONTAINER" ]; then
     exec /opt/ol/wlp/bin/server run $KAR_JAVA_SERVER $KAR_OPEN_LIBERTY_EXTRA_ARGS
 else
     exec /kar/bin/kar run -app $KAR_APP $KAR_EXTRA_ARGS /opt/ol/wlp/bin/server run $KAR_JAVA_SERVER $KAR_OPEN_LIBERTY_EXTRA_ARGS

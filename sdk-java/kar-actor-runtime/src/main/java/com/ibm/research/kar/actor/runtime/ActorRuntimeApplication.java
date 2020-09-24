@@ -19,6 +19,7 @@ public class ActorRuntimeApplication extends Application {
     Set<Class<?>> classes = new HashSet<Class<?>>();
     classes.add(JSONProvider.class);
     classes.add(ActorRuntimeResource.class);
+    classes.add(StatusReporter.class);
     return classes;
   }
 }
