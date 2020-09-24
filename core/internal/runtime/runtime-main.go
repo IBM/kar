@@ -145,10 +145,10 @@ func Main() {
 	}
 	defer pubsub.Close()
 
-	if config.Purge {
+	if config.CmdName == config.PurgeCmd {
 		purge("*")
 		return
-	} else if config.Drain {
+	} else if config.CmdName == config.DrainCmd {
 		purge("pubsub" + config.Separator + "*")
 		return
 	}
@@ -161,10 +161,13 @@ func Main() {
 
 	args := flag.Args()
 
-	if config.Invoke {
+	if config.CmdName == config.InvokeCmd {
 		exitCode = invokeActorMethod(ctx9, args)
 		cancel()
-	} else if config.Get != "" {
+	} else if config.CmdName == config.RestCmd {
+		exitCode = invokeServiceEndpoint(ctx9, args)
+		cancel()
+	} else if config.CmdName == config.GetCmd {
 		exitCode = getInformation(ctx9, args)
 		cancel()
 	} else {

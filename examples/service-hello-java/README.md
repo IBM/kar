@@ -47,7 +47,17 @@ kar run -app hello-java -service greeter mvn liberty:run
 kar run -app hello-java java -jar target/kar-hello-client-jar-with-dependencies.jar
 ```
 
-3. You can still use curl to invoke the service via kar, but you will now KAR's service invocation route
+3. Use the `kar` cli to invoke a route directly (the content type for request bodies defaults to application/json).
+```shell
+kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
+kar rest -app hello-java -content_type text/plain post greeter helloText 'Gandalf the Grey'
+```
+
+4. If the service endpoint being invoked requires more sophisticated
+headers or other features not supported by the `kar rest` command, it
+is still possible to use curl. However, the curl command is now using
+KAR's REST API to make the service call via a `kar` sidecar.
+
 ```shell
 kar run -runtime_port 32123 -app hello-java curl -s -X POST -H "Content-Type: text/plain" http://localhost:32123/kar/v1/service/greeter/call/helloText -d 'Gandalf the Grey'
 ```

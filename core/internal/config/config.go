@@ -18,8 +18,25 @@ import (
 // Separator character for store keys and topic names
 const Separator = "_" // must not be a legal DNS name character
 
+const (
+	// RunCmd is the command "run"
+	RunCmd = "run"
+	// GetCmd is the command "get"
+	GetCmd = "get"
+	// InvokeCmd is the command "invoke"
+	InvokeCmd = "invoke"
+	// RestCmd is the command "rest"
+	RestCmd = "rest"
+	// PurgeCmd is the command "purge"
+	PurgeCmd = "purge"
+	// DrainCmd is the command "drain"
+	DrainCmd = "drain"
+	// HelpCmd is the command "help"
+	HelpCmd = "help"
+)
+
 var (
-	// CmdName is the name of the kar command
+	// CmdName is the top-level command to be executed (purge, run, invoke, etc)
 	CmdName string
 
 	// AppName is the name of the application
@@ -82,15 +99,6 @@ var (
 	// H2C enables h2c to communicate with the app service
 	H2C bool
 
-	// Purge the application state and messages
-	Purge bool
-
-	// Drain the application messages
-	Drain bool
-
-	// Invoke an actor method
-	Invoke bool
-
 	// Hostname is the name of the host
 	Hostname string
 
@@ -101,13 +109,15 @@ var (
 	// ActorTimeout is how long to wait on a busy actor before timing it out and returning the error.
 	ActorTimeout time.Duration
 
+	// GetSystemComponent describes what system information to get
+	GetSystemComponent string
+
 	// OutputStyle is whether to print a human readable output, or return a JSON string of data.
 	// Currently only applies to calling system/information/
 	OutputStyle string
 
-	// Outputs information on running systems, like calling system/information/<Get>
-	// Currently supported: Sidecars
-	Get string
+	// RestBodyContentType specifies the content type of the request body
+	RestBodyContentType string
 
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes string
@@ -144,6 +154,7 @@ Available commands:
   run     run application component
   get     query running application
   invoke  invoke actor instance
+  rest    perform a REST operation on a service endpoint
   purge   purge application messages and state
   drain   drain application messages
   help    print help message`
@@ -179,10 +190,10 @@ Available commands:
 		os.Exit(2)
 	}
 
-	CmdName := os.Args[1]
+	CmdName = os.Args[1]
 
 	switch CmdName {
-	case "run":
+	case RunCmd:
 		usage = "kar run [OPTIONS] [-- [COMMAND]]"
 		description = "Run application component"
 		flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
@@ -197,26 +208,28 @@ Available commands:
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy actors before timing out")
 
-	case "get":
+	case GetCmd:
 		usage = "kar get [OPTIONS]"
 		description = "Query running application"
-		flag.StringVar(&Get, "s", "sidecars", "Information requested")
+		flag.StringVar(&GetSystemComponent, "s", "sidecars", "Information requested")
 		flag.StringVar(&OutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
 
-	case "invoke":
+	case InvokeCmd:
 		usage = "kar invoke [OPTIONS] ACTOR_TYPE ACTOR_ID METHOD [ARGS]"
 		description = "Invoke actor instance"
-		Invoke = true
 
-	case "purge":
+	case RestCmd:
+		usage = "kar rest [OPTIONS] REST_METHOD SERVICE_NAME PATH [REQUEST_BODY]"
+		description = "Peform a REST operation on a service endpoint"
+		flag.StringVar(&RestBodyContentType, "content_type", "application/json", "Content-Type of request body")
+
+	case PurgeCmd:
 		usage = "kar purge [OPTIONS]"
 		description = "Purge application messages and state"
-		Purge = true
 
-	case "drain":
+	case DrainCmd:
 		usage = "kar drain [OPTIONS]"
 		description = "Drain application messages"
-		Drain = true
 
 	case "-help":
 		fallthrough
@@ -357,8 +370,12 @@ Available commands:
 		}
 	}
 
-	if Invoke && len(flag.Args()) < 3 {
+	if CmdName == InvokeCmd && len(flag.Args()) < 3 {
 		logger.Fatal("invoke expects at least three arguments")
+	}
+
+	if CmdName == RestCmd && !(len(flag.Args()) == 3 || len(flag.Args()) == 4) {
+		logger.Fatal("rest expects either three or four arguments; got %v", len(flag.Args()))
 	}
 
 	OutputStyle = strings.ToLower(OutputStyle)

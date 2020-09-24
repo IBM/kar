@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -44,8 +45,37 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 	return
 }
 
+// invokeServiceEndpoint makes a request to a service endpoint
+func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
+	method := args[0]
+	service := args[1]
+	path := "/" + args[2]
+	var header, body string
+	if len(args) > 3 {
+		header = fmt.Sprintf("{\"Content-Type\": [\"%v\"]}", config.RestBodyContentType)
+		body = args[3]
+	} else {
+		header = ""
+		body = ""
+	}
+
+	reply, err := CallService(ctx, service, path, body, header, method, false)
+	if err != nil {
+		logger.Error("error invoking the service: %v", err)
+		exitCode = 1
+		return
+	}
+	if reply.StatusCode != http.StatusOK {
+		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
+		log.Printf("[STDERR] %v", reply.Payload)
+	} else {
+		log.Printf("[STDOUT] %v", reply.Payload)
+	}
+	return
+}
+
 func getInformation(ctx context.Context, args []string) (exitCode int) {
-	option := strings.ToLower(config.Get)
+	option := strings.ToLower(config.GetSystemComponent)
 	var str string
 	var err error
 	switch option {
