@@ -1,9 +1,8 @@
-package test;
+package com.ibm.research.kar.embedded.test;
 
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
-
 import com.ibm.research.kar.actor.ActorRef;
 
 import static com.ibm.research.kar.Kar.actorRef;

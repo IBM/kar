@@ -26,6 +26,8 @@
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
 		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
 		<version.java-compiler>11</version.java-compiler>
+		<version.glassfish-json>1.1.4</version.glassfish-json>
+		<version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
 	</properties>
 
 	<dependencies>
@@ -42,12 +44,6 @@
 			<version>${version.microprofile}</version>
 			<type>pom</type>
 			<scope>provided</scope>
-		</dependency>
-		<!-- KAR SDK -->
-		<dependency>
-			<groupId>com.ibm.research.kar</groupId>
-			<artifactId>kar-rest-client</artifactId>
-			<version>${version.kar-java-sdk}</version>
 		</dependency>
 	</dependencies>
 

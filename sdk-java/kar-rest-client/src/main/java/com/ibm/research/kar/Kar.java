@@ -32,8 +32,7 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
-import org.glassfish.json.jaxrs.JsonValueBodyReader;
-import org.glassfish.json.jaxrs.JsonValueBodyWriter;
+
 
 public class Kar {
 
@@ -41,13 +40,29 @@ public class Kar {
 
 	private static KarRest karClient = buildRestClient();
 
-	private Kar() {
+	public Kar() {
 	}
-
+	
+	/*
+	 * Set custom rest client
+	 */
+	public static void setRestClient(KarRest client) {
+		Kar.karClient = client;
+	}
+	
 	/*
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	private static KarRest buildRestClient() {
+
+		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(Kar.getUri());	
+		
+		return builder.register(ActorExceptionMapper.class)
+				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
+	}
+	
+	protected static URI getUri() {
 		String baseURIStr = "http://localhost";
 
 		String port = System.getenv("KAR_RUNTIME_PORT");
@@ -61,23 +76,9 @@ public class Kar {
 
 		logger.fine("Sidecar location set to " + baseURIStr);
 
-		URI baseURI = URI.create(baseURIStr);
-
-		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(baseURI);
-
-		// If running in standalone mode, add JsonValue serializers by hand
-		if (!isRunningEmbedded()) {
-			builder.register(JsonValueBodyReader.class).register(JsonValueBodyWriter.class);
-		}
-
-		return builder.register(ActorExceptionMapper.class)
-				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
+		return URI.create(baseURIStr);
 	}
 
-	private static boolean isRunningEmbedded() {
-		return (System.getProperty("wlp.server.name") != null);
-	}
 
 	private static JsonArray packArgs(JsonValue[] args) {
 		JsonArrayBuilder ja = Json.createArrayBuilder();
