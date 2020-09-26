@@ -1,9 +1,3 @@
-/**
- * This version of the KAR rest client is for applications that are running outside of
- * and application server.  It uses the Apache CXF implememtation of the Microprofile
- * REST client and pulls in org.glassfish.json.jaxrs JsonValue serializers normally provided
- * by the application server.
- */
 package com.ibm.research.kar.standalone;
 
 import java.net.URI;
@@ -11,11 +5,17 @@ import java.util.concurrent.TimeUnit;
 
 import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.KarRest;
-import com.ibm.research.kar.actor.exceptions.ActorExceptionMapper;
+import com.ibm.research.kar.actor.exceptions.ExceptionToResponse;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.glassfish.json.jaxrs.JsonValueBodyWriter;
 
+/**
+ * This version of the KAR rest client is for applications that are running outside of
+ * and application server.  It uses the Apache CXF implememtation of the Microprofile
+ * REST client and pulls in org.glassfish.json.jaxrs JsonValue serializers normally provided
+ * by the application server.
+ */
 public class Kar extends com.ibm.research.kar.Kar {
 
 	public static void init() {
@@ -26,8 +26,7 @@ public class Kar extends com.ibm.research.kar.Kar {
 		}
 
 		Kar.setRestClient(
-				builder.register(ActorExceptionMapper.class)
-				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				builder.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class)
 				);
 

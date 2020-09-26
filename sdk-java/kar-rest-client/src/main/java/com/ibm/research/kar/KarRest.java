@@ -16,7 +16,6 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.ProcessingException;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -26,8 +25,6 @@ import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
 import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 
-import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
-
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 @Timeout(600000)
@@ -36,6 +33,7 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 public interface KarRest extends AutoCloseable {
 
 	public final static String KAR_ACTOR_JSON = "application/kar+json";
+	public final static MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");
 
 	/*
 	 * Services
@@ -44,104 +42,109 @@ public interface KarRest extends AutoCloseable {
 	// asynchronous service invocation, returns (202, "OK")
 	@DELETE
 	@Path("service/{service}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
+	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tellDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public Response tellDelete(@PathParam("service") String service, @PathParam("path") String path);
 
 	@PATCH
 	@Path("service/{service}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
+	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tellPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response tellPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@POST
 	@Path("service/{service}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
+	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tellPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response tellPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@PUT
 	@Path("service/{service}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
+	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response tellPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
-
+	public Response tellPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	// synchronous service invocation, returns invocation result
 	@DELETE
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public Response callDelete(@PathParam("service") String service, @PathParam("path") String path);
 
 	@GET
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callGet(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public Response callGet(@PathParam("service") String service, @PathParam("path") String path);
 
 	@HEAD
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callHead(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public Response callHead(@PathParam("service") String service, @PathParam("path") String path);
 
 	@OPTIONS
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callOptions(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response callOptions(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@PATCH
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response callPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response callPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@PUT
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response callPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public Response callPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
-	// asynchronous service invocation, returns CompletionStage that will contain the eventual invocation result
+	// asynchronous service invocation, returns CompletionStage that will contain
+	// the eventual invocation result
 	@DELETE
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncDelete(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public CompletionStage<Response> callAsyncDelete(@PathParam("service") String service,
+			@PathParam("path") String path);
 
 	@GET
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncGet(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public CompletionStage<Response> callAsyncGet(@PathParam("service") String service, @PathParam("path") String path);
 
 	@HEAD
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncHead(@PathParam("service") String service, @PathParam("path") String path) throws ProcessingException;
+	public CompletionStage<Response> callAsyncHead(@PathParam("service") String service, @PathParam("path") String path);
 
 	@OPTIONS
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncOptions(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public CompletionStage<Response> callAsyncOptions(@PathParam("service") String service,
+			@PathParam("path") String path, JsonValue params);
 
 	@PATCH
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public CompletionStage<Response> callAsyncPatch(@PathParam("service") String service, @PathParam("path") String path,
+			JsonValue params);
 
 	@POST
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public CompletionStage<Response> callAsyncPost(@PathParam("service") String service, @PathParam("path") String path,
+			JsonValue params);
 
 	@PUT
 	@Path("service/{service}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public CompletionStage<Response>  callAsyncPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params) throws ProcessingException;
+	public CompletionStage<Response> callAsyncPut(@PathParam("service") String service, @PathParam("path") String path,
+			JsonValue params);
 
 	/*
 	 * Actors
@@ -150,11 +153,12 @@ public interface KarRest extends AutoCloseable {
 	// asynchronous actor invocation, returns (202, "OK")
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
-	@ClientHeaderParam(name="Pragma", value="async")
+	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Consumes(KAR_ACTOR_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, JsonArray args) throws ProcessingException;
+	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path,
+			JsonArray args);
 
 	// synchronous actor invocation: returns invocation result
 	@POST
@@ -162,7 +166,8 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Consumes(KAR_ACTOR_JSON)
 	@Produces(KAR_ACTOR_JSON)
-	public JsonValue actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
+	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path,
+			@QueryParam("session") String session, JsonArray args);
 
 	// synchronous actor invocation: returns invocation result
 	@POST
@@ -170,7 +175,8 @@ public interface KarRest extends AutoCloseable {
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Consumes(KAR_ACTOR_JSON)
 	@Produces(KAR_ACTOR_JSON)
-	public CompletionStage<JsonValue> actorCallAsync(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path, @QueryParam("session") String session, JsonArray args) throws ActorMethodNotFoundException;
+	public CompletionStage<Response> actorCallAsync(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("path") String path, @QueryParam("session") String session, JsonArray args);
 
 	//
 	// Actor Reminder operations
@@ -180,30 +186,32 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/reminders")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorCancelReminders(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorCancelReminders(@PathParam("type") String type, @PathParam("id") String id);
 
 	@DELETE
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorCancelReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorCancelReminder(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@GET
 	@Path("actor/{type}/{id}/reminders")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetReminders(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorGetReminders(@PathParam("type") String type, @PathParam("id") String id);
 
 	@GET
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorGetReminder(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("reminderId") String reminderId, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@PUT
 	@Path("actor/{type}/{id}/reminders/{reminderId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id, @PathParam("reminderId") String reminderId, JsonObject params) throws ProcessingException;
-
+	public Response actorScheduleReminder(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("reminderId") String reminderId, JsonObject params);
 
 	//
 	// Actor state operations
@@ -212,69 +220,78 @@ public interface KarRest extends AutoCloseable {
 	@GET
 	@Path("actor/{type}/{id}/state/{key}/{subkey}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorGetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@HEAD
 	@Path("actor/{type}/{id}/state/{key}/{subkey}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorHeadWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey) throws ProcessingException;
+	public Response actorHeadWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @PathParam("subkey") String subkey);
 
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}/{subkey}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, JsonValue params) throws ProcessingException;
+	public Response actorSetWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @PathParam("subkey") String subkey, JsonValue params);
 
 	@DELETE
 	@Path("actor/{type}/{id}/state/{key}/{subkey}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorDeleteWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorDeleteWithSubkeyState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @PathParam("subkey") String subkey, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@GET
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorGetState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@HEAD
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorHeadState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key) throws ProcessingException;
+	public Response actorHeadState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key);
 
 	@PUT
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonValue params) throws ProcessingException;
+	public Response actorSetState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, JsonValue params);
 
 	@POST
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response actorMapOp(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, JsonValue params) throws ProcessingException;
+	public Response actorMapOp(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key,
+			JsonValue params);
 
 	@DELETE
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorDeleteState(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent) throws ProcessingException;
+	public Response actorDeleteState(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("key") String key, @QueryParam("nilOnAbsent") boolean nilOnAbsent);
 
 	@GET
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorGetAllState(@PathParam("type") String type, @PathParam("id") String id);
 
 	@POST
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetMultipleState(@PathParam("type") String type, @PathParam("id") String id, JsonObject updates) throws ProcessingException;
+	public Response actorSetMultipleState(@PathParam("type") String type, @PathParam("id") String id, JsonObject updates);
 
 	@DELETE
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id);
 
 	/*
 	 * Events
@@ -283,42 +300,45 @@ public interface KarRest extends AutoCloseable {
 	@GET
 	@Path("actor/{type}/{id}/events")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorGetAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id);
 
 	@DELETE
 	@Path("actor/{type}/{id}/events")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorCancelAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id) throws ProcessingException;
+	public Response actorCancelAllSubscriptions(@PathParam("type") String type, @PathParam("id") String id);
 
 	@GET
 	@Path("actor/{type}/{id}/events/{subscriptionId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorGetSubscription(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId) throws ProcessingException;
+	public Response actorGetSubscription(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("subscriptionId") String subscriptionId);
 
 	@DELETE
 	@Path("actor/{type}/{id}/events/{subscriptionId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorCancelSubscription(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId) throws ProcessingException;
+	public Response actorCancelSubscription(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("subscriptionId") String subscriptionId);
 
 	@PUT
 	@Path("actor/{type}/{id}/events/{subscriptionId}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response actorSubscribe(@PathParam("type") String type, @PathParam("id") String id, @PathParam("subscriptionId") String subscriptionId, JsonValue data) throws ProcessingException;
+	public Response actorSubscribe(@PathParam("type") String type, @PathParam("id") String id,
+			@PathParam("subscriptionId") String subscriptionId, JsonValue data);
 
 	@PUT
 	@Path("event/{topic}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response eventCreateTopic(@PathParam("topic") String topic, JsonValue configuration) throws ProcessingException;
+	public Response eventCreateTopic(@PathParam("topic") String topic, JsonValue configuration);
 
 	@DELETE
 	@Path("event/{topic}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response eventDeleteTopic(@PathParam("topic") String topic) throws ProcessingException;
+	public Response eventDeleteTopic(@PathParam("topic") String topic);
 
 	@POST
 	@Path("event/{topic}/publish")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response eventPublish(@PathParam("topic") String topic, JsonValue event) throws ProcessingException;
+	public Response eventPublish(@PathParam("topic") String topic, JsonValue event);
 
 	/*
 	 * System
@@ -327,5 +347,5 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("system/shutdown")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	public Response shutdown() throws ProcessingException;
+	public Response shutdown();
 }

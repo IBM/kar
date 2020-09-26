@@ -1,8 +1,3 @@
-/**
- * This serializer works around a limitation of the org.glassfish.json.jaxrs
- * JsonValueBodyReader, which can cause an exception when parsing 1 character
- * input.  KAR char encoding is always UTF-8
- */
 package com.ibm.research.kar.standalone;
 
 import java.io.IOException;
@@ -21,8 +16,13 @@ import javax.ws.rs.core.MultivaluedMap;
 
 import org.glassfish.json.jaxrs.JsonValueBodyReader;
 
+/**
+ * This serializer works around a limitation of the org.glassfish.json.jaxrs
+ * JsonValueBodyReader, which can cause an exception when parsing 1 character
+ * input.  KAR char encoding is always UTF-8
+ */
 public class UTF8JsonValueBodyReader extends JsonValueBodyReader {
-	
+
     private final JsonReaderFactory rf = Json.createReaderFactory(null);
 	@Override
     public JsonValue readFrom(Class<JsonValue> jsonValueClass,
@@ -34,4 +34,3 @@ public class UTF8JsonValueBodyReader extends JsonValueBodyReader {
         }
     }
 }
-

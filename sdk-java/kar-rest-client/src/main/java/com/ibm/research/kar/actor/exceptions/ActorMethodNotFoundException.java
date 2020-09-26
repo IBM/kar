@@ -10,4 +10,8 @@ public class ActorMethodNotFoundException extends ActorException {
 	public ActorMethodNotFoundException(String errorMessage) {
 		super(errorMessage);
 	}
+
+	public ActorMethodNotFoundException(String errorMessage, Throwable cause) {
+		super(errorMessage, cause);
+	}
 }

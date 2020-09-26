@@ -19,6 +19,7 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -27,12 +28,10 @@ import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.Reminder;
 import com.ibm.research.kar.actor.Subscription;
-import com.ibm.research.kar.actor.exceptions.ActorExceptionMapper;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
-
 
 public class Kar {
 
@@ -42,26 +41,25 @@ public class Kar {
 
 	public Kar() {
 	}
-	
+
 	/*
 	 * Set custom rest client
 	 */
 	public static void setRestClient(KarRest client) {
 		Kar.karClient = client;
 	}
-	
+
 	/*
 	 * Generate REST client (used when injection not possible, e.g. tests)
 	 */
 	private static KarRest buildRestClient() {
 
-		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(Kar.getUri());	
-		
-		return builder.register(ActorExceptionMapper.class)
-				.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(Kar.getUri());
+
+		return builder.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 	}
-	
+
 	protected static URI getUri() {
 		String baseURIStr = "http://localhost";
 
@@ -79,7 +77,6 @@ public class Kar {
 		return URI.create(baseURIStr);
 	}
 
-
 	private static JsonArray packArgs(JsonValue[] args) {
 		JsonArrayBuilder ja = Json.createArrayBuilder();
 		for (JsonValue a : args) {
@@ -88,21 +85,10 @@ public class Kar {
 		return ja.build();
 	}
 
-	private static JsonValue actorUnwrap(JsonValue v) throws ActorMethodInvocationException {
-		JsonObject o = v.asJsonObject();
-		if (o.containsKey("error")) {
-			String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
-			String stack = o.containsKey("stack") ? o.getString("stack") : "";
-			throw new ActorMethodInvocationException(message + ": " + stack);
-		} else {
-			return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
-		}
-	}
-
 	private static Object toValue(Response response) {
 		if (response.hasEntity()) {
 			MediaType type = response.getMediaType();
-			if (type.equals(MediaType.APPLICATION_JSON_TYPE)) {
+			if (type.equals(MediaType.APPLICATION_JSON_TYPE) || type.equals(KarRest.KAR_ACTOR_JSON_TYPE)) {
 				return response.readEntity(JsonValue.class);
 			} else if (type.equals(MediaType.TEXT_PLAIN_TYPE)) {
 				return response.readEntity(String.class);
@@ -115,7 +101,7 @@ public class Kar {
 	}
 
 	private static int toInt(Response response) {
-		if (response.getStatus() == Status.OK.getStatusCode() && response.hasEntity()) {
+		if (response.hasEntity()) {
 			return response.readEntity(java.lang.Integer.TYPE);
 		} else {
 			return 0;
@@ -212,7 +198,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restDelete(String service, String path) throws ProcessingException {
+	public static Response restDelete(String service, String path) {
 		return karClient.callDelete(service, path);
 	}
 
@@ -223,7 +209,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restDeleteAsync(String service, String path) throws ProcessingException {
+	public static CompletionStage<Response> restDeleteAsync(String service, String path) {
 		return karClient.callAsyncDelete(service, path);
 	}
 
@@ -234,7 +220,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restGet(String service, String path) throws ProcessingException {
+	public static Response restGet(String service, String path) {
 		return karClient.callGet(service, path);
 	}
 
@@ -245,7 +231,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restGetAsync(String service, String path) throws ProcessingException {
+	public static CompletionStage<Response> restGetAsync(String service, String path) {
 		return karClient.callAsyncGet(service, path);
 	}
 
@@ -256,7 +242,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restHead(String service, String path) throws ProcessingException {
+	public static Response restHead(String service, String path) {
 		return karClient.callHead(service, path);
 	}
 
@@ -267,7 +253,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restHeadAsync(String service, String path) throws ProcessingException {
+	public static CompletionStage<Response> restHeadAsync(String service, String path) {
 		return karClient.callAsyncHead(service, path);
 	}
 
@@ -278,7 +264,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restOptions(String service, String path) throws ProcessingException {
+	public static Response restOptions(String service, String path) {
 		return karClient.callOptions(service, path, JsonValue.NULL);
 	}
 
@@ -290,7 +276,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restOptions(String service, String path, JsonValue body) throws ProcessingException {
+	public static Response restOptions(String service, String path, JsonValue body) {
 		return karClient.callOptions(service, path, body);
 	}
 
@@ -301,7 +287,7 @@ public class Kar {
 	 * @param path    The service endpoint.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restOptionsAsync(String service, String path) throws ProcessingException {
+	public static CompletionStage<Response> restOptionsAsync(String service, String path) {
 		return karClient.callAsyncOptions(service, path, JsonValue.NULL);
 	}
 
@@ -313,8 +299,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restOptionsAsync(String service, String path, JsonValue body)
-			throws ProcessingException {
+	public static CompletionStage<Response> restOptionsAsync(String service, String path, JsonValue body) {
 		return karClient.callAsyncOptions(service, path, body);
 	}
 
@@ -326,7 +311,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restPatch(String service, String path, JsonValue body) throws ProcessingException {
+	public static Response restPatch(String service, String path, JsonValue body) {
 		return karClient.callPatch(service, path, body);
 	}
 
@@ -338,8 +323,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPatchAsync(String service, String path, JsonValue body)
-			throws ProcessingException {
+	public static CompletionStage<Response> restPatchAsync(String service, String path, JsonValue body) {
 		return karClient.callAsyncPatch(service, path, body);
 	}
 
@@ -351,7 +335,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restPost(String service, String path, JsonValue body) throws ProcessingException {
+	public static Response restPost(String service, String path, JsonValue body) {
 		return karClient.callPost(service, path, body);
 	}
 
@@ -363,8 +347,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPostAsync(String service, String path, JsonValue body)
-			throws ProcessingException {
+	public static CompletionStage<Response> restPostAsync(String service, String path, JsonValue body) {
 		return karClient.callAsyncPost(service, path, body);
 	}
 
@@ -376,7 +359,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static Response restPut(String service, String path, JsonValue body) throws ProcessingException {
+	public static Response restPut(String service, String path, JsonValue body) {
 		return karClient.callPut(service, path, body);
 	}
 
@@ -388,8 +371,7 @@ public class Kar {
 	 * @param body    The request body.
 	 * @return The response returned by the target service.
 	 */
-	public static CompletionStage<Response> restPutAsync(String service, String path, JsonValue body)
-			throws ProcessingException {
+	public static CompletionStage<Response> restPutAsync(String service, String path, JsonValue body) {
 		return karClient.callAsyncPut(service, path, body);
 	}
 
@@ -471,8 +453,16 @@ public class Kar {
 	 */
 	public static JsonValue actorCall(ActorInstance caller, ActorRef actor, String path, JsonValue... args)
 			throws ActorMethodNotFoundException, ActorMethodInvocationException {
-		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args)));
-
+		try {
+			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args));
+			return actorCallProcessResponse(response);
+		} catch (WebApplicationException e) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else {
+				throw e;
+			}
+		}
 	}
 
 	/**
@@ -487,7 +477,16 @@ public class Kar {
 	 */
 	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args)
 			throws ActorMethodNotFoundException, ActorMethodInvocationException {
-		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args)));
+		try {
+			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
+			return actorCallProcessResponse(response);
+		} catch (WebApplicationException e) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else {
+				throw e;
+			}
+		}
 	}
 
 	/**
@@ -501,7 +500,16 @@ public class Kar {
 	 */
 	public static JsonValue actorCall(ActorRef actor, String path, JsonValue... args)
 			throws ActorMethodNotFoundException, ActorMethodInvocationException {
-		return actorUnwrap(karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args)));
+		try {
+			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
+			return actorCallProcessResponse(response);
+		} catch (WebApplicationException e) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else {
+				throw e;
+			}
+		}
 	}
 
 	/**
@@ -511,12 +519,36 @@ public class Kar {
 	 * @param actor The target Actor.
 	 * @param path  The actor method to invoke.
 	 * @param args  The arguments with which to invoke the actor method.
-	 * @return A CompletionStage containing the result of invoking the target
-	 *         service.
+	 * @return A CompletionStage containing the response returned from the actor
+	 *         method invocation.
 	 */
-	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args)
-			throws ActorMethodNotFoundException {
-		return karClient.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
+	public static CompletionStage<JsonValue> actorCallAsync(ActorRef actor, String path, JsonValue... args) {
+		CompletionStage<Response> cr = karClient.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
+		return cr.thenApply(r -> actorCallProcessResponse(r));
+	}
+
+	// Internal helper to go from a Response to the JsonValue representing the
+	// result of the method (or an exception)
+	private static JsonValue actorCallProcessResponse(Response response)
+			throws ActorMethodNotFoundException, ActorMethodInvocationException {
+		if (response.getStatus() == Status.OK.getStatusCode()) {
+			JsonObject o = ((JsonValue) toValue(response)).asJsonObject();
+			if (o.containsKey("error")) {
+				String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
+				String stack = o.containsKey("stack") ? o.getString("stack") : "";
+				throw new ActorMethodInvocationException(message + ": " + stack);
+			} else {
+				return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
+			}
+		} else if (response.getStatus() == Status.NOT_FOUND.getStatusCode()) {
+			if (response.hasEntity()) {
+				throw new ActorMethodNotFoundException(toValue(response).toString());
+			} else {
+				throw new ActorMethodNotFoundException();
+			}
+		} else {
+			throw new ProcessingException(response.getStatus() + ": " + toValue(response));
+		}
 	}
 
 	/*
@@ -623,7 +655,7 @@ public class Kar {
 		try {
 			Response resp = karClient.actorGetState(actor.getType(), actor.getId(), key, true);
 			return (JsonValue) toValue(resp);
-		} catch (ProcessingException e) {
+		} catch (WebApplicationException e) {
 			value = JsonValue.NULL;
 		}
 		return value;
@@ -642,7 +674,7 @@ public class Kar {
 		try {
 			Response resp = karClient.actorGetWithSubkeyState(actor.getType(), actor.getId(), key, subkey, true);
 			return (JsonValue) toValue(resp);
-		} catch (ProcessingException e) {
+		} catch (WebApplicationException e) {
 			value = JsonValue.NULL;
 		}
 		return value;
@@ -657,12 +689,13 @@ public class Kar {
 	 *         otherwise.
 	 */
 	public static boolean actorContainsState(ActorRef actor, String key) {
+		Response resp;
 		try {
-			Response resp = karClient.actorHeadState(actor.getType(), actor.getId(), key);
-			return resp.getStatus() == Status.OK.getStatusCode();
-		} catch (ActorMethodNotFoundException e) { // FIXME: This is an artifact of overly broad exceptiob remapping.
-			return false;
+			resp = karClient.actorHeadState(actor.getType(), actor.getId(), key);
+		} catch (WebApplicationException e) {
+			resp = e.getResponse();
 		}
+		return resp != null && resp.getStatus() == Status.OK.getStatusCode();
 	}
 
 	/**
@@ -675,12 +708,13 @@ public class Kar {
 	 *         `false` otherwise.
 	 */
 	public static boolean actorContainsState(ActorRef actor, String key, String subkey) {
+		Response resp;
 		try {
-			Response resp = karClient.actorHeadWithSubkeyState(actor.getType(), actor.getId(), key, subkey);
-			return resp.getStatus() == Status.OK.getStatusCode();
-		} catch (ActorMethodNotFoundException e) { // FIXME: This is an artifact of overly broad exceptiob remapping.
-			return false;
+			resp = karClient.actorHeadWithSubkeyState(actor.getType(), actor.getId(), key, subkey);
+		} catch (WebApplicationException e) {
+			resp = e.getResponse();
 		}
+		return resp != null && resp.getStatus() == Status.OK.getStatusCode();
 	}
 
 	/**
@@ -878,7 +912,7 @@ public class Kar {
 	/**
 	 * Cancel all subscriptions for an Actor instance.
 	 *
-	 * @param actor          The Actor instance.
+	 * @param actor The Actor instance.
 	 * @return The number of subscriptions that were cancelled.
 	 */
 	public static int actorCancelAllSubscriptions(ActorRef actor) {
@@ -901,7 +935,7 @@ public class Kar {
 	/**
 	 * Get all subscriptions for an Actor instance.
 	 *
-	 * @param actor          The Actor instance.
+	 * @param actor The Actor instance.
 	 * @return An array of subscriptions
 	 */
 	public static Subscription[] actorGetSubscriptions(ActorRef actor) {
@@ -924,9 +958,9 @@ public class Kar {
 	/**
 	 * Subscribe an Actor instance method to a topic.
 	 *
-	 * @param actor               The Actor instance to subscribe
-	 * @param path                The actor method to invoke on each event received on the topic
-	 * @param topic               The topic to which to subscribe
+	 * @param actor The Actor instance to subscribe
+	 * @param path  The actor method to invoke on each event received on the topic
+	 * @param topic The topic to which to subscribe
 	 */
 	public static void actorSubscribe(ActorRef actor, String path, String topic) {
 		actorSubscribe(actor, path, topic, topic);
@@ -935,10 +969,11 @@ public class Kar {
 	/**
 	 * Subscribe an Actor instance method to a topic.
 	 *
-	 * @param actor               The Actor instance to subscribe
-	 * @param path                The actor method to invoke on each event received on the topic
-	 * @param topic               The topic to which to subscribe
-	 * @param subscriptionId	    The subscriptionId to use for this subscription
+	 * @param actor          The Actor instance to subscribe
+	 * @param path           The actor method to invoke on each event received on
+	 *                       the topic
+	 * @param topic          The topic to which to subscribe
+	 * @param subscriptionId The subscriptionId to use for this subscription
 	 */
 	public static void actorSubscribe(ActorRef actor, String path, String topic, String subscriptionId) {
 		JsonObjectBuilder builder = Json.createObjectBuilder();

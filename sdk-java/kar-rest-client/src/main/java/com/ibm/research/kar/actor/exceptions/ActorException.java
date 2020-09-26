@@ -14,4 +14,8 @@ public class ActorException extends RuntimeException {
 	public ActorException(String message) {
 		super(message);
 	}
+
+	public ActorException(String message, Throwable cause) {
+		super(message, cause);
+	}
 }
