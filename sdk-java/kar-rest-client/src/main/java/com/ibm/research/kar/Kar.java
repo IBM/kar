@@ -88,9 +88,10 @@ public class Kar {
 	private static Object toValue(Response response) {
 		if (response.hasEntity()) {
 			MediaType type = response.getMediaType();
-			if (type.equals(MediaType.APPLICATION_JSON_TYPE) || type.equals(KarRest.KAR_ACTOR_JSON_TYPE)) {
+			MediaType basicType = new MediaType(type.getType(), type.getSubtype());
+			if (basicType.equals(MediaType.APPLICATION_JSON_TYPE) || basicType.equals(KarRest.KAR_ACTOR_JSON_TYPE)) {
 				return response.readEntity(JsonValue.class);
-			} else if (type.equals(MediaType.TEXT_PLAIN_TYPE)) {
+			} else if (basicType.equals(MediaType.TEXT_PLAIN_TYPE)) {
 				return response.readEntity(String.class);
 			} else {
 				return JsonValue.NULL;
