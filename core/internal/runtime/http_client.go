@@ -90,26 +90,24 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
-			} else {
-				logger.Warning("failed to invoke %s: %v", msg["path"], err)
-				if err == ctx.Err() {
-					return backoff.Permanent(err)
-				}
-				return err
 			}
+			logger.Warning("failed to invoke %s: %v", msg["path"], err)
+			if err == ctx.Err() {
+				return backoff.Permanent(err)
+			}
+			return err
 		}
 		buf, err := ioutil.ReadAll(res.Body) // TODO size limit?
 		if err != nil {
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
-			} else {
-				logger.Warning("failed to invoke %s: %v", msg["path"], err)
-				if err == ctx.Err() {
-					return backoff.Permanent(err)
-				}
-				return err
 			}
+			logger.Warning("failed to invoke %s: %v", msg["path"], err)
+			if err == ctx.Err() {
+				return backoff.Permanent(err)
+			}
+			return err
 		}
 		res.Body.Close()
 		if length, err := strconv.Atoi(res.Header.Get("Content-Length")); err == nil && len(buf) != length {

@@ -39,7 +39,7 @@ type actorEntry struct {
 var (
 	actorTable             = sync.Map{} // actor table: Actor -> *actorEntry
 	errActorHasMoved       = errors.New("actor has moved")
-	errActorAcquireTimeout = errors.New("timeout occured while acquiring actor")
+	errActorAcquireTimeout = errors.New("timeout occurred while acquiring actor")
 )
 
 // acquire locks the actor, session must be not be ""
@@ -194,7 +194,7 @@ func getAllActors(ctx context.Context, format string) (string, error) {
 			}
 			actorInfo = actorReply.Payload
 		} else {
-			actorInfo, err = getActors()
+			actorInfo, _ = getActors()
 		}
 		err = json.Unmarshal([]byte(actorInfo), &actorInformation)
 		if err != nil {
@@ -214,23 +214,22 @@ func getAllActors(ctx context.Context, format string) (string, error) {
 			return "", err
 		}
 		return string(m), nil
-	} else {
-		var str strings.Builder
-		fmt.Fprint(&str, "\nActor Type\n : IDs of actors with type\n")
-		for actorType, actorIDs := range information {
-			fmt.Fprintf(&str, "%v\n : ", actorType)
-			if len(actorIDs) > 10 { // Display up to 10 IDs per actor.
-				fmt.Fprint(&str, "[")
-				for i := 0; i < 10; i++ {
-					fmt.Fprintf(&str, "%v ", actorIDs[i])
-				}
-				fmt.Fprintf(&str, "... and %v more]\n", len(actorIDs)-10)
-			} else {
-				fmt.Fprintf(&str, "%v\n", actorIDs)
-			}
-		}
-		return str.String(), nil
 	}
+	var str strings.Builder
+	fmt.Fprint(&str, "\nActor Type\n : IDs of actors with type\n")
+	for actorType, actorIDs := range information {
+		fmt.Fprintf(&str, "%v\n : ", actorType)
+		if len(actorIDs) > 10 { // Display up to 10 IDs per actor.
+			fmt.Fprint(&str, "[")
+			for i := 0; i < 10; i++ {
+				fmt.Fprintf(&str, "%v ", actorIDs[i])
+			}
+			fmt.Fprintf(&str, "... and %v more]\n", len(actorIDs)-10)
+		} else {
+			fmt.Fprintf(&str, "%v\n", actorIDs)
+		}
+	}
+	return str.String(), nil
 }
 
 // migrate releases the actor lock and updates the sidecar for the actor
