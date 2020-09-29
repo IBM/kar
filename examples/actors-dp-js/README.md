@@ -19,10 +19,10 @@ tables or when a sated Philosopher leaves.
 To run the example locally, first do an `npm install`.
 Then in one window start up the server code:
 ```shell
-kar run -app dpjs -actors Cafe,Fork,Philosopher node philosophers.js
+kar run -app dp -actors Cafe,Fork,Philosopher node philosophers.js
 ```
-In a second window, use the `kar` cli to invite some Philosopers to diner:
+In a second window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
-# Invite 10 Philosophers to a feast of 20 servings each
-kar invoke -app dpjs Cafe "Cafe de Flore" seatTable 10 20
+# Invite 10 Philosophers to a meal of 20 servings each
+kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
 ```

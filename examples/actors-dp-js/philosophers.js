@@ -2,6 +2,8 @@ const express = require('express')
 const { actor, sys } = require('kar')
 const { v4: uuidv4 } = require('uuid')
 
+const verbose = process.env.VERBOSE
+
 class Fork {
   async activate () {
     this.inUseBy = await actor.state.get(this, 'inUseBy') || 'nobody'
@@ -94,7 +96,7 @@ class Philosopher {
   }
 
   async eat (servingsEaten) {
-    console.log(`${this.kar.id} ate serving number ${servingsEaten}`)
+    if (verbose) console.log(`${this.kar.id} ate serving number ${servingsEaten}`)
     this.servingsEaten = servingsEaten + 1
     await this.checkpointState()
     await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
@@ -115,6 +117,10 @@ class Cafe {
 
   async deactivate () {
     await actor.state.set(this, 'diners', Array.from(this.diners))
+  }
+
+  occupancy () {
+    return this.diners.size
   }
 
   async seatTable (n = 5, servings = 20) {

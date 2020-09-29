@@ -31,6 +31,8 @@ public class Philosopher extends ActorSkeleton {
 	private int servingsEaten;
 	private int targetServings;
 
+	static final boolean VERBOSE = Boolean.parseBoolean(System.getenv("VERBOSE"));
+
 	@Activate
 	public void activate () {
 		Map<String, JsonValue> state = actorGetAllState(this);
@@ -74,7 +76,6 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public void joinTable(JsonString cafe, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
-		System.out.println("start join table"+this.getId());
 		this.cafe = cafe.getString();
 		this.firstFork = firstFork.getString();
 		this.secondFork = secondFork.getString();
@@ -82,7 +83,6 @@ public class Philosopher extends ActorSkeleton {
 		this.targetServings = targetServings.intValue();
 		this.checkpointState();
 		actorScheduleReminder(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1));
-		System.out.println("end join table"+this.getId());
 	}
 
 	@Remote
@@ -111,7 +111,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public void eat(JsonNumber servingsEaten) {
-		System.out.println(this.getId()+" ate serving number "+servingsEaten);
+		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+servingsEaten);
 		this.servingsEaten = servingsEaten.intValue() + 1;
 		this.checkpointState();
 		actorCall(actorRef("Fork", this.secondFork), "putDown", Json.createValue(this.getId()));

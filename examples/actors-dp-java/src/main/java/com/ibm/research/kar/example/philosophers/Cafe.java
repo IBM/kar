@@ -53,6 +53,11 @@ public class Cafe extends ActorSkeleton {
 	}
 
 	@Remote
+	public JsonNumber occupancy() {
+		return Json.createValue(this.diners.size());
+	}
+
+	@Remote
 	public void seatTable(JsonNumber numDiners, JsonNumber servings) {
 		int n = numDiners.intValue();
 		int s = servings.intValue();

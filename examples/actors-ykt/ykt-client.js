@@ -52,9 +52,9 @@ async function main () {
 
   const ibm = actor.proxy('Company', 'IBM')
   const researchDivision = [
-    { proxy: actor.proxy('Site', 'Yorktown'), params: { workers: 20, thinkms: 2000, steps: 10, days: 2 } },
-    { proxy: actor.proxy('Site', 'Cambridge'), params: { workers: 10, thinkms: 1000, steps: 40, days: 1 } },
-    { proxy: actor.proxy('Site', 'Almaden'), params: { workers: 15, thinkms: 500, steps: 10, days: 5 } }
+    { proxy: actor.proxy('Site', 'Yorktown'), params: { workers: 20, thinkms: 2000, steps: 5, days: 2 } },
+    { proxy: actor.proxy('Site', 'Cambridge'), params: { workers: 10, thinkms: 1000, steps: 20, days: 1 } },
+    { proxy: actor.proxy('Site', 'Almaden'), params: { workers: 15, thinkms: 500, steps: 5, days: 5 } }
   ]
 
   console.log('Starting simulation:')

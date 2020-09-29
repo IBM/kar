@@ -41,3 +41,20 @@ cd $ROOTDIR/examples/service-hello-java/client
 run $PID kar run -app java-hello java -jar target/kar-hello-client-jar-with-dependencies.jar
 
 
+#################
+
+echo "Building Java Dining Philsopophers"
+cd $ROOTDIR/examples/actors-dp-java
+mvn clean package
+
+echo "Launching Java DP Server"
+kar run -v info -app dp -actors Cafe,Fork,Philosopher mvn liberty:run &
+PID=$!
+
+# Sleep 10 seconds to given liberty time to come up
+sleep 10
+
+echo "Building and launching test harness"
+cd $ROOTDIR/examples/actors-dp-js
+npm install --prod
+run $PID kar run -app dp node tester.js
