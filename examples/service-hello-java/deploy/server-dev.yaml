@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-server
+  annotations:
+    kar.ibm.com/app: hello-java
+    kar.ibm.com/service: greeter
+spec:
+  imagePullSecrets:
+  - name: kar.ibm.com.image-pull
+  containers:
+  - name: server
+    image: localhost:5000/examples/java/service-hello
