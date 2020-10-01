@@ -41,6 +41,9 @@ class Company {
     this.nextSerialNumber = state.nextSerialNumber || 0
     this.sites = state.sites || []
     this.bluepages = state.bluepages || {}
+
+    await events.createTopic('siteReport')
+    await events.createTopic('outputReport')
   }
 
   async deactivate () {

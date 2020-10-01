@@ -1,4 +1,4 @@
-const { actor, call, sys } = require('kar')
+const { actor, call, events, sys } = require('kar')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)
@@ -223,8 +223,11 @@ async function actorTests () {
 async function pubSubTests () {
   const a = actor.proxy('Foo', 456)
   let failure = false
+  const topic = 'test-topic2'
 
-  const v1 = await actor.call(a, 'pubsub', 'topic2')
+  await events.createTopic(topic)
+
+  const v1 = await actor.call(a, 'pubsub', topic)
   if (v1 !== 'OK') {
     console.log('Failed: pubsub')
     failure = true
@@ -232,7 +235,7 @@ async function pubSubTests () {
 
   let i
   for (i = 30; i > 0; i--) { // poll
-    const v2 = await actor.call(a, 'check', 'topic2')
+    const v2 = await actor.call(a, 'check', topic)
     if (v2 === true) break
     await new Promise(resolve => setTimeout(resolve, 500)) // wait
   }

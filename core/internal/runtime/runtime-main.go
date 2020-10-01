@@ -88,8 +88,8 @@ func server(listener net.Listener) http.Server {
 
 	// events
 	router.POST(base+"/event/:topic/publish", routeImplPublish)
-	router.PUT(base+"/event/:topic/", routeImplCreateTopic)
-	router.DELETE(base+"/event/:topic/", routeImplDeleteTopic)
+	router.DELETE(base+"/event/:topic", routeImplDeleteTopic)
+	router.PUT(base+"/event/:topic", routeImplCreateTopic)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }

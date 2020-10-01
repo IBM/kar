@@ -1421,6 +1421,9 @@
           }
         ],
         "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
           "201": {
             "$ref": "#/responses/response201"
           },

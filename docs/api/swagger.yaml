@@ -1333,6 +1333,8 @@ paths:
         schema:
           $ref: '#/definitions/topicCreateOptions'
       responses:
+        "200":
+          $ref: '#/responses/response200'
         "201":
           $ref: '#/responses/response201'
         "500":

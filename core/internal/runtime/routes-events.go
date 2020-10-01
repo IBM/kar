@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/Shopify/sarama"
 	"github.com/julienschmidt/httprouter"
 	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
 )
@@ -188,6 +189,7 @@ func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 //     Consumes:
 //     - application/json
 //     Responses:
+//       200: response200
 //       201: response201
 //       500: response500
 //
@@ -195,7 +197,12 @@ func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.
 	params := ReadAll(r)
 	err := pubsub.CreateTopic(ps.ByName("topic"), params)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
+		if e, ok := err.(*sarama.TopicError); ok && e.Err == sarama.ErrTopicAlreadyExists {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprint(w, "Already existed")
+		} else {
+			http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
+		}
 	} else {
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprint(w, "Created")

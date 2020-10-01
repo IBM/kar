@@ -10,7 +10,7 @@ patterns using KAR's actor programming model.
 
 The entities in the simulation are:
 + Researcher
-   + Researchers are the active agents that drive the simulation. 
+   + Researchers are the active agents that drive the simulation.
      They are hired by a Company to work in a Site for a specific
      number of days.
    + As is common in simulations, Researchers are invoked by
@@ -42,7 +42,7 @@ The entities in the simulation are:
    + A Site represents a physical location that contains Offices.
    + There are a small number of Site instances in the simulation.
    + Every time a Researcher changes their activity, they use `tell` to
-     report what they did to their Site. Thus, as the number of 
+     report what they did to their Site. Thus, as the number of
      Researchers is ramped up, the statistics gathered by the
      Site on the observed latency of the delivery of these messages
      can be used to assess KAR's ability to deliver
@@ -149,7 +149,7 @@ $ ./deploy/runClientLocally.sh
 
 ```
 $ ./deploy/runServerLocally.sh
-Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh 
+Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh
 2020/04/24 16:51:09 [WARNING] starting...
 2020/04/24 16:51:11 [INFO] setup session for topic kar_ykt, generation 1, claims [0]
 2020/04/24 16:51:11 [INFO] KAR_RUNTIME_PORT=58417 KAR_APP_PORT=8080
@@ -285,12 +285,6 @@ following environment variables to contain the cluster IP address of the service
 export KAR_KAFKA_CLUSTER_IP=X.X.X.X
 ```
 
-Create the Kafka topics used by this part fo the example:
-
-```
-sh createTopics.sh
-```
-
 To start the Slack output process run:
 ```
 ./deploy/runOutputToSlack.sh
@@ -315,11 +309,11 @@ LAST DEPLOYED: Fri Apr  3 16:08:35 2020
 NAMESPACE: default
 STATUS: deployed
 REVISION: 1
-$ kubectl get pods 
+$ kubectl get pods
 NAME                          READY   STATUS        RESTARTS   AGE
 ykt-server-5cdb4699d9-5s4cc   2/2     Running       0          3s
 ykt-server-5cdb4699d9-bqmc9   2/2     Running       0          3s
-$ helm test ykt 
+$ helm test ykt
 Pod ykt-client pending
 Pod ykt-client pending
 Pod ykt-client running

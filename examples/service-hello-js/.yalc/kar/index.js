@@ -218,7 +218,7 @@ function eventsCreateSubscription (actor, path, topic, options = {}) {
   return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic, contentType })
 }
 
-const eventsCreateTopic = (topic, options = {}) => put(`event/${topic}`, options)
+const eventsCreateTopic = (topic, options) => put(`event/${topic}`, options)
 
 const eventsDeleteTopic = (topic) => del(`event/${topic}`)
 
