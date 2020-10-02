@@ -7,23 +7,25 @@ go:
   - 1.15.x
 
 before_install:
-  - ./travis/setup.sh && ./scripts/start-kind.sh
+  - ./travis/setup.sh
 
-script:
-  - (./travis/build.sh && ./travis/start-kar.sh) || travis_terminate 1
-  - ./travis/testLocal.sh
-  - ./travis/testJavaLocal.sh
-  - ./travis/testInCluster.sh
-
-deploy:
-  - provider: script
-    script: "./travis/pushImages.sh ${TRAVIS_BRANCH} ${TRAVIS_TAG}"
-    on:
-      tags: true
-      all_branches: true
-      repo: solsa/kar
-  - provider: script
-    script: "./travis/pushImages.sh master latest"
-    on:
-      branch: master
-      repo: solsa/kar
+jobs:
+  include:
+    - stage: test
+      name: local
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make install || travis_terminate 1
+        - make installJavaSDK || travis_terminate 1
+        - ./travis/testLocal.sh
+        - ./travis/testJavaLocal.sh
+    - name: in-cluster
+      script:
+        -  ./scripts/start-kind.sh || travis_terminate 1
+        - make install || travis_terminate 1
+        - make dockerDev || travis_terminate 1
+        - ./travis/start-kar.sh || travis_terminate 1
+        - ./travis/testInCluster.sh
+    - stage: deploy
+      script: "./travis/pushImages.sh master latest"
+      if: NOT type in (pull_request) AND branch = master AND repo = solsa/kar
