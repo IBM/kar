@@ -71,6 +71,8 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	var data string
 	var err error
 	switch component {
+	case "id":
+		data, err = pubsub.GetSidecarID(format)
 	case "sidecars", "Sidecars":
 		data, err = pubsub.GetSidecars(format)
 	case "actors", "Actors":

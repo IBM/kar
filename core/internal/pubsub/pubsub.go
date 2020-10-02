@@ -233,6 +233,14 @@ func GetSidecars(format string) (string, error) {
 	return str.String(), nil
 }
 
+func GetSidecarID(format string) (string, error) {
+	if format == "json" || format == "application/json" {
+		return fmt.Sprintf("{\"id\":\"%s\"}", config.ID), nil
+	}
+
+	return config.ID + "\n", nil
+}
+
 // Purge deletes the application topic
 func Purge() error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
