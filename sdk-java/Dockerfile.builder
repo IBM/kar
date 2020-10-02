@@ -12,4 +12,4 @@ COPY pom.xml pom.xml
 COPY kar-actor-runtime kar-actor-runtime
 COPY kar-rest-client kar-rest-client
 
-RUN mvn install
+RUN mvn -q install

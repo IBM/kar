@@ -18,7 +18,7 @@ echo "Executing Java Hello Service test"
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-. $ROOTDIR/scripts/kar-kind-env.sh
+. $ROOTDIR/scripts/kar-env-local.sh
 
 echo "Building Java KAR SDK"
 cd $ROOTDIR/sdk-java

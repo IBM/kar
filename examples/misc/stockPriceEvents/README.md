@@ -1,37 +1,3 @@
-# Setting up KAR in a few easy steps
-
-This is a quick summary of the steps required to get up and running with KAR.
-
-1. Follow the list of prerequisites included [here](../../docs/getting-started.md).
-
-2. Clone KAR:
-
-```script
-git clone git@github.ibm.com:solsa/kar.git
-cd kar
-```
-
-3. Build your docker images and push them to kind's internal docker registry:
-
-```shell
-make kindPushDev
-```
-
-4. Deploy KAR in dev mode by doing:
-```shell
-./scripts/kar-deploy.sh -dev
-```
-
-5. KAR-enable the default namespace:
-```shell
-./scripts/kar-enable-namespace.sh default
-```
-
-6. When you're done or just want to reset your KAR deployment, undeploy KAR in dev mode by doing:
-```shell
-./scripts/kar-undeploy.sh
-```
-
 # Stock price application overview
 
 The three coponents are:
@@ -53,7 +19,7 @@ As long as the KAR instance is running, the different components of the applicat
 First, set up the environment:
 
 ```shell
-source ./scripts/kar-kind-env.sh
+source ./scripts/kar-env-local.sh
 cd examples/stockPriceEvents
 ```
 

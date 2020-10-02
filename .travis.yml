@@ -15,16 +15,16 @@ jobs:
       name: local
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
-        - make install || travis_terminate 1
+        - make cli || travis_terminate 1
         - make installJavaSDK || travis_terminate 1
         - ./travis/testLocal.sh
         - ./travis/testJavaLocal.sh
     - name: in-cluster
       script:
-        -  ./scripts/start-kind.sh || travis_terminate 1
-        - make install || travis_terminate 1
+        -  ./scripts/kind-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
         - make dockerDev || travis_terminate 1
-        - ./travis/start-kar.sh || travis_terminate 1
+        - (./scripts/kar-k8s-deploy.sh -dev && ./scripts/kar-k8s-namespace-enable.sh default) || travis_terminate 1
         - ./travis/testInCluster.sh
     - stage: deploy
       script: "./travis/pushImages.sh master latest"

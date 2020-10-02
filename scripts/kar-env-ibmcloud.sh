@@ -5,12 +5,12 @@
 # The Event Streams key must permit manager access.
 # The script expects the user is already logged in.
 #
-# Usage . kar-cloud-env.sh <service-key>
+# Usage . kar-env-ibmcloud.sh <service-key>
 #
 
 if [ $# -lt 1 ]; 
 then 
-   echo ". kar-cloud-env.sh <service-key>"
+   echo ". kar-env-ibmcloud.sh <service-key>"
    return 1
 fi
 

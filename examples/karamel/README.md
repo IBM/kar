@@ -33,7 +33,7 @@ export KARAMEL_SLACK_CHANNEL=kar-output
 
 ### Set Kafka broker details
 
-Export the following environment variable (taken from kar-kind-env.sh)
+Export the following environment variable (taken from kar-env-local.sh)
 ```
 export KAFKA_BROKERS=localhost:31093
 ```

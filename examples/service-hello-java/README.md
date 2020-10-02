@@ -44,7 +44,7 @@ kar run -app hello-java -service greeter mvn liberty:run
 
 2. Run a test client
 ```shell
-kar run -app hello-java java -jar target/kar-hello-client-jar-with-dependencies.jar
+kar run -app hello-java java -jar client/target/kar-hello-client-jar-with-dependencies.jar
 ```
 
 3. Use the `kar` cli to invoke a route directly (the content type for request bodies defaults to application/json).

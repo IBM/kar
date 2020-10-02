@@ -16,7 +16,7 @@ run () {
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-. $ROOTDIR/scripts/kar-kind-env.sh
+. $ROOTDIR/scripts/kar-env-local.sh
 
 # Run unit-tests/test-harness.js locally
 echo "*** Testing examples/unit-tests ***"

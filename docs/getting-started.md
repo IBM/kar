@@ -1,87 +1,194 @@
+# Overview
+
+Using KAR to build and run applications requires two things:
+1. A running instance of the KAR runtime system.
+2. The `kar` cli, which is used to launch application components and
+   connect them to the KAR runtime system and each other in
+   application service meshes that enable cross-component
+   communication.
+
+A running KAR application will be composed of one or more application
+components. Individual components may be deployed as simple OS
+processes running directly on a development machine or as containers
+running inside one or more Kubernetes or OpenShift clusters. The
+Kubernetes clusters may be local to the development machine (eg
+Kubernetes in Docker Desktop, `kind` or `minishift`), or remote (eg
+IBM Cloud Kubernetes Service or OpenShift). 
+
+One of the values of KAR is that it enables developers to make an easy
+and frictionless transition between these various modes, including
+simultaneously running application components in multiple of these
+modes for easier local debugging.
+
+To simplify getting started with KAR, we suggest first starting with
+the simplest clusterless local mode using our NodeJS-based examples.
+After becoming familiar with this mode, either continue with running
+some Java examples in the same clusterless mode or explore one of the
+Kubernetes-based modes. 
+
 # Prerequisites
 
-1. You need a Kubernetes 1.16 (or newer) cluster.
-    1. You can use an IKS cluster provisioned on the IBM Public Cloud.
-    2. You can use [kind](https://kind.sigs.k8s.io/) to create a virtual
-       Kubernetes cluster using Docker on your development machine.
-       Using kind is only supported in KAR's "dev" mode where you will
-       be building your own docker images of the KAR system components
-       and pushing them into kind's local docker registry.
+1. Have an installation of Docker Desktop (Mac/Windows) or Docker Engine (Linux).
 
-       **IMPORTANT: You must use our `start-kind.sh` script to create your
-       kind cluster to properly configure networking and ingress.**
-       
-       Once you have Docker installed, run
-       [start-kind.sh](../scripts/start-kind.sh) to create a virtual
-       cluster properly configured for running KAR.
-
-2. You will need the `kubectl` cli installed locally and configured to
-   connect to your cluster.
-
-3. You will need the `helm` (Helm 3) cli installed locally.
-
-4. Optionally, you will need Go 1.15+ to build KAR.
-
-5. Optionally, you will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
-   SDK and examples.
-
-6. Optionally, you will need Java 11 and Maven 3.6+ to run the Java SDK and
-   examples.
-
-# Getting Started with KAR
-
-In the sections below, the sample commands are meant to be executed in
-the top level directory of a local git clone of this repository. Get
-one by doing:
-```script
+2.  You will need a local clone of the KAR git repository:
+```shell
 git clone git@github.ibm.com:solsa/kar.git
 cd kar
 ```
+Unless otherwise noted, all shell commands in this document assume
+you are at the top-level directory of your local clone of the kar repo.
 
-## Deploying KAR to the `kar-system` namespace
-
-### Deploying on IKS
-
-When deploying on IKS, you will use pre-built images from the KAR
-project namespaces in the IBM Cloud Container Registry.
-Assuming you have set your kubectl context and have done an
-`ibmcloud login` into the RIS IBM Research Shared account, you
-can deploy KAR into your cluster in a single command:
-```script
-./scripts/kar-deploy.sh
+3. You will need the `kar` cli.  Currently you must build `kar` from
+source, which requires a Go development environment to be available on
+your machine. If you have Go installed, then build `kar` with
+```shell
+make cli
 ```
 
-### Deploying on kind
+# Local Clusterless Deployment
 
-When deploying on `kind` you will be using locally built images
-for all KAR runtime components and examples. You do not need
-access to the IBM Cloud Container Registry when using kind.
+## Deploying an instance of the KAR Runtime System
 
-First, build the docker images and push them to a local
+The KAR runtime system internally uses redis, kafka, and zookeeper.
+You can deploy these as docker containers using docker-compose
+by running:
+```shell
+./scripts/docker-composer.start.sh
+```
+
+After the script completes, configure your shell environment
+to enable `kar` to access its runtime by doing
+```shell
+source ./scripts/kar-env-local.sh
+```
+
+## Run a NodeJS based example locally
+
+### Prerequisites
+
+1. You will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
+   SDK and examples.
+
+###  Run a Hello World NodeJS Example
+
+In one window:
+```shell
+source scripts/kar-env-local.sh
+cd examples/service-hello-js
+npm install --prod 
+kar run -app helloWorld -service greeter node server.js
+```
+
+In a second window:
+```shell
+source scripts/kar-env-local.sh
+cd examples/service-hello-js
+kar run -app helloWorld node client.js
+```
+
+You should see output like shown below in both windows:
+```
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+```
+The client process will exit, while the server remains running. You
+can send another request, or exit the server with a Control-C.
+
+You can also use the `kar` cli to invoke the service directly:
+```shell
+kar rest -app helloWorld post greeter helloJson '{"name": "Alan Turing"}'
+```
+
+## Run a Java based example locally
+
+### Prerequisites
+
+1. You will need Java 11 and Maven 3.6+ installed.
+
+### Build the Java SDK and publish to your local .m2 repository
+
+```shell
+make installJavaSDK
+```
+
+### Run the Hello World Java Example
+
+In one window:
+```shell
+source scripts/kar-env-local.sh
+cd examples/service-hello-java
+mvn package
+kar run -app hello-java -service greeter mvn liberty:run
+```
+
+In a second window, run the Java client program
+```shell
+source scripts/kar-env-local.sh
+cd examples/service-hello-java/client
+kar run -app hello-java java -jar client/target/kar-hello-client-jar-with-dependencies.jar
+```
+
+You should see output like shown below in both windows:
+```
+2020/10/02 14:56:23.770749 [STDOUT] Hello Gandalf the Grey
+```
+The client process will exit, while the server remains running. You
+can send another request, or exit the server with a Control-C.
+
+You can also use the `kar` cli to invoke the service directly:
+```shell
+kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
+```
+
+# Local Cluster Deployment
+
+Next, we will use [kind](https://kind.sigs.k8s.io/) to create a
+virtual Kubernetes cluster using Docker on your development machine.
+Using kind is only supported in KAR's "dev" mode where you will be
+building your own docker images of the KAR system components and
+pushing them into a local docker registry that we configure when
+deploying kind.
+
+## Prerequisites
+
+1. You will need `kind` 0.8.1 installed locally.
+
+2. You will need the `kubectl` cli installed locally.
+
+3. You will need the `helm` (Helm 3) cli installed locally.
+
+### Create your `kind` cluster and docker registry
+
+```shell
+./scripts/kind-start.sh
+```
+
+### Deploying the KAR Runtime System to the `kar-system` namespace
+
+First, build the necessary docker images and push them to a local
 registry that is accessible to kind with:
 ```shell
 make dockerDev
 ```
 Next, deploy KAR in dev mode by doing:
 ```shell
-./scripts/kar-deploy.sh -dev
+./scripts/kar-k8s-deploy.sh -dev
 ```
 
-## Enable a namespace to run KAR-based applications.
+### Enable a namespace to run KAR-based applications.
 
 **NOTE: We strongly recommend against enabling the `kar-system` namespace
   or any Kubernetes system namespace for KAR applications. Enabling
   KAR sidecar injection for these namespaces can cause instability.**
 
-In either mode, enabling a namespace for deploying KAR-based applications requires
+Enabling a namespace for deploying KAR-based applications requires
 copying configuration secrets from the `kar-system` namespace and
 labeling the namespace to enable KAR sidecar injection.  These steps
-are automated by
-[kar-enable-namespace.sh](../scripts/kar-enable-namespace.sh).
+are automated by [kar-k8s-namespace-enable.sh](../scripts/kar-k8s-namespace-enable.sh).
 
 The simplest approach is to KAR-enable the default namespace:
 ```shell
-./scripts/kar-enable-namespace.sh default
+./scripts/kar-k8s-namespace-enable.sh default
 ```
 The rest of our documentation assumes you will be deploying KAR
 applications to the default namespace and omits the `-n <namespace>`
@@ -92,35 +199,14 @@ you can use the same script to KAR-enable other namespaces.
 If the namespace doesn't exist, the script will create it.
 For example, to create and KAR-enable the `kar-apps` namespace execute:
 ```shell
-./scripts/kar-enable-namespace.sh kar-apps
+./scripts/kar-k8s-namespace-enable.sh kar-apps
 ```
 
-Now you are ready to run KAR applications!
-
-## Running KAR-based applications
-
-To demonstrate the different modes of running KAR applications, we'll
-use a simple greeting server.  A server process receives a request
-from a client containing a name and responds to each request with a
-greeting. The picture below depicts the structure of this application;
-_green_ components represent the application code and _blue_ components
-are KAR system components.
-
-![Greeting server](images/example-hello-world.png)
-
-### Mode 1: running completely inside Kubernetes
-
-In this mode, the application runs in Pods in a Kubernetes cluster in
-a KAR-enabled namespace.  The KAR runtime is automatically injected as
-a sidecar container into every application Pod.
-
-The command log below assumes you deployed KAR in `-dev` mode.  If you
-instead provided an IBM Container Registry API key (`-a`), use
-`server-icr.yaml` and `client-icr.yaml` in your `kubectl` commands.
+### Run a containerized example
 
 Run the client and server as shown below:
 ```shell
-$ cd examples/helloWorld
+$ cd examples/service-hello-js
 $ kubectl apply -f deploy/server-dev.yaml
 pod/hello-server created
 $ kubectl get pods
@@ -140,80 +226,66 @@ $ kubectl delete -f deploy/server-dev.yaml
 pod "hello-server" deleted
 ```
 
-### Mode 2: running completely locally
+## Deploying KAR on IBM Cloud Kubernetes Service
 
-In this mode, both the KAR runtime and the application run
-as processes on your local machine.  The KAR runtime dependencies
-(Kafka and Redis) are assumed to be already running and are made
-available to KAR by defining environment variables.  The simplest way
-to deploy and configure these dependencies is to deploy KAR to a
-`kind` cluster and then source
-[kar-kind-env.sh](../scripts/kar-kind-env.sh) to configure your
-command shell to enable access to them.
+## Prerequisites
 
-You will need to build the `kar` binary locally.  This requires a
-correctly configured Go development environment on your machine. In
-your top-level directory execute:
+1. You will need an IKS cluster on which you have the cluster-admin role.
+
+2. You will need the `kubectl` cli installed locally.
+
+3. You will need the `helm` (Helm 3) cli installed locally.
+
+## Deploy the KAR Runtime System
+
+When deploying on IKS, you will use pre-built images from the KAR
+project namespace in the IBM Cloud Container Registry.
+Assuming you have set your kubectl context and have done an
+`ibmcloud login` into the RIS IBM Research Shared account, you
+can deploy KAR into your cluster in a single command:
 ```shell
-go install ./...
-```
-You should now have the `kar` executable in your path.
-
-In one window:
-```shell
-. scripts/kar-kind-env.sh
-cd examples/helloWorld
-npm install
-kar run -app helloWorld -service greeter node server.js
+./scripts/kar-k8s-deploy.sh
 ```
 
-In a second window:
-```shell
-. scripts/kar-kind-env.sh
-cd examples/helloWorld
-kar run -app helloWorld node client.js
-```
-
-You should see output like shown below in both windows:
-```
-2020/04/02 17:41:23 [STDOUT] Hello John Doe!
-2020/04/02 17:41:23 [STDOUT] Hello John Doe!
-```
-The client process will exit, while the server remains running. You
-can send another request, or exit the server with a Control-C.
-
-### Mode 3: run the server in Kubernetes and the client locally
-
-You can also run in a hybrid mode where some parts of your application
-run locally and others run inside the cluster.  KAR will automatically
-connect the pieces of your application via Kafka to each other.
-For example, run the server in the cluster and the client locally.
+### Enable a namespace to run KAR-based applications.
 
 ```shell
-$ kubectl apply -f deploy/server-dev.yaml
+./scripts/kar-k8s-namespace-enable.sh default
+```
+
+### Run a containerized example
+
+Run the client and server as shown below:
+```shell
+$ cd examples/service-hello-js
+$ kubectl apply -f deploy/server-icr.yaml
 pod/hello-server created
-$ kar run -app helloWorld node client.js
-2020/04/02 18:02:19 [STDOUT] Hello John Doe!
-2020/04/02 18:02:19 [STDOUT] Hello John Doe!
-$ kubectl delete -f deploy/server-dev.yaml
+$ kubectl get pods
+NAME           READY   STATUS    RESTARTS   AGE
+hello-server   2/2     Running   0          3s
+$ kubectl apply -f deploy/client-icr.yaml
+job.batch/hello-client created
+$ kubectl logs jobs/hello-client -c client
+Hello John Doe!
+Hello John Doe!
+$ kubectl logs hello-server -c server
+Hello John Doe!
+Hello John Doe!
+$ kubectl delete -f deploy/client-icr.yaml
+job.batch "hello-client" deleted
+$ kubectl delete -f deploy/server-icr.yaml
 pod "hello-server" deleted
 ```
 
-# Local Development - JavaScript SDK - Yalc
+# Next Steps
 
-We use [yalc](https://www.npmjs.com/package/yalc) to keep the example packages
-and the JavaScript SDK package in sync. When making and testing local changes to
-the JavaScript SDK these changes need to be propagated to the examples projects
-using `yalc`. First install `yalc`:
-```shell
-$ npm i -g yalc
-```
-Then configure `yalc` for `KAR`:
-```shell
-./scripts/setup-yalc.sh
-```
-Finally, whenever a change is made to the JavaScript SDK run:
-```shell
-cd sdk-js
-yalc push
-```
+Now that you have run your first few KAR examples, you can continue to
+explore in a number of directions.
+
+1. Browse the examples and try running additional programs.
+2. Experiment with mixing local and cluster mode executions.
+3. Explore multi-cluster and hybrid application deployments by
+   configuring the KAR Runtime system using `scripts/kar-env-ibmcloud.sh`
+   to use EventStreams and Redis instances provisioned on the IBM
+   Public cloud.
+4. Deploy a KAR application on IBM Code Engine.

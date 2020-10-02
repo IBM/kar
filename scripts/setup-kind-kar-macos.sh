@@ -16,14 +16,14 @@ echo "Running KAR setup ...."
 cd $ROOTDIR
 $SCRIPTDIR/start-kind.sh
 make dockerDev
-$SCRIPTDIR/kar-deploy.sh -dev
+$SCRIPTDIR/kar-k8s-deploy.sh -dev
 
 echo "Building kar CLI"
-make install
+make cli
 
 echo "Setting up namespace and environment"
-$SCRIPTDIR/kar-enable-namespace.sh default
+$SCRIPTDIR/kar-k8s-namespace-enable.sh default
 
-source $SCRIPTDIR/kar-kind-env.sh
+source $SCRIPTDIR/kar-env-local.sh
 
 echo "KAR Setup Complete!"

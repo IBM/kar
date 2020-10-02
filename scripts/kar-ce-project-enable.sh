@@ -12,7 +12,7 @@
 
 if [ $# -lt 1 ];
 then
-   echo "Usage: kar-enable-code-engine-project.sh <service-key>"
+   echo "Usage: kar-code-engine-project-enable.sh <service-key>"
    exit 1
 fi
 
@@ -22,7 +22,7 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
 echo "Extracting credentials from service key"
-. ${SCRIPTDIR}/kar-cloud-env.sh $1
+. ${SCRIPTDIR}/kar-env-cloud.sh $1
 
 echo "Creating secret in code-engine project"
 ibmcloud code-engine secret create --name kar.ibm.com.runtime-config \

@@ -9,7 +9,7 @@ FROM $JAVA_BUILDER as builder
 WORKDIR /kar/app
 COPY pom.xml ./
 COPY src src
-RUN mvn package
+RUN mvn -q package
 
 #
 # Copy the artifacts to the runtime image

@@ -17,9 +17,9 @@ KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)examples/js/unit-tests:$(DOCKER_IMAGE
 KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)examples/java/actors-dp:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)examples/java/service-hello:$(DOCKER_IMAGE_TAG)
 
-all: install
+install: cli
 
-install:
+cli:
 	cd core && go install ./...
 
 dockerCore:
@@ -65,7 +65,7 @@ dockerDev:
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
 
 installJavaSDK:
-	cd sdk-java && mvn install
+	cd sdk-java && mvn -q install
 
 swagger-gen:
 	cd core && swagger generate spec -o ../docs/api/swagger.yaml

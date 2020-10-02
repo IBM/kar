@@ -5,7 +5,7 @@
 KAR_NS=$1
 
 if [ -z "$KAR_NS" ]; then
-  echo "Usage: kar-disable-namespace.sh <namespace>"
+  echo "Usage: kar-k8s-namespace-disable.sh <namespace>"
   exit 1
 fi
 

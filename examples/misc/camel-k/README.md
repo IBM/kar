@@ -88,7 +88,7 @@ To install Camel K as part of your kind cluster run the following command:
 kamel install --registry=registry:5000 --registry-insecure
 ```
 
-This command assumes that the registry exists. The registry is created when invoking the `start-kind.sh` script.
+This command assumes that the registry exists. The registry is created when invoking the `kind-start.sh` script.
 
 This will deploy a camel-k operator inside your kind cluster.
 
