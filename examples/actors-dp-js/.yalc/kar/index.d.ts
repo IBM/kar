@@ -328,6 +328,13 @@ export namespace sys {
   export function h2c (app: Application): Server;
 
   /**
+   * Query sidecar.
+   * @param a query
+   * @returns an answer
+   */
+  export function get (query: string): Promise<any>;
+
+  /**
    * Error handling middleware
    * TODO: proper type & documentation
    */

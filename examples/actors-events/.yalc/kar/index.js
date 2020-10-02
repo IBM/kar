@@ -224,6 +224,8 @@ const eventsDeleteTopic = (topic) => del(`event/${topic}`)
 
 const eventsPublish = (topic, event) => post(`event/${topic}/publish`, event)
 
+const systemGet = (query) => fetch(url + 'system/information/' + query, { headers: { Accept: 'application/json' } }).then(parse)
+
 /***************************************************
  * End of public methods intended for application programming
  **************************************************/
@@ -365,6 +367,7 @@ module.exports = {
   },
   sys: {
     actorRuntime,
+    get: systemGet,
     shutdown,
     h2c,
     errorHandler
