@@ -3,7 +3,7 @@
 #
 # Prerequisites: Docker and Kind should be installed already
 # versions: Docker version 19.03.8, build afacb8b
-#           kind v0.8.1 go1.14.2 darwin/amd64
+#           kind v0.9.0 go1.14.2 darwin/amd64
 #############################################################
 
 #!/bin/sh

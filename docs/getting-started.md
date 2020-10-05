@@ -151,7 +151,7 @@ deploying kind.
 
 ## Prerequisites
 
-1. You will need `kind` 0.8.1 installed locally.
+1. You will need `kind` 0.9.0 installed locally.
 
 2. You will need the `kubectl` cli installed locally.
 
