@@ -66,8 +66,7 @@ source ./scripts/kar-env-local.sh
 
 ### Prerequisites
 
-1. You will need Node 12 (LTS) and NPM 6.12+ to run the JavaScript
-   SDK and examples.
+You will need Node 12+ and NPM 6.12+ to run the NodeJS example.
 
 ###  Run a Hello World NodeJS Example
 
@@ -98,6 +97,8 @@ You can also use the `kar` cli to invoke the service directly:
 ```shell
 kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
 ```
+
+For more details on the NodeJS example, see its [README](../examples/service-hello-js/README.md).
 
 ## Run a Java based example locally
 
@@ -139,6 +140,9 @@ You can also use the `kar` cli to invoke the service directly:
 ```shell
 kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
 ```
+
+For more details on the Java example, see its [README](../examples/service-hello-java/README.md).
+
 
 # Local Cluster Deployment
 

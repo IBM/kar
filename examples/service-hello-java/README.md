@@ -44,13 +44,20 @@ kar run -app hello-java -service greeter mvn liberty:run
 
 2. Run a test client
 ```shell
-kar run -app hello-java java -jar client/target/kar-hello-client-jar-with-dependencies.jar
+(%) kar run -app hello-java java -jar client/target/kar-hello-client-jar-with-dependencies.jar
+2020/10/06 09:47:44.068160 [STDOUT] Hello Gandalf the Grey
+2020/10/06 09:47:44.068176 [STDOUT] SUCCESS!
 ```
 
 3. Use the `kar` cli to invoke a route directly (the content type for request bodies defaults to application/json).
 ```shell
-kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
-kar rest -app hello-java -content_type text/plain post greeter helloText 'Gandalf the Grey'
+(%) kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
+2020/10/06 09:48:10.929784 [STDOUT] {"greetings":"Hello Alan Turing"}
+```
+Or invoke the `text/plain` route with an explicit content type:
+```shell
+(%) kar rest -app hello-java -content_type text/plain post greeter helloText 'Gandalf the Grey'
+2020/10/06 09:48:29.644326 [STDOUT] Hello Gandalf the Grey
 ```
 
 4. If the service endpoint being invoked requires more sophisticated
@@ -59,5 +66,15 @@ is still possible to use curl. However, the curl command is now using
 KAR's REST API to make the service call via a `kar` sidecar.
 
 ```shell
-kar run -runtime_port 32123 -app hello-java curl -s -X POST -H "Content-Type: text/plain" http://localhost:32123/kar/v1/service/greeter/call/helloText -d 'Gandalf the Grey'
+(%) kar run -runtime_port 32123 -app hello-java curl -s -X POST -H "Content-Type: text/plain" http://localhost:32123/kar/v1/service/greeter/call/helloText -d 'Gandalf the Grey'
+2020/10/06 09:49:45.300122 [STDOUT] Hello Gandalf the Grey
 ```
+
+## Looking Inside the Server Code
+
+The server code in HelloServices.java uses standard JAX-RS annotations like `@POST`,
+`@Path` and `@Consumes` to specify the endpoints provided by the server.
+
+One KAR-specific detail is the use of the `KAR_APP_PORT` environment variable
+in the specification of the `httpPort` in server.xml.  This enables the `kar` sidecar
+to control the port that the JVM process will use to accept incoming requests.
