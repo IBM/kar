@@ -29,4 +29,5 @@ app.post('/helloJson', (req, res) => {
 })
 
 // start server on port $KAR_APP_PORT
+console.log('Starting greetings server...')
 app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

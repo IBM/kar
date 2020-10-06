@@ -4,10 +4,35 @@ This example demonstrates how to use KAR's REST API directly. It consists of an
 [HTTP server](server.js) implemented using `express` and an [HTTP
 client](client.js) implemented using `node-fetch` and `fetch-retry`.
 
-Detailed instructions for running the example are contained in [Getting
-Started](../../docs/getting-started.md).
+You will need Node 12 (LTS) and NPM 6.12+ to run this example
 
-## Server Code
+## Running the Code
+
+In one window:
+```shell
+npm install --prod
+kar run -app hello-js -service greeter node server.js
+```
+
+In a second window:
+```shell
+kar run -app hello-js node client.js
+```
+
+You should see output like shown below in both windows:
+```
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+2020/04/02 17:41:23 [STDOUT] Hello John Doe!
+```
+The client process will exit, while the server remains running. You
+can send another request, or exit the server with a Control-C.
+
+You can also use the `kar` cli to invoke the service directly:
+```shell
+kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
+```
+
+## Looking Inside the Server Code
 
 The server code uses [express](https://www.npmjs.com/package/express) to standup
 a REST server with two routes:
@@ -25,7 +50,7 @@ As a simple security measure, the server only listens for requests coming from
 `127.0.0.1` since all requests are expected to come from a KAR sidecar process
 running on the same host (or pod).
 
-## Client Code
+## Looking Inside the Client Code
 
 The client code use [node-fetch](https://www.npmjs.com/package/node-fetch) to
 invoke the two routes in turn.

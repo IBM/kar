@@ -8,7 +8,7 @@ spec:
   template:
     metadata:
       annotations:
-        kar.ibm.com/app: helloWorld
+        kar.ibm.com/app: hello-js
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:

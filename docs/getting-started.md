@@ -76,14 +76,14 @@ In one window:
 source scripts/kar-env-local.sh
 cd examples/service-hello-js
 npm install --prod 
-kar run -app helloWorld -service greeter node server.js
+kar run -app hello-js -service greeter node server.js
 ```
 
 In a second window:
 ```shell
 source scripts/kar-env-local.sh
 cd examples/service-hello-js
-kar run -app helloWorld node client.js
+kar run -app hello-js node client.js
 ```
 
 You should see output like shown below in both windows:
@@ -96,7 +96,7 @@ can send another request, or exit the server with a Control-C.
 
 You can also use the `kar` cli to invoke the service directly:
 ```shell
-kar rest -app helloWorld post greeter helloJson '{"name": "Alan Turing"}'
+kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
 ```
 
 ## Run a Java based example locally
@@ -124,7 +124,7 @@ kar run -app hello-java -service greeter mvn liberty:run
 In a second window, run the Java client program
 ```shell
 source scripts/kar-env-local.sh
-cd examples/service-hello-java/client
+cd examples/service-hello-java
 kar run -app hello-java java -jar client/target/kar-hello-client-jar-with-dependencies.jar
 ```
 

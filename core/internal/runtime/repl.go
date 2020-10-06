@@ -47,13 +47,13 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 
 // invokeServiceEndpoint makes a request to a service endpoint
 func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
-	method := args[0]
+	method := strings.ToUpper(args[0])
 	service := args[1]
 	path := "/" + args[2]
 	var header, body string
 	if len(args) > 3 {
-		header = fmt.Sprintf("{\"Content-Type\": [\"%v\"]}", config.RestBodyContentType)
 		body = args[3]
+		header = fmt.Sprintf("{\"Content-Type\": [\"%v\"]}", config.RestBodyContentType)
 	} else {
 		header = ""
 		body = ""
