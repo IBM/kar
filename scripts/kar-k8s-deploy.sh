@@ -60,7 +60,7 @@ done
 
 if [ -n "$help" ]; then
     cat << EOF
-Usage: kay-deploy.sh [options]
+Usage: kar-deploy.sh [options]
 where [options] includes:
     -f -file <config.yaml>    pass `-f <config.yaml>` to `helm install kar`
     -m -managed <service-key> use managed EventStreams and Redis accessed via service-key

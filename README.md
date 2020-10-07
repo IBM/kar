@@ -16,6 +16,7 @@ overview from the Challenge Portal Entry.
 ## Quick Links
 
 + See [Getting Started](docs/getting-started.md) for hands-on instructions on trying KAR.
++ See [KAR on IBM Cloud](docs/kar-ibmcloud.md) for notes on using KAR with the IBM Cloud.
 + Check out our [examples](examples/README.md)
 + Read about the KAR [Programming Model](#programming-model)
 + Browse the Swagger specification of the [KAR sidecar API](https://pages.github.ibm.com/solsa/kar/api/redoc/).
