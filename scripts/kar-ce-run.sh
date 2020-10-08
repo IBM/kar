@@ -111,7 +111,7 @@ if [ "$actors" != "" ]; then
 fi
 
 ceargs="$ceargs --image $image --name $name --min-scale $scale --max-scale $scale --cpu $scale"
-ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config"
+ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config --cluster-local"
 ceargs="$ceargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 ceargs="$ceargs --env KAR_EXTRA_ARGS=\"$karargs\""
 
