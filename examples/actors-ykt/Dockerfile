@@ -4,6 +4,9 @@ FROM $JS_RUNTIME
 
 WORKDIR /kar/app
 
+# Default to running actor server
+ENV MAIN=ykt.js
+
 # Copy dependencies first; they change rarely
 COPY package.json package-lock.json yalc.lock ./
 COPY .yalc .yalc

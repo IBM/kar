@@ -74,5 +74,5 @@ requires a fairly extensive set of command line arguments.  The script
 `kar-ce-run.sh` wraps `ibmcloud ce` to simplify the process.
 
 ```shell
-./scripts/kar-ce-run.sh -app hello -image us.icr.io/research/kar-dev/examples/js/service-hello -name hello-js-server -service greeter -env MAIN=server.js
+./scripts/kar-ce-run.sh -app hello -image us.icr.io/research/kar-dev/examples/js/service-hello -name hello-js-server -service greeter
 ```

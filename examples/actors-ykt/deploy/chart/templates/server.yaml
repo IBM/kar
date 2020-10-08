@@ -31,8 +31,6 @@ spec:
         image: {{ .Values.image }}
 
         env:
-        - name: MAIN
-          value: ykt.js
 {{ if .Values.noSidecar }}
         - name: KAR_SIDECAR_IN_CONTAINER
           value: "true"

@@ -11,6 +11,3 @@ spec:
   containers:
   - name: server
     image: localhost:5000/examples/js/server-hello
-    env:
-    - name: MAIN
-      value: server.js

@@ -11,6 +11,3 @@ spec:
   containers:
   - name: server
     image: us.icr.io/research/kar-dev/examples/js/server-hello
-    env:
-    - name: MAIN
-      value: server.js
