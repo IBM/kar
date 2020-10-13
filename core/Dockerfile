@@ -12,8 +12,8 @@ COPY internal internal
 COPY cmd cmd
 RUN CGO_ENABLED=0 go install ./...
 
-# Create final image with desired executable
-FROM alpine:3.11
+# Create image containing nothing but the sidecar
+FROM scratch
 ARG KAR_BINARY
 
 COPY --from=builder /go/bin/$KAR_BINARY /kar/bin/$KAR_BINARY
