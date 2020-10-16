@@ -60,6 +60,10 @@ dockerBuildAndPush:
 	make dockerPushCore
 	make dockerPushExamples
 
+dockerBuild:
+	make dockerCore
+	make dockerExamples
+
 dockerDev:
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerCore dockerExamples
 	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
