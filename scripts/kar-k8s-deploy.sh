@@ -32,7 +32,7 @@ while [ -n "$1" ]; do
         -m|-managed|--managed)
             shift;
             serviceKey="$1"
-            . $SCRIPTDIR/kar-env-cloud.sh $serviceKey
+            . $SCRIPTDIR/kar-env-ibmcloud.sh $serviceKey
             helmargs="$helmargs --set kafka.internal=false --set redis.internal=false"
             helmargs="$helmargs --set-string kafka.externalConfig.enabletls=true"
             helmargs="$helmargs --set-string kafka.externalConfig.version=2.3.0"

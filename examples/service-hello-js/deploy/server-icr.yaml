@@ -10,4 +10,4 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: us.icr.io/research/kar-dev/examples/js/server-hello
+    image: us.icr.io/research/kar-dev/examples/js/service-hello
