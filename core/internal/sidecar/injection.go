@@ -167,7 +167,28 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
-		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch}
+		// Label the pod with appName and serviceName (if present) to enable kubectl -l filters
+		labels := pod.GetObjectMeta().GetLabels()
+		if labels == nil {
+			labels = make(map[string]string)
+		}
+		var op string
+		if len(labels) == 0 {
+			op = "add"
+		} else {
+			op = "replace"
+		}
+		labels[appNameAnnotation] = appName
+		if serviceName, ok := annotations[serviceNameAnnotation]; ok {
+			labels[serviceNameAnnotation] = serviceName
+		}
+		patchPodLabels := patchOperation{
+			Op:    op,
+			Path:  "/metadata/labels",
+			Value: labels,
+		}
+
+		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch, patchPodLabels}
 
 		patchBytes, err := json.Marshal(patches)
 		if err != nil {

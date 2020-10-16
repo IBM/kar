@@ -10,4 +10,4 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/examples/js/server-hello
+    image: localhost:5000/examples/js/service-hello
