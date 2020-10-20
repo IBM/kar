@@ -53,12 +53,12 @@ public class Cafe extends ActorSkeleton {
 	}
 
 	@Remote
-	public JsonNumber occupancy() {
+	public JsonNumber occupancy(JsonString table) {
 		return Json.createValue(this.diners.size());
 	}
 
 	@Remote
-	public void seatTable(JsonNumber numDiners, JsonNumber servings) {
+	public JsonString seatTable(JsonNumber numDiners, JsonNumber servings) {
 		int n = numDiners.intValue();
 		int s = servings.intValue();
 		System.out.println("Cafe "+this.getId()+" is seating a new table of "+n+" hungry philosophers for "+s+" servings");
@@ -74,6 +74,7 @@ public class Cafe extends ActorSkeleton {
 		}
 		actorCall(actorRef("Philosopher", philosophers[n-1]), "joinTable", Json.createValue(this.getId()), Json.createValue(forks[0]), Json.createValue(forks[n-1]), servings);
 		checkpointState();
+		return Json.createValue("table-1");
 	}
 
 	@Remote

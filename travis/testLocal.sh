@@ -33,7 +33,7 @@ echo "*** Testing examples/actors-dp-js ***"
 cd $ROOTDIR/examples/actors-dp-js
 npm install --prod
 
-kar run -app dp -actors Cafe,Fork,Philosopher node philosophers.js &
+kar run -app dp -actors Cafe,Table,Fork,Philosopher node philosophers.js &
 run $! kar run -app dp node tester.js
 
 # Run actors-ykt locally

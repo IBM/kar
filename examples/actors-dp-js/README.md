@@ -19,7 +19,7 @@ tables or when a sated Philosopher leaves.
 To run the example locally, first do an `npm install`.
 Then in one window start up the server code:
 ```shell
-kar run -app dp -actors Cafe,Fork,Philosopher node philosophers.js
+kar run -app dp -actors Cafe,Table,Fork,Philosopher node philosophers.js
 ```
 In a second window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
