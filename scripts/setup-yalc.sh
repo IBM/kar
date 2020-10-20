@@ -6,7 +6,7 @@ ROOTDIR="$SCRIPTDIR/.."
 cd $ROOTDIR/sdk-js
 yalc publish
 
-EXAMPLES=$(find $ROOTDIR/examples -name .yalc -print0 -maxdepth 2 | xargs -0 -n1 dirname)
+EXAMPLES=$(find $ROOTDIR/examples -name .yalc -print0 -maxdepth 3 | xargs -0 -n1 dirname)
 
 for e in $EXAMPLES
 do

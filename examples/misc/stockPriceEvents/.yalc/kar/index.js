@@ -215,14 +215,16 @@ const eventsGetSubscription = (actor, id) => id ? get(`actor/${actor.kar.type}/$
 function eventsCreateSubscription (actor, path, topic, options = {}) {
   const id = options.id || topic
   const contentType = options.contentType
-  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic /* contentType */ })
+  return put(`actor/${actor.kar.type}/${actor.kar.id}/events/${id}`, { path: `/${path}`, topic, contentType })
 }
 
-const eventsCreateTopic = (topic, options = {}) => put(`event/${topic}`, options)
+const eventsCreateTopic = (topic, options) => put(`event/${topic}`, options)
 
 const eventsDeleteTopic = (topic) => del(`event/${topic}`)
 
 const eventsPublish = (topic, event) => post(`event/${topic}/publish`, event)
+
+const systemGet = (query) => fetch(url + 'system/information/' + query, { headers: { Accept: 'application/json' } }).then(parse)
 
 /***************************************************
  * End of public methods intended for application programming
@@ -309,6 +311,11 @@ function actorRuntime (actors) {
       .catch(next)
   })
 
+  // health route
+  router.get('/kar/impl/v1/system/health', (req, res, next) => {
+    return res.status(200).type('text/plain').send('Peachy Keen!')
+  })
+
   router.use(errorHandler)
 
   return router
@@ -360,6 +367,7 @@ module.exports = {
   },
   sys: {
     actorRuntime,
+    get: systemGet,
     shutdown,
     h2c,
     errorHandler

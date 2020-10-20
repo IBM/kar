@@ -4,7 +4,7 @@
     "kar": {
       "signature": "7e2588728a60dd38dccd5114638dce15",
       "file": true,
-      "replaced": "../../sdk-js"
+      "replaced": "../../../sdk-js"
     }
   }
 }
