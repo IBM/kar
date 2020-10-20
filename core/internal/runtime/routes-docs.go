@@ -470,6 +470,11 @@ type success201 struct {
 type response202CallResult struct {
 }
 
+// Indicates that the result of an actor method is void or undefined.
+// swagger:response response204ActorNoContentResult
+type response204ActorNoContentResult struct {
+}
+
 // Response indicating a bad request
 // swagger:response response400
 type error400 struct {

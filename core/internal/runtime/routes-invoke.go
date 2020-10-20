@@ -256,7 +256,8 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 // The request body must be a (possibly zero-length) JSON array whose elements
 // are used as the actual parameters of the actor method.
 // The result of the call is the result of invoking the target actor method
-// unless the `async` or `promise` pragma header is specified.
+// unless the `async` or `promise` pragma header is specified.  If the actor
+// method returns `void` or `undefined`, then a 204 - No Content reponse is returned.
 //
 //     Consumes:
 //     - application/kar+json
@@ -266,6 +267,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Responses:
 //       200: response200CallActorResult
 //       202: response202CallResult
+//       204: response204ActorNoContentResult
 //       404: response404
 //       500: response500
 //       503: response503
@@ -307,8 +309,12 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		}
 	} else {
-		w.Header().Add("Content-Type", reply.ContentType)
-		w.WriteHeader(reply.StatusCode)
-		fmt.Fprint(w, reply.Payload)
+		if reply.StatusCode == http.StatusNoContent {
+			w.WriteHeader(reply.StatusCode)
+		} else {
+			w.Header().Add("Content-Type", reply.ContentType)
+			w.WriteHeader(reply.StatusCode)
+			fmt.Fprint(w, reply.Payload)
+		}
 	}
 }

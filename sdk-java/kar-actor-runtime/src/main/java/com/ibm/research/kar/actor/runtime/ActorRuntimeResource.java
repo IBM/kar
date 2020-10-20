@@ -113,9 +113,13 @@ public class ActorRuntimeResource {
 
 		try {
 			Object result = actorMethod.invokeWithArguments(actuals);
-			JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
-			JsonObject ro = Json.createObjectBuilder().add("value", jv).build();
-			return Response.status(Response.Status.OK).entity(ro).build();
+			if (result == null && actorMethod.type().returnType().equals(Void.TYPE)) {
+				return Response.status(Response.Status.NO_CONTENT).build();
+			} else {
+				JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
+				JsonObject ro = Json.createObjectBuilder().add("value", jv).build();
+				return Response.status(Response.Status.OK).entity(ro).build();
+			}
 		} catch (Throwable t) {
 			JsonObjectBuilder ro = Json.createObjectBuilder();
 			ro.add("error", true);

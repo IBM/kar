@@ -246,7 +246,8 @@ paths:
         The request body must be a (possibly zero-length) JSON array whose elements
         are used as the actual parameters of the actor method.
         The result of the call is the result of invoking the target actor method
-        unless the `async` or `promise` pragma header is specified.
+        unless the `async` or `promise` pragma header is specified.  If the actor
+        method returns `void` or `undefined`, then a 204 - No Content reponse is returned.
       operationId: idActorCall
       parameters:
       - description: The actor type
@@ -296,6 +297,8 @@ paths:
           $ref: '#/responses/response200CallActorResult'
         "202":
           $ref: '#/responses/response202CallResult'
+        "204":
+          $ref: '#/responses/response204ActorNoContentResult'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1888,6 +1891,8 @@ responses:
         type: string
   response202CallResult:
     description: Indicates that a non-blocking call has been accepted for eventual execution
+  response204ActorNoContentResult:
+    description: Indicates that the result of an actor method is void or undefined.
   response400:
     description: Response indicating a bad request
     headers:

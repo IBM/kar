@@ -53,6 +53,7 @@ const parse = res => res.text().then(text => { // parse to string first
 // parse actor response
 const parseActor = res => res.text().then(text => { // parse to string first
   if (!res.ok) throw new Error(text) // if error response return error string
+  if (res.status === 204) return undefined
   let obj
   try { // try parsing to json object
     obj = JSON.parse(text)
@@ -307,7 +308,13 @@ function actorRuntime (actors) {
         if (typeof actor[req.params.method] === 'function') return actor[req.params.method](...req.body)
         return actor[req.params.method]
       }) // invoke method on actor
-      .then(value => res.json({ value })) // stringify invocation result
+      .then(value => {
+        if (value === undefined) {
+          return res.status(204).send()
+        } else {
+          return res.json({ value }) // stringify invocation result
+        }
+      })
       .catch(next)
   })
 

@@ -547,6 +547,8 @@ public class Kar {
 			} else {
 				throw new ActorMethodNotFoundException();
 			}
+		} else if (response.getStatus() == Status.NO_CONTENT.getStatusCode()) {
+			return null;
 		} else {
 			throw new ProcessingException(response.getStatus() + ": " + toValue(response));
 		}

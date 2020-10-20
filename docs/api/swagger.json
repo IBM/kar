@@ -88,7 +88,7 @@
     },
     "/v1/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
-        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.",
+        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.  If the actor\nmethod returns `void` or `undefined`, then a 204 - No Content reponse is returned.",
         "consumes": [
           "application/kar+json"
         ],
@@ -162,6 +162,9 @@
           },
           "202": {
             "$ref": "#/responses/response202CallResult"
+          },
+          "204": {
+            "$ref": "#/responses/response204ActorNoContentResult"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -2340,6 +2343,9 @@
     },
     "response202CallResult": {
       "description": "Indicates that a non-blocking call has been accepted for eventual execution"
+    },
+    "response204ActorNoContentResult": {
+      "description": "Indicates that the result of an actor method is void or undefined."
     },
     "response400": {
       "description": "Response indicating a bad request",
