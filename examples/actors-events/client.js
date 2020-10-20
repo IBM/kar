@@ -1,14 +1,15 @@
 const { events } = require('kar')
-const v1 = require('cloudevents-sdk/v1')
+const { CloudEvent } = require('cloudevents')
 
 // main function
 async function main () {
   while (true) {
     // construct event
-    const event = v1.event()
-      .type('test.event')
-      .source('test.source')
-      .data(Date.now())
+    const event = new CloudEvent({
+      type: 'test.event',
+      source: 'test.source',
+      data: Date.now()
+    })
 
     // publish event
     console.log('publish:', await events.publish('test-topic', event))
