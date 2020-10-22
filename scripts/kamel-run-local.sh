@@ -28,7 +28,7 @@ done
 
 cd "$workspace"
 
-function assemble { local f=$1; shift; printf %s "file:$f" "${@/#/,file:}"; }
+function assemble { printf "file:"; while [ $# -gt 1 ]; do printf "%s%s" "$1" ",file:"; shift; done; printf "%s" "$1"; }
 
 CAMEL_K_CONF_D=properties \
 CAMEL_K_ROUTES=$(assemble $(find src -type f)) \
