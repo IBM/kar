@@ -2,6 +2,8 @@
 
 # Script to build a kamel integration locally
 
+set -e
+
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 
 # extract workspace flag
@@ -16,6 +18,10 @@ while [ $# -gt 0 ]; do
       workspace="$1"
       shift
       ;;
+    -*)
+      echo "Error: unexpected argument: $1"
+      exit 1
+      ;;
     *)
       array+=("$1")
       shift
@@ -23,28 +29,27 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+set -- "${array[@]}"
+
 # run kamel inspect
 
-kamel inspect --all-dependencies \
+KUBECONFIG= kamel inspect --all-dependencies \
+  --workspace "$workspace" \
   --additional-dependencies camel-k:runtime-main,github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626 \
-  $SCRIPTDIR/kamel/org/apache/camel/kar/kamel/kafka/*.java \
+  "$SCRIPTDIR"/kamel/org/apache/camel/kar/kamel/kafka/*.java \
   "$@"
 
-# create property file if it does not exist yet
+# create kafka.properties file
 
-mkdir -p $workspace/properties
+mkdir -p "$workspace"/properties
 
-if [ ! -f $workspace/properties/integration.properties ]; then
-  echo camel.component.kafka.brokers=$KAFKA_BROKERS > $workspace/properties/integration.properties
+echo camel.component.kafka.brokers=$KAFKA_BROKERS > "$workspace"/properties/kafka.properties
+if [ -z $KAFKA_BROKERS ]; then
+  echo "Warning: please set property camel.component.kafka.brokers in properties/kafka.properties"
 fi
 
-# create run script
+# copy source files
 
-function assemble { local f=$1; shift; printf %s "file:$f" "${@/#/,file:}"; }
-
-echo cd $(pwd) > $workspace/run.sh
-echo CAMEL_K_ROUTES=$(assemble $SCRIPTDIR/kamel/org/apache/camel/kar/kamel/kafka/*.java "${array[@]}") \
-CAMEL_K_CONF_D=$workspace/properties \
-java -cp \"$workspace/dependencies/*\" org.apache.camel.k.main.Application >> $workspace/run.sh
-
-chmod u+x $workspace/run.sh
+mkdir -p "$workspace"/src
+cp "$@" "$workspace"/src
+cp "$SCRIPTDIR"/kamel/org/apache/camel/kar/kamel/kafka/*.java "$workspace"/src
