@@ -96,7 +96,6 @@ func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.
 // The state of the actor instance indicated by `actorType` and `actorId`
 // will be updated by setting `key` to contain the JSON request body.
 // The operation will not return until the state has been updated.
-// The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
 //
 //     Consumes:
 //     - application/json
@@ -104,7 +103,8 @@ func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.
 //     - text/plain
 //     Schemes: http
 //     Responses:
-//       200: response200StateSetResult
+//       201: response201
+//       204: response204
 //       500: response500
 //
 
@@ -125,7 +125,8 @@ func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.
 //     - text/plain
 //     Schemes: http
 //     Responses:
-//       200: response200StateSetResult
+//       201: response201
+//       204: response204
 //       500: response500
 //
 func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -138,8 +139,10 @@ func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 
 	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
+	} else if reply == 1 {
+		w.WriteHeader(http.StatusCreated) // New entry created
 	} else {
-		fmt.Fprint(w, reply)
+		w.WriteHeader(http.StatusNoContent) // Existing entry updated
 	}
 }
 

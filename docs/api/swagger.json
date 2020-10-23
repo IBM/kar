@@ -379,8 +379,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -653,8 +656,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -909,7 +915,7 @@
         }
       },
       "put": {
-        "description": "### Update a single entry of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key` to contain the JSON request body.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.",
+        "description": "### Update a single entry of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key` to contain the JSON request body.\nThe operation will not return until the state has been updated.",
         "consumes": [
           "application/json"
         ],
@@ -951,8 +957,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200StateSetResult"
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1232,8 +1241,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200StateSetResult"
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1424,11 +1436,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
-          },
           "201": {
             "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "500": {
             "$ref": "#/responses/response500"
@@ -1604,11 +1616,11 @@
           }
         ],
         "responses": {
-          "200": {
-            "$ref": "#/responses/response200CallResult"
+          "201": {
+            "$ref": "#/responses/response201"
           },
-          "202": {
-            "$ref": "#/responses/response202CallResult"
+          "204": {
+            "$ref": "#/responses/response204"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -2332,18 +2344,11 @@
         }
       }
     },
-    "response201": {
-      "headers": {
-        "body": {
-          "type": "string",
-          "example": "\"Created\"",
-          "description": "A success message Indicating that the requested resource has been successfully created"
-        }
-      }
-    },
+    "response201": {},
     "response202CallResult": {
       "description": "Indicates that a non-blocking call has been accepted for eventual execution"
     },
+    "response204": {},
     "response204ActorNoContentResult": {
       "description": "Indicates that the result of an actor method is void or undefined."
     },

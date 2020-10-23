@@ -109,7 +109,8 @@ import (
 //     - text/plain
 //     Schemes: http
 //     Responses:
-//       200: response200
+//       201: response201
+//       204: response204
 //       500: response500
 //       503: response503
 //

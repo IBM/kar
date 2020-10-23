@@ -266,7 +266,7 @@ func bindingGet(ctx context.Context, msg map[string]string) error {
 func bindingSet(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	code, err := postBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
+	code, err := putBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
 		reply = &Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
 	} else {

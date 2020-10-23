@@ -518,8 +518,10 @@ paths:
       produces:
       - text/plain
       responses:
-        "200":
-          $ref: '#/responses/response200'
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -737,8 +739,10 @@ paths:
       produces:
       - text/plain
       responses:
-        "200":
-          $ref: '#/responses/response200'
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "500":
           $ref: '#/responses/response500'
         "503":
@@ -1045,7 +1049,6 @@ paths:
         The state of the actor instance indicated by `actorType` and `actorId`
         will be updated by setting `key` to contain the JSON request body.
         The operation will not return until the state has been updated.
-        The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
       operationId: idActorStateSet
       parameters:
       - description: The actor type
@@ -1069,8 +1072,10 @@ paths:
       produces:
       - text/plain
       responses:
-        "200":
-          $ref: '#/responses/response200StateSetResult'
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1260,8 +1265,10 @@ paths:
       produces:
       - text/plain
       responses:
-        "200":
-          $ref: '#/responses/response200StateSetResult'
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1336,10 +1343,10 @@ paths:
         schema:
           $ref: '#/definitions/topicCreateOptions'
       responses:
-        "200":
-          $ref: '#/responses/response200'
         "201":
           $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1719,10 +1726,10 @@ paths:
         schema:
           type: object
       responses:
-        "200":
-          $ref: '#/responses/response200CallResult'
-        "202":
-          $ref: '#/responses/response202CallResult'
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1883,14 +1890,10 @@ responses:
         description: The subscription
     schema:
       $ref: '#/definitions/source'
-  response201:
-    headers:
-      body:
-        description: A success message Indicating that the requested resource has been successfully created
-        example: '"Created"'
-        type: string
+  response201: {}
   response202CallResult:
     description: Indicates that a non-blocking call has been accepted for eventual execution
+  response204: {}
   response204ActorNoContentResult:
     description: Indicates that the result of an actor method is void or undefined.
   response400:

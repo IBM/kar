@@ -175,8 +175,8 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //
 //     Schemes: http
 //     Responses:
-//       200: response200CallResult
-//       202: response202CallResult
+//       201: response201
+//       204: response204
 //       404: response404
 //       500: response500
 //       503: response503

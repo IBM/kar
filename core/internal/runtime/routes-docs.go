@@ -460,14 +460,15 @@ type response200StateSetMultipleResult struct {
 
 // swagger:response response201
 type success201 struct {
-	// A success message Indicating that the requested resource has been successfully created
-	// Example: "Created"
-	Body string `json:"body"`
 }
 
 // Indicates that a non-blocking call has been accepted for eventual execution
 // swagger:response response202CallResult
 type response202CallResult struct {
+}
+
+// swagger:response response204
+type success204 struct {
 }
 
 // Indicates that the result of an actor method is void or undefined.

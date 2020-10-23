@@ -116,19 +116,22 @@ func getBindings(kind string, actor Actor, id string) []binding {
 	return found
 }
 
-// add binding in redis and memory
-func postBinding(ctx context.Context, kind string, actor Actor, id, payload string) (int, error) {
+// create or update a binding in redis and memory
+func putBinding(ctx context.Context, kind string, actor Actor, id, payload string) (int, error) {
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
 	keys, _ := store.Keys(bindingKey(kind, actor, "*", id))
 	var key string
+	var successCode int
 	if len(keys) > 0 { // reuse existing key
 		key = keys[0]
+		successCode = http.StatusOK
 	} else { // new key with random partition
 		ps, _ := pubsub.Partitions()
 		p := ps[rand.Int31n(int32(len(ps)))]
 		key = bindingKey(kind, actor, strconv.Itoa(int(p)), id)
+		successCode = http.StatusNoContent
 	}
 	b, m, err := pair.bindings.parse(actor, id, key, payload)
 	if err != nil {
@@ -140,8 +143,8 @@ func postBinding(ctx context.Context, kind string, actor Actor, id, payload stri
 		return code, err
 	}
 	store.HSetMultiple(key, m)
-	logger.Debug("created binding %v", b)
-	return http.StatusOK, nil
+	logger.Debug("put binding %v", b)
+	return successCode, nil
 }
 
 // ensure bindings for this partition are loaded from redis in memory

@@ -112,7 +112,8 @@ import (
 //     - text/plain
 //     Schemes: http
 //     Responses:
-//       200: response200
+//       201: response201
+//       204: response204
 //       500: response500
 //       503: response503
 //
@@ -189,8 +190,8 @@ func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 //     Consumes:
 //     - application/json
 //     Responses:
-//       200: response200
 //       201: response201
+//       204: response204
 //       500: response500
 //
 func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
