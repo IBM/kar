@@ -730,7 +730,7 @@ public class Kar {
 	 */
 	public static int actorSetState(ActorRef actor, String key, JsonValue value) {
 		Response response = karClient.actorSetState(actor.getType(), actor.getId(), key, value);
-		return toInt(response);
+		return response.getStatus() == Status.CREATED.getStatusCode() ? 1 : 0;
 	}
 
 	/**
@@ -744,7 +744,7 @@ public class Kar {
 	 */
 	public static int actorSetState(ActorRef actor, String key, String subkey, JsonValue value) {
 		Response response = karClient.actorSetWithSubkeyState(actor.getType(), actor.getId(), key, subkey, value);
-		return toInt(response);
+		return response.getStatus() == Status.CREATED.getStatusCode() ? 1 : 0;
 	}
 
 	/**
