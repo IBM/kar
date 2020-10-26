@@ -3,7 +3,7 @@
 # Script to build a Camel HTTP integration locally
 
 SCRIPTDIR=../../scripts
-WORKSPACE=http-integration
+WORKSPACE=workspace-http-integration
 
 # Clear any previous attempts
 

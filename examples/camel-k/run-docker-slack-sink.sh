@@ -3,7 +3,7 @@
 # Script to build a Camel Slack integration locally and run it in Docker
 
 SCRIPTDIR=../../scripts
-WORKSPACE=slack-integration-docker
+WORKSPACE=workspace-slack-integration-docker
 
 # Clear any previous attempts
 

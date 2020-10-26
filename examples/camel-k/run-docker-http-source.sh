@@ -3,7 +3,7 @@
 # Script to build a Camel HTTP integration locally and run it in Docker
 
 SCRIPTDIR=../../scripts
-WORKSPACE=http-integration-docker
+WORKSPACE=workspace-http-integration-docker
 
 # Clear any previous attempts
 

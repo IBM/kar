@@ -3,7 +3,7 @@
 # Script to build a Camel Slack integration locally
 
 SCRIPTDIR=../../scripts
-WORKSPACE=slack-integration
+WORKSPACE=workspace-slack-integration
 
 # Clear any previous attempts
 
