@@ -26,7 +26,7 @@ done
 
 # run integration
 
-cd "$workspace"
+cd "${workspace}"
 
 function assemble { printf "file:"; while [ $# -gt 1 ]; do printf "%s%s" "$1" ",file:"; shift; done; printf "%s" "$1"; }
 

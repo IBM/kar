@@ -4,4 +4,4 @@
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 
-docker build -f $SCRIPTDIR/kamel/Dockerfile "$@"
+docker build -f "${SCRIPTDIR}/kamel/Dockerfile" "$@"

@@ -33,24 +33,26 @@ set -- "${array[@]}"
 
 # run kamel inspect
 
-KUBECONFIG="$SCRIPTDIR"/kamel/config \
+KUBECONFIG="${SCRIPTDIR}/kamel/config" \
 kamel inspect --all-dependencies \
-  --workspace "$workspace" \
+  --workspace "${workspace}" \
   --additional-dependencies camel-k:runtime-main,github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626 \
-  "$SCRIPTDIR"/kamel/org/apache/camel/kar/kamel/kafka/*.java \
+  "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/InputProcessor.java" \
+  "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/OutputProcessor.java" \
   "$@"
 
 # create kafka.properties file
 
-mkdir -p "$workspace"/properties
+mkdir -p "${workspace}/properties"
 
-echo camel.component.kafka.brokers=$KAFKA_BROKERS > "$workspace"/properties/kafka.properties
+echo camel.component.kafka.brokers=$KAFKA_BROKERS > "${workspace}/properties/kafka.properties"
 if [ -z $KAFKA_BROKERS ]; then
   echo "Warning: please set property camel.component.kafka.brokers in properties/kafka.properties"
 fi
 
 # copy source files
 
-mkdir -p "$workspace"/src
-cp "$@" "$workspace"/src
-cp "$SCRIPTDIR"/kamel/org/apache/camel/kar/kamel/kafka/*.java "$workspace"/src
+mkdir -p "${workspace}/src"
+cp "$@" "${workspace}/src"
+cp "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/InputProcessor.java" "${workspace}/src"
+cp "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/OutputProcessor.java" "${workspace}/src"
