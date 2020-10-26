@@ -1,8 +1,8 @@
 const express = require('express')
-const { actor, sys, publish } = require('kar')
+const { actor, sys, events } = require('kar')
 
 // CloudEvents SDK for defining a structured HTTP request receiver.
-const cloudevents = require('cloudevents-sdk/v1')
+const { CloudEvent } = require('cloudevents')
 
 const app = express()
 
@@ -83,24 +83,24 @@ class StockManager {
       var previousPrice = this.package[`stock_${prevCounter}`].price
       var increase = currentPrice - previousPrice
       if (increase >= 0) {
-        // Create a Cloud Event to hold to result:
-        var slackStockEvent = cloudevents.event()
-          .type('stock.output')
-          .source('kar.processor')
-
         var userInfo = `Price of ${stock.name} has increased by ${increase} to ${currentPrice}.`
 
         if (newHigh) {
           userInfo += ' Stock has reached a new high this session. Sell, sell, sell!'
         }
 
+        // Create a CloudEvent to hold to result.
         // Note: data_base64 is not available in the cloud events javascript SDK as is available in the
         // Java SDK. We use the plain data field. The Java Cloud Event deserialization can handle
         // of this case.
-        slackStockEvent.data(userInfo)
+        var slackStockEvent = new CloudEvent({
+          type: 'stock.output',
+          source: 'kar.processor',
+          data: userInfo
+        })
 
         // Publish event.
-        publish('OutputStockEvent', slackStockEvent)
+        events.publish('OutputStockEvent', slackStockEvent)
       }
     }
 
@@ -112,7 +112,7 @@ class StockManager {
 
 // Subscribe the `manage` method of the StockManager Actor to respond to events emitted on
 // the 'InputStockEvent' topic.
-actor.subscribe(actor.proxy('StockManager', 'ITStocks'), 'InputStockEvent', 'manage')
+events.subscribe(actor.proxy('StockManager', 'ITStocks'), 'manage', 'InputStockEvent')
 
 // Enable actor.
 app.use(sys.actorRuntime({ StockManager }))
