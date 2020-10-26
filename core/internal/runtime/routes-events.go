@@ -195,18 +195,19 @@ func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 //       500: response500
 //
 func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	topic := ps.ByName("topic")
 	params := ReadAll(r)
-	err := pubsub.CreateTopic(ps.ByName("topic"), params)
+	err := pubsub.CreateTopic(topic, params)
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); ok && e.Err == sarama.ErrTopicAlreadyExists {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprint(w, "Already existed")
 		} else {
-			http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("Failed to create topic %v: %v", topic, err), http.StatusInternalServerError)
 		}
 	} else {
+		w.Header().Set("Location", fmt.Sprintf("/kar/v1/event/%v", topic))
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprint(w, "Created")
 	}
 }
 

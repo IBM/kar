@@ -140,6 +140,12 @@ func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	if reply, err := store.HSet(stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else if reply == 1 {
+		if subkey := ps.ByName("subkey"); subkey != "" {
+			w.Header().Set("Location", fmt.Sprintf("/kar/v1/actor/%v/%v/state/%v/%v", ps.ByName("type"), ps.ByName("id"), ps.ByName("key"), subkey))
+		} else {
+			w.Header().Set("Location", fmt.Sprintf("/kar/v1/actor/%v/%v/state/%v", ps.ByName("type"), ps.ByName("id"), ps.ByName("key")))
+
+		}
 		w.WriteHeader(http.StatusCreated) // New entry created
 	} else {
 		w.WriteHeader(http.StatusNoContent) // Existing entry updated
