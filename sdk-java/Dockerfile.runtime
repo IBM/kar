@@ -2,18 +2,8 @@ ARG KAR_BASE=us.icr.io/research/kar-dev/kar
 
 FROM $KAR_BASE as kar
 
-FROM open-liberty:kernel-java11
+FROM openliberty/open-liberty:20.0.0.9-kernel-java11-openj9-ubi
 
-# Get security updates; open-liberty image lags...
-USER root
-RUN rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && apt-get update \
-    && apt-get -y --no-install-recommends upgrade \
-    && apt-get -y --no-install-recommends install locales \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && locale-gen en_US.UTF-8
 USER default
 
 # Copy in kar cli to enable local mode for IBM Code Engine
