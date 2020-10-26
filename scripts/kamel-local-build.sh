@@ -33,7 +33,6 @@ set -- "${array[@]}"
 
 # run kamel inspect
 
-KUBECONFIG="${SCRIPTDIR}/kamel/config" \
 kamel inspect --all-dependencies \
   --workspace "${workspace}" \
   --additional-dependencies camel-k:runtime-main,github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626 \
