@@ -5,6 +5,7 @@ package org.apache.camel.kar.kamel.kafka;
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.camel.builder.RouteBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,16 +21,26 @@ class TransformMessageToCloudEvent implements Processor {
 
     public void process(Exchange exchange) throws Exception {
         String body = exchange.getIn().getBody(String.class);
-        LOG.info("Received message from console with body: {}", body);
+        LOG.info("Received message with body: {}", body);
+
+        String eventType = exchange.getProperty("cloudevent.type", String.class);
+        if (eventType == null) {
+            eventType = "defaultEventType";
+        }
+
+        String eventSource = exchange.getProperty("cloudevent.source", String.class);
+        if (eventSource == null) {
+            eventSource = "defaultEventSource";
+        }
 
         // Create a Cloud Event:
         CloudEvent event = CloudEventBuilder.v1()
                 .withId(exchange.getExchangeId())
-                .withType(exchange.getProperty("cloudevent.type", String.class))
-                .withSource(URI.create(exchange.getProperty("cloudevent.source", String.class)))
+                .withType(eventType)
+                .withSource(URI.create(eventSource))
                 .withData("text/plain", body.getBytes())
                 .build();
-        LOG.info("User generated message packaged as CloudEvent: {}", event.toString());
+        LOG.info("Message packaged as CloudEvent: {}", event.toString());
 
         // Serialize event.
         EventFormat format = EventFormatProvider.getInstance().resolveFormat("application/cloudevents+json");
@@ -40,7 +51,11 @@ class TransformMessageToCloudEvent implements Processor {
     }
 }
 
-public class InputConfiguration {
+public class InputProcessor extends RouteBuilder {
+    @Override
+    public void configure() throws Exception {
+    }
+
     @BindToRegistry
     public TransformMessageToCloudEvent transformMessageToCloudEvent() {
         return new TransformMessageToCloudEvent();

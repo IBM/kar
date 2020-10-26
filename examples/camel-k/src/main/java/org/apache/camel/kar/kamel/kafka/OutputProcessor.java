@@ -5,6 +5,7 @@ package org.apache.camel.kar.kamel.kafka;
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.camel.builder.RouteBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,7 @@ class TransformCloudEventToMessage implements Processor {
 
     public void process(Exchange exchange) throws Exception {
         String exchangeBody = exchange.getIn().getBody(String.class);
-        LOG.info("Received message from KAR Kafka with body: {}", exchangeBody);
+        LOG.info("Received message with body: {}", exchangeBody);
 
         // Deserialize event.
         EventFormat format = EventFormatProvider.getInstance().resolveFormat("application/cloudevents+json");
@@ -28,7 +29,11 @@ class TransformCloudEventToMessage implements Processor {
     }
 }
 
-public class OutputConfiguration {
+public class OutputProcessor extends RouteBuilder {
+    @Override
+    public void configure() throws Exception {
+    }
+
     @BindToRegistry
     public TransformCloudEventToMessage transformCloudEventToMessage() {
         return new TransformCloudEventToMessage();
