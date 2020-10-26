@@ -110,12 +110,10 @@ class StockManager {
   }
 }
 
-// Subscribe the `manage` method of the StockManager Actor to respond to events emitted on
-// the 'InputStockEvent' topic.
-events.subscribe(actor.proxy('StockManager', 'ITStocks'), 'manage', 'InputStockEvent')
-
 // Enable actor.
 app.use(sys.actorRuntime({ StockManager }))
+
+let server
 
 // Boilerplate code for terminating the service.
 app.post('/shutdown', async (_reg, res) => {
@@ -128,4 +126,16 @@ app.post('/shutdown', async (_reg, res) => {
 // Enable kar error handling.
 app.use(sys.errorHandler)
 
-const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+async function main () {
+  // Create topics.
+  await events.createTopic('InputStockEvent')
+  await events.createTopic('OutputStockEvent')
+
+  server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+
+  // Subscribe the `manage` method of the StockManager Actor to respond to events emitted on
+  // the 'InputStockEvent' topic.
+  await events.subscribe(actor.proxy('StockManager', 'ITStocks'), 'manage', 'InputStockEvent')
+}
+
+main()
