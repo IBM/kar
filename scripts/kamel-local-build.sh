@@ -36,8 +36,7 @@ set -- "${array[@]}"
 kamel inspect --all-dependencies \
   --workspace "${workspace}" \
   --additional-dependencies camel-k:runtime-main,github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626 \
-  "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/InputProcessor.java" \
-  "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/OutputProcessor.java" \
+  "${SCRIPTDIR}/kamel/CloudEventProcessor.java" \
   "$@"
 
 # create kafka.properties file
@@ -53,5 +52,4 @@ fi
 
 mkdir -p "${workspace}/src"
 cp "$@" "${workspace}/src"
-cp "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/InputProcessor.java" "${workspace}/src"
-cp "${SCRIPTDIR}/kamel/org/apache/camel/kar/kamel/kafka/OutputProcessor.java" "${workspace}/src"
+cp "${SCRIPTDIR}/kamel/CloudEventProcessor.java" "${workspace}/src"

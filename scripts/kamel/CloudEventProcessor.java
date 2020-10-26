@@ -1,6 +1,6 @@
 // camel-k: dependency=github:cloudevents/sdk-java/f42020333a8ecfa6353fec26e4b9d6eceb97e626
 
-package org.apache.camel.kar.kamel.kafka;
+package com.ibm.research.kar.camel;
 
 import org.apache.camel.BindToRegistry;
 import org.apache.camel.Exchange;
@@ -33,7 +33,7 @@ class TransformMessageToCloudEvent implements Processor {
             eventSource = "defaultEventSource";
         }
 
-        // Create a Cloud Event:
+        // Create a CloudEvent:
         CloudEvent event = CloudEventBuilder.v1()
                 .withId(exchange.getExchangeId())
                 .withType(eventType)
@@ -51,7 +51,23 @@ class TransformMessageToCloudEvent implements Processor {
     }
 }
 
-public class InputProcessor extends RouteBuilder {
+class TransformCloudEventToMessage implements Processor {
+    private static final Logger LOG = LoggerFactory.getLogger(TransformCloudEventToMessage.class);
+
+    public void process(Exchange exchange) throws Exception {
+        String exchangeBody = exchange.getIn().getBody(String.class);
+        LOG.info("Received message with body: {}", exchangeBody);
+
+        // Deserialize event.
+        EventFormat format = EventFormatProvider.getInstance().resolveFormat("application/cloudevents+json");
+        CloudEvent event = format.deserialize(exchangeBody.getBytes());
+
+        // Set Exchange body to CloudEvent and send it along.
+        exchange.getIn().setBody(event.getData());
+    }
+}
+
+public class CloudEventProcessor extends RouteBuilder {
     @Override
     public void configure() throws Exception {
     }
@@ -59,5 +75,10 @@ public class InputProcessor extends RouteBuilder {
     @BindToRegistry
     public TransformMessageToCloudEvent transformMessageToCloudEvent() {
         return new TransformMessageToCloudEvent();
+    }
+
+    @BindToRegistry
+    public TransformCloudEventToMessage transformCloudEventToMessage() {
+        return new TransformCloudEventToMessage();
     }
 }
