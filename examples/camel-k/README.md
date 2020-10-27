@@ -101,8 +101,8 @@ docker build workspace-slack-sink -t stock-sink
 To launch the example run:
 ```
 ../../scripts/kar-docker-run.sh -app stocks -actors StockManager stock-processor
-docker run --network kar-bus --env KAFKA_BROKERS=kafka:9092 stock-source --detach
-docker run --network kar-bus --env KAFKA_BROKERS=kafka:9092 --env SLACK_WEBHOOK=$SLACK_WEBHOOK stock-sink --detach
+docker run --network kar-bus stock-source --detach
+docker run --network kar-bus --env SLACK_WEBHOOK=$SLACK_WEBHOOK stock-sink --detach
 ```
 
 ## Build and run using Kind development cluster
