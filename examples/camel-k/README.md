@@ -32,8 +32,8 @@ of CloudEvents in Camel sources and sinks.
 
 Camel integrations run on a Java Virtual Machine. KAR leverages the `kamel` CLI
 from the [Camel-K project](https://camel.apache.org/camel-k/latest/index.html)
-to assemble the artifacts required to run a Camel integration (essentially a
-collection of jar files).
+and [Apache Maven](https://maven.apache.org) to assemble the artifacts required
+to run a Camel integration (essentially a collection of jar files).
 
 In contrast to Camel-K today, KAR does not require a Kubernetes cluster to run
 integrations. Moreover KAR does not require the Camel-K operator to deploy
