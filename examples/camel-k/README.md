@@ -50,8 +50,8 @@ This example application combines three components to analyze stock prices:
 
 ## Slack Webhook
 
-This example assumes a webhook for the Slack channel is provided via the
-environment variable `SLACK_WEBHOOK`.
+This example assumes a [webhook URL](https://api.slack.com/messaging/webhooks)
+for the Slack channel is provided via the environment variable `SLACK_WEBHOOK`.
 
 ## Example code
 
