@@ -127,7 +127,7 @@ export namespace actor {
 	 *
 	 * @param target The Actor instance.
 	 */
-  export function purge (target: Actor): Promise<any>;
+  export function remove (target: Actor): Promise<any>;
 
   namespace reminders {
     /**

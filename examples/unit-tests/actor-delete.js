@@ -28,7 +28,7 @@ class Victim {
   }
 
   async deleteMyself () {
-    await actor.purge(this)
+    await actor.remove(this)
   }
 
   async deleteMyState () {
@@ -36,7 +36,7 @@ class Victim {
   }
 
   async deleteOther (id) {
-    await actor.purge(actor.proxy('Victim', id))
+    await actor.remove(actor.proxy('Victim', id))
   }
 }
 

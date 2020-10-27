@@ -913,7 +913,7 @@ public class Kar {
 	 *
 	 * @param actor The Actor instance.
 	 */
-	public static void actorDelete(ActorRef actor) {
+	public static void actorRemove(ActorRef actor) {
 		karClient.actorDelete(actor.getType(), actor.getId());
 	}
 

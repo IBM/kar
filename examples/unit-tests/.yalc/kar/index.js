@@ -345,7 +345,7 @@ module.exports = {
     tell: actorTell,
     call: actorCall,
     asyncCall: actorAsyncCall,
-    purge: actorDelete,
+    remove: actorDelete,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,

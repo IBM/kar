@@ -88,7 +88,6 @@ class Company {
   async retire (who) {
     delete this.bluepages[who]
     await actor.state.set(this, 'bluepages', this.bluepages)
-    await actor.state.removeAll(actor.proxy('Researcher', who))
   }
 }
 
@@ -282,7 +281,6 @@ class Researcher {
   // Checkpoint only saves the transitory state of the Researcher
   // All initialize-only fields are persisted in newHire.
   async checkpointState () {
-    if (this.retired) return
     const state = {
       activity: this.activity,
       currentStep: this.currentStep,
@@ -315,8 +313,8 @@ class Researcher {
     // TODO: atomic checkpoint & doNext
     await this.checkpointState()
     if (this.currentStep === this.career) {
-      this.retired = true
       await actor.tell(actor.proxy('Site', this.site), 'retire', this.name, this.delays)
+      await actor.remove(this)
     } else {
       await actor.tell(this, 'determineNextStep')
     }
