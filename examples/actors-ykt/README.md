@@ -269,20 +269,12 @@ The site report can be aggregated and published to Slack. To do so, all site rep
 are published to the `siteReport` Kafka topic, an aggregator process will consume
 the reports and send update messages on the `outputReport` topic to Slack.
 
-To set up this part of the example a valid kamel installation is required as detailed
+To set up this part of the example the `kamel` CLI is required as detailed
 in the camel-k example.
 
 To output to Slack export the Slack webhook to the following environment variable:
-
 ```
-export SLACK_KAR_OUTPUT_WEBHOOK=<webhook-url>
-```
-
-To Slack component also needs to connect to KAR's Kafka instance. To do so, export the
-following environment variables to contain the cluster IP address of the service:
-
-```
-export KAR_KAFKA_CLUSTER_IP=X.X.X.X
+export SLACK_WEBHOOK=<webhook-url>
 ```
 
 To start the Slack output process run:

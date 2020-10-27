@@ -1,8 +1,8 @@
 const express = require('express')
-const { actor, sys, publish } = require('kar')
+const { actor, sys, events } = require('kar')
 
 // CloudEvents SDK for defining a structured HTTP request receiver.
-const cloudevents = require('cloudevents-sdk/v1')
+const { CloudEvent } = require('cloudevents')
 
 const app = express()
 
@@ -27,6 +27,7 @@ class SiteReportManager {
 
   async manageReport (reportEvent) {
     var report = reportEvent.data
+    console.log(reportEvent)
     console.log(`Event ${this.counter}: ${JSON.stringify(report)}`)
     // console.log(report)
 
@@ -49,10 +50,6 @@ class SiteReportManager {
     // reoport when there is a change in the number of employees of any site.
     // When all employees have departed we print a custom message.
     if (changesPresent) {
-      var slackReportEvent = cloudevents.event()
-        .type('employee.count')
-        .source('ykt.aggregator')
-
       // Compose message.
       var slackMessage = 'Employee count: '
       var onSiteEmployees = false
@@ -68,11 +65,14 @@ class SiteReportManager {
         slackMessage = 'End of work day. No on-site employees.'
       }
 
-      // Add message to Cloud Event data field.
-      slackReportEvent.data(slackMessage)
+      var slackReportEvent = new CloudEvent({
+        type: 'employee.count',
+        source: 'ykt.aggregator',
+        data: slackMessage
+      })
 
       // Publish event.
-      publish('outputReport', slackReportEvent)
+      events.publish('outputReport', slackReportEvent)
     }
 
     // Increment the counter and return.
@@ -83,7 +83,7 @@ class SiteReportManager {
 
 // Subscribe the `manageReport` method of the SiteReportManager Actor to respond to events
 // emitted on the 'siteReport' topic.
-actor.subscribe(actor.proxy('SiteReportManager', 'Reports'), 'siteReport', 'manageReport')
+events.subscribe(actor.proxy('SiteReportManager', 'Reports'), 'manageReport', 'siteReport')
 
 // Enable actor.
 app.use(sys.actorRuntime({ SiteReportManager }))
