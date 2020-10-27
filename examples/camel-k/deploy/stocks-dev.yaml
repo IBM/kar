@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stock-processor
+  annotations:
+    kar.ibm.com/app: stock-processor
+    kar.ibm.com/actors: StockManager
+    kar.ibm.com/appPort: "8080"
+spec:
+  containers:
+  - name: stock-processor
+    image: registry:5000/examples/stock-processor
+    ports:
+    - containerPort: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stock-source
+spec:
+  containers:
+  - name: stock-source
+    image: registry:5000/examples/stock-source
+    env:
+    - name: KAFKA_BROKERS
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_brokers
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stock-sink
+spec:
+  containers:
+  - name: stock-sink
+    image: registry:5000/examples/stock-sink
+    env:
+    - name: KAFKA_BROKERS
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_brokers
+    - name: SLACK_WEBHOOK
+      valueFrom:
+        secretKeyRef:
+          name: slack
+          key: webhook

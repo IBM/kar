@@ -1,57 +1,138 @@
-# Camel K example with KAR Processor, KAR Kafka and Cloud Events using Yaml to specify integrations
+# KAR, Camel, and CloudEvents
 
-This example builds on the Camel K example. The example is split into three components: two generic source and sink components and one user defined components.
+This example demonstrates how to build KAR solutions that consume and produce
+external events or data streams.
 
-The source component uses Camel K's reactive streams to repeatedly request stock price updates from an external service. The stock information is packed as a Cloud Event and forwarded to a user implemented processor launched using KAR. The cloud event is published on the `InputStockEvent` Kafka topic.
+## Apache Camel
 
-The user-defined processor unpacks the cloud event, adds it to the list of existing stock prices, computes the maximum stock price seen so far and then assembles a Cloud Event which contains the output string to be printed in Slack. The cloud event is published on the `OutputStockEvent` Kafka topic.
+KAR components can natively produce and consume events from Kafka topics using
+simple APIs built into KAR. KAR leverages [Apache
+Camel](https://camel.apache.org) to access hundreds of data services beyond
+Kafka. KAR makes it easy to configure and run Camel integrations that connect
+external data services to Kafka topics. These integrations are either sources or
+sinks. Sources fetch or accept data from external services that they feed to
+Kafka topics. Sinks forward messages from Kafka topics to external services.
 
-The sink component receives the Cloud Event containing the output message and forward the message to the Slack kar-output channel.
+## YAML integration language
 
-This example uses YAML to specify the generic integration code which is used to interact with the event source (stock price service) and the sink (Slack).
+Sources and sinks may be implemented using any integration language supported by
+the [Camel-K project](https://camel.apache.org/camel-k/latest/index.html).
+However, we recommend using the [YAML integration
+language](https://camel.apache.org/camel-k/latest/languages/yaml.html) as
+illustrated in this example. YAML makes it easy to configure Camel integrations
+without any coding.
 
-The KAR component is implemented in Javascript.
+## CloudEvents
 
-This example relies on access to a `kamel` executable. Follow the steps in the `camel-k` example for how to satisfy this dependency.
+KAR leverages [CloudEvents](https://cloudevents.io) to encode events in a
+portable, cloud-native way. KAR facilitates the construction and deconstruction
+of CloudEvents in Camel sources and sinks.
 
-## Steps to run the example
+## Dependencies
 
-For the consumer to output to a Slack channel, expose the incoming webhook address via the `SLACK_KAR_OUTPUT_WEBHOOK` environment variable. If the variable is not set the output will be emitted only as a log message.
+Camel integrations run on a Java Virtual Machine. KAR leverages the `kamel` CLI
+from the [Camel-K project](https://camel.apache.org/camel-k/latest/index.html)
+to assemble the artifacts required to run a Camel integration (essentially a
+collection of jar files).
 
-Export the IP address of KAR's Kafka service via the `KAR_KAFKA_CLUSTER_IP` environemnt variable.
+In contrast to Camel-K today, KAR does not require a Kubernetes cluster to run
+integrations. Moreover KAR does not require the Camel-K operator to deploy
+integrations to Kubernetes.
 
-Move to the example folder:
+## Example description
 
+This example application combines three components to analyze stock prices:
+- A Camel source periodically fetches stock prices from a web service and feeds
+  them to a Kafka topic as CloudEvents.
+- A KAR component subscribes to this topic and analyses trends, publishing
+  insights to a second Kafka topic as CloudEvents.
+- A Camel sink posts these insights to a Slack Channel named `kar-output`.
+
+## Slack Webhook
+
+This example assumes a webhook for the Slack channel is provided via the
+environment variable `SLACK_WEBHOOK`.
+
+## Example code
+
+The Camel source is implemented in file [input.yaml](input.yaml). The Camel sink
+is implemented in file [output.yaml](output.yaml). The KAR component is
+implemented in JavaScript in file [processor.js](processor.js). A Kubernetes
+deployment template is provided in [stocks-dev.yaml](deploy/stocks-dev.yaml).
+
+## Build and run locally
+
+To build the Camel integrations locally run:
 ```
-cd examples/kar-kamel
+../../scripts/kamel-local-build.sh --workspace workspace-http-source input.yaml
+../../scripts/kamel-local-build.sh --workspace workspace-slack-sink output.yaml
 ```
 
-Create topics for this example:
-
+To prepare the KAR component for execution run:
 ```
-sh createTopics.sh
-```
-
-Since the KAR user-defined component is implemented in Javascript, run `npm`:
-
-```
-npm install
+npm install --prod
 ```
 
-## Running the components
+To launch the KAR component run:
+```
+kar run -app stocks -actors StockManager -- node processor.js
+```
+This KAR component will create the necessary Kafka topics.
 
-Run the sink component:
+To launch the source run:
 ```
-sh run-sink.sh
+../../scripts/kamel-local-run.sh --workspace workspace-http-source
 ```
 
-Run the user-defined component:
+To launch the sink run:
 ```
-kar run -app stock-price-manager -runtime_port 3502 -app_port 8082 -service stock-manager -actors StockManager -- node kar-server.js
+../../scripts/kamel-local-run.sh --workspace workspace-slack-sink
 ```
-For additional output details pass `-v info` to the kar CLI.
 
-Run the source component:
+## Build and run using Docker development environment
+
+To build container images for the three components run:
 ```
-sh run-source.sh
+docker build . -t stock-processor
+docker build workspace-http-source -t stock-source
+docker build workspace-slack-sink -t stock-sink
+```
+
+To launch the example run:
+```
+../../scripts/kar-docker-run.sh -app stocks -actors StockManager stock-processor
+docker run --network kar-bus --env KAFKA_BROKERS=kafka:9092 stock-source --detach
+docker run --network kar-bus --env KAFKA_BROKERS=kafka:9092 --env SLACK_WEBHOOK=$SLACK_WEBHOOK stock-sink --detach
+```
+
+## Build and run using Kind development cluster
+
+To build container images for the three components run:
+```
+docker build . -t localhost:5000/examples/stock-processor
+docker build workspace-http-source -t localhost:5000/examples/stock-source
+docker build workspace-slack-sink -t localhost:5000/examples/stock-sink
+```
+
+To push these container images to the local registry run:
+```
+docker push localhost:5000/examples/stock-processor
+docker push localhost:5000/examples/stock-source
+docker push localhost:5000/examples/stock-sink
+```
+
+To deploy the example to Kubernetes, we first need to create a Kubernetes secret
+containing the Slack webhook. Run:
+```
+kubectl create secret generic slack --from-literal=webhook=$SLACK_WEBHOOK
+```
+
+To deploy the example run:
+```
+kubectl apply -f deploy/stocks-dev.yaml
+```
+
+To undeploy the example run:
+```
+kubectl delete -f deploy/stocks-dev.yaml
 ```

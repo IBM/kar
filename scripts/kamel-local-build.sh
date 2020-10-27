@@ -39,17 +39,16 @@ kamel inspect --all-dependencies \
   "${SCRIPTDIR}/kamel/CloudEventProcessor.java" \
   "$@"
 
-# create kafka.properties file
+# create folders
 
 mkdir -p "${workspace}/properties"
-
-echo camel.component.kafka.brokers=$KAFKA_BROKERS > "${workspace}/properties/kafka.properties"
-if [ -z $KAFKA_BROKERS ]; then
-  echo "Warning: please set property camel.component.kafka.brokers in properties/kafka.properties"
-fi
+mkdir -p "${workspace}/src"
 
 # copy source files
 
-mkdir -p "${workspace}/src"
 cp "$@" "${workspace}/src"
 cp "${SCRIPTDIR}/kamel/CloudEventProcessor.java" "${workspace}/src"
+
+# copy Dockerfile
+
+cp "${SCRIPTDIR}/kamel/Dockerfile" "${workspace}"

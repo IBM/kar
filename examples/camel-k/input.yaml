@@ -12,6 +12,6 @@
           constant: "quote"
       - process:
           ref: "transformMessageToCloudEvent"
-      - to: "kafka:InputStockEvent"
+      - to: "kafka:InputStockEvent?brokers={{env:KAFKA_BROKERS}}"
       - log:
           message: "${body}"

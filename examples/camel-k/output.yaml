@@ -1,8 +1,8 @@
 - from:
-    uri: "kafka:OutputStockEvent"
+    uri: "kafka:OutputStockEvent?brokers={{env:KAFKA_BROKERS}}"
     steps:
       - process:
           ref: "transformCloudEventToMessage"
-      - to: "slack:#kar-output"
+      - to: "slack:#kar-output?webhookUrl={{env:SLACK_WEBHOOK}}"
       - log:
           message: "${body}"
