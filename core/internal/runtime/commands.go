@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.ibm.com/solsa/kar.git/core/internal/config"
 	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
+	"github.ibm.com/solsa/kar.git/core/internal/store"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
@@ -47,6 +48,15 @@ func TellActor(ctx context.Context, actor Actor, path, payload string, direct bo
 		"command":  "tell", // post with no callback expected
 		"path":     path,
 		"payload":  payload})
+}
+
+// DeleteActor sends a delete message to an actor and does not wait for a reply
+func DeleteActor(ctx context.Context, actor Actor, direct bool) error {
+	return pubsub.Send(ctx, direct, map[string]string{
+		"protocol": "actor",
+		"type":     actor.Type,
+		"id":       actor.ID,
+		"command":  "delete"})
 }
 
 func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingID string) error {
@@ -379,6 +389,8 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if session == "" {
 			if strings.HasPrefix(msg["command"], "binding:") {
 				session = "reminder"
+			} else if msg["command"] == "delete" {
+				session = "exclusive"
 			} else {
 				session = uuid.New().String() // start new session
 			}
@@ -394,7 +406,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				var reply *Reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				err = respond(ctx, msg, reply)
 			} else {
-				logger.Error("acquire %v timed out, aborting tell %s", actor, msg["path"])
+				logger.Error("acquire %v timed out, aborting command %s with path %s", actor, msg["command"], msg["path"])
 				err = nil
 			}
 		} else if err == nil {
@@ -403,6 +415,21 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				e.release(session, false)
 				break
 			}
+
+			if msg["command"] == "delete" {
+				// delete SDK-level in-memory state
+				if !fresh {
+					deactivate(ctx, actor)
+				}
+				// delete persistent actor state
+				if _, err := store.Del(stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
+					logger.Error("deleting persistent state of %v failed with %v", actor, err)
+				}
+				// clear placement data and sidecar's in-memory state
+				err = e.migrate("")
+				break
+			}
+
 			var reply *Reply
 			if fresh {
 				reply, err = activate(ctx, actor)

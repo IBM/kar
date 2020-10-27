@@ -293,6 +293,12 @@ public interface KarRest extends AutoCloseable {
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorDeleteAllState(@PathParam("type") String type, @PathParam("id") String id);
 
+	@DELETE
+	@Path("actor/{type}/{id}")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response actorDelete(@PathParam("type") String type, @PathParam("id") String id);
+
 	/*
 	 * Events
 	 */

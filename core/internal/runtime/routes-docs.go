@@ -462,9 +462,9 @@ type response200StateSetMultipleResult struct {
 type success201 struct {
 }
 
-// Indicates that a non-blocking call has been accepted for eventual execution
-// swagger:response response202CallResult
-type response202CallResult struct {
+// An asynchronous operation has been accepted for eventual execution
+// swagger:response response202
+type success202 struct {
 }
 
 // swagger:response response204

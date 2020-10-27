@@ -155,6 +155,8 @@ function actorAsyncCall (...args) {
   }
 }
 
+const actorDelete = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}`)
+
 const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
 
 const actorGetReminder = (actor, reminderId) => reminderId ? get(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : get(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
@@ -343,6 +345,7 @@ module.exports = {
     tell: actorTell,
     call: actorCall,
     asyncCall: actorAsyncCall,
+    purge: actorDelete,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,

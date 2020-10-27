@@ -234,6 +234,26 @@ paths:
       summary: actor invocation
       tags:
       - actor-runtime
+  /v1/actor/{actorType}/{actorId}:
+    delete:
+      description: |-
+        ### Completely remove an actor instance
+
+        All user-level and runtime state of the actor instance indicated by
+        `actorType` and `actorId` will be asynchronously deleted.
+      operationId: idActorDelete
+      responses:
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor
+      tags:
+      - actors
   /v1/actor/{actorType}/{actorId}/call/{path}:
     post:
       consumes:
@@ -296,7 +316,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallActorResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "204":
           $ref: '#/responses/response204ActorNoContentResult'
         "404":
@@ -1423,7 +1443,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1470,7 +1490,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1517,7 +1537,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1570,7 +1590,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1623,7 +1643,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1676,7 +1696,7 @@ paths:
         "200":
           $ref: '#/responses/response200CallResult'
         "202":
-          $ref: '#/responses/response202CallResult'
+          $ref: '#/responses/response202'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1891,8 +1911,8 @@ responses:
     schema:
       $ref: '#/definitions/source'
   response201: {}
-  response202CallResult:
-    description: Indicates that a non-blocking call has been accepted for eventual execution
+  response202:
+    description: An asynchronous operation has been accepted for eventual execution
   response204: {}
   response204ActorNoContentResult:
     description: Indicates that the result of an actor method is void or undefined.

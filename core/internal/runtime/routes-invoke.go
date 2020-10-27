@@ -115,7 +115,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -135,7 +135,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -155,7 +155,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -197,7 +197,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -217,7 +217,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -238,7 +238,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallResult
-//       202: response202CallResult
+//       202: response202
 //       404: response404
 //       500: response500
 //       503: response503
@@ -266,7 +266,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //     Schemes: http
 //     Responses:
 //       200: response200CallActorResult
-//       202: response202CallResult
+//       202: response202
 //       204: response204ActorNoContentResult
 //       404: response404
 //       500: response500
@@ -316,5 +316,34 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			w.WriteHeader(reply.StatusCode)
 			fmt.Fprint(w, reply.Payload)
 		}
+	}
+}
+
+// swagger:route DELETE /v1/actor/{actorType}/{actorId} actors idActorDelete
+//
+// actor
+//
+// ### Completely remove an actor instance
+//
+// All user-level and runtime state of the actor instance indicated by
+// `actorType` and `actorId` will be asynchronously deleted.
+//
+//     Schemes: http
+//     Responses:
+//       202: response202
+//       404: response404
+//       500: response500
+//
+func routeImplDelActor(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	err := DeleteActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, false)
+	if err != nil {
+		if err == ctx.Err() {
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else {
+			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		w.WriteHeader(http.StatusAccepted)
+		fmt.Fprint(w, "OK")
 	}
 }

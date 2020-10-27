@@ -79,6 +79,7 @@ func server(listener net.Listener) http.Server {
 	router.GET(base+"/actor/:type/:id/state", routeImplGetAll)
 	router.POST(base+"/actor/:type/:id/state", routeImplSetMultiple)
 	router.DELETE(base+"/actor/:type/:id/state", routeImplDelAll)
+	router.DELETE(base+"/actor/:type/:id", routeImplDelActor)
 
 	// kar system methods
 	router.GET(base+"/system/health", routeImplHealth)

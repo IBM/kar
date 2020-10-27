@@ -908,6 +908,15 @@ public class Kar {
 		return toInt(response);
 	}
 
+	/**
+	 * Asynchronously remove all user-level and runtime state of an Actor.
+	 *
+	 * @param actor The Actor instance.
+	 */
+	public static void actorDelete(ActorRef actor) {
+		karClient.actorDelete(actor.getType(), actor.getId());
+	}
+
 	/*
 	 * Events
 	 */

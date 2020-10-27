@@ -86,6 +86,30 @@
         }
       }
     },
+    "/v1/actor/{actorType}/{actorId}": {
+      "delete": {
+        "description": "### Completely remove an actor instance\n\nAll user-level and runtime state of the actor instance indicated by\n`actorType` and `actorId` will be asynchronously deleted.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor",
+        "operationId": "idActorDelete",
+        "responses": {
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
     "/v1/actor/{actorType}/{actorId}/call/{path}": {
       "post": {
         "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.  If the actor\nmethod returns `void` or `undefined`, then a 204 - No Content reponse is returned.",
@@ -161,7 +185,7 @@
             "$ref": "#/responses/response200CallActorResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "204": {
             "$ref": "#/responses/response204ActorNoContentResult"
@@ -1556,7 +1580,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1684,7 +1708,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1740,7 +1764,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1804,7 +1828,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1860,7 +1884,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1924,7 +1948,7 @@
             "$ref": "#/responses/response200CallResult"
           },
           "202": {
-            "$ref": "#/responses/response202CallResult"
+            "$ref": "#/responses/response202"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -2345,8 +2369,8 @@
       }
     },
     "response201": {},
-    "response202CallResult": {
-      "description": "Indicates that a non-blocking call has been accepted for eventual execution"
+    "response202": {
+      "description": "An asynchronous operation has been accepted for eventual execution"
     },
     "response204": {},
     "response204ActorNoContentResult": {

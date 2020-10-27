@@ -115,12 +115,19 @@ export namespace actor {
   export function call (from: Actor, callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**
-   *  Synchronous actor invocation creating a new session; returns the result of the invoked Actor method.
+   * Synchronous actor invocation creating a new session; returns the result of the invoked Actor method.
    * @param callee The target Actor.
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
   export function call (callee: Actor, path: string, ...args: any[]): Promise<any>;
+
+	/**
+	 * Asynchronously remove all user-level and runtime state of an Actor.
+	 *
+	 * @param target The Actor instance.
+	 */
+  export function purge (target: Actor): Promise<any>;
 
   namespace reminders {
     /**
