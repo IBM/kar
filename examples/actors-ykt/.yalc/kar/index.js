@@ -54,6 +54,7 @@ const parse = res => res.text().then(text => { // parse to string first
 const parseActor = res => res.text().then(text => { // parse to string first
   if (!res.ok) throw new Error(text) // if error response return error string
   if (res.status === 204) return undefined
+  if (res.status === 202) return text
   let obj
   try { // try parsing to json object
     obj = JSON.parse(text)
@@ -240,7 +241,7 @@ const errorHandler = [
       const body = { error: true } // sanitize error object
       body.message = typeof err.message === 'string' ? err.message : typeof err === 'string' ? err : 'Internal Server Error'
       body.stack = typeof err.stack === 'string' ? err.stack : new Error(body.message).stack
-      return res.json(body) // return error
+      return res.status(200).type('application/kar+json').send(body) // return error
     })
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
@@ -314,7 +315,7 @@ function actorRuntime (actors) {
         if (value === undefined) {
           return res.status(204).send()
         } else {
-          return res.json({ value }) // stringify invocation result
+          return res.status(200).type('application/kar+json').send({ value })
         }
       })
       .catch(next)

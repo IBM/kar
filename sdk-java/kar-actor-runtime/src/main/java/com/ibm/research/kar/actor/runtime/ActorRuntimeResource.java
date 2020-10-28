@@ -118,7 +118,7 @@ public class ActorRuntimeResource {
 			} else {
 				JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
 				JsonObject ro = Json.createObjectBuilder().add("value", jv).build();
-				return Response.status(Response.Status.OK).entity(ro).build();
+				return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro).build();
 			}
 		} catch (Throwable t) {
 			JsonObjectBuilder ro = Json.createObjectBuilder();
@@ -128,7 +128,7 @@ public class ActorRuntimeResource {
 			PrintWriter pw = new PrintWriter(sw);
 			t.printStackTrace(pw);
 			ro.add("stack", sw.toString());
-			return Response.status(Response.Status.OK).entity(ro.build()).build();
+			return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro.build()).build();
 		}
 	}
 }
