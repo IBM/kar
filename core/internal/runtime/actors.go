@@ -20,6 +20,18 @@ type Actor struct {
 	ID   string // actor instance id
 }
 
+// actorCallResult encodes the result of invoking an actor method.
+type actorCallResult struct {
+	// The value being returned as the result of the method
+	Value interface{} `json:"value,omitempty"`
+	// If true, indicates that the method execution resulted in an error/exception
+	Error bool `json:"error,omitempty"`
+	// When error is true, the error message
+	Message string `json:"message,omitempty"`
+	// When error is true, the stack trace for the error
+	Stack string `json:"stack,omitempty"`
+}
+
 // mapOp describes the requested map operation on an Actors state
 type mapOp struct {
 	Op      string                 `json:"op"`

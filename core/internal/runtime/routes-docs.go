@@ -106,7 +106,7 @@ func dummy2() {}
 //     Produces:
 //     - application/kar+json
 //     Responses:
-//       200: response200
+//       200: response200CallActorResult
 //       404: response404
 //       500: response500
 //
@@ -354,7 +354,7 @@ type response200CallResult struct {
 // swagger:response response200CallActorResult
 type response200CallActorResult struct {
 	// The result returned by the actor method
-	Body interface{} `json:"body"`
+	Body actorCallResult
 }
 
 // The result of performing a map operation on an actor's state

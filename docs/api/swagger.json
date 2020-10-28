@@ -75,7 +75,7 @@
         "operationId": "idImplActorPost",
         "responses": {
           "200": {
-            "$ref": "#/responses/response200"
+            "$ref": "#/responses/response200CallActorResult"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -2076,6 +2076,33 @@
       },
       "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
     },
+    "actorCallResult": {
+      "type": "object",
+      "title": "actorCallResult encodes the result of invoking an actor method.",
+      "properties": {
+        "error": {
+          "description": "If true, indicates that the method execution resulted in an error/exception",
+          "type": "boolean",
+          "x-go-name": "Error"
+        },
+        "message": {
+          "description": "When error is true, the error message",
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "stack": {
+          "description": "When error is true, the stack trace for the error",
+          "type": "string",
+          "x-go-name": "Stack"
+        },
+        "value": {
+          "description": "The value being returned as the result of the method",
+          "type": "object",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
     "mapOp": {
       "description": "mapOp describes the requested map operation on an Actors state",
       "type": "object",
@@ -2204,10 +2231,10 @@
     "response200CallActorResult": {
       "description": "The result of invoking the actor method",
       "schema": {
-        "type": "object"
+        "$ref": "#/definitions/actorCallResult"
       },
       "headers": {
-        "body": {
+        "Body": {
           "description": "The result returned by the actor method"
         }
       }

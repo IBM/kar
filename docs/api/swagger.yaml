@@ -60,6 +60,27 @@ definitions:
         x-go-name: TargetTime
     type: object
     x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  actorCallResult:
+    properties:
+      error:
+        description: If true, indicates that the method execution resulted in an error/exception
+        type: boolean
+        x-go-name: Error
+      message:
+        description: When error is true, the error message
+        type: string
+        x-go-name: Message
+      stack:
+        description: When error is true, the stack trace for the error
+        type: string
+        x-go-name: Stack
+      value:
+        description: The value being returned as the result of the method
+        type: object
+        x-go-name: Value
+    title: actorCallResult encodes the result of invoking an actor method.
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
   mapOp:
     description: mapOp describes the requested map operation on an Actors state
     properties:
@@ -224,7 +245,7 @@ paths:
       - application/kar+json
       responses:
         "200":
-          $ref: '#/responses/response200'
+          $ref: '#/responses/response200CallActorResult'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1804,10 +1825,10 @@ responses:
   response200CallActorResult:
     description: The result of invoking the actor method
     headers:
-      body:
+      Body:
         description: The result returned by the actor method
     schema:
-      type: object
+      $ref: '#/definitions/actorCallResult'
   response200CallResult:
     description: The response body returned by the invoked endpoint
     headers:
