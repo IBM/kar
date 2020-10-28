@@ -304,11 +304,31 @@ func tell(ctx context.Context, msg map[string]string) error {
 		}
 		return err
 	}
-	if reply.StatusCode >= http.StatusBadRequest {
-		logger.Error("tell returned status %v with body %s", reply.StatusCode, reply.Payload)
+
+	// Examine the reply and log any that represent appliction-level errors.
+	// We do this because a tell does not have a caller to which such reporting can be delegated.
+	if reply.StatusCode == http.StatusNoContent {
+		logger.Debug("Asynchronous invoke of %s returned void", msg["path"])
+	} else if reply.StatusCode == http.StatusOK {
+		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
+			var result actorCallResult
+			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
+				logger.Error("Asynchronous invoke of %s had malformed result. %v", msg["path"], err)
+			} else {
+				if result.Error {
+					logger.Error("Asynchronous invoke of %s raised error %s", msg["path"], result.Message)
+					logger.Error("Stacktrace: %v", result.Stack)
+				} else {
+					logger.Debug("Asynchronous invoke of %s returned %v", msg["path"], result.Value)
+				}
+			}
+		} else {
+			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", msg["path"], reply.ContentType)
+		}
 	} else {
-		logger.Debug("tell returned status %v with body %s", reply.StatusCode, reply.Payload)
+		logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], reply.StatusCode, reply.Payload)
 	}
+
 	return nil
 }
 
