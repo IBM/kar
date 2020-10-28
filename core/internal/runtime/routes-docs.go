@@ -384,15 +384,12 @@ type response200ReminderGetResult struct {
 	Body Reminder
 }
 
-/* HACK: This should be here, but `swagger` doesn't handle cross-package [] element types.
-         Declaration is in internal/runtime/docs.go as a workaround.
 // swagger:response response200ReminderGetAllResult
 type response200ReminderGetAllResult struct {
 	// An array containing all matching reminders
 	// Example: [{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{"msg":"hello"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', targetTime: '2020-04-14T14:20:00Z', encodedData: '{"msg":"carpe diem"}' }]
 	Body []Reminder
 }
-*/
 
 // swagger:response response200SubscriptionCancelResult
 type response200SubscriptionCancelResult struct {
@@ -413,14 +410,11 @@ type response200SubscriptionGetResult struct {
 	Body source
 }
 
-/* HACK: This should be here, but `swagger` doesn't handle cross-package [] element types.
-         Declaration is in internal/runtime/docs.go as a workaround.
 // swagger:response response200SubscriptionGetAllResult
 type response200SubscriptionGetAllResult struct {
 	// An array containing all matching subscriptions
-	Body []Source
+	Body []source
 }
-*/
 
 // swagger:response response200StateExistsResult
 type response200StateExistsResult struct {
