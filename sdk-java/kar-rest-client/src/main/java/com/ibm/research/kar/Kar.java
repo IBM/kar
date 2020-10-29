@@ -61,19 +61,15 @@ public class Kar {
 	}
 
 	protected static URI getUri() {
-		String baseURIStr = "http://localhost";
-
 		String port = System.getenv("KAR_RUNTIME_PORT");
-		logger.fine("KAR_RUNTIME_PORT set to " + port);
-
-		if (port != null && !port.trim().isEmpty()) {
-			baseURIStr = baseURIStr + ":" + port + "/";
-		} else {
-			baseURIStr = baseURIStr + ":" + KarConfig.DEFAULT_PORT + "/";
+		if (port == null || port.trim().isEmpty()) {
+			logger.severe("KAR_RUNTIME_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
+			RuntimeException ex = new RuntimeException();
+			ex.printStackTrace();
+			throw ex;
 		}
-
-		logger.fine("Sidecar location set to " + baseURIStr);
-
+		String baseURIStr = "http://localhost:"+ port + "/";
+		logger.fine("KAR Sidecar base URI is " + baseURIStr);
 		return URI.create(baseURIStr);
 	}
 

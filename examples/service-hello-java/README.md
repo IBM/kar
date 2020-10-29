@@ -23,7 +23,7 @@ Build the client and server applications by doing `mvn package`
 
 1. Launch the Server
 ```shell
-mvn liberty:run
+sh -c 'export KAR_APP_PORT=8080; mvn liberty:run'
 ```
 2. Invoke routes using curl
 ```shell

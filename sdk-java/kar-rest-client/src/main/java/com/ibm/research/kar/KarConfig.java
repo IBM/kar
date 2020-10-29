@@ -9,9 +9,6 @@ public class KarConfig {
 	 * settable variables in web.xml
 	 */
 
-	// default sidecar port
-	public static int DEFAULT_PORT = 3500;
-
 	// default read/write connection timeout
 	public static int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 600000;
 

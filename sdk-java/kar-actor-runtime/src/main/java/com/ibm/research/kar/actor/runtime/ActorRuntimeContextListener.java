@@ -20,11 +20,9 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 	public static final String KAR_ACTOR_CLASSES = "kar-actor-classes";
 	public static final String KAR_ACTOR_TYPES = "kar-actor-types";
 	public static final String KAR_CONNECTION_TIMEOUT = "kar-connection-timeout-millis";
-	public static final String KAR_DEFAULT_SIDECAR_PORT  = "kar-default-sidecar-port";
 
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
-		
 		ServletContext ctx = servletContextEvent.getServletContext();
 
 		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
@@ -40,17 +38,14 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 			}
 		}
 
-		String port = ctx.getInitParameter(ActorRuntimeContextListener.KAR_DEFAULT_SIDECAR_PORT);
-		if (port != null) {
-			try {
-				logger.info("Setting default sidecar port to " + port);
-				KarConfig.DEFAULT_PORT = Integer.parseInt(port);
-			} catch (NumberFormatException ex) {
-				ex.printStackTrace();
-			}
+		if (System.getenv("KAR_RUNTIME_PORT") == null) {
+			logger.severe("KAR_RUNTIME_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
+			new Exception().printStackTrace();
 		}
-
-
+		if (System.getenv("KAR_APP_PORT") == null) {
+			logger.severe("KAR_APP_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
+			new Exception().printStackTrace();
+		}
 	}
 
 }

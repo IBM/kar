@@ -21,8 +21,6 @@
 		<version.slf4j>1.7.25</version.slf4j>
 		<jaeger.version>0.34.0</jaeger.version>
 		<!-- Liberty configuration -->
-		<liberty.var.default.http.port>8080</liberty.var.default.http.port>
-		<liberty.var.default.https.port>8443</liberty.var.default.https.port>
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
 		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
 		<version.java-compiler>11</version.java-compiler>
