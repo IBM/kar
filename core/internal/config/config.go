@@ -282,7 +282,11 @@ Available commands:
 		ServiceName = "kar.none"
 	}
 
-	ActorTypes = strings.Split(actorTypes, ",")
+	if actorTypes == "" {
+		ActorTypes = make([]string, 0)
+	} else {
+		ActorTypes = strings.Split(actorTypes, ",")
+	}
 
 	if !KafkaEnableTLS {
 		ktmp := os.Getenv("KAFKA_ENABLE_TLS")
