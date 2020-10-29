@@ -216,6 +216,12 @@ func Main() {
 			ManageBindings(ctx)
 		}()
 
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ValidateActorConfig(ctx)
+		}()
+
 		if len(args) > 0 {
 			exitCode = Run(ctx9, args, append(os.Environ(), runtimePort, appPort, requestTimeout))
 			cancel()

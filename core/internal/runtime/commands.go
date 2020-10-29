@@ -564,6 +564,21 @@ func ManageBindings(ctx context.Context) {
 	}
 }
 
+// ValidateActorConfig checks to make sure the user process actually supports
+// all the Actor types that were specified with `-actors` when the sidecar was launched.
+func ValidateActorConfig(ctx context.Context) {
+	for _, actorType := range config.ActorTypes {
+		reply, err := invoke(ctx, "HEAD", map[string]string{"path": actorRuntimeRoutePrefix + actorType})
+		if err != nil {
+			if err != ctx.Err() {
+				logger.Error("validate actor type failed for %s: %v", actorType, err)
+			}
+		} else if reply.StatusCode != http.StatusOK {
+			logger.Error("Actor type %v is not recognized by application process!", actorType)
+		}
+	}
+}
+
 // Migrate migrates an actor and associated reminders to a new sidecar
 // NOTE: This method is currently unused and not exposed via the KAR REST API.
 func Migrate(ctx context.Context, actor Actor, sidecar string) error {

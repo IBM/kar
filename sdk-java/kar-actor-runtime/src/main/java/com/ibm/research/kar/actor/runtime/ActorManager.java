@@ -14,6 +14,8 @@ public interface ActorManager {
 	// delete an actor instance -- deos not invoke deactivate
 	public boolean deleteActor(String type, String id);
 
+	public boolean hasActorType(String type);
+
 	public MethodHandle getActorMethod(String type, String name);
 
 	public MethodHandle getActorActivateMethod(String type);

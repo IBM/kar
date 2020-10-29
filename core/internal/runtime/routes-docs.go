@@ -60,6 +60,22 @@ package runtime
  * Swagger specification for language-level actor runtime implementation
  *******************************************************************/
 
+// swagger:route HEAD /impl/v1/actor/{type} actor-runtime idImplActorTypeGet
+//
+// actor type validation
+//
+// ### Test to see if the actor type is provided by the targeted runtime.
+//
+// TODO: Document me
+//
+//     Schemes: http
+//     Responses:
+//       200: response200
+//       404: response404
+//       500: response500
+//
+func dummy0() {}
+
 // swagger:route GET /impl/v1/actor/{type}/{id} actor-runtime idImplActorGet
 //
 // actor allocation

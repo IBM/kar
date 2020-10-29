@@ -173,6 +173,11 @@ public class ActorManagerImpl implements ActorManager {
 		}
 	}
 
+	@Lock(LockType.READ)
+	public boolean hasActorType(String type) {
+		return this.actorMap.containsKey(type);
+	}
+
 	@Override
 	@Lock(LockType.READ)
 	public MethodHandle getActorMethod(String type, String name) {

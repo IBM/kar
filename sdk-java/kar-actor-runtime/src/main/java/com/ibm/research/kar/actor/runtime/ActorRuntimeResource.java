@@ -15,12 +15,14 @@ import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
@@ -82,6 +84,13 @@ public class ActorRuntimeResource {
 		// Actually remove the instance
 		actorManager.deleteActor(type, id);
 		return Response.status(Response.Status.OK).build();
+	}
+
+	@HEAD
+	@Path("{type}")
+	public Response checkActorType(@PathParam("type") String type) {
+		Status status = this.actorManager.hasActorType(type) ? Response.Status.OK : Response.Status.NOT_FOUND;
+		return Response.status(status).build();
 	}
 
 	@POST

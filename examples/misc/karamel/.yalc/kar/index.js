@@ -321,6 +321,13 @@ function actorRuntime (actors) {
       .catch(next)
   })
 
+  // actor type validation route
+  router.head('/kar/impl/v1/actor/:type', (req, res, next) => {
+    const Actor = actors[req.params.type]
+    if (Actor == null) return res.status(404).send()
+    return res.status(200).send()
+  })
+
   // health route
   router.get('/kar/impl/v1/system/health', (req, res, next) => {
     return res.status(200).type('text/plain').send('Peachy Keen!')
