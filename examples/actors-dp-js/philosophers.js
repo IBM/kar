@@ -23,8 +23,7 @@ class Fork {
   }
 
   async putDown (who) {
-    if (this.inUseBy === who) {
-      // not guaranteed if putDown is re-executed due to failure
+    if (this.inUseBy === who) { // can be false if putDown is re-executed due to failure
       this.inUseBy = 'nobody'
       await actor.state.set(this, 'inUseBy', this.inUseBy)
     }
@@ -34,6 +33,7 @@ class Fork {
 class Philosopher {
   async activate () {
     Object.assign(this, await actor.state.getAll(this))
+    this.step = this.step || this.kar.id // use actor id as initial step
   }
 
   nextStepTime () {
@@ -105,53 +105,71 @@ class Table {
   async activate () {
     const that = await actor.state.getAll(this)
     this.cafe = that.cafe
-    this.diners = new Set(that.diners || [])
-    this.step = that.step
+    this.n = that.n
+    this.diners = that.diners || [] // initial state is an empty table
+    this.step = that.step || this.kar.id // use actor id as initial step
   }
 
-  occupancy () {
-    return this.diners.size
-  }
+  occupancy () { return this.diners.length }
 
-  async set (cafe, n, servings, step) {
+  philosopher (p) { return `${this.cafe}-${this.kar.id}-philosopher-${p}` }
+
+  fork (f) { return `${this.cafe}-${this.kar.id}-fork-${f}` }
+
+  async prepare (cafe, n, servings, step) {
     if (this.step !== step) throw new Error('unexpected step')
     step = uuidv4()
     this.cafe = cafe
-    console.log(`Cafe ${cafe} is seating table ${this.kar.id} with ${n} hungry philosophers for ${servings} servings`)
-    var philosophers = []
+    this.n = n
     for (var i = 0; i < n; i++) {
-      philosophers[i] = `${cafe}-${this.kar.id}-${i}`
-      this.diners.add(philosophers[i])
+      this.diners[i] = this.philosopher(i)
     }
-    await actor.tell(this, 'eat', n, servings, step)
+    console.log(`Cafe ${cafe} is seating table ${this.kar.id} with ${n} hungry philosophers for ${servings} servings`)
+    await actor.tell(this, 'serve', servings, step)
     this.step = step
-    await actor.state.setMultiple(this, { step, diners: Array.from(this.diners) })
+    await actor.state.setMultiple(this, { step, cafe, n, diners: this.diners })
   }
 
-  async eat (n, servings, step) {
+  async serve (servings, step) {
     if (this.step !== step) throw new Error('unexpected step')
     step = uuidv4()
-    var philosophers = []
-    var forks = []
-    for (var i = 0; i < n; i++) {
-      philosophers[i] = `${this.cafe}-${this.kar.id}-${i}`
-      forks[i] = `${this.cafe}-${this.kar.id}-${i}`
+    for (var i = 0; i < this.n - 1; i++) {
+      const who = this.philosopher(i)
+      const fork1 = this.fork(i)
+      const fork2 = this.fork(i + 1)
+      await actor.call(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings, who)
     }
-    for (i = 0; i < n - 1; i++) {
-      await actor.call(actor.proxy('Philosopher', philosophers[i]), 'joinTable', this.kar.id, forks[i], forks[i + 1], servings)
-    }
-    await actor.call(actor.proxy('Philosopher', philosophers[n - 1]), 'joinTable', this.kar.id, forks[0], forks[n - 1], servings)
+    const who = this.philosopher(this.n - 1)
+    const fork1 = this.fork(0)
+    const fork2 = this.fork(this.n - 1)
+    await actor.call(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings, who)
     this.step = step
     await actor.state.set(this, 'step', step)
   }
 
   async doneEating (philosopher) {
-    this.diners.delete(philosopher)
-    await actor.state.set(this, 'diners', Array.from(this.diners))
-    console.log(`Philosopher ${philosopher} is done eating; there are now ${this.diners.size} present at the table`)
-    if (this.diners.size === 0) {
+    this.diners = this.diners.filter(x => x !== philosopher)
+    await actor.state.set(this, 'diners', this.diners)
+    console.log(`Philosopher ${philosopher} is done eating; there are now ${this.diners.length} present at the table`)
+    if (this.diners.length === 0) {
       console.log(`Table ${this.kar.id} is now empty!`)
+      const step = uuidv4()
+      await actor.tell(this, 'busTable', step)
+      this.step = step
+      await actor.state.set(this, 'step', step)
     }
+  }
+
+  async busTable (step) {
+    if (this.step !== step) throw new Error('unexpected step')
+    step = uuidv4()
+    for (var i = 0; i < this.n; i++) {
+      await actor.remove(actor.proxy('Philosopher', this.philosopher(i)))
+      await actor.remove(actor.proxy('Fork', this.fork(i)))
+    }
+    await actor.remove(this)
+    this.step = step
+    await actor.state.set(this, 'step', step)
   }
 }
 
@@ -160,9 +178,9 @@ class Cafe {
     return actor.call(actor.proxy('Table', table), 'occupancy')
   }
 
-  async seatTable (n = 5, servings = 20, table = uuidv4()) {
-    await actor.call(actor.proxy('Table', table), 'set', this.kar.id, n, servings)
-    return table
+  async seatTable (n = 5, servings = 20, requestId = uuidv4()) {
+    await actor.call(actor.proxy('Table', requestId), 'prepare', this.kar.id, n, servings, requestId)
+    return requestId
   }
 }
 

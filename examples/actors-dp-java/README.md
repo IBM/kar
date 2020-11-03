@@ -19,7 +19,7 @@ tables or when a sated Philosopher leaves.
 To run the example locally, first do a `mvn package`.
 Then in one window start up the server code:
 ```shell
-kar run -app dp -actors Cafe,Fork,Philosopher mvn liberty:run
+kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
 ```
 In a second window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell

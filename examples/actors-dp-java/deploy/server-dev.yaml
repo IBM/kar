@@ -14,7 +14,7 @@ spec:
         app: java-dp
       annotations:
         kar.ibm.com/app: dp
-        kar.ibm.com/actors: Cafe,Fork,Philosopher
+        kar.ibm.com/actors: Cafe,Fork,Philosopher,Table
         kar.ibm.com/appPort: "8080"
     spec:
       containers:

@@ -48,7 +48,7 @@ cd $ROOTDIR/examples/actors-dp-java
 mvn clean package
 
 echo "Launching Java DP Server"
-kar run -v info -app dp -actors Cafe,Fork,Philosopher mvn liberty:run &
+kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
 PID=$!
 
 # Sleep 10 seconds to given liberty time to come up

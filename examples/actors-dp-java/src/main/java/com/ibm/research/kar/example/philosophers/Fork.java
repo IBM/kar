@@ -10,7 +10,6 @@ import javax.json.JsonValue;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
-import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
 
 @Actor
@@ -29,11 +28,6 @@ public class Fork extends ActorSkeleton {
 		}
 	}
 
-	@Deactivate
-	public void deactivate() {
-		actorSetState(this, "inUseBy", this.inUseBy);
-	}
-
 	@Remote
 	public JsonValue pickUp(JsonString who) {
 		if (this.inUseBy.equals(nobody)) {
@@ -41,6 +35,7 @@ public class Fork extends ActorSkeleton {
 			actorSetState(this, "inUseBy", who);
 			return JsonValue.TRUE;
 		} else if (this.inUseBy.equals(who)) {
+			// can happen if pickUp is re-executed due to a failure
 			return JsonValue.TRUE;
 		} else {
 			return JsonValue.FALSE;
@@ -48,13 +43,10 @@ public class Fork extends ActorSkeleton {
 	}
 
 	@Remote
-	public JsonValue putDown(JsonString who) {
-		if (this.inUseBy.equals(who)) {
+	public void putDown(JsonString who) {
+		if (this.inUseBy.equals(who)) { // can be false if putDown is re-executed due to failure
 			this.inUseBy = nobody;
 			actorSetState(this, "inUseBy", this.inUseBy);
-			return JsonValue.TRUE;
-		} else {
-			return JsonValue.FALSE;
 		}
 	}
 }
