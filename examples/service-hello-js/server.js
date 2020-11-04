@@ -28,6 +28,12 @@ app.post('/helloJson', (req, res) => {
   res.json({ greetings: msg })
 })
 
+// a get route for health checks
+app.get('/health', (req, res) => {
+  console.log('I am healthy')
+  res.send('I am healthy!')
+})
+
 // start server on port $KAR_APP_PORT
 console.log('Starting greetings server...')
 app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
