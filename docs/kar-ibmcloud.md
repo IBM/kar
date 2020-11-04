@@ -64,7 +64,7 @@ ibmcloud ce project create --name kar-project
 
 ### Configure the project for KAR
 ```shell
-./scripts/kar-code-engine-project-enable.sh <service-key> <cr-apikey>
+./scripts/kar-ce-project-enable.sh <service-key> <cr-apikey>
 ```
 
 ### Deploy a KAR component
