@@ -105,7 +105,7 @@ public class ActorRuntimeResource {
 			return Response.status(Response.Status.NOT_FOUND).entity("Actor instance not found " + type + "actor" + id).build();
 		}
 
-		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path);
+		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path, args.size());
 		if (actorMethod == null) {
 			return Response.status(Response.Status.NOT_FOUND).entity("Cannot find method " + path).build();
 		}

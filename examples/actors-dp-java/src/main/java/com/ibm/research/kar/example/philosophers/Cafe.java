@@ -21,26 +21,20 @@ public class Cafe extends ActorSkeleton {
 		return actorCall(actorRef("Table", table.getString()), "occupancy");
 	}
 
-	// FIXME: Java runtime does not support overloading @Remote methods
-	/*
 	@Remote
 	public JsonString seatTable() {
 		return seatTable(Json.createValue(5), Json.createValue(20));
 	}
-	*/
 
 	@Remote
 	public JsonString seatTable(JsonNumber n, JsonNumber servings) {
 		JsonString requestId = Json.createValue(UUID.randomUUID().toString());
+		return seatTable(n, servings, requestId);
+	}
+
+	@Remote
+	public JsonString seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
 		actorCall(actorRef("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId);
 		return requestId;
 	}
-
-	/*
-	@Remote
-	public JsonString seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		actorCall(actorRef("Table", requestId.getString()), "set", Json.createValue(this.getId()), n, servings, requestId);
-		return requestId;
-	}
-	*/
 }

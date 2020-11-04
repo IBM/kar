@@ -76,9 +76,14 @@ public class ActorManagerImpl implements ActorManager {
 								if (method.isAnnotationPresent(Remote.class)) {
 									try {
 										MethodHandle mh = lookup.unreflect(method);
-										logger.info(LOG_PREFIX + "initialize: adding method " + method.getName() + " to remote methods for "
-												+ actorClassName);
-										remoteMethods.put(method.getName(), mh);
+										String key = method.getName()+":"+method.getParameterCount();
+										if (remoteMethods.containsKey(key)) {
+											logger.severe("Unsupported static overload of "+method.getName()+". Multiple overloads with "+method.getParameterCount()+" arguments");
+											logger.severe("Method "+method.toString()+" failed to be registered as a @Remote method");
+										} else {
+											logger.info(LOG_PREFIX + "initialize: adding " + key + " to remote methods for "+ actorClassName);
+											remoteMethods.put(method.getName()+":"+method.getParameterTypes().length, mh);
+										}
 									} catch (IllegalAccessException e) {
 										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName()
 												+ " to remote methods for " + actorClassName);
@@ -180,9 +185,9 @@ public class ActorManagerImpl implements ActorManager {
 
 	@Override
 	@Lock(LockType.READ)
-	public MethodHandle getActorMethod(String type, String name) {
+	public MethodHandle getActorMethod(String type, String name, int numParams) {
 		ActorModel model = this.actorMap.get(type);
-		return model != null ? model.getRemoteMethods().get(name) : null;
+		return model != null ? model.getRemoteMethods().get(name+":"+numParams) : null;
 	}
 
 	@Override

@@ -16,7 +16,7 @@ public interface ActorManager {
 
 	public boolean hasActorType(String type);
 
-	public MethodHandle getActorMethod(String type, String name);
+	public MethodHandle getActorMethod(String type, String name, int numParams);
 
 	public MethodHandle getActorActivateMethod(String type);
 
