@@ -15,6 +15,7 @@ service=""
 verbose="error"
 port="8080"
 ceargs=""
+cluster_local="--cluster-local"
 
 help=""
 args=""
@@ -47,6 +48,9 @@ while [ -n "$1" ]; do
         -env)
             shift;
             ceargs="$ceargs --env $1"
+            ;;
+        -externalize)
+            cluster_local=""
             ;;
         -name)
             shift;
@@ -111,7 +115,7 @@ if [ "$actors" != "" ]; then
 fi
 
 ceargs="$ceargs --image $image --name $name --min-scale $scale --max-scale $scale --cpu 1"
-ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config --cluster-local"
+ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config $cluster_local"
 ceargs="$ceargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 ceargs="$ceargs --env KAR_EXTRA_ARGS=\"$karargs\""
 
