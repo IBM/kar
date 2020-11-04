@@ -39,12 +39,12 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 		}
 
 		if (System.getenv("KAR_RUNTIME_PORT") == null) {
-			logger.severe("KAR_RUNTIME_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
-			new Exception().printStackTrace();
+			logger.severe("KAR_RUNTIME_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
+			Runtime.getRuntime().halt(1);
 		}
 		if (System.getenv("KAR_APP_PORT") == null) {
-			logger.severe("KAR_APP_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
-			new Exception().printStackTrace();
+			logger.severe("KAR_APP_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
+			Runtime.getRuntime().halt(1);
 		}
 	}
 

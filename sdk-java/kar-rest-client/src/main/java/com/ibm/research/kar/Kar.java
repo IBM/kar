@@ -63,10 +63,8 @@ public class Kar {
 	protected static URI getUri() {
 		String port = System.getenv("KAR_RUNTIME_PORT");
 		if (port == null || port.trim().isEmpty()) {
-			logger.severe("KAR_RUNTIME_PORT is not set.  YOUR APPLICATION IS BADLY MISCONFIGURED AND WILL NOT WORK!");
-			RuntimeException ex = new RuntimeException();
-			ex.printStackTrace();
-			throw ex;
+			logger.severe("KAR_RUNTIME_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
+			Runtime.getRuntime().halt(1);
 		}
 		String baseURIStr = "http://localhost:"+ port + "/";
 		logger.fine("KAR Sidecar base URI is " + baseURIStr);
