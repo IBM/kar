@@ -16,6 +16,7 @@ verbose="error"
 port="8080"
 ceargs=""
 cluster_local="--cluster-local"
+nowait=""
 
 help=""
 args=""
@@ -52,6 +53,9 @@ while [ -n "$1" ]; do
         -externalize)
             cluster_local=""
             ;;
+        -nowait)
+            nowait="--no-wait"
+            ;;
         -name)
             shift;
             name="$1"
@@ -84,9 +88,11 @@ where [options] includes:
     -actors <actors>          invoke kar with -actors <actors>
     -service <service>        invoke kar with -service <service>
     -port <port>              invoke kar with -app_port <port> (default 8080)
+    -externalize              make app port accessible via public URL (default cluster_local)
     -env KEY=VALUE            add the binding KEY=VALUE to the container's environment
     -scale <N>                run N replicas of this component (default 1)
     -v <level>                invoke kar with -v <level>       (default error)
+    -nowait                   create the app asynchronously    (default wait up to 300 seconds)
 EOF
     exit 0
 fi
@@ -114,8 +120,8 @@ if [ "$actors" != "" ]; then
     karargs="$karargs -actors $actors"
 fi
 
-ceargs="$ceargs --image $image --name $name --min-scale $scale --max-scale $scale --cpu 1"
-ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config $cluster_local"
+ceargs="$ceargs --image $image --name $name --min-scale $scale --max-scale $scale --cpu 1 --port http1:$port"
+ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config $cluster_local $nowait"
 ceargs="$ceargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 ceargs="$ceargs --env KAR_EXTRA_ARGS=\"$karargs\""
 
