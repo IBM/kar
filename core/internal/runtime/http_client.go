@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cenkalti/backoff/v4"
 	"github.ibm.com/solsa/kar.git/core/internal/config"
@@ -55,7 +56,13 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		return nil, ctx.Err()
 	default:
 	}
+	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, method, url+msg["path"], strings.NewReader(msg["payload"]))
+	done := time.Now()
+	elapsed := done.Sub(start)
+	if elapsed.Seconds() > 30 {
+		logger.Info("Request with path %v took %v seconds", msg["path"], elapsed.Seconds())
+	}
 	if err != nil {
 		return nil, err
 	}
