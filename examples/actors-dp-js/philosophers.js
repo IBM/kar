@@ -187,4 +187,4 @@ class Cafe {
 // Server setup: register actors with KAR and start express
 const app = express()
 app.use(sys.actorRuntime({ Fork, Philosopher, Table, Cafe }))
-app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

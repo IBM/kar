@@ -11,7 +11,7 @@ class Handler {
 
 app.use(sys.actorRuntime({ Handler }))
 
-app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 // main function
 async function main () {

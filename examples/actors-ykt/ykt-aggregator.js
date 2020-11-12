@@ -99,4 +99,4 @@ app.post('/shutdown', async (_reg, res) => {
 // Enable kar error handling.
 app.use(sys.errorHandler)
 
-const server = app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+const server = app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

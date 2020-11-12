@@ -36,4 +36,4 @@ app.get('/health', (req, res) => {
 
 // start server on port $KAR_APP_PORT
 console.log('Starting greetings server...')
-app.listen(process.env.KAR_APP_PORT, '127.0.0.1')
+app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
