@@ -4,7 +4,7 @@
 - Java 11
 - Maven 3.6+
 
-Note: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty)
+Note1: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty). You should not use v20.0.0.11 because of a known bug in the Microprofile Rest Client.
 
 # Overview
 The Java SDK provides:
@@ -12,7 +12,9 @@ The Java SDK provides:
 2. `kar-actor-runtime` - classes that implement the KAR actor runtime in Java
 
 # Building
-To build these packages, run `mvn install`.  This will build both `kar-rest-client` and `kar-actor-runtime`.
+
+## Open Liberty
+To build these packages to run on Open Liberty, run `mvn install`.  This will build both `kar-rest-client` and `kar-actor-runtime`.  \
 
 # Basic KAR SDK usage
 The basic KAR SDK is in `kar-rest-client`. After building, add `target/kar-rest-client.jar` and `target/libs` to the CLASSPATH of your application. Note: `target/libs` contains dependent jars required by `target/kar-rest-client.jar`, which is implemented using the [Microprofile 3.3 Rest Client](https://github.com/eclipse/microprofile-rest-client).
@@ -235,3 +237,15 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 ```
 
 For a complete example, see the [KAR example actor server](https://github.ibm.com/solsa/kar/tree/master/examples/java/actors/kar-actor-example)
+
+# Quarkus Support
+We are experimenting with the KAR Java SDK for Quarkus.  This is an early preview and has the following limitations:
+
+- No support for native compilation.  The Quarkus native-image does not support Java `MethodHandle`, which we use for reflection in the actor runtime.
+- No support for `quarkus:dev`.  We have undiagnosed classpath errors when running under this mode.  To run a quarkus application that uses KAR, directly execute the runnable jar target, e.g. `kar -app myApp java -jar target/my-runnable-jar`
+
+## Building
+If you've previously built the KAR Java SDK for Open Liberty, it is highly recommended that you delete your local maven repository.  Then, to build the KAR SDK using Quarkus extensions, in the `sdk-java` directory execute `mvn -P quarkus install`. 
+
+## Usage
+The Quarkus version of the SDK is the same, except you should not declare an `@ApplicationPath` in your JAX-RS application class since this is already used by the actor runtime.  Quarkus does not allow multiple declarations of `@ApplicationPath` (it also does not require a JAX-RS application class).

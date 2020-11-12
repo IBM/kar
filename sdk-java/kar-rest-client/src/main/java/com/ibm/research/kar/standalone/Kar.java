@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit;
 
 import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.KarRest;
-import com.ibm.research.kar.actor.exceptions.ExceptionToResponse;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import org.glassfish.json.jaxrs.JsonValueBodyWriter;
