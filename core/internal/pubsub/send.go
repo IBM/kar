@@ -111,25 +111,25 @@ func Send(ctx context.Context, direct bool, msg map[string]string) error {
 	case "service": // route to service
 		partition, msg["sidecar"], err = routeToService(ctx, msg["service"])
 		if err != nil {
-			logger.Debug("failed to route to service %s: %v", msg["service"], err)
+			logger.Error("failed to route to service %s: %v", msg["service"], err)
 			return err
 		}
 	case "actor": // route to actor
 		partition, msg["sidecar"], err = routeToActor(ctx, msg["type"], msg["id"])
 		if err != nil {
-			logger.Debug("failed to route to actor type %s, id %s: %v", msg["type"], msg["id"], err)
+			logger.Error("failed to route to actor type %s, id %s: %v", msg["type"], msg["id"], err)
 			return err
 		}
 	case "sidecar": // route to sidecar
 		partition, err = routeToSidecar(msg["sidecar"])
 		if err != nil {
-			logger.Debug("failed to route to sidecar %s: %v", msg["sidecar"], err)
+			logger.Error("failed to route to sidecar %s: %v", msg["sidecar"], err)
 			return err
 		}
 	case "partition": // route to partition
 		p, err := strconv.ParseInt(msg["partition"], 10, 32)
 		if err != nil {
-			logger.Debug("failed to route to partition %s: %v", msg["partition"], err)
+			logger.Error("failed to route to partition %s: %v", msg["partition"], err)
 			return err
 		}
 		partition = int32(p)
@@ -139,14 +139,14 @@ func Send(ctx context.Context, direct bool, msg map[string]string) error {
 	}
 	m, err := json.Marshal(msg)
 	if err != nil {
-		logger.Debug("failed to marshal message: %v", err)
+		logger.Error("failed to marshal message: %v", err)
 		return err
 	}
 	if direct && msg["sidecar"] != "" {
 		logger.Debug("sending message via direct http connection to sidecar %v", msg["sidecar"])
 		err = httpSend(addresses[msg["sidecar"]], m)
 		if err != nil {
-			logger.Debug("failed to send message to sidecar %v: %v", msg["sidecar"], err)
+			logger.Error("failed to send message to sidecar %v: %v", msg["sidecar"], err)
 			return err
 		}
 		return nil
@@ -157,7 +157,7 @@ func Send(ctx context.Context, direct bool, msg map[string]string) error {
 		Value:     sarama.ByteEncoder(m),
 	})
 	if err != nil {
-		logger.Debug("failed to send message to partition %d: %v", partition, err)
+		logger.Error("failed to send message to partition %d: %v", partition, err)
 		return err
 	}
 	logger.Debug("sent message at partition %d, offset %d", partition, offset)

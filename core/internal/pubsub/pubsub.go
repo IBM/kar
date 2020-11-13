@@ -62,13 +62,13 @@ func Dial() error {
 
 	client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka client: %v", err)
+		logger.Error("failed to instantiate Kafka client: %v", err)
 		return err
 	}
 
 	producer, err = sarama.NewSyncProducerFromClient(client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka producer: %v", err)
+		logger.Error("failed to instantiate Kafka producer: %v", err)
 		return err
 	}
 
@@ -86,7 +86,7 @@ func newConfig() (*sarama.Config, error) {
 	var err error
 	conf.Version, err = sarama.ParseKafkaVersion(config.KafkaVersion)
 	if err != nil {
-		logger.Debug("failed to parse Kafka version: %v", err)
+		logger.Error("failed to parse Kafka version: %v", err)
 		return nil, err
 	}
 	conf.ClientID = "kar"
@@ -120,7 +120,7 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 	address = net.JoinHostPort(config.Hostname, strconv.Itoa(port))
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return nil, err
 	}
 	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
@@ -129,7 +129,7 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 	}
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
-			logger.Debug("failed to create Kafka topic: %v", err)
+			logger.Error("failed to create Kafka topic: %v", err)
 			return nil, err
 		}
 	}
@@ -145,14 +145,14 @@ func CreateTopic(topic string, parameters string) error {
 	if parameters != "" {
 		err = json.Unmarshal([]byte(parameters), &params)
 		if err != nil {
-			logger.Debug("Error unmarshaling parameters to createTopic %v: %v", topic, err)
+			logger.Error("failed to unmarshal parameters to createTopic %v: %v", topic, err)
 			return err
 		}
 	}
 
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return err
 	}
 
@@ -165,7 +165,7 @@ func CreateTopic(topic string, parameters string) error {
 		err = admin.CreateTopic(topic, &params, false)
 	}
 	if err != nil {
-		logger.Debug("failed to create Kafka topic %v: %v", topic, err)
+		logger.Error("failed to create Kafka topic %v: %v", topic, err)
 		return err
 	}
 	return nil
@@ -175,12 +175,12 @@ func CreateTopic(topic string, parameters string) error {
 func DeleteTopic(topic string) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return err
 	}
 	err = admin.DeleteTopic(topic)
 	if err != nil {
-		logger.Debug("failed to delete Kafka topic %v: %v", topic, err)
+		logger.Error("failed to delete Kafka topic %v: %v", topic, err)
 		return err
 	}
 	return nil
@@ -219,7 +219,7 @@ func GetSidecars(format string) (string, error) {
 	if format == "json" || format == "application/json" {
 		m, err := json.Marshal(information)
 		if err != nil {
-			logger.Debug("Error marshaling sidecar information data: %v", err)
+			logger.Error("failed to marshal sidecar information data: %v", err)
 			return "", err
 		}
 		return string(m), nil

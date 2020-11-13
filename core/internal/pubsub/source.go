@@ -80,7 +80,7 @@ func (h *handler) mark(partition int32, offset int64) error {
 	_, err := store.ZAdd(mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
 	if err != nil {
 		// TODO retry logic
-		logger.Debug("failed to mark message on topic %s, partition %d, offset %d: %v", err)
+		logger.Error("failed to mark message on topic %s, partition %d, offset %d: %v", err)
 		return err
 	}
 	h.lock.Lock()
@@ -112,13 +112,13 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 
 	admin, err := sarama.NewClusterAdminFromClient(h.client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka cluster admin: %v", err)
+		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return err
 	}
 
 	groups, err := admin.DescribeConsumerGroups([]string{h.topic})
 	if err != nil {
-		logger.Debug("failed to describe consumer group: %v", err)
+		logger.Error("failed to describe consumer group: %v", err)
 		return err
 	}
 	members := groups[0].Members
@@ -135,7 +135,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 				if err := admin.CreatePartitions(h.topic, int32(len(members)), nil, false); err != nil {
 					// do not fail if another sidecar added partitions already
 					if e, ok := err.(*sarama.TopicPartitionError); !ok || e.Err != sarama.ErrInvalidPartitions {
-						logger.Debug("failed to add partitions: %v", err)
+						logger.Error("failed to add partitions: %v", err)
 						return err
 					}
 				}
@@ -157,7 +157,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 		h.done[p] = map[int64]struct{}{}
 		r, err := store.ZRange(mangle(h.topic, p), 0, -1) // fetch done offsets from store
 		if err != nil {
-			logger.Debug("failed to retrieve offsets from store: %v", err)
+			logger.Error("failed to retrieve offsets from store: %v", err)
 			return err
 		}
 		for _, o := range r {
@@ -170,14 +170,14 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for _, member := range members {
 		m, err := member.GetMemberMetadata()
 		if err != nil {
-			logger.Debug("failed to parse member metadata: %v", err)
+			logger.Error("failed to parse member metadata: %v", err)
 			return err
 		}
 		var remote map[int32]map[int64]struct{}
 		if h.options.master { // also recompute routes
 			var d userData
 			if err := json.Unmarshal(m.UserData, &d); err != nil {
-				logger.Debug("failed to unmarshal user data: %v", err)
+				logger.Error("failed to unmarshal user data: %v", err)
 				return err
 			}
 			rp[d.Service] = append(rp[d.Service], d.Sidecar)
@@ -186,7 +186,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 			}
 			a, err := member.GetMemberAssignment()
 			if err != nil {
-				logger.Debug("failed to parse member assignment: %v", err)
+				logger.Error("failed to parse member assignment: %v", err)
 				return err
 			}
 			rt[d.Sidecar] = append(rt[d.Sidecar], a.Topics[h.topic]...)
@@ -194,7 +194,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 			ad[d.Sidecar] = d.Address
 		} else {
 			if err := json.Unmarshal(m.UserData, &remote); err != nil {
-				logger.Debug("failed to unmarshal user data: %v", err)
+				logger.Error("failed to unmarshal user data: %v", err)
 				return err
 			}
 		}
@@ -207,7 +207,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 
 	if h.options.master {
 		if err := client.RefreshMetadata(topic); err != nil { // refresh producer
-			logger.Debug("failed to refresh topic: %v", err)
+			logger.Error("failed to refresh topic: %v", err)
 			return err
 		}
 		mu.Lock()
@@ -291,7 +291,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	handler.marshal()
 	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka client: %v", err)
+		logger.Error("failed to instantiate Kafka client: %v", err)
 		return nil, http.StatusInternalServerError, err
 	}
 	_, err = client.Partitions(topic)
@@ -300,7 +300,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	}
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
-		logger.Debug("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
+		logger.Error("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
 		handler.client.Close()
 		return nil, http.StatusInternalServerError, err
 	}
@@ -312,7 +312,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 		defer close(closed)
 		for {
 			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil && err != errTooFewPartitions { // abnormal termination
-				logger.Error("failed consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
+				logger.Error("failed Kafka consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
 				// TODO maybe add an error channel
 				break
 			}

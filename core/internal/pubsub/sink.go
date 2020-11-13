@@ -14,7 +14,7 @@ func Publish(topic string, message []byte) ( /* httpStatusCode */ int, error) {
 		Value: sarama.ByteEncoder(message),
 	})
 	if err != nil {
-		logger.Debug("failed to send message on topic %s: %v", topic, err)
+		logger.Error("failed to send message on topic %s: %v", topic, err)
 		if err == sarama.ErrUnknownTopicOrPartition {
 			return http.StatusNotFound, err
 		}

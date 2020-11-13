@@ -133,7 +133,7 @@ func Main() {
 	}
 	listener, err := net.Listen("tcp", listenHost)
 	if err != nil {
-		logger.Fatal("listener failed: %v", err)
+		logger.Fatal("TCP listener failed: %v", err)
 	}
 
 	if store.Dial() != nil {
@@ -142,7 +142,7 @@ func Main() {
 	defer store.Close()
 
 	if pubsub.Dial() != nil {
-		logger.Fatal("dial failed: %v", err)
+		logger.Fatal("failed to connect to Kafka: %v", err)
 	}
 	defer pubsub.Close()
 
@@ -157,7 +157,7 @@ func Main() {
 	// one goroutine, defer close(closed)
 	closed, err := pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
 	if err != nil {
-		logger.Fatal("join failed: %v", err)
+		logger.Fatal("failed to join Kafka consumer group for application: %v", err)
 	}
 
 	args := flag.Args()
