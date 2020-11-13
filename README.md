@@ -1,186 +1,125 @@
-# KAR: Kubernetes Application Runtime
+# KAR: A Runtime for the Hybrid Cloud
 
-The KAR project is part of a strategic effort in IBM Research to
-simplify cloud native development and drive the growth of IBM's Hybrid
-Cloud strategy. KAR, an acronym for *Kubernetes Application Runtime*,
-is specifically about developing a programming model and supporting
-runtime system that directly supports a productive programming model
-for assembling enterprise applications from cloud-native components.
+The KAR runtime makes it easy to _develop_ and _run_ stateful, scalable,
+resilient applications for the _hybrid cloud_ that combine microservices and
+managed services.
 
-If you are a regular employee in the Research Division, you can access
-our [Challenge Portal Entry](https://aichallenges.sl.cloud9.ibm.com/challenges/2659?tab=details)
-for additional strategic context.  For non-Research employees, the
-[Project Summary](#project-summary) below captures the technical
-overview from the Challenge Portal Entry.
+KAR is:
+- open source and vendor neutral.
+- cloud-native: KAR is built for Kubernetes and OpenShift.
+- polyglot: KAR supports any programming language and developer framework by
+  means of REST APIs. Idiomatic SDKs for specific languages may be developed
+  with minor effort.
+- simple yet expressive: KAR interfaces stateless and stateful microservices
+  using requests and events.
+- scalable: KAR is designed from the ground up to handle dynamic scaling of
+  replicated stateless and stateful microservices.
+- resilient: KAR combines persistent message queues with persistent data stores
+  to offer strong fault-tolerance guarantees.
+- extensible: KAR applications can produce or consume events and data streams
+  using hundreds of [Apache Camel](https://camel.apache.org) sources and sinks.
 
-## Quick Links
+KAR is deployed as a lightweight process, a container, or a Kubernetes sidecar
+that runs alongside each microservice:
+- The KAR process exposes a REST API to the microservice. Using this API, the
+  microservice can make synchronous and asynchronous requests to other
+  microservices, produce or consume events, or manage its persistent state.
+- This REST API is served over HTTP/1.1 for maximal compatibility as well as
+  HTTP/2 for high performance and scalability.
 
-+ See [Getting Started](docs/getting-started.md) for hands-on instructions on trying KAR.
-+ See [KAR on IBM Cloud](docs/kar-ibmcloud.md) for notes on using KAR with the IBM Cloud.
-+ Check out our [examples](examples/README.md)
-+ Read about the KAR [Programming Model](#programming-model)
-+ Browse the Swagger specification of the [KAR sidecar API](https://pages.github.ibm.com/solsa/kar/api/redoc/).
+Together the KAR processes form a mesh:
+- This mesh can run entirely on a developer's laptop, on a Kubernetes cluster,
+  but also across clusters, servers, VMs, edge devices, etc.
+- This mesh leverages Kafka to decouple the microservices from one another and
+  guarantee reliable request/reponse and publish/subscribe interactions.
+- This mesh has no leader, no single point of failure, no dependency other than
+  a Kafka and Redis instances.
 
-## Project Summary
+![KAR](docs/images/mesh.png)
 
-### Motivation
+Using the KAR mesh, a typical application interfaces a collection of
+microservices, event sources, event sinks, and interactive client/CLI processes.
+Consider for instance the architecture of the simulation engine described in
+[actor-ykt](examples/actors-ykt/README.md). This application combines:
+- a replicated simulator microservice that can be scaled to accommodate many
+  simulated agents.
+- a singleton reporter microservice that produces reports on a schedule or on
+  demand.
+- a controller that runs only when a human operator is controlling the
+  simulator.
+- a notifier that sends reports to a Slack channel.
 
-Cloud platforms provide developers with a multitude of building
-blocks: compute engines to execute containerized microservices and
-serverless functions; access to multiple data stores; pub/sub and
-messaging services; and a diverse set of other platform-managed
-services. However, productively assembling these building blocks into
-an overall solution that achieves the desired application-level
-(global) characteristics of availability, reliability, scalability,
-transactionality, etc. remains an extremely challenging task that
-requires a high degree of technical expertise and cross-stack
-knowledge. Furthermore, there is a lack of repeatable methodologies,
-best practices, and associated middleware for assembling a complex
-enterprise application using cloud-native building blocks. These gaps
-impede the adoption of hybrid cloud technology by enterprise clients.
+The simulator, reporter, and controller are Node.js components implemented in
+JavaScript. The notifier component leverages the Camel runtime and is configured
+by means of a few lines of YAML.
 
-There are many established and successful programming models for
-building individual microservices in specific programming languages
-(e.g. Spring for Java, Express for NodeJS). These models are adequate
-for building individual application components, but by themselves are
-not sufficient to enable enterprises to construct complete
-applications with the necessary global characteristics.
+A developer may choose to deploy the simulator to Kubernetes/OpenShift but run
+the controller on his laptop. The KAR CLI or operator automatically injects and
+configures the KAR runtime that runs alongside each component.
 
-Based on our understanding of the desired application patterns and the
-capabilities of the underlying building blocks, we intend to develop
-an application runtime system called KAR that directly supports a
-productive programming model for assembling enterprise applications
-from cloud-native components. In particular, we propose to build a
-system with **strong enough failure semantics** and **built-in support
-for state** to significantly simplify the construction of reliable,
-stateful applications. We will both build out the middleware layer and
-develop motivating example applications and application patterns that
-illustrate its usefulness.
+# Scalable and Fault-Tolerant State
 
-We believe that a cloud-native programming model should abstract away
-non-essential details of the runtime system and the components being
-assembled to enable the **decoupling of the logical application
-architecture from the specific technology choices** that are made to
-(a) develop each component and (b) deploy an application instance in a
-specific environment.
+KAR puts a great deal of emphasis on helping developers manage application
+state. Stateless microservices are easy to scale and easy to restart or replace
+on failure. Stateful microservices are not. Moreover the state of an application
+not only includes the state of its microservice components, but also the state
+of in-flight requests or events, external state in databases or on disk, etc.
+Keeping track of this state, avoiding performance bottlenecks, and protecting it
+from failures is typically very hard.
 
-### Key Assumptions
-+ We assume Kubernetes (OpenShift) as our base distributed operating system.
-+ We assume Kafka as a reliable messaging platform.
-+ We assume a persistent data store.
-+ We assume that a variety of programming languages/models will be
-  used to construct the individual application components that contain
-  business logic. We do not assume that these components can be
-  entirely oblivious of the overarching programming model we are
-  providing, but using our programming model/runtime will not require
-  deep changes to the existing technology/languages used to implement
-  business the core business logic.
+## Actors
 
-### Technical Approach
+KAR make it easy to structure the state of microservices as a collection of
+_actor_ instances. The [actor model](https://en.wikipedia.org/wiki/Actor_model)
+is a popular and well-understood approach to programming concurrent and
+distributed systems. Each actor instance is responsible for its own state. The
+state of an actor instance can be saved or restored safely (because actor
+instances are single-threaded) and independently from other actor instances
+(since there is no shared state).
 
-We will inject a level of indirection/abstraction between individual
-application components by introducing a "standard" set of **REST-style
-APIs for accessing pub/sub, data store, compute engines, and other
-services**. Applications use these APIs to access the logical services
-they need. For selected programming languages, a thin
-language-specific SDK can provide a more idiomatic set of APIs than
-the least-common-denominator REST API.
+KAR offers simple APIs for actors to incrementally save their state to Redis.
+These APIs can be triggered periodically, or when idle with little effort. KAR
+can automatically restore the state of a failed actor instance. Timers or event
+subscriptions associated with an actor instance are also restored.
 
-When an application instance is deployed, a **sidecar** attached to
-each application component implements the REST-style APIs and mediates
-all incoming and outgoing traffic from the component. The runtime
-system consisting of all the sidecars and possibly other helper
-services leverages **Kafka to ensure reliable at-least-once delivery
-semantics** of all messages, freeing individual application components
-from having to deal with transient failures.
+Actor instances can migrate from one microservice replica to another due to
+failures or for load balancing purposes. KAR understands that actors are
+relocatable. KAR's API for invoking actors transparently route and if necessary
+reroute requests to the proper destination.
 
-As a programming abstraction, **synchronous RPCs** are generally
-easier for programmers to use correctly that asynchronous
-APIs. However, synchronous invocation of high-latency services is
-undesirable for a number of reasons (performance/footprint;
-fault-tolerance; resource allocation/migration). We hypothesize that
-an important role for the programming model is to provide the
-programmer with the illusion of synchronous cross-component APIs while
-actually implementing those APIs via lower-level asynchronous
-operations with more desirable performance and reliability
-characteristics.
+For instance, in the simulation engine example, the simulation state is
+partitioned across multiple replicas of the simulator microservice using actors.
+A developer can reason about and program these actors and their interactions
+without having to worry about exhausting the resources of a single process
+mapping actor instances to processes. In that sense, KAR supports a "serverless"
+experience.
 
-In order to facilitate the development of scalable, stateful
-applications, we propose to initially focus on supporting three kinds
-of application components:
-+ **Stateless components** whose scaling can be primarily managed
-  using Kubernetes mechanisms (or KEDA).
-+ **Stateful components** that are managed by the application itself
-  (in particular singleton services).
-+ **Virtual stateful components** (aka actors or agents) whose
-  scaling and migration can be completely managed by our runtime layer
-  because the runtime layer is able to activate, passivate, and migrate
-  agent instances between containers.
+## Exactly-once completion semantics
 
-While we intend to leverage Kubernetes to the fullest extend
-(discovery, routing, scaling, health...), we believe a good local
-developer experience is essential to success. Our sidecar can run
-outside of Kubernetes with low resource requirements, making it
-possible for a developer to run one or multiple application components
-locally, e.g. on a laptop.
+KAR not only facilitate persisting the state of actors, but it also
+transparently persists requests and events until fully processed. More
+precisely, KAR combines three guarantees:
+- an _at-least-once-delivery_ guarantee,
+- an _at-most-one-attempt-at-a-time_ guarantee,
+- a _no-reexecution-upon-success_ guarantee.
 
-## Programming Model
+In other words, KAR will try as many times as necessary, making one attempt
+after the other, but not once more than necessary.
 
-An application is composed of multiple components. Every instance of
-an application component is paired with its own KAR runtime _sidecar_
-process that mediates all of the component's inter-component
-interactions. From the perspective of the application, all
-inter-component interactions occur via RESTful calls to its sidecar as
-depicted below. The pair of a single application process and single
-sidecar process is the basic building block of a KAR application and
-the unit of [fault-tolerance](#fault-tolerance).
+KAR strives to achieve such guarantees in a dynamic, distributed system with
+minimal overheads.
 
-![KAR sidecar and application](docs/images/one-component.png)
+# Quick Links
 
-The picture below represents the runtime structure of a KAR
-application with two replicated application components, **A** and
-**B**. Each instance of the application relies on local communication
-with its sidecar to handle service discovery, cross-component calls,
-etc. Beneath the hood, the KAR sidecars orchestrate all
-inter-component interactions using reliable messaging on Kafka to
-provide the application with at-least-once delivery semantics. The
-sidecars also mediate application access to Redis, providing a
-persistent key-value store.
++ See [Getting Started](docs/getting-started.md) for hands-on instructions on
+  trying KAR.
++ See [KAR on IBM Cloud](docs/kar-ibmcloud.md) for notes on using KAR with the
+  IBM Cloud.
++ Check out our [examples](examples/README.md).
++ Read about the KAR [Programming Model](docs/KAR.md).
++ Browse the Swagger specification of the [KAR
+  API](https://pages.github.ibm.com/solsa/kar/api/redoc/).
 
-![multi-pod KAR application](docs/images/multiple-pods.png)
+# License
 
-### Services
-
-An application component can expose one or more logical services to
-other components. Each service can contain an arbitrary set of REST
-endpoints that can be invoked either synchronously or
-asynchronously. Application components that provide services are
-intended to be auto-scaled by KAR/Kubernetes and therefore should
-either be stateless or do their own state management. 
-
-### Actors
-
-KAR includes a virtual actor model that provides system-managed
-stateful entities. An application component can host one or more actor
-types.  The entire actor life cycle and auto-scaling of application
-components that are hosting actors is managed by the KAR runtime.
-
-### State
-
-KAR provides applications with a resilient key-value store to store
-arbitrary application state.
-
-### Event Sources and Sinks
-
-KAR provides applications with a publish/subscribe sub-system that can
-be bound to a variety of concrete event sources and sinks.
-
-### Fault Tolerance
-
-The containment domain for failures in KAR is the basic unit of a
-single application process and its sidecar. KAR provides at-least-once
-semantics for all inter-component interactions.  Once an
-inter-component message has been accepted by a KAR sidecar
-it is guaranteed to be delivered to an instance of the target
-application component. In the presence of failures, some messages may
-be delivered more than once to different instances of the component.
+KAR is an open-source project with an [Apache 2.0 license](LICENSE.txt).

@@ -1,20 +1,17 @@
-# KAR Programming Model
+# Programming Model
 
 KAR makes is possible to construct scalable, fault-tolerant, cloud-native
 applications by building networks of loosely coupled application components.
-These components implement microservices and actors. They communicate over Kafka
-and persist state in Redis.
 
-Components do not interface with each other, Kafka, or Redis directly but via
-the KAR sidecar. This sidecar runs in parallel with each application component
-(in the same pod when deploying on Kubernetes). It offers REST APIs that permit
-one component to invoke another (Remote Procedure Call), to produce or consume
-events, and to persist state.
-
-While the sidecar REST API may be used directly, KAR provides language-specific
-SDKs that offer more idiomatic APIs and facilitate the implementation of actors.
-A JavaScript and a Java SDK are available now, with more to come in the near
-future.
+Application components communicate over Kafka and persist state in Redis.
+However, they do not interface with Kafka or Redis directly but via the KAR
+sidecar. This sidecar runs in parallel with each component. It offers REST APIs
+that permit one component to invoke another (Remote Procedure Call), to produce
+or consume events, and to persist state. While these REST APIs may be used
+directly, KAR provides language-specific SDKs that offer more idiomatic APIs and
+facilitate the implementation of actors. A JavaScript and a Java SDK are
+available now, with more to come in the near future. In the future, we may also
+consider offering alternatives to Kafka and Redis.
 
 ## Applications
 
@@ -23,12 +20,24 @@ independent applications concurrently. Distinct applications may communicate by
 means of _events_, i.e., publishing events and/or subscribing to events.
 
 A KAR application consists of a dynamic set of _components_ akin to running
-instances of microservices and a _persistent store_. A _component_ is a unit of
-compute and state. A component belongs to a single application. A component is
-_joined_ to a specific application at launch time by providing the name of the
-application (required). The component belongs to the same application until it
-terminates. The set of components in an application vary over time as new
-components join the application or existing components terminate.
+instances of microservices, _event sources_ and _sinks_, and a _persistent
+store_.
+
+KAR uses name mangling to allow for a single Redis instance and single Kafka
+instance to support multiple applications without interferences.
+
+## Components
+
+An application _component_ is a unit of compute and state. A component belongs
+to a single application. A component is _joined_ to a specific application at
+launch time by providing the name of the application (required). The component
+belongs to the same application until it terminates. The set of components in an
+application vary over time as new components join the application or existing
+components terminate.
+
+Components can be stateless or stateful. Stateful components intended to be
+scalable or fault-tolerant should either manage their state on their own or
+leverage KAR's actors and persistent store.
 
 ## Services
 
@@ -45,8 +54,9 @@ delivers the request to any component offering the service. If no such component
 is available KAR persists the request until it can be delivered (up to a
 configurable timeout). Requests may be _synchronous_ or _asynchronous_. A
 synchronous request returns the _response_ to the HTTP request. An asynchronous
-request returns as soon as KAR accepts the request with a simple
-_acknowledgment_.
+request returns as soon as KAR accepts the request. If desired, a request id
+can be returned from an asynchronous method invocation to permit querying KAR
+for the response later.
 
 ## Stores
 
@@ -61,20 +71,25 @@ go down to zero, KAR will persists its store content and make it available to
 components later joining the application.
 
 Since KAR may persist state indefinitely, components should make sure to delete
-unnecessary content from the persistent store, or set content to expire after a
-delay. KAR will also provide tools to monitor, examine, and cleanup persistent
-state.
+unnecessary content from the persistent store.
+
+The KAR CLI makes it possible to purge the application state.
 
 ## Actors
 
-KAR provides support for _actors_. An _actor instance_ (or actor in short) is a
-logically independent unit of compute and state, typically much smaller than an
-application component. An actor instance offers _methods_ that can query and/or
-update the state of the actor instance and invoke other actors. Actors offer a
-single-threaded execution model where two method invocations on an actor
-instance may not make progress concurrently.
+KAR includes a virtual actor model that provides system-managed stateful
+entities. An application component can support one or more _actor types_ and
+host many _actor instances_ of the supported types. The entire actor lifecycle
+of these actor instances is managed by the KAR runtime.
 
-Every actor instance is an instance of an _actor type_. Actor instances of the
+An actor instance (or actor in short) is a logically independent unit of compute
+and state, typically much smaller than an application component. An actor
+instance offers _methods_ that can query and/or update the state of the actor
+instance and invoke other actors. Actors offer a single-threaded execution model
+where two method invocations on an actor instance may not make progress
+concurrently.
+
+Every actor instance is an instance of an actor type. Actor instances of the
 same type are expected to offer the same methods and logically represent
 entities of the same kind but with different state.
 
@@ -90,22 +105,22 @@ Application components may host many actor instances of multiple actor types.
 Application components must specify at launch time what actor types they
 support. A application component supporting an actor type T, must implement a
 REST server capable of handling the following requests:
-* construction of an actor instance with type T and a given ID,
-* invocation of a method on the actor instance with type T and a given ID,
-* destruction of an actor instance with type T and a given ID.
+* construct an actor instance with type T and a given ID,
+* invoke a method on the actor instance with type T and a given ID,
+* destruct an actor instance with type T and a given ID.
 
-KAR includes actor SDKs to facilitate the implementation of such REST servers.
-For instance, the JavaScript SDK for KAR makes it possible to define an actor
-type by means of a class declaration. An actor instance is simply an instance of
-that class and its methods are the methods of the actor. Multiple actor types
-may be defined by means of multiple classes. The SDK handles the mapping from
-actor types and IDs to object references and implements the required routes of a
-REST server.
+KAR includes SDKs to facilitate the implementation of such REST servers. For
+instance, the JavaScript SDK for KAR makes it possible to define an actor type
+by means of a class declaration. An actor instance is simply an instance of that
+class and its methods are the methods of the actor. Multiple actor types may be
+defined by means of multiple classes. The SDK handles the mapping from actor
+types and IDs to object references and implements the required routes of a REST
+server.
 
 An application component may offer a service and at the same time hosts actors
 by implementing a REST server capable of doing both.
 
-### Actor Lifecyle
+## Actor Lifecycle
 
 When a method is invoked on an actor reference, KAR first checks whether a
 matching instance exists for this reference. If there is no such instance, KAR
@@ -115,10 +130,16 @@ the given type and ID. It then invokes the method on this actor instance with
 the specified arguments. Hence, by design, KAR will never invoke a method on an
 actor instance that has not been constructed first.
 
+By convention, KAR SDKs invoke the `activate` method on an actor instance
+immediately after construction if this method exists on the actor instance. The
+SDKs invoke the `deactivate` method of the actor instance if it exists
+immediately before reclaiming the instance.
+
 Method invocations can be synchronous and asynchronous. A synchronous method
 invocation returns the result of the invocation of the method on the actor
 instance to the caller. An asynchronous method invocation returns as soon as KAR
-accepts the invocation with a simple acknowledgment.
+accepts the invocation. If desired, a request id can be returned from an
+asynchronous method invocation to permit querying KAR for the response later.
 
 If no application component is available to instantiate the specified actor
 type, KAR persists the invocation request until it can be delivered (up to a
@@ -169,10 +190,26 @@ invocations share the same session ID.
 
 TODO
 
+Reminders are implicitly persisted by the KAR runtime. Reminders will continue
+to fire even if an actor instance is lost or destructed, reconstructing the
+actor instance at firing time if necessary.
+
 ## Events
 
-TODO
+KAR provides applications with a publish/subscribe sub-system that can
+be bound to a variety of concrete event sources and sinks using Camel.
 
-## Fault-Tolerance
+Application components can publish events to a _topic_ identified by its name.
+Actor instances can subscribe to a _topic_ by specifying a method to invoke on
+each event delivered to this topic.
 
-TODO
+Topic names are global. In other words, distinct applications can communicate
+by emitting and receiving events on the same topics.
+
+Subscriptions are identified by a _subscription ID_. KAR provides APIs to not
+only create subscriptions, but also query, update, and delete existing
+subscriptions.
+
+Subscriptions are implicitly persisted by the KAR runtime. Subscriptions will
+continue to deliver events even if an actor instance is lost or destructed,
+reconstructing the actor instance on event arrival if necessary.
