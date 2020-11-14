@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.ibm.com/solsa/kar.git/core/internal/config"
+	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 var (
@@ -18,6 +20,8 @@ var (
 	// connection
 	conn redis.Conn      // for now use a single connection
 	mu   = &sync.Mutex{} // and a mutex
+
+	last = time.Now()
 )
 
 // mangle add common prefix to all keys
@@ -37,8 +41,24 @@ func unmangle(key string) string {
 // send a command while holding the connection mutex
 func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	mu.Lock()
+	if time.Since(last) > time.Minute {
+		// check connection and reconnect if necessary
+		conn.Do("PING")
+		err = conn.Err()
+		if err != nil {
+			err = Dial()
+			if err != nil {
+				logger.Error("failed to reconnect to redis: %v", err)
+				return
+			}
+		}
+	}
 	reply, err = conn.Do(command, args...)
+	last = time.Now()
 	mu.Unlock()
+	if err != nil {
+		logger.Error("failed to send command to redis: %v", err)
+	}
 	return
 }
 
