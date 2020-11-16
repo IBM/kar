@@ -58,11 +58,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 	}
 	start := time.Now()
 	req, err := http.NewRequestWithContext(ctx, method, url+msg["path"], strings.NewReader(msg["payload"]))
-	done := time.Now()
-	elapsed := done.Sub(start)
-	if elapsed.Seconds() > 30 {
-		logger.Info("Request with path %v took %v seconds", msg["path"], elapsed.Seconds())
-	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -93,6 +89,9 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 	err = backoff.Retry(func() error {
 		var res *http.Response
 		res, err = client.Do(req)
+		if elapsed := time.Now().Sub(start); elapsed.Seconds() > config.ActorTimeout.Seconds()/2 {
+			logger.Info("Request with path %v took %v seconds", msg["path"], elapsed.Seconds())
+		}
 		if err != nil {
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
 				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
