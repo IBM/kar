@@ -56,7 +56,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		return nil, ctx.Err()
 	default:
 	}
-	start := time.Now()
+
 	req, err := http.NewRequestWithContext(ctx, method, url+msg["path"], strings.NewReader(msg["payload"]))
 
 	if err != nil {
@@ -88,6 +88,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 	}
 	err = backoff.Retry(func() error {
 		var res *http.Response
+		start := time.Now()
 		res, err = client.Do(req)
 		if elapsed := time.Now().Sub(start); elapsed.Seconds() > config.ActorTimeout.Seconds()/2 {
 			logger.Info("Request with path %v took %v seconds", msg["path"], elapsed.Seconds())
