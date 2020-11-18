@@ -421,12 +421,12 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if err == errActorHasMoved {
 			err = pubsub.Send(ctx, false, msg) // forward
 		} else if err == errActorAcquireTimeout {
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
+			logger.Error("%s", payload)
 			if msg["command"] == "call" {
-				logger.Debug("acquire %v timed out, aborting call %s", actor, msg["path"])
-				var reply *Reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				var reply *Reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
 				err = respond(ctx, msg, reply)
 			} else {
-				logger.Error("acquire %v timed out, aborting command %s with path %s", actor, msg["command"], msg["path"])
 				err = nil
 			}
 		} else if err == nil {
