@@ -40,7 +40,21 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
 		log.Printf("[STDERR] %v", reply.Payload)
 	} else {
-		log.Printf("[STDOUT] %v", reply.Payload)
+		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
+			var result actorCallResult
+			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
+				log.Printf("[STDERR] Internal error: malformed method result: %v", err)
+			} else {
+				if result.Error {
+					log.Printf("[STDERR] Exception raised: %s", result.Message)
+					log.Printf("[STDERR] Stacktrace: %v", result.Stack)
+				} else {
+					log.Printf("[STDOUT] Method result: %v", result.Value)
+				}
+			}
+		} else {
+			log.Printf("[STDOUT] %v", reply.Payload)
+		}
 	}
 	return
 }
