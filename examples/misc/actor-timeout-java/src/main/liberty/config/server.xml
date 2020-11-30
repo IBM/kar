@@ -1,0 +1,28 @@
+<server description="KAR actors timeout test">
+
+	<featureManager>
+		<feature>jaxrs-2.1</feature>
+		<feature>jsonb-1.0</feature>
+		<feature>mpHealth-2.1</feature>
+		<feature>mpConfig-1.3</feature>
+		<feature>mpRestClient-1.3</feature>
+		<feature>beanValidation-2.0</feature>
+		<feature>cdi-2.0</feature>
+		<feature>concurrent-1.0</feature>
+		<feature>mpOpenTracing-1.3</feature>
+	</featureManager>
+
+	<variable name="default.http.port" defaultValue="${env.KAR_APP_PORT}" />
+	<variable name="default.https.port" defaultValue="-1" />
+
+	<httpEndpoint httpPort="${default.http.port}"
+		httpsPort="${default.https.port}" id="defaultHttpEndpoint" host="*" />
+
+	<webApplication location="actor-timeout.war"
+		contextRoot="/">
+		<classloader apiTypeVisibility="+third-party" />
+	</webApplication>
+
+	<applicationManager autoExpand="true" />
+
+</server>

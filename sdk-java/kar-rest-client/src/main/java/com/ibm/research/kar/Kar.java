@@ -30,6 +30,7 @@ import com.ibm.research.kar.actor.Reminder;
 import com.ibm.research.kar.actor.Subscription;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
+import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
@@ -452,8 +453,10 @@ public class Kar {
 			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args));
 			return actorCallProcessResponse(response);
 		} catch (WebApplicationException e) {
-			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+				throw new ActorMethodTimeoutException("Method timeout: "+actor.getType()+"["+actor.getId()+"]."+path);
 			} else {
 				throw e;
 			}
@@ -471,13 +474,15 @@ public class Kar {
 	 * @return The result of the invoked actor method.
 	 */
 	public static JsonValue actorCall(String session, ActorRef actor, String path, JsonValue... args)
-			throws ActorMethodNotFoundException, ActorMethodInvocationException {
+			throws ActorMethodNotFoundException, ActorMethodInvocationException, ActorMethodTimeoutException {
 		try {
 			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
 			return actorCallProcessResponse(response);
 		} catch (WebApplicationException e) {
-			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+				throw new ActorMethodTimeoutException("Method timeout: "+actor.getType()+"["+actor.getId()+"]."+path);
 			} else {
 				throw e;
 			}
@@ -499,8 +504,10 @@ public class Kar {
 			Response response = karClient.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
 			return actorCallProcessResponse(response);
 		} catch (WebApplicationException e) {
-			if (e.getResponse() != null && e.getResponse().getStatus() == Status.NOT_FOUND.getStatusCode()) {
+			if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 				throw new ActorMethodNotFoundException("Method not found: "+actor.getType()+"."+path, e);
+			} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+				throw new ActorMethodTimeoutException("Method timeout: "+actor.getType()+"["+actor.getId()+"]."+path);
 			} else {
 				throw e;
 			}
@@ -530,8 +537,9 @@ public class Kar {
 			JsonObject o = ((JsonValue) toValue(response)).asJsonObject();
 			if (o.containsKey("error")) {
 				String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
-				String stack = o.containsKey("stack") ? o.getString("stack") : "";
-				throw new ActorMethodInvocationException(message + ": " + stack);
+				Throwable cause =  o.containsKey("stack") ? new Throwable(o.getString("stack")) : null;
+				cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this dummy exception...the real stack is in the msg.
+				throw new ActorMethodInvocationException(message, cause);
 			} else {
 				return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
 			}

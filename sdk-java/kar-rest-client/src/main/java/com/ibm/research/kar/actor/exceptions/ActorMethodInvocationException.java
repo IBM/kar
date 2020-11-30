@@ -10,4 +10,8 @@ public class ActorMethodInvocationException extends ActorException {
 	public ActorMethodInvocationException(String errorMessage) {
 		super(errorMessage);
 	}
+
+	public ActorMethodInvocationException(String errorMessage, Throwable cause) {
+		super(errorMessage, cause);
+	}
 }
