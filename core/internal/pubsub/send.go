@@ -9,10 +9,14 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Shopify/sarama"
+	"github.ibm.com/solsa/kar.git/core/internal/config"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
+
+var errRouteToActor = errors.New("timeout occurred while looking for actor type")
 
 // use debug logger for errors returned to caller
 
@@ -86,8 +90,10 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			case <-ctx.Done():
 				err = ctx.Err()
 				return
+			case <-time.After(config.ActorTimeout):
+				err = errRouteToActor
+				return
 			}
-			// TODO timeout
 		}
 		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)
 		_, err = CompareAndSetSidecar(t, id, expected, sidecar) // try saving sidecar
