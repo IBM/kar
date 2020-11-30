@@ -24,6 +24,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
 
@@ -130,6 +131,18 @@ public class ActorRuntimeResource {
 				return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro).build();
 			}
 		} catch (Throwable t) {
+			if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
+				// Elide all of the implementation details above us in the backtrace
+				StackTraceElement [] fullBackTrace = t.getStackTrace();
+				for (int i=0; i<fullBackTrace.length; i++) {
+					if (fullBackTrace[i].getClassName().equals(ActorRuntimeResource.class.getName()) && fullBackTrace[i].getMethodName().equals("invokeActorMethod")) {
+						StackTraceElement[] reducedBackTrace = new StackTraceElement[i+1];
+						System.arraycopy(fullBackTrace, 0, reducedBackTrace, 0, i+1);
+						t.setStackTrace(reducedBackTrace);
+						break;
+					}
+				}
+			}
 			JsonObjectBuilder ro = Json.createObjectBuilder();
 			ro.add("error", true);
 			ro.add("message", t.toString());

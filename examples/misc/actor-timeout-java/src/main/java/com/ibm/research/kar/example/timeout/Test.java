@@ -1,6 +1,7 @@
 package com.ibm.research.kar.example.timeout;
 
 import static com.ibm.research.kar.Kar.actorCall;
+import static com.ibm.research.kar.Kar.actorTell;
 import static com.ibm.research.kar.Kar.actorRef;
 
 import javax.json.JsonString;
@@ -25,13 +26,12 @@ public class Test extends ActorSkeleton {
     System.out.println("Exiting method B");
   }
 
+  @Remote public void asyncA() {
+    actorTell(this, "A");
+  }
+
   @Remote public void externalA(JsonString target) {
     ActorRef other = actorRef("Test", target.getString());
     actorCall(other, "A");
-  }
-
-  @Remote public void externalB(JsonString target) {
-    ActorRef other = actorRef("Test", target.getString());
-    actorCall(other, "B");
   }
 }

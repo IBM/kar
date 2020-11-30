@@ -18,6 +18,9 @@ public class KarConfig {
 	// comma-delimited list of actor type names
 	public static String ACTOR_TYPE_NAME_STR;
 
+	// elide implementation details from actor method stack traces
+	public static boolean SHORTEN_ACTOR_STACKTRACES = true;
+
 	/********
 	 * TBD settable variables microprofile-config.properties
 	 */

@@ -20,6 +20,7 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 	public static final String KAR_ACTOR_CLASSES = "kar-actor-classes";
 	public static final String KAR_ACTOR_TYPES = "kar-actor-types";
 	public static final String KAR_CONNECTION_TIMEOUT = "kar-connection-timeout-millis";
+	public static final String KAR_SHORTEN_ACTOR_STACKTRACES = "kar-shorten-actor-stacktraces";
 
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
@@ -27,6 +28,10 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 
 		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
 		KarConfig.ACTOR_TYPE_NAME_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_TYPES);
+		String tmp = ctx.getInitParameter(ActorRuntimeContextListener.KAR_SHORTEN_ACTOR_STACKTRACES);
+		if (tmp != null) {
+			KarConfig.SHORTEN_ACTOR_STACKTRACES = Boolean.parseBoolean(tmp);
+		}
 
 		String timeOut = ctx.getInitParameter(ActorRuntimeContextListener.KAR_CONNECTION_TIMEOUT);
 		if (timeOut != null) {
