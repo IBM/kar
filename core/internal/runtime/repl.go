@@ -36,10 +36,9 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		exitCode = 1
 		return
 	}
-	if reply.StatusCode != http.StatusOK {
-		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
-		log.Printf("[STDERR] %v", reply.Payload)
-	} else {
+	if reply.StatusCode == http.StatusNoContent {
+		log.Printf("[STDOUT] Method completed normally with void result.")
+	} else if reply.StatusCode == http.StatusOK {
 		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
 			var result actorCallResult
 			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
@@ -55,6 +54,9 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		} else {
 			log.Printf("[STDOUT] %v", reply.Payload)
 		}
+	} else {
+		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
+		log.Printf("[STDERR] %v", reply.Payload)
 	}
 	return
 }
