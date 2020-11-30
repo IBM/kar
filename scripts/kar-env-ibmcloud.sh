@@ -23,6 +23,16 @@ REDIS_KEY=`echo $KEY | jq '.[] | select(.source_crn|test("redis"))'`
 # extract kafka key
 KAFKA_KEY=`echo $KEY | jq '.[] | select(.source_crn|test("messagehub"))'`
 
+# Clear any old bindings
+unset REDIS_ENABLE_TLS
+unset REDIS_HOST
+unset REDIS_PORT
+unset REDIS_PASSWORD
+unset KAFKA_VERSION
+unset KAFKA_ENABLE_TLS
+unset KAFKA_BROKERS
+unset KAFKA_PASSWORD
+
 # setup redis env variables
 export REDIS_ENABLE_TLS=true
 export REDIS_HOST=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.hosts[0].hostname`
