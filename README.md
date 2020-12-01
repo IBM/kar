@@ -90,7 +90,7 @@ reroute requests to the proper destination.
 For instance, in the simulation engine example, the simulation state is
 partitioned across multiple replicas of the simulator microservice using actors.
 A developer can reason about and program these actors and their interactions
-without having to worry about exhausting the resources of a single process
+without having to worry about exhausting the resources of a single process or
 mapping actor instances to processes. In that sense, KAR supports a "serverless"
 experience.
 
