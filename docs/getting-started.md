@@ -22,9 +22,13 @@ modes for easier local debugging.
 
 To simplify getting started with KAR, we suggest first starting with
 the simplest clusterless local mode using our NodeJS-based examples.
-After becoming familiar with this mode, either continue with running
-some Java examples in the same clusterless mode or explore one of the
-Kubernetes-based modes. 
+After becoming familiar with this simplest scenario, you can explore
+running additional Java examples in the same clusterless local mode.
+
+Alternatively, you can explore additional deployment modes such as
+deploying KAR on a [Kubernetes cluster](kar-deployments.md#kubernetes),
+[IBM Code Engine](kar-deployments.md#ibm-code-engine), or spanning mutiple execution
+environments in a [Hybrid Cloud](kar-deployments.md#hybrid-cloud).
 
 # Prerequisites
 
@@ -144,141 +148,14 @@ kar rest -app hello-java post greeter helloJson '{"name": "Alan Turing"}'
 For more details on the Java example, see its [README](../examples/service-hello-java/README.md).
 
 
-# Local Cluster Deployment
+## Undeploying an instance of the KAR Runtime System
 
-Next, we will use [kind](https://kind.sigs.k8s.io/) to create a
-virtual Kubernetes cluster using Docker on your development machine.
-Using kind is only supported in KAR's "dev" mode where you will be
-building your own docker images of the KAR system components and
-pushing them into a local docker registry that we configure when
-deploying kind.
-
-## Prerequisites
-
-1. You will need `kind` 0.9.0 installed locally.
-
-2. You will need the `kubectl` cli installed locally.
-
-3. You will need the `helm` (Helm 3) cli installed locally.
-
-### Create your `kind` cluster and docker registry
-
+Undeploying your local instance of the KAR runtime system entails stopping
+and removing the docker containers for redis, kafka, and zookeeper. Note that
+this will also remove all saved state for any KAR-based applications you have run. 
+Undeploy these containers using docker-compose by running:
 ```shell
-./scripts/kind-start.sh
-```
-
-### Deploying the KAR Runtime System to the `kar-system` namespace
-
-First, build the necessary docker images and push them to a local
-registry that is accessible to kind with:
-```shell
-make dockerDev
-```
-Next, deploy KAR in dev mode by doing:
-```shell
-./scripts/kar-k8s-deploy.sh -dev
-```
-
-### Enable a namespace to run KAR-based applications.
-
-**NOTE: We strongly recommend against enabling the `kar-system` namespace
-  or any Kubernetes system namespace for KAR applications. Enabling
-  KAR sidecar injection for these namespaces can cause instability.**
-
-Enabling a namespace for deploying KAR-based applications requires
-copying configuration secrets from the `kar-system` namespace and
-labeling the namespace to enable KAR sidecar injection.  These steps
-are automated by [kar-k8s-namespace-enable.sh](../scripts/kar-k8s-namespace-enable.sh).
-
-The simplest approach is to KAR-enable the default namespace:
-```shell
-./scripts/kar-k8s-namespace-enable.sh default
-```
-The rest of our documentation assumes you will be deploying KAR
-applications to the default namespace and omits the `-n <namespace>`
-arguments to `kubectl` and `helm`.
-
-If you are used to working with multiple Kubernetes namespaces,
-you can use the same script to KAR-enable other namespaces.
-If the namespace doesn't exist, the script will create it.
-For example, to create and KAR-enable the `kar-apps` namespace execute:
-```shell
-./scripts/kar-k8s-namespace-enable.sh kar-apps
-```
-
-### Run a containerized example
-
-Run the client and server as shown below:
-```shell
-$ cd examples/service-hello-js
-$ kubectl apply -f deploy/server-dev.yaml
-pod/hello-server created
-$ kubectl get pods
-NAME           READY   STATUS    RESTARTS   AGE
-hello-server   2/2     Running   0          3s
-$ kubectl apply -f deploy/client-dev.yaml
-job.batch/hello-client created
-$ kubectl logs jobs/hello-client -c client
-Hello John Doe!
-Hello John Doe!
-$ kubectl logs hello-server -c server
-Hello John Doe!
-Hello John Doe!
-$ kubectl delete -f deploy/client-dev.yaml
-job.batch "hello-client" deleted
-$ kubectl delete -f deploy/server-dev.yaml
-pod "hello-server" deleted
-```
-
-## Deploying KAR on IBM Cloud Kubernetes Service
-
-## Prerequisites
-
-1. You will need an IKS cluster on which you have the cluster-admin role.
-
-2. You will need the `kubectl` cli installed locally.
-
-3. You will need the `helm` (Helm 3) cli installed locally.
-
-## Deploy the KAR Runtime System
-
-When deploying on IKS, you will use pre-built images from the KAR
-project namespace in the IBM Cloud Container Registry.
-Assuming you have set your kubectl context and have done an
-`ibmcloud login` into the RIS IBM Research Shared account, you
-can deploy KAR into your cluster in a single command:
-```shell
-./scripts/kar-k8s-deploy.sh
-```
-
-### Enable a namespace to run KAR-based applications.
-
-```shell
-./scripts/kar-k8s-namespace-enable.sh default
-```
-
-### Run a containerized example
-
-Run the client and server as shown below:
-```shell
-$ cd examples/service-hello-js
-$ kubectl apply -f deploy/server-icr.yaml
-pod/hello-server created
-$ kubectl get pods
-NAME           READY   STATUS    RESTARTS   AGE
-hello-server   2/2     Running   0          3s
-$ kubectl apply -f deploy/client-icr.yaml
-job.batch/hello-client created
-$ kubectl logs jobs/hello-client -c client
-Hello John Doe!
-Hello John Doe!
-$ kubectl logs hello-server -c server
-Hello John Doe!
-Hello John Doe!
-$ kubectl delete -f deploy/client-icr.yaml
-job.batch "hello-client" deleted
-$ kubectl delete -f deploy/server-icr.yaml
-pod "hello-server" deleted
+./scripts/docker-composer.stop.sh
 ```
 
 # Next Steps
@@ -287,9 +164,7 @@ Now that you have run your first few KAR examples, you can continue to
 explore in a number of directions.
 
 1. Browse the examples and try running additional programs.
-2. Experiment with mixing local and cluster mode executions.
-3. Explore multi-cluster and hybrid application deployments by
-   configuring the KAR Runtime system using `scripts/kar-env-ibmcloud.sh`
-   to use EventStreams and Redis instances provisioned on the IBM
-   Public cloud.
-4. Deploy a KAR application on IBM Code Engine.
+2. Explore [additional deployment options](kar-deployments.md)
+   for KAR including [Kubernetes](kar-deployments.md#kubernetes),
+   [Code Engine](kar-deployments.md#ibm-code-engine),
+   and [Hybrid Cloud](kar-deployments.md#hybrid-cloud) scenarios.

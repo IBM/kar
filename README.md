@@ -111,10 +111,10 @@ minimal overheads.
 
 # Quick Links
 
-+ See [Getting Started](docs/getting-started.md) for hands-on instructions on
++ See [Getting Started](docs/getting-started.md) for hands-on instructions for
   trying KAR.
-+ See [KAR on IBM Cloud](docs/kar-ibmcloud.md) for notes on using KAR with the
-  IBM Cloud.
++ See [KAR Deployment Options](docs/kar-deployments.md) for detailed instructions
+  for deploying KAR-based applications on a wide range of platforms.
 + Check out our [examples](examples/README.md).
 + Read about the KAR [Programming Model](docs/KAR.md).
 + Browse the Swagger specification of the [KAR
