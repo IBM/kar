@@ -16,7 +16,8 @@ import (
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
-var errRouteToActor = errors.New("timeout occurred while looking for actor type")
+// ErrRouteToActorTimeout indicates a timeout while waiting for a viable route to an Actor type.
+var ErrRouteToActorTimeout = errors.New("timeout occurred while looking for actor type")
 
 // use debug logger for errors returned to caller
 
@@ -91,7 +92,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 				err = ctx.Err()
 				return
 			case <-time.After(config.ActorTimeout):
-				err = errRouteToActor
+				err = ErrRouteToActorTimeout
 				return
 			}
 		}

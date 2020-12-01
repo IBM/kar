@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
+	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
 	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
@@ -305,6 +306,8 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+		} else if err == pubsub.ErrRouteToActorTimeout {
+			http.Error(w, fmt.Sprintf("timeout waiting for Actor type %v to be defined", ps.ByName("type")), http.StatusRequestTimeout)
 		} else {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		}
