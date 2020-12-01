@@ -28,11 +28,11 @@ that runs alongside each microservice:
   HTTP/2 for high performance and scalability.
 
 Together the KAR processes form a mesh:
-- This mesh can run entirely on a developer's laptop, on a Kubernetes cluster,
-  but also across clusters, servers, VMs, edge devices, etc.
+- This mesh can run entirely on a developer's laptop, or entirely within a single Kubernetes cluster,
+  or spanning multiple clusters, servers, VMs, edge devices, etc.
 - This mesh leverages Kafka to decouple the microservices from one another and
-  guarantee reliable request/reponse and publish/subscribe interactions.
-- This mesh has no leader, no single point of failure, no dependency other than
+  guarantee reliable request/response and publish/subscribe interactions.
+- This mesh has no leader, no single point of failure, and no external dependency other than
   a Kafka and Redis instances.
 
 ![KAR](docs/images/mesh.png)
@@ -84,8 +84,8 @@ subscriptions associated with an actor instance are also restored.
 
 Actor instances can migrate from one microservice replica to another due to
 failures or for load balancing purposes. KAR understands that actors are
-relocatable. KAR's API for invoking actors transparently route and if necessary
-reroute requests to the proper destination.
+relocatable. KAR's API for invoking actors transparently routes, and if necessary
+reroutes, requests to the proper destination.
 
 For instance, in the simulation engine example, the simulation state is
 partitioned across multiple replicas of the simulator microservice using actors.
