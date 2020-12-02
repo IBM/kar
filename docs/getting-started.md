@@ -21,14 +21,16 @@ simultaneously running application components in multiple of these
 modes for easier local debugging.
 
 To simplify getting started with KAR, we suggest first starting with
-the simplest clusterless local mode using our NodeJS-based examples.
-After becoming familiar with this simplest scenario, you can explore
-running additional Java examples in the same clusterless local mode.
+the simplest clusterless local mode using a Node.js example.
+After successfully running the first Node.js example, you can continue
+by running additional Node.js and Java examples in the same
+clusterless local mode.
 
-Alternatively, you can explore additional deployment modes such as
-deploying KAR on a [Kubernetes cluster](kar-deployments.md#kubernetes),
-[IBM Code Engine](kar-deployments.md#ibm-code-engine), or spanning mutiple execution
-environments in a [Hybrid Cloud](kar-deployments.md#hybrid-cloud).
+Next, you can explore additional deployment modes such as deploying
+KAR on a [Kubernetes cluster](kar-deployments.md#kubernetes-and-openshift),
+on [IBM Code Engine](kar-deployments.md#ibm-code-engine),
+or even spanning multiple execution environments in a
+[Hybrid Cloud](kar-deployments.md#hybrid-cloud) deployment.
 
 # Prerequisites
 
@@ -53,9 +55,10 @@ make cli
 
 ## Deploying an instance of the KAR Runtime System
 
-The KAR runtime system internally uses redis, kafka, and zookeeper.
-You can deploy these as docker containers using docker-compose
-by running:
+The KAR runtime system internally uses Redis as a persistent store and
+Kafka as a reliable message transport (Kafka internally uses ZooKeeper
+for distributed consensus).  You can deploy these
+dependencies as docker containers using docker-compose by running:
 ```shell
 ./scripts/docker-composer.start.sh
 ```
@@ -66,13 +69,13 @@ to enable `kar` to access its runtime by doing
 source ./scripts/kar-env-local.sh
 ```
 
-## Run a NodeJS based example locally
+## Run a Node.js based example locally
 
 ### Prerequisites
 
-You will need Node 12+ and NPM 6.12+ to run the NodeJS example.
+You will need Node.js 12+ and NPM 6.12+ to run the Node.js example.
 
-###  Run a Hello World NodeJS Example
+###  Run a Hello World Node.js Example
 
 In one window:
 ```shell
@@ -102,7 +105,7 @@ You can also use the `kar` cli to invoke the service directly:
 kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
 ```
 
-For more details on the NodeJS example, see its [README](../examples/service-hello-js/README.md).
+For more details on the Node.js example, see its [README](../examples/service-hello-js/README.md).
 
 ## Run a Java based example locally
 
@@ -151,7 +154,7 @@ For more details on the Java example, see its [README](../examples/service-hello
 ## Undeploying an instance of the KAR Runtime System
 
 Undeploying your local instance of the KAR runtime system entails stopping
-and removing the docker containers for redis, kafka, and zookeeper. Note that
+and removing the docker containers for Redis, Kafka, and ZooKeeper. Note that
 this will also remove all saved state for any KAR-based applications you have run. 
 Undeploy these containers using docker-compose by running:
 ```shell
@@ -165,6 +168,6 @@ explore in a number of directions.
 
 1. Browse the examples and try running additional programs.
 2. Explore [additional deployment options](kar-deployments.md)
-   for KAR including [Kubernetes](kar-deployments.md#kubernetes),
-   [Code Engine](kar-deployments.md#ibm-code-engine),
-   and [Hybrid Cloud](kar-deployments.md#hybrid-cloud) scenarios.
+   for KAR including [Kubernetes](kar-deployments.md#kubernetes-and-openshift),
+   [IBM Code Engine](kar-deployments.md#ibm-code-engine),
+   and [Hybrid Cloud](kar-deployments.md#hybrid-cloud) deployments.
