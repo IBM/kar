@@ -5,13 +5,18 @@ applications by building networks of loosely coupled application components.
 
 Application components communicate over Kafka and persist state in Redis.
 However, they do not interface with Kafka or Redis directly but via the KAR
-sidecar. This sidecar runs in parallel with each component. It offers REST APIs
-that permit one component to invoke another (Remote Procedure Call), to produce
-or consume events, and to persist state. While these REST APIs may be used
-directly, KAR provides language-specific SDKs that offer more idiomatic APIs and
-facilitate the implementation of actors. A JavaScript and a Java SDK are
-available now, with more to come in the near future. In the future, we may also
-consider offering alternatives to Kafka and Redis.
+runtime processes. A KAR runtime process runs alongside each application
+component. It offers REST APIs that permit one component to invoke another
+(Remote Procedure Call), to produce or consume events, and to persist state.
+While these REST APIs may be used directly, KAR provides language-specific SDKs
+that offer more idiomatic APIs and facilitate the implementation of actors. A
+JavaScript and a Java SDK are available now, with more to come in the near
+future. In the future, we may also consider offering alternatives to Kafka and
+Redis.
+
+In this document, we define and illustrate KAR's key concept using a collection
+of [examples](../examples). We assume a working KAR deployment. See [KAR
+Deployments](kar-deployments.md) for options.
 
 ## Applications
 
@@ -24,7 +29,14 @@ instances of microservices, _event sources_ and _sinks_, and a _persistent
 store_.
 
 KAR uses name mangling to allow for a single Redis instance and single Kafka
-instance to support multiple applications without interferences.
+instance to support multiple applications without unintended interference.
+
+Most KAR CLI commands requires specifying the name of the application to target,
+for example:
+```
+kar purge -app demo
+```
+This command purges the state of the `demo` application from Kafka and Redis.
 
 ## Components
 
@@ -39,26 +51,187 @@ Components can be stateless or stateful. Stateful components intended to be
 scalable or fault-tolerant should either manage their state on their own or
 leverage KAR's actors and persistent store.
 
+A component can be pretty much anything. In this tutorial, we will encounter
+examples of components built using Node.js, OpenLiberty, and curl. Individual
+components may be deployed as simple OS processes or as containers running on
+platforms such as Docker, Kubernetes, OpenShift, and IBM Code Engine.
+
+## Ports
+
+A KAR runtime process runs alongside each component process. We distinguish two
+kinds of components:
+- a _client_ component issues HTTP requests to the corresponding KAR runtime
+  process.
+- a _server_ component can not only issue HTTP requests to the KAR runtime
+  process, but also handle HTTP requests issued by the KAR runtime process.
+
+The KAR runtime process is listening on the _runtime port_. The server process is
+listening the _app(lication) port_.
+
+By default the KAR runtime port is autoselected and the KAR application port is
+set to 8080. When multiple server components are running on a single host, the
+default KAR application port must be overridden to avoid conflicts.
+
+## Launchers
+
+Using the KAR CLI, a KAR component is typically launched as follows:
+```
+kar run -app demo -- node demo-component.js
+```
+This command launches the KAR component process as well as the matching KAR
+runtime process. This component is joined to the `demo` application.
+
+Using `kubectl` a KAR component may be launched with a YAML specification such
+as:
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: demo-component
+  annotations:
+    kar.ibm.com/app: demo
+spec:
+  containers:
+  - name: demo-component
+    image: demo-component-image
+```
+This YAML launches both the containerized KAR component as well as the KAR
+runtime process as a sidecar container. The application name is specified as an
+annotation.
+
+In both cases, the component code may obtain the runtime and application port
+numbers by reading the environment variables `KAR_RUNTIME_PORT` and
+`KAR_APP_PORT`. The default port numbers may be overridden using the
+`-runtime_port` and `-app_port` flags of the `kar run` command or by adding the
+`kar.ibm.com/runtimePort` and `kar.ibm.com/appPort` annotations to the YAML
+specification.
+
 ## Services
 
 An application component may offer a single _service_ identified by its name,
-specified at launch time (optional). The component offers the same service until
-it terminates. Multiple components of the same application may offer the same
-service, akin to multiple replicas of a microservice. A component is not
-required to offer service. A component that offers a service must implement a
-REST server.
+specified at launch time. A component is not required to offer service. The
+component offers the same service (if any) until it terminates. Multiple
+components of the same application may offer the same service, akin to multiple
+replicas of a microservice.
+
+A component that offers a service must implement a REST server. For instance
+[server.js](../examples/service-hello-js/server.js) in example
+[service-hello-js](../examples/service-hello-js) implements a KAR service in
+JavaScript using [Express](https://expressjs.com) for Node.js. Alternatively,
+the [service-hello-java](../examples/service-hello-java) code implements the
+same example in Java using OpenLiberty.
+
+Launching a KAR service requires specifying the application name and service
+name, for instance using the KAR CLI:
+```
+kar run -app hello-js -service greeter -- node server.js
+```
+When deploying to Kubernetes or OpenShift, these names are provided by means of
+annotations, for example:
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-server
+  annotations:
+    kar.ibm.com/app: hello-js
+    kar.ibm.com/service: greeter
+spec:
+  containers:
+  - name: server
+    image: localhost:5000/examples/js/service-hello
+```
+Ideally the server should be listening on the port specified by the
+`KAR_APP_PORT` environment variable, for instance
+[server.js](../examples/service-hello-js/server.js) includes code:
+```
+app.listen(process.env.KAR_APP_PORT)
+```
+
+## Requests
 
 An application component can make a _request_ to a service of the application. A
-request consists of the name of the target service and an HTTP request. KAR
-delivers the request to any component offering the service. If no such component
-is available KAR persists the request until it can be delivered (up to a
-configurable timeout). Requests may be _synchronous_ or _asynchronous_. A
-synchronous request returns the _response_ to the HTTP request. An asynchronous
-request returns as soon as KAR accepts the request. If desired, a request id
-can be returned from an asynchronous method invocation to permit querying KAR
+request has the usual elements of an HTTP request: a method, a route, a payload,
+and headers. KAR delivers the request to any component offering the service. If
+no such component is available KAR persists the request until it can be
+delivered (up to a configurable timeout).
+
+Requests may be _synchronous_ or _asynchronous_. Requests are synchronous by
+default. A synchronous request returns the _response_ to the HTTP request. An
+asynchronous request returns as soon as KAR accepts the request. If desired, a
+request id can be returned from an asynchronous request to permit querying KAR
 for the response later.
 
-## Stores
+### REST API
+
+The KAR runtime process exposes a REST API to support service requests.
+
+For instance, assuming the `greeter` service of application `hello-js` is
+running, we can join a component to this application to make a request using
+`curl`.
+```
+kar run -app hello-js -- sh -c 'curl -s -X POST -H "Content-Type: text/plain" http://localhost:$KAR_RUNTIME_PORT/kar/v1/service/greeter/call/helloText -d "Gandalf the Grey"'
+```
+```
+2020/12/02 10:25:37.284552 [STDOUT] Hello Gandalf the Grey!
+```
+This component makes a single synchronous request to the `greeter` service,
+outputs the response, and terminates. The URL for the request follows the schema
+specified in the [KAR REST API
+documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/). It includes
+the target service name `greeter` and route `helloText`. The request also
+specifies the method `POST`, the payload `"Gandalf the Grey"`, and headers.
+
+The `KAR_RUNTIME_PORT` environment variable is automatically set by the KAR
+launcher to the port of the KAR runtime process. We wrap the `curl` command with
+a shell invocation `sh -c` to ensure proper expansion of this variable.
+
+An asynchronous request is obtained by adding a `Pragma` header to the request.
+If the `Pragma: Async` header is specified (case insensitive), the request
+simply returns `Accepted`. If the `Pragma: Promise` header is specified
+(case insensitive), the request returns a request id.
+
+See [KAR API documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/)
+for details.
+
+### CLI
+
+Because making requests from a terminal is very useful when developing KAR
+services, the KAR CLI offers a convenient shorthand for synchronous requests:
+```
+kar rest -app hello-js -content_type text/plain post greeter helloText 'Gandalf the Grey'
+```
+```
+2020/12/02 11:25:20.783532 [STDOUT] Hello Gandalf the Grey!
+```
+
+### Javascript SDK
+
+```
+const { call, tell, asyncCall } = require('kar')
+
+async function main () {
+  // synchronous request to a service
+  console.log(await call('greeter', 'helloJson', { name: 'Alice' }))
+
+  // asynchronous request
+  await tell('greeter', 'helloJson', { name: 'Bob' }))
+
+  // asynchronous request returning a future
+  const f = await asyncCall('greeter', 'helloJson', { name: 'Charlie' })
+
+  // forcing the future
+  console.log(await f())
+}
+
+main()
+```
+
+### Java SDK
+
+TODO
+
+## State
 
 An application includes a _persistent store_. Application components can
 _create_, _read_, _update_, and _delete_ content from the application store. KAR
@@ -73,7 +246,19 @@ components later joining the application.
 Since KAR may persist state indefinitely, components should make sure to delete
 unnecessary content from the persistent store.
 
-The KAR CLI makes it possible to purge the application state.
+The KAR CLI makes it possible to purge the application state:
+```
+kar purge -app demo
+```
+The `purge` command eliminates the application state in Redis and Kafka. It
+should only be invoked when no application component is running.
+
+Alternatively, the `drain` command preserves the state explicitly created by the
+application but cancels all pending requests. Intuitively, it flushes Kafka
+queues for the target application but does not affect Redis.
+```
+kar drain -app demo
+```
 
 ## Actors
 
@@ -196,15 +381,15 @@ actor instance at firing time if necessary.
 
 ## Events
 
-KAR provides applications with a publish/subscribe sub-system that can
-be bound to a variety of concrete event sources and sinks using Camel.
+KAR provides applications with a publish/subscribe sub-system that can be bound
+to a variety of concrete event sources and sinks using Camel.
 
 Application components can publish events to a _topic_ identified by its name.
 Actor instances can subscribe to a _topic_ by specifying a method to invoke on
 each event delivered to this topic.
 
-Topic names are global. In other words, distinct applications can communicate
-by emitting and receiving events on the same topics.
+Topic names are global. In other words, distinct applications can communicate by
+emitting and receiving events on the same topics.
 
 Subscriptions are identified by a _subscription ID_. KAR provides APIs to not
 only create subscriptions, but also query, update, and delete existing
