@@ -1,9 +1,15 @@
 package pubsub
 
 import (
+	"strings"
+
 	"github.ibm.com/solsa/kar.git/core/internal/config"
 	"github.ibm.com/solsa/kar.git/core/internal/store"
 )
+
+func placementKeyPrefix(t string) string {
+	return "pubsub" + config.Separator + "placement" + config.Separator + t
+}
 
 func placementKey(t, id string) string {
 	return "pubsub" + config.Separator + "placement" + config.Separator + t + config.Separator + id
@@ -32,4 +38,23 @@ func CompareAndSetSidecar(t, id, old, new string) (int, error) {
 		n = nil
 	}
 	return store.CompareAndSet(placementKey(t, id), o, n)
+}
+
+// GetAllActorInstances returns a mapping from actor types to instanceIDs
+func GetAllActorInstances(actorTypePrefix string) (map[string][]string, error) {
+	m := map[string][]string{}
+	reply, err := store.Keys(placementKeyPrefix(actorTypePrefix) + "*")
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range reply {
+		splitKeys := strings.Split(key, config.Separator)
+		actorType := splitKeys[2]
+		instanceID := splitKeys[3]
+		if m[actorType] == nil {
+			m[actorType] = make([]string, 0)
+		}
+		m[actorType] = append(m[actorType], instanceID)
+	}
+	return m, nil
 }

@@ -112,13 +112,16 @@ var (
 	// GetSystemComponent describes what system information to get
 	GetSystemComponent string
 
+	// GetResidentOnly include non-memory-resisdent actor instances in get query?
+	GetResidentOnly bool
+
 	// GetActorType restrict actor gets to specific type
 	GetActorType string
 
 	// GetActorInstanceID is an actor instance whose state will be read
 	GetActorInstanceID string
 
-	// OutputStyle is whether to print a human readable output, or return a JSON string of data.
+	// GetOutputStyle is whether to print a human readable output, or return a JSON string of data.
 	// Currently only applies to calling system/information/
 	GetOutputStyle string
 
@@ -218,6 +221,7 @@ Available commands:
 		usage = "kar get [OPTIONS]"
 		description = "Inspect state of an active application"
 		flag.StringVar(&GetSystemComponent, "s", "actors", "Subsystem to query [actors|sidecars]")
+		flag.BoolVar(&GetResidentOnly, "mr", false, "Only include memory-resident actor instances")
 		flag.StringVar(&GetActorType, "t", "", "Type of the actor instance to get")
 		flag.StringVar(&GetActorInstanceID, "i", "", "Instance id of a single actor whose state to get")
 		flag.StringVar(&GetOutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")

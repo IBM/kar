@@ -106,13 +106,24 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				}
 			}
 		} else {
-			if config.GetActorType != "" {
-				log.Printf("Memory-resident instances of actor type %v are:\n", config.GetActorType)
+			if !config.GetResidentOnly {
+				if config.GetActorType != "" {
+					log.Printf("Known instances of actor type %v are:\n", config.GetActorType)
+				} else {
+					log.Printf("Listing all known actor instances:\n")
+				}
+				if actorMap, err := pubsub.GetAllActorInstances(config.GetActorType); err == nil {
+					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
+				}
 			} else {
-				log.Printf("The complete set of memory-resident actors is:\n")
-			}
-			if actorMap, err := getAllActiveActors(ctx, config.GetActorType); err == nil {
-				str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
+				if config.GetActorType != "" {
+					log.Printf("Memory-resident instances of actor type %v are:\n", config.GetActorType)
+				} else {
+					log.Printf("Listing all memory-resident actor instances:\n")
+				}
+				if actorMap, err := getAllActiveActors(ctx, config.GetActorType); err == nil {
+					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
+				}
 			}
 		}
 	default:
