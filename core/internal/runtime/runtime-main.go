@@ -141,10 +141,19 @@ func Main() {
 	}
 	defer store.Close()
 
-	if pubsub.Dial() != nil {
-		logger.Fatal("failed to connect to Kafka: %v", err)
+	// Connecting to Kafka takes a long time and can disrupt the application when we re-partition.
+	// Recognize the command combinations that do not require Kafka and short-circuit.
+	requiresPubSub := true
+	if config.CmdName == config.GetCmd && config.GetSystemComponent == "actors" && !config.GetResidentOnly {
+		requiresPubSub = false
 	}
-	defer pubsub.Close()
+
+	if requiresPubSub {
+		if pubsub.Dial() != nil {
+			logger.Fatal("failed to connect to Kafka: %v", err)
+		}
+		defer pubsub.Close()
+	}
 
 	if config.CmdName == config.PurgeCmd {
 		purge("*")
@@ -154,10 +163,13 @@ func Main() {
 		return
 	}
 
-	// one goroutine, defer close(closed)
-	closed, err := pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
-	if err != nil {
-		logger.Fatal("failed to join Kafka consumer group for application: %v", err)
+	var closed <-chan struct{} = nil
+	if requiresPubSub {
+		// one goroutine, defer close(closed)
+		closed, err = pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
+		if err != nil {
+			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
+		}
 	}
 
 	args := flag.Args()
@@ -228,8 +240,10 @@ func Main() {
 		}
 	}
 
-	<-closed // wait for closed consumer first since process adds to WaitGroup
-	wg.Wait()
+	if requiresPubSub {
+		<-closed // wait for closed consumer first since process adds to WaitGroup
+		wg.Wait()
+	}
 
 	cancel9()
 
