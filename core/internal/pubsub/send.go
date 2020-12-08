@@ -19,6 +19,9 @@ import (
 // ErrRouteToActorTimeout indicates a timeout while waiting for a viable route to an Actor type.
 var ErrRouteToActorTimeout = errors.New("timeout occurred while looking for actor type")
 
+// ErrRouteToServiceTimeout indicates a timeout while waiting for a viable route to a Service endpoint.
+var ErrRouteToServiceTimeout = errors.New("timeout occurred while looking for service instance")
+
 // use debug logger for errors returned to caller
 
 // routeToService maps a service to a partition (keep trying)
@@ -40,6 +43,9 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 		case <-ch:
 		case <-ctx.Done():
 			err = ctx.Err()
+			return
+		case <-time.After(config.ServiceTimeout):
+			err = ErrRouteToServiceTimeout
 			return
 		}
 		// TODO timeout

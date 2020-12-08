@@ -106,8 +106,11 @@ var (
 	// A negative time will apply default durations
 	RequestTimeout time.Duration
 
-	// ActorTimeout is how long to wait on a busy actor before timing it out and returning the error.
+	// ActorTimeout is how long to wait on a busy actor instance or missing actor type before timing it out and returning an error.
 	ActorTimeout time.Duration
+
+	// ServiceTimeout is how long to wait on a busy or missing service before timing it out and returning an error.
+	ServiceTimeout time.Duration
 
 	// GetSystemComponent describes what system information to get
 	GetSystemComponent string
@@ -216,6 +219,7 @@ Available commands:
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy/unknown actors before timing out")
+		flag.DurationVar(&ServiceTimeout, "service_timeout", 2*time.Minute, "Time to wait on busy/unknown service before timing out")
 
 	case GetCmd:
 		usage = "kar get [OPTIONS]"
@@ -235,6 +239,7 @@ Available commands:
 		usage = "kar rest [OPTIONS] REST_METHOD SERVICE_NAME PATH [REQUEST_BODY]"
 		description = "Peform a REST operation on a service endpoint"
 		flag.StringVar(&RestBodyContentType, "content_type", "application/json", "Content-Type of request body")
+		flag.DurationVar(&ServiceTimeout, "service_timeout", 2*time.Minute, "Time to wait on busy/unknown service before timing out")
 
 	case PurgeCmd:
 		usage = "kar purge [OPTIONS]"
