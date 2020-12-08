@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -164,63 +165,60 @@ func collect(ctx context.Context, time time.Time) error {
 	return ctx.Err()
 }
 
-// getActors returns a json map of actor types ->  list of active IDs on a per-sidecar basis
-func getActors() (string, error) {
+// getMyActiveActors returns a map of actor types ->  list of active IDs in this sidecar
+func getMyActiveActors(targetedActorType string) map[string][]string {
 	information := make(map[string][]string)
 	actorTable.Range(func(actor, v interface{}) bool {
 		e := v.(*actorEntry)
 		e.lock <- struct{}{}
 		if e.valid {
-			information[e.actor.Type] = append(information[e.actor.Type], e.actor.ID)
+			if targetedActorType == "" || targetedActorType == e.actor.Type {
+				information[e.actor.Type] = append(information[e.actor.Type], e.actor.ID)
+			}
 		}
 		<-e.lock
 		return true
 	})
-	m, err := json.Marshal(information)
-	if err != nil {
-		logger.Debug("Error marshaling actor information data: %v", err)
-		return "", err
-	}
-	return string(m), nil
+	return information
 }
 
-// getAllActors Returns map of actor types ->  list of active IDs for all sidecars in the app
-func getAllActors(ctx context.Context, format string) (string, error) {
+// getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
+func getAllActiveActors(ctx context.Context, targetedActorType string) (map[string][]string, error) {
 	information := make(map[string][]string)
-	var err error
 	for _, sidecar := range pubsub.Sidecars() {
-		var actorInfo string
-		var actorReply *Reply
 		var actorInformation map[string][]string
 		if sidecar != config.ID {
-			// Make call to other sidecar, returns the result of GetActors() there
+			// Make call to another sidecar, returns the result of GetMyActiveActors() there
 			msg := map[string]string{
-				"protocol": "sidecar",
-				"sidecar":  sidecar,
-				"command":  "getActors",
+				"protocol":  "sidecar",
+				"sidecar":   sidecar,
+				"command":   "getActiveActors",
+				"actorType": targetedActorType,
 			}
-			actorReply, err = callHelper(ctx, msg, false)
+			actorReply, err := callHelper(ctx, msg, false)
 			if err != nil || actorReply.StatusCode != 200 {
 				logger.Debug("Error gathering actor information: %v", err)
-				return "", err
+				return nil, err
 			}
-			actorInfo = actorReply.Payload
+			err = json.Unmarshal([]byte(actorReply.Payload), &actorInformation)
+			if err != nil {
+				logger.Debug("Error unmarshaling actor information: %v", err)
+				return nil, err
+			}
 		} else {
-			actorInfo, _ = getActors()
-		}
-		err = json.Unmarshal([]byte(actorInfo), &actorInformation)
-		if err != nil {
-			logger.Debug("Error unmarshaling actor information: %v", err)
-			return "", err
+			actorInformation = getMyActiveActors(targetedActorType)
 		}
 		for actorType, actorIDs := range actorInformation { // accumulate sidecar's info into information
 			information[actorType] = append(information[actorType], actorIDs...)
 		}
 	}
-	//TODO: Sort IDs ?
+	return information, nil
+}
+
+func formatActorInstanceMap(actorInfo map[string][]string, format string) (string, error) {
 	if format == "json" || format == "application/json" {
 		var m []byte
-		m, err = json.Marshal(information)
+		m, err := json.MarshalIndent(actorInfo, "", "  ")
 		if err != nil {
 			logger.Debug("Error marshaling actors information: %v", err)
 			return "", err
@@ -228,18 +226,13 @@ func getAllActors(ctx context.Context, format string) (string, error) {
 		return string(m), nil
 	}
 	var str strings.Builder
-	fmt.Fprint(&str, "\nActor Type\n : IDs of actors with type\n")
-	for actorType, actorIDs := range information {
-		fmt.Fprintf(&str, "%v\n : ", actorType)
-		if len(actorIDs) > 10 { // Display up to 10 IDs per actor.
-			fmt.Fprint(&str, "[")
-			for i := 0; i < 10; i++ {
-				fmt.Fprintf(&str, "%v ", actorIDs[i])
-			}
-			fmt.Fprintf(&str, "... and %v more]\n", len(actorIDs)-10)
-		} else {
-			fmt.Fprintf(&str, "%v\n", actorIDs)
+	for actorType, actorIDs := range actorInfo {
+		sort.Strings(actorIDs)
+		fmt.Fprintf(&str, "%v: [\n", actorType)
+		for _, actorID := range actorIDs {
+			fmt.Fprintf(&str, "    %v\n", actorID)
 		}
+		fmt.Fprintf(&str, "]\n")
 	}
 	return str.String(), nil
 }

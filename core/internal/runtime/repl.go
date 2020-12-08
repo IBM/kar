@@ -96,9 +96,25 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err = pubsub.GetSidecars(config.OutputStyle)
+		str, err = pubsub.GetSidecars(config.GetOutputStyle)
 	case "actor", "actors":
-		str, err = getAllActors(ctx, config.OutputStyle)
+		if config.GetActorInstanceID != "" {
+			log.Printf("State of actor %v[%v] is:\n", config.GetActorType, config.GetActorInstanceID)
+			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
+				if bytes, err := json.MarshalIndent(actorState, "", "  "); err == nil {
+					str = string(bytes)
+				}
+			}
+		} else {
+			if config.GetActorType != "" {
+				log.Printf("Memory-resident instances of actor type %v are:\n", config.GetActorType)
+			} else {
+				log.Printf("The complete set of memory-resident actors is:\n")
+			}
+			if actorMap, err := getAllActiveActors(ctx, config.GetActorType); err == nil {
+				str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
+			}
+		}
 	default:
 		logger.Error("invalid argument <%v> to call Inform", option)
 		exitCode = 1

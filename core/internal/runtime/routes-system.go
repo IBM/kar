@@ -76,9 +76,11 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	case "sidecars", "Sidecars":
 		data, err = pubsub.GetSidecars(format)
 	case "actors", "Actors":
-		data, err = getAllActors(ctx, format)
+		if actorMap, err := getAllActiveActors(ctx, ""); err == nil {
+			data, err = formatActorInstanceMap(actorMap, format)
+		}
 	case "sidecar_actors":
-		data, err = getActors()
+		data, err = formatActorInstanceMap(getMyActiveActors(""), format)
 	default:
 		http.Error(w, fmt.Sprintf("Invalid information query: %v", component), http.StatusBadRequest)
 	}

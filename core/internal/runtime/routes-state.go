@@ -431,32 +431,40 @@ func routeImplDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 //       500: response500
 //
 func routeImplGetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := store.HGetAll(stateKey(ps.ByName("type"), ps.ByName("id"))); err != nil {
-		http.Error(w, fmt.Sprintf("HGETALL failed: %v", err), http.StatusInternalServerError)
+	state, err := actorGetAllState(ps.ByName("type"), ps.ByName("id"))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("actorGetAllState failed: %v", err), http.StatusInternalServerError)
 	} else {
-		// reply has type map[string]string
-		// we unmarshal the values then marshal the map
-		m := map[string]interface{}{}
-		for i, s := range reply {
-			var v interface{}
-			json.Unmarshal([]byte(s), &v)
-			splitKeys := strings.SplitN(i, config.Separator, 2)
-			key := splitKeys[0]
-			subkey := splitKeys[1]
-			if subkey == config.Separator {
-				m[key] = v
-			} else {
-				if m[key] == nil {
-					m[key] = map[string]interface{}{}
-				}
-				(m[key].(map[string]interface{}))[subkey] = v
-			}
-
-		}
-		b, _ := json.Marshal(m)
+		b, _ := json.Marshal(state)
 		w.Header().Add("Content-Type", "application/json")
 		fmt.Fprint(w, string(b))
 	}
+}
+
+func actorGetAllState(actorType string, actorID string) (map[string]interface{}, error) {
+	reply, err := store.HGetAll(stateKey(actorType, actorID))
+	if err != nil {
+		return nil, err
+	}
+	// reply has type map[string]string
+	// we unmarshal the values then marshal the map
+	m := map[string]interface{}{}
+	for i, s := range reply {
+		var v interface{}
+		json.Unmarshal([]byte(s), &v)
+		splitKeys := strings.SplitN(i, config.Separator, 2)
+		key := splitKeys[0]
+		subkey := splitKeys[1]
+		if subkey == config.Separator {
+			m[key] = v
+		} else {
+			if m[key] == nil {
+				m[key] = map[string]interface{}{}
+			}
+			(m[key].(map[string]interface{}))[subkey] = v
+		}
+	}
+	return m, nil
 }
 
 // swagger:route POST /v1/actor/{actorType}/{actorId}/state state idActorStateSetMultiple

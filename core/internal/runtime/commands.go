@@ -334,12 +334,14 @@ func tell(ctx context.Context, msg map[string]string) error {
 
 // Returns information about this sidecar's actors
 func getActorInformation(ctx context.Context, msg map[string]string) error {
-	actorInfo, err := getActors()
+	actorInfo := getMyActiveActors(msg["actorType"])
+	m, err := json.Marshal(actorInfo)
 	var reply *Reply
 	if err != nil {
+		logger.Debug("Error marshaling actor information data: %v", err)
 		reply = &Reply{StatusCode: http.StatusInternalServerError}
 	} else {
-		reply = &Reply{StatusCode: http.StatusOK, Payload: actorInfo, ContentType: "application/json"}
+		reply = &Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
 	}
 	return respond(ctx, msg, reply)
 }
@@ -362,7 +364,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 		return bindingTell(ctx, msg)
 	case "tell":
 		return tell(ctx, msg)
-	case "getActors":
+	case "getActiveActors":
 		return getActorInformation(ctx, msg)
 	default:
 		logger.Error("unexpected command %s", msg["command"]) // dropping message

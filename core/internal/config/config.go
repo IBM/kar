@@ -112,9 +112,15 @@ var (
 	// GetSystemComponent describes what system information to get
 	GetSystemComponent string
 
+	// GetActorType restrict actor gets to specific type
+	GetActorType string
+
+	// GetActorInstanceID is an actor instance whose state will be read
+	GetActorInstanceID string
+
 	// OutputStyle is whether to print a human readable output, or return a JSON string of data.
 	// Currently only applies to calling system/information/
-	OutputStyle string
+	GetOutputStyle string
 
 	// RestBodyContentType specifies the content type of the request body
 	RestBodyContentType string
@@ -210,9 +216,11 @@ Available commands:
 
 	case GetCmd:
 		usage = "kar get [OPTIONS]"
-		description = "Query running application"
-		flag.StringVar(&GetSystemComponent, "s", "sidecars", "Information requested")
-		flag.StringVar(&OutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
+		description = "Inspect state of an active application"
+		flag.StringVar(&GetSystemComponent, "s", "actors", "Subsystem to query [actors|sidecars]")
+		flag.StringVar(&GetActorType, "t", "", "Type of the actor instance to get")
+		flag.StringVar(&GetActorInstanceID, "i", "", "Instance id of a single actor whose state to get")
+		flag.StringVar(&GetOutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
 
 	case InvokeCmd:
 		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy/unknown actors before timing out")
@@ -383,7 +391,7 @@ Available commands:
 		logger.Fatal("rest expects either three or four arguments; got %v", len(flag.Args()))
 	}
 
-	OutputStyle = strings.ToLower(OutputStyle)
+	GetOutputStyle = strings.ToLower(GetOutputStyle)
 }
 
 func loadStringFromConfig(path string, file string) string {
