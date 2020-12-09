@@ -449,6 +449,9 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				}
 				// clear placement data and sidecar's in-memory state
 				err = e.migrate("")
+				if err != nil {
+					logger.Error("deleting placement date for %v failed with %v", actor, err)
+				}
 				break
 			}
 
