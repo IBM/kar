@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.ibm.com/solsa/kar.git/core/internal/config"
@@ -37,26 +37,26 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		return
 	}
 	if reply.StatusCode == http.StatusNoContent {
-		log.Printf("[STDOUT] Method completed normally with void result.")
+		fmt.Println("Method completed normally with void result.")
 	} else if reply.StatusCode == http.StatusOK {
 		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
 			var result actorCallResult
 			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
-				log.Printf("[STDERR] Internal error: malformed method result: %v", err)
+				fmt.Fprintf(os.Stderr, "[STDERR] Internal error: malformed method result: %v\n", err)
 			} else {
 				if result.Error {
-					log.Printf("[STDERR] Exception raised: %s", result.Message)
-					log.Printf("[STDERR] Stacktrace: %v", result.Stack)
+					fmt.Fprintf(os.Stderr, "[STDERR] Exception raised: %s\n", result.Message)
+					fmt.Fprintf(os.Stderr, "[STDERR] Stacktrace: %v\n", result.Stack)
 				} else {
-					log.Printf("[STDOUT] Method result: %v", result.Value)
+					fmt.Printf("Method result: %v\n", result.Value)
 				}
 			}
 		} else {
-			log.Printf("[STDOUT] %v", reply.Payload)
+			fmt.Println(reply.Payload)
 		}
 	} else {
-		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
-		log.Printf("[STDERR] %v", reply.Payload)
+		fmt.Fprintf(os.Stderr, "[STDERR] HTTP status: %v\n", reply.StatusCode)
+		fmt.Fprintf(os.Stderr, "[STDERR] %v\n", reply.Payload)
 	}
 	return
 }
@@ -82,10 +82,10 @@ func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
 		return
 	}
 	if reply.StatusCode != http.StatusOK {
-		log.Printf("[STDERR] HTTP status: %v", reply.StatusCode)
-		log.Printf("[STDERR] %v", reply.Payload)
+		fmt.Fprintf(os.Stderr, "[STDERR] HTTP status: %v\n", reply.StatusCode)
+		fmt.Fprintf(os.Stderr, "[STDERR] %v\n", reply.Payload)
 	} else {
-		log.Printf("[STDOUT] %v", reply.Payload)
+		fmt.Println(reply.Payload)
 	}
 	return
 }
@@ -143,6 +143,6 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 		exitCode = 1
 		return
 	}
-	log.Printf("%s", str)
+	fmt.Println(str)
 	return
 }
