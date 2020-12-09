@@ -99,31 +99,38 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 		str, err = pubsub.GetSidecars(config.GetOutputStyle)
 	case "actor", "actors":
 		if config.GetActorInstanceID != "" {
-			log.Printf("State of actor %v[%v] is:\n", config.GetActorType, config.GetActorInstanceID)
 			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
-				if bytes, err := json.MarshalIndent(actorState, "", "  "); err == nil {
-					str = string(bytes)
+				if len(actorState) == 0 {
+					str = fmt.Sprintf("Actor %v[%v] has no persisted state", config.GetActorType, config.GetActorInstanceID)
+				} else {
+					if bytes, err := json.MarshalIndent(actorState, "", "  "); err == nil {
+						str = fmt.Sprintf("Persisted state of actor %v[%v] is:\n", config.GetActorType, config.GetActorInstanceID) + string(bytes)
+					}
 				}
 			}
 		} else {
+			var prefix string
 			if !config.GetResidentOnly {
 				if config.GetActorType != "" {
-					log.Printf("Known instances of actor type %v are:\n", config.GetActorType)
+					prefix = fmt.Sprintf("Known instances of actor type %v are:\n", config.GetActorType)
 				} else {
-					log.Printf("Listing all known actor instances:\n")
+					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
 				if actorMap, err := pubsub.GetAllActorInstances(config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {
 				if config.GetActorType != "" {
-					log.Printf("Memory-resident instances of actor type %v are:\n", config.GetActorType)
+					prefix = fmt.Sprintf("Memory-resident instances of actor type %v are:\n", config.GetActorType)
 				} else {
-					log.Printf("Listing all memory-resident actor instances:\n")
+					prefix = fmt.Sprintf("Listing all memory-resident actor instances:\n")
 				}
 				if actorMap, err := getAllActiveActors(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
+			}
+			if err == nil {
+				str = prefix + str
 			}
 		}
 	default:
