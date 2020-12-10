@@ -16,7 +16,8 @@ Redis.
 
 In this document, we define and illustrate KAR's key concept using a collection
 of [examples](../examples). We assume a working KAR deployment. See [KAR
-Deployments](kar-deployments.md) for options.
+Deployments](kar-deployments.md) for options. The full REST API documentation is
+available [here](https://pages.github.ibm.com/solsa/kar/api/redoc/).
 
 ## Applications
 
@@ -65,8 +66,8 @@ kinds of components:
 - a _server_ component can not only issue HTTP requests to the KAR runtime
   process, but also handle HTTP requests issued by the KAR runtime process.
 
-The KAR runtime process is listening on the _runtime port_. The server process is
-listening the _app(lication) port_.
+The KAR runtime process is listening on the _runtime port_. The server process
+is listening the _app(lication) port_.
 
 By default the KAR runtime port is autoselected and the KAR application port is
 set to 8080. When multiple server components are running on a single host, the
@@ -164,7 +165,7 @@ asynchronous request returns as soon as KAR accepts the request. If desired, a
 request id can be returned from an asynchronous request to permit querying KAR
 for the response later.
 
-### REST API
+## Requests: REST API
 
 The KAR runtime process exposes a REST API to support service requests.
 
@@ -194,7 +195,7 @@ simply returns `Accepted`. If the `Pragma: Promise` header is specified (case
 insensitive), the request returns a request id. See [KAR API
 documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/) for details.
 
-### CLI
+## Requests: CLI
 
 Because making requests from a terminal is very useful when developing KAR
 services, the KAR CLI offers a convenient shorthand for synchronous requests:
@@ -205,7 +206,7 @@ kar rest -app hello-js -content_type text/plain post greeter helloText 'Gandalf 
 Hello Gandalf the Grey!
 ```
 
-### Javascript SDK
+## Requests: Javascript SDK
 
 The JavaScript SDK offers convenience methods to make synchronous and
 asynchronous requests with method `POST` and headers `Content-Type:
@@ -236,7 +237,7 @@ kar run -app hello-js -- node client.js
 2020/12/10 08:44:14.567674 [STDOUT] { greetings: 'Hello Charlie!' }
 ```
 
-## State
+## Persistent Store
 
 An application includes a _persistent store_. Application components can
 _create_, _read_, _update_, and _delete_ content from the application store. KAR
@@ -303,14 +304,15 @@ REST server capable of handling the following requests:
 KAR includes SDKs to facilitate the implementation of such REST servers. For
 instance, the JavaScript SDK for KAR makes it possible to define an actor type
 by means of a class declaration. An actor instance is simply an instance of that
-class and its methods are the methods of the actor. Multiple actor types may be
-defined by means of multiple classes. The SDK handles the mapping from actor
-types and IDs to object references and implements the required routes of a REST
-server.
+class (a object) and its methods are the methods of the actor. Moreover, the
+fields of this object hold the in-memory state of the actor instance. Multiple
+actor types may be defined by means of multiple classes. The SDK handles the
+mapping from actor types and IDs to object references and implements the
+required routes of a REST server.
 
 The [philosophers.js](../examples/actors-dp-js/philosophers.js) file in the
-[actors-dp-js](../examples/actors-dp-js) example demonstrates how to define
-and serve four actor types using KAR's Javascript SDK:
+[actors-dp-js](../examples/actors-dp-js) example demonstrates how to define and
+serve four actor types using KAR's Javascript SDK:
 ```
 const { sys } = require('kar')
 
@@ -338,7 +340,24 @@ kar run -app dp -actors Cafe,Table,Fork,Philosopher -- node philosophers.js
 An application component may offer a service and at the same time hosts actors
 by implementing a REST server capable of doing both.
 
-### Actor Lifecycle
+KAR SDKs also embed the actor instance type and id into the actor instance.
+Using the Javascript SDK, if `myActorInstance` is an actor instance, then
+`myActorInstance.kar.type` and `myActorInstance.kar.id` respectively provide the
+actor type and id for this instance.
+
+## Actors: State
+
+KAR provides a range of APIs to save and retrieve persistent data associated
+with an actor instance from the persistent store. This data for each actor
+instance is organized as a key-value map. The API supports different levels of
+granularity with whole map, single key, and sub-map operations.
+
+For instance, the JavaScript SDK offers the following methods: `getAll`,
+`setMultiple`, `removeAll`, `get`, `set`, `remove`, `contains`, `setWithSubkey`,
+`setMultipleInSubMap`, `subMapGetKeys`, `subMapGet`, `subMapGetSize`,
+`subMapClear`.
+
+## Actors: Lifecycle
 
 When a method is invoked on an actor reference, KAR first checks whether a
 matching instance exists for this reference. If there is no such instance, KAR
@@ -353,21 +372,14 @@ immediately after construction if this method exists on the actor instance. The
 SDKs invoke the `deactivate` method of the actor instance if it exists
 immediately before reclaiming the instance.
 
-KAR SDKs also embed the actor instance type and id into the actor instance.
-Using the Javascript SDK, if `myActorInstance` is an actor instance, then
-`myActorInstance.kar.type` and `myActorInstance.kar.id` respectively provide the
-actor type and id for this instance.
-
 For instance, the `activate` method of the `Fork` actor class in
 [philosophers.js](../examples/actors-dp-js/philosophers.js) attempts to restore
-the state of the Fork from the persistent store:
+the state of the `Fork` instance from the persistent store:
 ```
 async activate () {
   this.inUseBy = await actor.state.get(this, 'inUseBy') || 'nobody'
 }
 ```
-We will discuss the persistent store later.
-
 Like service invocations, method invocations on actors can be synchronous and
 asynchronous. A synchronous method invocation returns the result of the
 invocation of the method on the actor instance to the caller. An asynchronous
@@ -416,7 +428,7 @@ KAR may migrate an actor instance from one application component to another when
 no method is running on the instance by first destructing the existing instance
 then creating a new instance.
 
-### Sessions
+## Actors: Sessions
 
 A method invocation on an actor reference may optionally include an
 alphanumerical _session ID_. If no session ID is specified, KAR synthesizes a
@@ -439,9 +451,10 @@ While re-entrancy permits method invocations to overlap, it still ensures that
 no two invocations make progress concurrently, since only nested synchronous
 invocations share the same session ID.
 
-## Reminders
+### Actors: Reminders
 
-TODO
+Reminders provide mechanisms for delayed and possibly periodic actor
+invocations.
 
 Reminders are implicitly persisted by the KAR runtime. Reminders will continue
 to fire even if an actor instance is lost or destructed, reconstructing the
