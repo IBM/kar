@@ -59,7 +59,7 @@ func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	elapsed := last.Sub(start)
 	mu.Unlock()
 	if elapsed > config.LongRedisOperation {
-		logger.Error("Slow Redis command %v took %v seconds", command, elapsed.Seconds())
+		logger.Error("Slow Redis command %v %v took %v seconds", command, args[0], elapsed.Seconds())
 	}
 	if err != nil {
 		logger.Error("failed to send command to redis: %v", err)
