@@ -99,8 +99,11 @@ func newConfig() (*sarama.Config, error) {
 	}
 	if config.KafkaEnableTLS {
 		conf.Net.TLS.Enable = true
-		conf.Net.TLS.Config = &tls.Config{
-			InsecureSkipVerify: true, // TODO certificates
+		// TODO support custom CA certificate
+		if config.KafkaTLSSkipVerify {
+			conf.Net.TLS.Config = &tls.Config{
+				InsecureSkipVerify: true,
+			}
 		}
 	}
 	return conf, nil

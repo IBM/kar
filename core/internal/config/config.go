@@ -87,6 +87,9 @@ var (
 	// KafkaVersion is the expected Kafka version
 	KafkaVersion string
 
+	// KafkaTLSSkipVerify is set to skip server name verification for Kafka when connecting over TLS
+	KafkaTLSSkipVerify bool
+
 	// RedisHost is the host of the Redis instance
 	RedisHost string
 
@@ -156,6 +159,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
 	f.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
 	f.StringVar(&KafkaVersion, "kafka_version", "", "Kafka cluster version")
+	f.BoolVar(&KafkaTLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
 
 	f.StringVar(&RedisHost, "redis_host", "", "The Redis host")
 	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
@@ -361,6 +365,18 @@ Available commands:
 		if KafkaVersion = os.Getenv("KAFKA_VERSION"); KafkaVersion == "" {
 			if KafkaVersion = loadStringFromConfig(configDir, "kafka_version"); KafkaVersion == "" {
 				KafkaVersion = "2.2.0"
+			}
+		}
+	}
+
+	if !KafkaTLSSkipVerify {
+		rtmp := os.Getenv("KAFKA_TLS_SKIP_VERIFY")
+		if rtmp == "" {
+			rtmp = loadStringFromConfig(configDir, "kafka_tls_skip_verify")
+		}
+		if rtmp != "" {
+			if KafkaTLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
+				logger.Fatal("error parsing KAFKA_TLS_SKIP_VERIFY as boolean")
 			}
 		}
 	}
