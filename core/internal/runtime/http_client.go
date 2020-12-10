@@ -91,7 +91,11 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		start := time.Now()
 		res, err = client.Do(req)
 		if elapsed := time.Now().Sub(start); elapsed > config.ActorTimeout/2 {
-			logger.Info("Request with path %v took %v seconds", msg["path"], elapsed.Seconds())
+			if err != nil {
+				logger.Info("Request with path %v completed with an error in %v seconds", msg["path"], elapsed.Seconds())
+			} else {
+				logger.Info("Request with path %v completed normally in %v seconds", msg["path"], elapsed.Seconds())
+			}
 		}
 		if err != nil {
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
