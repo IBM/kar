@@ -5,7 +5,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -17,11 +16,8 @@ var (
 	// ErrNil indicates that a reply value is nil.
 	ErrNil = redis.ErrNil
 
-	// connection
-	conn redis.Conn      // for now use a single connection
-	mu   = &sync.Mutex{} // and a mutex
-
-	last = time.Now()
+	// connection pool
+	pool *redis.Pool
 )
 
 // mangle add common prefix to all keys
@@ -41,25 +37,13 @@ func unmangle(key string) string {
 // send a command while holding the connection mutex
 func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
-	mu.Lock()
-	if time.Since(last) > time.Minute {
-		// check connection and reconnect if necessary
-		conn.Do("PING")
-		err = conn.Err()
-		if err != nil {
-			err = Dial()
-			if err != nil {
-				logger.Error("failed to reconnect to redis: %v", err)
-				return
-			}
-		}
-	}
+	conn := pool.Get()
+	defer conn.Close()
 	start := time.Now()
 	reply, err = conn.Do(command, args...)
-	last = time.Now()
+	last := time.Now()
 	elapsed := last.Sub(opStart)
 	connElapsed := last.Sub(start)
-	mu.Unlock()
 	if elapsed > config.LongRedisOperation {
 		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
 	}
@@ -241,8 +225,7 @@ func ZRemRangeByScore(key string, min, max int64) (int, error) {
 
 // Connection
 
-// Dial establishes a connection to the store.
-func Dial() error {
+func connect() (redis.Conn, error) {
 	redisOptions := []redis.DialOption{}
 	if config.RedisEnableTLS {
 		redisOptions = append(redisOptions, redis.DialUseTLS(true))
@@ -256,15 +239,32 @@ func Dial() error {
 		redisOptions = append(redisOptions, redis.DialReadTimeout(config.RequestTimeout))
 		redisOptions = append(redisOptions, redis.DialWriteTimeout(config.RequestTimeout))
 	}
-	var err error
-	conn, err = redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
+	return redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
+}
+
+// Dial initializes a connection pool and pings redis.
+func Dial() error {
+	pool = &redis.Pool{
+		MaxIdle:     3,
+		MaxActive:   16,
+		IdleTimeout: 240 * time.Second,
+		Wait:        true,
+		Dial:        connect,
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
+			_, err := c.Do("PING")
+			return err
+		},
+	}
+	conn := pool.Get()
+	defer conn.Close()
+	_, err := conn.Do("PING")
 	return err
 }
 
-// Close closes the connection to the store.
+// Close terminates the connection pool.
 func Close() error {
-	// forcefully closing the connection appears to correctly and immediately
-	// terminate pending requests as well as prevent new commands to be sent to
-	// redis so there is no need for synchronization here
-	return conn.Close()
+	return pool.Close()
 }
