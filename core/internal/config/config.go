@@ -57,6 +57,9 @@ var (
 	// ActorReminderAcceptableDelay controls the threshold at which reminders are logged as being late
 	ActorReminderAcceptableDelay time.Duration
 
+	// LongRedisOperation sets a threshold used to report long-running redis operations
+	LongRedisOperation time.Duration
+
 	// AppPort is the HTTP port the application process will be listening on
 	AppPort int
 
@@ -151,6 +154,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
 
 	f.DurationVar(&RequestTimeout, "timeout", -1*time.Second, "Time to wait before timing out calls")
+	f.DurationVar(&LongRedisOperation, "redis_slow_op_threshold", 1*time.Second, "Threshold for reporting long-running redis operations")
 
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
 
