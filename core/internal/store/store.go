@@ -40,6 +40,7 @@ func unmangle(key string) string {
 
 // send a command while holding the connection mutex
 func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
+	opStart := time.Now()
 	mu.Lock()
 	if time.Since(last) > time.Minute {
 		// check connection and reconnect if necessary
@@ -56,10 +57,11 @@ func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 	start := time.Now()
 	reply, err = conn.Do(command, args...)
 	last = time.Now()
-	elapsed := last.Sub(start)
+	elapsed := last.Sub(opStart)
+	connElapsed := last.Sub(start)
 	mu.Unlock()
 	if elapsed > config.LongRedisOperation {
-		logger.Error("Slow Redis command %v %v took %v seconds", command, args[0], elapsed.Seconds())
+		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
 	}
 	if err != nil {
 		logger.Error("failed to send command to redis: %v", err)
