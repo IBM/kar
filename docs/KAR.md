@@ -147,6 +147,8 @@ Ideally the server should be listening on the port specified by the
 ```
 app.listen(process.env.KAR_APP_PORT)
 ```
+Otherwise the application port must be specified when launching the runtime
+process for the component.
 
 ## Requests
 
@@ -188,11 +190,9 @@ a shell invocation `sh -c` to ensure proper expansion of this variable.
 
 An asynchronous request is obtained by adding a `Pragma` header to the request.
 If the `Pragma: Async` header is specified (case insensitive), the request
-simply returns `Accepted`. If the `Pragma: Promise` header is specified
-(case insensitive), the request returns a request id.
-
-See [KAR API documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/)
-for details.
+simply returns `Accepted`. If the `Pragma: Promise` header is specified (case
+insensitive), the request returns a request id. See [KAR API
+documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/) for details.
 
 ### CLI
 
@@ -202,11 +202,14 @@ services, the KAR CLI offers a convenient shorthand for synchronous requests:
 kar rest -app hello-js -content_type text/plain post greeter helloText 'Gandalf the Grey'
 ```
 ```
-2020/12/02 11:25:20.783532 [STDOUT] Hello Gandalf the Grey!
+Hello Gandalf the Grey!
 ```
 
 ### Javascript SDK
 
+The JavaScript SDK offers convenience methods to make synchronous and
+asynchronous requests with method `POST` and headers `Content-Type:
+application/json`:
 ```
 const { call, tell, asyncCall } = require('kar')
 
@@ -215,21 +218,23 @@ async function main () {
   console.log(await call('greeter', 'helloJson', { name: 'Alice' }))
 
   // asynchronous request
-  await tell('greeter', 'helloJson', { name: 'Bob' }))
+  console.log(await tell('greeter', 'helloJson', { name: 'Bob' }))
 
-  // asynchronous request returning a future
-  const f = await asyncCall('greeter', 'helloJson', { name: 'Charlie' })
+  // asynchronous request returning a handle
+  const resolve = await asyncCall('greeter', 'helloJson', { name: 'Charlie' })
 
-  // forcing the future
-  console.log(await f())
+  // waiting for the response to the asynchronous request
+  console.log(await resolve())
 }
 
 main()
 ```
-
-### Java SDK
-
-TODO
+```
+kar run -app hello-js -- node client.js
+2020/12/10 08:44:14.554886 [STDOUT] { greetings: 'Hello Alice!' }
+2020/12/10 08:44:14.559342 [STDOUT] OK
+2020/12/10 08:44:14.567674 [STDOUT] { greetings: 'Hello Charlie!' }
+```
 
 ## State
 
@@ -254,8 +259,9 @@ The `purge` command eliminates the application state in Redis and Kafka. It
 should only be invoked when no application component is running.
 
 Alternatively, the `drain` command preserves the state explicitly created by the
-application but cancels all pending requests. Intuitively, it flushes Kafka
-queues for the target application but does not affect Redis.
+application but drops all pending requests. Intuitively, it flushes Kafka queues
+for the target application (and the corresponding runtime state in Redis) but it
+preserves the application state Redis.
 ```
 kar drain -app demo
 ```
@@ -302,10 +308,37 @@ defined by means of multiple classes. The SDK handles the mapping from actor
 types and IDs to object references and implements the required routes of a REST
 server.
 
+The [philosophers.js](../examples/actors-dp-js/philosophers.js) file in the
+[actors-dp-js](../examples/actors-dp-js) example demonstrates how to define
+and serve four actor types using KAR's Javascript SDK:
+```
+const { sys } = require('kar')
+
+class Fork { ... }
+class Philosopher { ... }
+class Table { ... }
+class Cafe { ... }
+
+const app = express()
+app.use(sys.actorRuntime({ Fork, Philosopher, Table, Cafe }))
+app.listen(process.env.KAR_APP_PORT)
+```
+The `sys.actorRuntime` helper method turns the four actor classes into the
+required Express middleware (HTTP handlers).
+
+In general, `sys.actorRuntime({ actorType: className, ... })` defines the actor
+type `actorType` by means of the class `className` making it possible for the
+two names to differ. In practice, we recommend against it.
+
+For now, the names of the provided actor types must be repeated when launching
+the application component using flag `-actors`:
+```
+kar run -app dp -actors Cafe,Table,Fork,Philosopher -- node philosophers.js
+```
 An application component may offer a service and at the same time hosts actors
 by implementing a REST server capable of doing both.
 
-## Actor Lifecycle
+### Actor Lifecycle
 
 When a method is invoked on an actor reference, KAR first checks whether a
 matching instance exists for this reference. If there is no such instance, KAR
@@ -320,15 +353,50 @@ immediately after construction if this method exists on the actor instance. The
 SDKs invoke the `deactivate` method of the actor instance if it exists
 immediately before reclaiming the instance.
 
-Method invocations can be synchronous and asynchronous. A synchronous method
-invocation returns the result of the invocation of the method on the actor
-instance to the caller. An asynchronous method invocation returns as soon as KAR
-accepts the invocation. If desired, a request id can be returned from an
-asynchronous method invocation to permit querying KAR for the response later.
+KAR SDKs also embed the actor instance type and id into the actor instance.
+Using the Javascript SDK, if `myActorInstance` is an actor instance, then
+`myActorInstance.kar.type` and `myActorInstance.kar.id` respectively provide the
+actor type and id for this instance.
+
+For instance, the `activate` method of the `Fork` actor class in
+[philosophers.js](../examples/actors-dp-js/philosophers.js) attempts to restore
+the state of the Fork from the persistent store:
+```
+async activate () {
+  this.inUseBy = await actor.state.get(this, 'inUseBy') || 'nobody'
+}
+```
+We will discuss the persistent store later.
+
+Like service invocations, method invocations on actors can be synchronous and
+asynchronous. A synchronous method invocation returns the result of the
+invocation of the method on the actor instance to the caller. An asynchronous
+method invocation returns as soon as KAR accepts the invocation. If desired, a
+request id can be returned from an asynchronous method invocation to permit
+querying KAR for the response later. See [KAR API
+documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/) for details.
 
 If no application component is available to instantiate the specified actor
 type, KAR persists the invocation request until it can be delivered (up to a
 configurable timeout).
+
+The [philosophers.js](../examples/actors-dp-js/philosophers.js) files contains
+many examples of actor invocations using the Javascript SDK, for instance:
+```
+// call: synchronous invocation
+await actor.call(actor.proxy('Table', this.table), 'doneEating', this.kar.id)
+
+/// tell: asynchronous invocation
+await actor.tell(this, 'serve', servings, step)
+```
+These invocations take as parameters:
+- a reference to the target actor,
+- the actor method,
+- zero, one, or multiple arguments.
+
+The actor reference is either constructed from the actor type and id using
+`actor.proxy` or the shorthand `this` when an actor instance is calling a method
+on itself.
 
 Subsequent method invocations on the same actor reference will normally be
 handled by the same actor instance in the same application component. But, if an
@@ -348,7 +416,7 @@ KAR may migrate an actor instance from one application component to another when
 no method is running on the instance by first destructing the existing instance
 then creating a new instance.
 
-## Sessions
+### Sessions
 
 A method invocation on an actor reference may optionally include an
 alphanumerical _session ID_. If no session ID is specified, KAR synthesizes a
