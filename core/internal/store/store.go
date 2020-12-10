@@ -2,6 +2,8 @@
 package store
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"strconv"
 	"strings"
@@ -223,13 +225,20 @@ func ZRemRangeByScore(key string, min, max int64) (int, error) {
 	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
 }
 
-// Connection
-
-func connect() (redis.Conn, error) {
+// Dial connects to Redis.
+func Dial() error {
 	redisOptions := []redis.DialOption{}
+
 	if config.RedisEnableTLS {
 		redisOptions = append(redisOptions, redis.DialUseTLS(true))
-		redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true)) // TODO
+		if config.RedisCA != nil {
+			roots := x509.NewCertPool()
+			roots.AddCert(config.RedisCA)
+			redisOptions = append(redisOptions, redis.DialTLSConfig(&tls.Config{RootCAs: roots}))
+		}
+		if config.RedisTLSSkipVerify {
+			redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true))
+		}
 	}
 	if config.RedisPassword != "" {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
@@ -239,17 +248,17 @@ func connect() (redis.Conn, error) {
 		redisOptions = append(redisOptions, redis.DialReadTimeout(config.RequestTimeout))
 		redisOptions = append(redisOptions, redis.DialWriteTimeout(config.RequestTimeout))
 	}
-	return redis.Dial("tcp", net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort)), redisOptions...)
-}
 
-// Dial initializes a connection pool and pings redis.
-func Dial() error {
+	address := net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort))
+
 	pool = &redis.Pool{
 		MaxIdle:     3,
 		MaxActive:   16,
 		IdleTimeout: 240 * time.Second,
 		Wait:        true,
-		Dial:        connect,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", address, redisOptions...)
+		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
 			if time.Since(t) < time.Minute {
 				return nil

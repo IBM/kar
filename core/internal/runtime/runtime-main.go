@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -108,6 +109,8 @@ func process(m pubsub.Message) {
 // Main is the main entrypoint for the KAR runtime
 func Main() {
 	logger.Warning("starting...")
+	logger.Info("redis: %v:%v", config.RedisHost, config.RedisPort)
+	logger.Info("kafka: %v", strings.Join(config.KafkaBrokers, ","))
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()
 
@@ -136,7 +139,7 @@ func Main() {
 		logger.Fatal("TCP listener failed: %v", err)
 	}
 
-	if store.Dial() != nil {
+	if err = store.Dial(); err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
 	}
 	defer store.Close()
@@ -149,7 +152,7 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		if pubsub.Dial() != nil {
+		if err = pubsub.Dial(); err != nil {
 			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
 		defer pubsub.Close()

@@ -2,6 +2,9 @@
 package config
 
 import (
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -93,8 +96,14 @@ var (
 	// RedisEnableTLS is set if the Redis connection requires TLS
 	RedisEnableTLS bool
 
+	// RedisTLSSkipVerify is set to skip server name verification for Redis when connecting over TLS
+	RedisTLSSkipVerify bool
+
 	// RedisPassword the the password of the Redis instance (optional)
 	RedisPassword string
+
+	// Redis certificate
+	RedisCA *x509.Certificate
 
 	// ID is the unique id of this sidecar instance
 	ID = uuid.New().String()
@@ -135,7 +144,7 @@ var (
 	RestBodyContentType string
 
 	// temporary variables to parse command line options
-	kafkaBrokers, verbosity, configDir, actorTypes string
+	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
 )
 
 // define the flags available on all commands
@@ -152,6 +161,8 @@ func globalOptions(f *flag.FlagSet) {
 	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
 	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
 	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
+	f.BoolVar(&RedisTLSSkipVerify, "redis_tls_skip_verify", false, "Skip server name verification for Redis when connecting over TLS")
+	f.StringVar(&redisCABase64, "redis_ca_cert", "", "The base64-encoded Redis CA certificate if any")
 
 	f.DurationVar(&RequestTimeout, "timeout", -1*time.Second, "Time to wait before timing out calls")
 	f.DurationVar(&LongRedisOperation, "redis_slow_op_threshold", 1*time.Second, "Threshold for reporting long-running redis operations")
@@ -366,11 +377,42 @@ Available commands:
 		}
 	}
 
+	if !RedisTLSSkipVerify {
+		rtmp := os.Getenv("REDIS_TLS_SKIP_VERIFY")
+		if rtmp == "" {
+			rtmp = loadStringFromConfig(configDir, "redis_tls_skip_verify")
+		}
+		if rtmp != "" {
+			if RedisTLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
+				logger.Fatal("error parsing REDIS_TLS_SKIP_VERIFY as boolean")
+			}
+		}
+	}
+
 	if RedisHost == "" {
 		if RedisHost = os.Getenv("REDIS_HOST"); RedisHost == "" {
 			if RedisHost = loadStringFromConfig(configDir, "redis_host"); RedisHost == "" {
 				logger.Fatal("Redis host is required")
 			}
+		}
+	}
+
+	if redisCABase64 == "" {
+		if redisCABase64 = os.Getenv("REDIS_CA"); redisCABase64 == "" {
+			redisCABase64 = loadStringFromConfig(configDir, "redis_ca")
+		}
+	}
+
+	if redisCABase64 != "" {
+		buf, err := base64.StdEncoding.DecodeString(redisCABase64)
+		if err != nil {
+			logger.Fatal("error parsing Redis CA certificate: %v", err)
+		}
+
+		block, _ := pem.Decode(buf)
+		RedisCA, err = x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			logger.Fatal("error parsing Redis CA certificate: %v", err)
 		}
 	}
 
