@@ -392,7 +392,7 @@ If no application component is available to instantiate the specified actor
 type, KAR persists the invocation request until it can be delivered (up to a
 configurable timeout).
 
-The [philosophers.js](../examples/actors-dp-js/philosophers.js) files contains
+The [philosophers.js](../examples/actors-dp-js/philosophers.js) file contains
 many examples of actor invocations using the Javascript SDK, for instance:
 ```
 // call: synchronous invocation
@@ -453,12 +453,33 @@ invocations share the same session ID.
 
 ### Actors: Reminders
 
-Reminders provide mechanisms for delayed and possibly periodic actor
-invocations.
+A _reminder_ is a time-triggered asynchronous invocation of an actor
+method.  The system supports both _one-shot_ reminders that are scheduled to
+run once after their target time arrives and _periodic_ reminders that
+are automatically rescheduled to run again with a specified delay
+after they are delivered. Both one-short and periodic reminders are
+implicitly persisted by the KAR runtime. Reminders will continue to
+fire even if an actor instance is lost or destructed, reconstructing
+the actor instance at firing time if necessary.
 
-Reminders are implicitly persisted by the KAR runtime. Reminders will continue
-to fire even if an actor instance is lost or destructed, reconstructing the
-actor instance at firing time if necessary.
+The [philosophers.js](../examples/actors-dp-js/philosophers.js) file contains
+several examples of actor reminders using the JavaScript SDK, for instance:
+```
+await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1, step)
+```
+In this snippet, the currently running actor instance schedules an
+invocation of `getFirstFork(1, step)` on itself to occur at a
+targetTime of `this.nextStepTime()`. This is a one-shot reminder.
+
+The [ykt.js/(../examples/actors-ykt/ykt.js) contains an example of a
+periodic reminder:
+```
+await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport',
+    { id: 'aisle14', targetTime: new Date(Date.now() + 1000) }, '5s')
+```
+Here an invocation of `siteReport()` is scheduled to be delivered to
+the `site` instance of the `Site` actor every 5 seconds, with the first
+invocation happening 1 second in the future.
 
 ## Events
 
