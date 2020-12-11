@@ -162,6 +162,9 @@ func HSet3(hash, key1, value1, key2, value2, key3, value3 string) (int, error) {
 // HSetMultiple hash map[string]string does an HSET of the entire map
 func HSetMultiple(hash string, keyValuePairs map[string]string) (int, error) {
 	nPairs := len(keyValuePairs)
+	if nPairs == 0 {
+		return 0, nil
+	}
 	args := make([]interface{}, 2*nPairs+1)
 	args[0] = hash
 	idx := 1

@@ -757,6 +757,7 @@ public class Kar {
 	 * @return The number of new state entries created by this operation
 	 */
 	public static int actorSetMultipleState(ActorRef actor, Map<String, JsonValue> updates) {
+		if (updates.isEmpty()) return 0;
 		JsonObjectBuilder jb = Json.createObjectBuilder();
 		for (Entry<String, JsonValue> e : updates.entrySet()) {
 			jb.add(e.getKey(), e.getValue());
@@ -775,6 +776,7 @@ public class Kar {
 	 * @return The number of new map entries created by this operation
 	 */
 	public static int actorSetMultipleState(ActorRef actor, String key, Map<String, JsonValue> updates) {
+		if (updates.isEmpty()) return 0;
 		JsonObjectBuilder jb = Json.createObjectBuilder();
 		for (Entry<String, JsonValue> e : updates.entrySet()) {
 			jb.add(e.getKey(), e.getValue());
