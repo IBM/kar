@@ -195,13 +195,57 @@ info:
   title: KAR
   version: v1
 paths:
-  /impl/v1/actor/{type}/{id}:
+  /impl/v1/actor/{actorType}:
+    head:
+      description: |-
+        ### Test to see if the actor type is provided by the targeted runtime.
+
+        Used to validate that the language level actor runtime knows how
+        to instantiate an actor type.
+      operationId: idImplActorTypeGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor type validation
+      tags:
+      - actor-runtime
+  /impl/v1/actor/{actorType}/{actorId}:
     delete:
       description: |-
         ### Deallocate the language-level state for the specified actor instance
 
-        TODO: Document me
+        The optional passivation/deactivation method for the actor type will
+        be invoked.  After it completes, the language-level storate for the actor
+        instance will be released. After this operation is invoked, no more POST
+        operations on this actor instance may be performed unless a GET is first
+        performed to re-initialize the language-level state of the actor instance.
       operationId: idImplActorDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -218,8 +262,24 @@ paths:
       description: |-
         ### Allocate the language-level state for the specified actor instance
 
-        TODO: Document me
+        Causes the language-level actor runtime to allocate storage for the
+        actor instance and to invoke its initialization/activation method
+        if one is provided.  This operation must be successfully completed
+        before any POST operations on this actor instance are performed.
       operationId: idImplActorGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
       responses:
         "200":
           $ref: '#/responses/response200'
@@ -232,20 +292,60 @@ paths:
       summary: actor allocation
       tags:
       - actor-runtime
-  /impl/v1/actor/{type}/{id}/{session}/{method}:
+  /impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}:
     post:
       consumes:
       - application/kar+json
       description: |-
         ### Invoke an actor method of the specified actor instance
 
-        TODO: Document me
+        Invokes the actor method on the actor instance within the session specified in the path.
+        The body of the request will contain the actual paramters on which to invoke the method.
       operationId: idImplActorPost
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The actor method to be invoked
+        example: computeMyResult
+        in: path
+        name: methodName
+        required: true
+        type: string
+        x-go-name: MethodName
+      - description: The session to use for the actor method invocation.
+        format: uuid
+        in: path
+        name: session
+        required: true
+        type: string
+        x-go-name: Session
+      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+        example: '[3, ''hello'', { msg: ''Greetings'' }]'
+        in: body
+        name: ActorMethodArguments
+        schema:
+          items:
+            type: object
+          type: array
       produces:
       - application/kar+json
       responses:
         "200":
           $ref: '#/responses/response200CallActorResult'
+        "202":
+          $ref: '#/responses/response202'
+        "204":
+          $ref: '#/responses/response204ActorNoContentResult'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -275,14 +375,14 @@ paths:
       summary: actor
       tags:
       - actors
-  /v1/actor/{actorType}/{actorId}/call/{path}:
+  /v1/actor/{actorType}/{actorId}/call/{methodName}:
     post:
       consumes:
       - application/kar+json
       description: |-
         ### Invoke an actor method
 
-        Call executes a `POST` to the `path` endpoint of the
+        Call invokes the `methodName` method of the
         actor instance indicated by `actorType` and `actorId`.
         The request body must be a (possibly zero-length) JSON array whose elements
         are used as the actual parameters of the actor method.
@@ -310,13 +410,13 @@ paths:
         in: header
         name: Pragma
         type: string
-      - description: The target endpoint to be invoked by the operation
-        example: an/arbitrary/valid/pathSegment
+      - description: The actor method to be invoked
+        example: computeMyResult
         in: path
-        name: path
+        name: methodName
         required: true
         type: string
-        x-go-name: Path
+        x-go-name: MethodName
       - description: Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
         format: uuid
         in: query

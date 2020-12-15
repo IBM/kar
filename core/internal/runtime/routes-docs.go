@@ -60,13 +60,14 @@ package runtime
  * Swagger specification for language-level actor runtime implementation
  *******************************************************************/
 
-// swagger:route HEAD /impl/v1/actor/{type} actor-runtime idImplActorTypeGet
+// swagger:route HEAD /impl/v1/actor/{actorType} actor-runtime idImplActorTypeGet
 //
 // actor type validation
 //
 // ### Test to see if the actor type is provided by the targeted runtime.
 //
-// TODO: Document me
+// Used to validate that the language level actor runtime knows how
+// to instantiate an actor type.
 //
 //     Schemes: http
 //     Responses:
@@ -76,13 +77,16 @@ package runtime
 //
 func dummy0() {}
 
-// swagger:route GET /impl/v1/actor/{type}/{id} actor-runtime idImplActorGet
+// swagger:route GET /impl/v1/actor/{actorType}/{actorId} actor-runtime idImplActorGet
 //
 // actor allocation
 //
 // ### Allocate the language-level state for the specified actor instance
 //
-// TODO: Document me
+// Causes the language-level actor runtime to allocate storage for the
+// actor instance and to invoke its initialization/activation method
+// if one is provided.  This operation must be successfully completed
+// before any POST operations on this actor instance are performed.
 //
 //     Schemes: http
 //     Responses:
@@ -92,13 +96,17 @@ func dummy0() {}
 //
 func dummy1() {}
 
-// swagger:route DELETE /impl/v1/actor/{type}/{id} actor-runtime idImplActorDelete
+// swagger:route DELETE /impl/v1/actor/{actorType}/{actorId} actor-runtime idImplActorDelete
 //
 // actor deallocation
 //
 // ### Deallocate the language-level state for the specified actor instance
 //
-// TODO: Document me
+// The optional passivation/deactivation method for the actor type will
+// be invoked.  After it completes, the language-level storate for the actor
+// instance will be released. After this operation is invoked, no more POST
+// operations on this actor instance may be performed unless a GET is first
+// performed to re-initialize the language-level state of the actor instance.
 //
 //     Schemes: http
 //     Responses:
@@ -108,13 +116,14 @@ func dummy1() {}
 //
 func dummy2() {}
 
-// swagger:route POST /impl/v1/actor/{type}/{id}/{session}/{method} actor-runtime idImplActorPost
+// swagger:route POST /impl/v1/actor/{actorType}/{actorId}/{session}/{methodName} actor-runtime idImplActorPost
 //
 // actor invocation
 //
 // ### Invoke an actor method of the specified actor instance
 //
-// TODO: Document me
+// Invokes the actor method on the actor instance within the session specified in the path.
+// The body of the request will contain the actual paramters on which to invoke the method.
 //
 //     Schemes: http
 //     Consumes:
@@ -123,6 +132,8 @@ func dummy2() {}
 //     - application/kar+json
 //     Responses:
 //       200: response200CallActorResult
+//       202: response202
+//       204: response204ActorNoContentResult
 //       404: response404
 //       500: response500
 //
@@ -155,6 +166,9 @@ func dummy3() {}
 // swagger:parameters idActorStateSubkeySet
 // swagger:parameters idActorStateGetAll
 // swagger:parameters idActorStateDeleteAll
+// swagger:parameters idImplActorGet
+// swagger:parameters idImplActorDelete
+// swagger:parameters idImplActorPost
 type actorParam struct {
 	// The actor type
 	// in:path
@@ -162,6 +176,13 @@ type actorParam struct {
 	// The actor instance id
 	// in:path
 	ActorID string `json:"actorId"`
+}
+
+// swagger:parameters idImplActorTypeGet
+type actorTypeOnlyParam struct {
+	// The actor type
+	// in:path
+	ActorType string `json:"actorType"`
 }
 
 // swagger:parameters idActorStateDelete
@@ -226,7 +247,6 @@ type topicParam struct {
 	Topic string `json:"topic"`
 }
 
-// swagger:parameters idActorCall
 // swagger:parameters idServiceDelete
 // swagger:parameters idServiceGet
 // swagger:parameters idServiceHead
@@ -242,10 +262,27 @@ type pathParam struct {
 }
 
 // swagger:parameters idActorCall
+// swagger:parameters idImplActorPost
+type methodParam struct {
+	// The actor method to be invoked
+	// in:path
+	// Example: computeMyResult
+	MethodName string `json:"methodName"`
+}
+
+// swagger:parameters idActorCall
 type sessionParam struct {
 	// Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
 	// in:query
 	// required:false
+	// swagger:strfmt uuid
+	Session string `json:"session"`
+}
+
+// swagger:parameters idImplActorPost
+type sessionPathParam struct {
+	// The session to use for the actor method invocation.
+	// in:path
 	// swagger:strfmt uuid
 	Session string `json:"session"`
 }
@@ -314,6 +351,7 @@ type endpointRequestBody struct {
 }
 
 // swagger:parameters idActorCall
+// swagger:parameters idImplActorPost
 type actorCallRequestBody struct {
 	// A possibly empty array containing the arguments with which to invoke the target actor method.
 	// example: [3, 'hello', { msg: 'Greetings' }]

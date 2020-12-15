@@ -246,13 +246,13 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //       default: responseGenericEndpointError
 //
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/call/{path} actors idActorCall
+// swagger:route POST /v1/actor/{actorType}/{actorId}/call/{methodName} actors idActorCall
 //
 // call
 //
 // ### Invoke an actor method
 //
-// Call executes a `POST` to the `path` endpoint of the
+// Call invokes the `methodName` method of the
 // actor instance indicated by `actorType` and `actorId`.
 // The request body must be a (possibly zero-length) JSON array whose elements
 // are used as the actual parameters of the actor method.

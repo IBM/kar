@@ -10,39 +10,27 @@
   },
   "basePath": "/kar",
   "paths": {
-    "/impl/v1/actor/{type}/{id}": {
-      "get": {
-        "description": "### Allocate the language-level state for the specified actor instance\n\nTODO: Document me",
+    "/impl/v1/actor/{actorType}": {
+      "head": {
+        "description": "### Test to see if the actor type is provided by the targeted runtime.\n\nUsed to validate that the language level actor runtime knows how\nto instantiate an actor type.",
         "schemes": [
           "http"
         ],
         "tags": [
           "actor-runtime"
         ],
-        "summary": "actor allocation",
-        "operationId": "idImplActorGet",
-        "responses": {
-          "200": {
-            "$ref": "#/responses/response200"
-          },
-          "404": {
-            "$ref": "#/responses/response404"
-          },
-          "500": {
-            "$ref": "#/responses/response500"
+        "summary": "actor type validation",
+        "operationId": "idImplActorTypeGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
           }
-        }
-      },
-      "delete": {
-        "description": "### Deallocate the language-level state for the specified actor instance\n\nTODO: Document me",
-        "schemes": [
-          "http"
         ],
-        "tags": [
-          "actor-runtime"
-        ],
-        "summary": "actor deallocation",
-        "operationId": "idImplActorDelete",
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
@@ -56,9 +44,91 @@
         }
       }
     },
-    "/impl/v1/actor/{type}/{id}/{session}/{method}": {
+    "/impl/v1/actor/{actorType}/{actorId}": {
+      "get": {
+        "description": "### Allocate the language-level state for the specified actor instance\n\nCauses the language-level actor runtime to allocate storage for the\nactor instance and to invoke its initialization/activation method\nif one is provided.  This operation must be successfully completed\nbefore any POST operations on this actor instance are performed.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor allocation",
+        "operationId": "idImplActorGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Deallocate the language-level state for the specified actor instance\n\nThe optional passivation/deactivation method for the actor type will\nbe invoked.  After it completes, the language-level storate for the actor\ninstance will be released. After this operation is invoked, no more POST\noperations on this actor instance may be performed unless a GET is first\nperformed to re-initialize the language-level state of the actor instance.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor deallocation",
+        "operationId": "idImplActorDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}": {
       "post": {
-        "description": "### Invoke an actor method of the specified actor instance\n\nTODO: Document me",
+        "description": "### Invoke an actor method of the specified actor instance\n\nInvokes the actor method on the actor instance within the session specified in the path.\nThe body of the request will contain the actual paramters on which to invoke the method.",
         "consumes": [
           "application/kar+json"
         ],
@@ -73,9 +143,63 @@
         ],
         "summary": "actor invocation",
         "operationId": "idImplActorPost",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "computeMyResult",
+            "x-go-name": "MethodName",
+            "description": "The actor method to be invoked",
+            "name": "methodName",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "format": "uuid",
+            "x-go-name": "Session",
+            "description": "The session to use for the actor method invocation.",
+            "name": "session",
+            "in": "path",
+            "required": true
+          },
+          {
+            "example": "[3, 'hello', { msg: 'Greetings' }]",
+            "description": "A possibly empty array containing the arguments with which to invoke the target actor method.",
+            "name": "ActorMethodArguments",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/response200CallActorResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "204": {
+            "$ref": "#/responses/response204ActorNoContentResult"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -110,9 +234,9 @@
         }
       }
     },
-    "/v1/actor/{actorType}/{actorId}/call/{path}": {
+    "/v1/actor/{actorType}/{actorId}/call/{methodName}": {
       "post": {
-        "description": "### Invoke an actor method\n\nCall executes a `POST` to the `path` endpoint of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.  If the actor\nmethod returns `void` or `undefined`, then a 204 - No Content reponse is returned.",
+        "description": "### Invoke an actor method\n\nCall invokes the `methodName` method of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.  If the actor\nmethod returns `void` or `undefined`, then a 204 - No Content reponse is returned.",
         "consumes": [
           "application/kar+json"
         ],
@@ -152,10 +276,10 @@
           },
           {
             "type": "string",
-            "example": "an/arbitrary/valid/pathSegment",
-            "x-go-name": "Path",
-            "description": "The target endpoint to be invoked by the operation",
-            "name": "path",
+            "example": "computeMyResult",
+            "x-go-name": "MethodName",
+            "description": "The actor method to be invoked",
+            "name": "methodName",
             "in": "path",
             "required": true
           },
