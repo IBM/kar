@@ -186,10 +186,10 @@ export namespace actor {
     export function set (actor: Actor, key: string, value: any): Promise<void>;
 
     /**
-     * Store one value to an Actor's state
+     * Store one value to a submap in an Actor's state
      * @param actor The Actor instance.
-     * @param key The key to update in the instance's state
-     * @param subkey The optional subkey to update in the instance's state
+     * @param key The name of the submap being updated
+     * @param subkey The key in the submap to update
      * @param value The value to store
      */
     export function setWithSubkey (actor: Actor, key: string, subkey: string, value: any): Promise<void>;
@@ -207,15 +207,24 @@ export namespace actor {
      * @param key the name of the map to which the updates should be performed.
      * @param updates The updates to make
      */
-    export function setMultipleInSubMap (actor: Actor, key: string, updates: Map<string, any>): Promise<void>;
+    export function setMultipleInSubmap (actor: Actor, key: string, updates: Map<string, any>): Promise<void>;
 
     /**
-     * Remove one value from an Actor's state
+     * Remove a single value from an Actor's state.
+     * NOTE: To bulk remove all subkeys of a given key, use @see removeSubmap.
      * @param actor The Actor instance.
      * @param key The key to delete
      * @param subkey The optional subkey to delete
      */
     export function remove (actor: Actor, key: string, subkey?: string): Promise<void>;
+
+    /**
+     * Remove all subkeys associated with the given key
+     * @param actor The Actor instance
+     * @param key The key
+     * @returns The number of removed subkey entrys
+     */
+    export function removeSubmap (actor: Actor, key: string): Promise<number>;
 
     /**
      * Get all of an Actor's state
@@ -244,7 +253,7 @@ export namespace actor {
      * @param key The key
      * @returns An array containing the currently defined subkeys
      */
-    export function subMapGetKeys (actor: Actor, key: string): Promise<Array<string>>;
+    export function submapKeys (actor: Actor, key: string): Promise<Array<string>>;
 
     /**
      * Get the number of subkeys associated with the given key
@@ -252,15 +261,7 @@ export namespace actor {
      * @param key The key
      * @returns The number of currently define subkeys
      */
-    export function subMapSize (actor: Actor, key: string): Promise<number>;
-
-    /**
-     * Remove all subkeys associated with the given key
-     * @param actor The Actor instance
-     * @param key The key
-     * @returns The number of removed subkey entrys
-     */
-    export function subMapClear (actor: Actor, key: string): Promise<number>;
+    export function submapSize (actor: Actor, key: string): Promise<number>;
   }
 }
 

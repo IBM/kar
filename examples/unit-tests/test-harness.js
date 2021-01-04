@@ -101,7 +101,7 @@ async function actorTests () {
     failure = true
   }
   await actor.state.setWithSubkey(a, 'famous', 'Allen', 'Fran')
-  await actor.state.setMultipleInSubMap(a, 'famous', { Turing: 'Alan', Knuth: 'Don' })
+  await actor.state.setMultipleInSubmap(a, 'famous', { Turing: 'Alan', Knuth: 'Don' })
   const fa = await actor.state.get(a, 'famous', 'Allen')
   const dk = await actor.state.get(a, 'famous', 'Knuth')
   if (fa !== 'Fran' || dk !== 'Don') {
@@ -118,14 +118,14 @@ async function actorTests () {
     console.log('found non-contained key famous/Doe')
     failure = true
   }
-  const nf = await actor.state.subMapSize(a, 'famous')
+  const nf = await actor.state.submapSize(a, 'famous')
   if (nf !== 3) {
     console.log(`Unexpected number of famous people: ${nf}`)
     failure = true
   }
-  const fpm = await actor.state.subMapGet(a, 'famous')
+  const fpm = await actor.state.getSubmap(a, 'famous')
   if (fpm.Allen !== 'Fran' || fpm.Turing !== 'Alan' || fpm.Knuth !== 'Don') {
-    console.log('Missing famous person entry from subMapGet')
+    console.log('Missing famous person entry from getSubmaps')
     failure = true
   }
   await actor.state.remove(a, 'famous', 'Knuth')
@@ -134,13 +134,13 @@ async function actorTests () {
     console.log('Failed to remove Don Knuth from famous map')
     failure = true
   }
-  const fp = await actor.state.subMapGetKeys(a, 'famous')
+  const fp = await actor.state.submapKeys(a, 'famous')
   if (!fp.includes('Allen') || !fp.includes('Turing')) {
     console.log(`Unexpected set of famous people ${fp}`)
     failure = true
   }
-  await actor.state.subMapClear(a, 'famous')
-  if (await actor.state.subMapSize(a, 'famous') !== 0) {
+  await actor.state.removeSubmap(a, 'famous')
+  if (await actor.state.submapSize(a, 'famous') !== 0) {
     console.log('Submap clear did not remove all keys')
     failure = true
   }

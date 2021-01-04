@@ -194,21 +194,22 @@ function actorRemoveState (actor, key, subkey) {
     return del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
   }
 }
+
 const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
 const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, state)
 
-const actorSetStateMultipleInSubMap = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
+const actorSetStateMultipleInSubmap = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const actorSubMapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
+const actorSubmapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
 
-const actorSubMapGet = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
+const actorSubmapGet = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
 
-const actorSubMapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
+const actorSubmapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
 
-const actorSubMapClear = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
+const actorRemoveSubmap = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
 
 const shutdown = () => post('system/shutdown').then(_ => session.close())
 
@@ -365,14 +366,14 @@ module.exports = {
       set: actorSetState,
       setWithSubkey: actorSetWithSubkeyState,
       setMultiple: actorSetStateMultiple,
-      setMultipleInSubMap: actorSetStateMultipleInSubMap,
+      setMultipleInSubmap: actorSetStateMultipleInSubmap,
       remove: actorRemoveState,
+      removeSubmap: actorRemoveSubmap,
       getAll: actorGetAllState,
+      getSubmap: actorSubmapGet,
       removeAll: actorRemoveAllState,
-      subMapGetKeys: actorSubMapGetKeys,
-      subMapGet: actorSubMapGet,
-      subMapSize: actorSubMapSize,
-      subMapClear: actorSubMapClear
+      submapKeys: actorSubmapGetKeys,
+      submapSize: actorSubmapSize
     }
   },
   events: {
