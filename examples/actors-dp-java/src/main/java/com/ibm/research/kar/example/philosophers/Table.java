@@ -1,13 +1,5 @@
 package com.ibm.research.kar.example.philosophers;
 
-import static com.ibm.research.kar.Kar.actorCall;
-import static com.ibm.research.kar.Kar.actorGetAllState;
-import static com.ibm.research.kar.Kar.actorRef;
-import static com.ibm.research.kar.Kar.actorRemove;
-import static com.ibm.research.kar.Kar.actorSetMultipleState;
-import static com.ibm.research.kar.Kar.actorSetState;
-import static com.ibm.research.kar.Kar.actorTell;
-
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,6 +12,7 @@ import javax.json.JsonObjectBuilder;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.Kar.Actors;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -34,7 +27,7 @@ public class Table extends ActorSkeleton {
 
   @Activate
   public void activate() {
-    Map<String, JsonValue> state = actorGetAllState(this);
+    Map<String, JsonValue> state = Actors.State.getAll(this);
     if (state.containsKey("cafe")) {
       this.cafe = ((JsonString) state.get("cafe"));
     }
@@ -59,7 +52,7 @@ public class Table extends ActorSkeleton {
     jb.add("diners", this.diners);
     jb.add("step", this.step);
     JsonObject state = jb.build();
-    actorSetMultipleState(this, state);
+    Actors.State.set(this, state);
   }
 
   @Remote
@@ -87,7 +80,7 @@ public class Table extends ActorSkeleton {
     }
     this.diners = jba.build();
     System.out.println("Cafe "+this.cafe+" is seating table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
-    actorTell(this, "serve", servings, step);
+    Actors.tell(this, "serve", servings, step);
     this.step = step;
     this.checkpointState();
   }
@@ -100,14 +93,14 @@ public class Table extends ActorSkeleton {
       JsonString who = Json.createValue(philosopher(i));
       JsonString fork1 = Json.createValue(fork(i));
       JsonString fork2 = Json.createValue(fork(i + 1));
-      actorCall(actorRef("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
+      Actors.call(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
     }
     JsonString who = Json.createValue(philosopher(n.intValue() - 1));
     JsonString fork1 = Json.createValue(fork(0));
     JsonString fork2 = Json.createValue(fork(n.intValue() - 1));
-    actorCall(actorRef("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
+    Actors.call(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
     this.step = step;
-    actorSetState(this, "step", step);
+    Actors.State.set(this, "step", step);
   }
 
   @Remote
@@ -124,9 +117,9 @@ public class Table extends ActorSkeleton {
     if (this.diners.size() == 0) {
       System.out.println("Table " + this.getId() + " is now empty!");
       JsonString step = Json.createValue(UUID.randomUUID().toString());
-      actorTell(this, "busTable", step);
+      Actors.tell(this, "busTable", step);
       this.step = step;
-      actorSetState(this, "step", step);
+      Actors.State.set(this, "step", step);
     }
   }
 
@@ -135,11 +128,11 @@ public class Table extends ActorSkeleton {
     if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
     step = Json.createValue(UUID.randomUUID().toString());
     for (int i = 0; i<n.intValue(); i++) {
-      actorRemove(actorRef("Philosopher", philosopher(i)));
-      actorRemove(actorRef("Fork", fork(i)));
+      Actors.remove(Actors.ref("Philosopher", philosopher(i)));
+      Actors.remove(Actors.ref("Fork", fork(i)));
     }
-    actorRemove(this);
+    Actors.remove(this);
     this.step = step;
-    actorSetState(this, "step", step);
+    Actors.State.set(this, "step", step);
   }
 }

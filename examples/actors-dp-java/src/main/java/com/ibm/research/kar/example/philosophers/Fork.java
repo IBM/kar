@@ -1,12 +1,10 @@
 package com.ibm.research.kar.example.philosophers;
 
-import static com.ibm.research.kar.Kar.actorGetState;
-import static com.ibm.research.kar.Kar.actorSetState;
-
 import javax.json.Json;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.Kar.Actors;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -20,7 +18,7 @@ public class Fork extends ActorSkeleton {
 
 	@Activate
 	public void activate() {
-		JsonValue user = actorGetState(this, "inUseBy");
+		JsonValue user = Actors.State.get(this, "inUseBy");
 		if (user instanceof JsonString) {
 			this.inUseBy = (JsonString)user;
 		} else {
@@ -32,7 +30,7 @@ public class Fork extends ActorSkeleton {
 	public JsonValue pickUp(JsonString who) {
 		if (this.inUseBy.equals(nobody)) {
 			this.inUseBy = who;
-			actorSetState(this, "inUseBy", who);
+			Actors.State.set(this, "inUseBy", who);
 			return JsonValue.TRUE;
 		} else if (this.inUseBy.equals(who)) {
 			// can happen if pickUp is re-executed due to a failure
@@ -46,7 +44,7 @@ public class Fork extends ActorSkeleton {
 	public void putDown(JsonString who) {
 		if (this.inUseBy.equals(who)) { // can be false if putDown is re-executed due to failure
 			this.inUseBy = nobody;
-			actorSetState(this, "inUseBy", this.inUseBy);
+			Actors.State.set(this, "inUseBy", this.inUseBy);
 		}
 	}
 }

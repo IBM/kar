@@ -1,8 +1,5 @@
 package com.ibm.research.kar.example.philosophers;
 
-import static com.ibm.research.kar.Kar.actorCall;
-import static com.ibm.research.kar.Kar.actorRef;
-
 import java.util.UUID;
 
 import javax.json.Json;
@@ -10,6 +7,7 @@ import javax.json.JsonNumber;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.Kar.Actors;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Remote;
@@ -18,7 +16,7 @@ import com.ibm.research.kar.actor.annotations.Remote;
 public class Cafe extends ActorSkeleton {
 	@Remote
 	public JsonValue occupancy(JsonString table) {
-		return actorCall(actorRef("Table", table.getString()), "occupancy");
+		return Actors.call(Actors.ref("Table", table.getString()), "occupancy");
 	}
 
 	@Remote
@@ -34,7 +32,7 @@ public class Cafe extends ActorSkeleton {
 
 	@Remote
 	public JsonString seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		actorCall(actorRef("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId);
+		Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId);
 		return requestId;
 	}
 }

@@ -1,13 +1,5 @@
 package com.ibm.research.kar.example.philosophers;
 
-import static com.ibm.research.kar.Kar.actorCall;
-import static com.ibm.research.kar.Kar.actorGetAllState;
-import static com.ibm.research.kar.Kar.actorRef;
-import static com.ibm.research.kar.Kar.actorScheduleReminder;
-import static com.ibm.research.kar.Kar.actorSetMultipleState;
-import static com.ibm.research.kar.Kar.actorSetState;
-import static com.ibm.research.kar.Kar.actorTell;
-
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -19,6 +11,7 @@ import javax.json.JsonObjectBuilder;
 import javax.json.JsonString;
 import javax.json.JsonValue;
 
+import com.ibm.research.kar.Kar.Actors;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -37,7 +30,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Activate
 	public void activate () {
-		Map<String, JsonValue> state = actorGetAllState(this);
+		Map<String, JsonValue> state = Actors.State.getAll(this);
 		if (state.containsKey("table")) {
 			this.table = ((JsonString)state.get("table"));
 		}
@@ -70,7 +63,7 @@ public class Philosopher extends ActorSkeleton {
 		jb.add("targetServings", this.targetServings);
 		jb.add("step", this.step);
 		JsonObject state = jb.build();
-		actorSetMultipleState(this, state);
+		Actors.State.set(this, state);
 	}
 
 	private Instant nextStepTime() {
@@ -87,7 +80,7 @@ public class Philosopher extends ActorSkeleton {
 		this.secondFork = secondFork;
 		this.servingsEaten = Json.createValue(0);
 		this.targetServings = targetServings;
-		actorScheduleReminder(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step);
+		Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step);
 		this.step = step;
 		checkpointState();
 	}
@@ -96,32 +89,32 @@ public class Philosopher extends ActorSkeleton {
 	public void getFirstFork(JsonNumber attempt, JsonString step) {
 		if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
 		step = Json.createValue(UUID.randomUUID().toString());
-		if (actorCall(actorRef("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
-			actorTell(this, "getSecondFork", Json.createValue(1), step);
+		if (Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
+			Actors.tell(this, "getSecondFork", Json.createValue(1), step);
 		} else {
 			if (attempt.intValue() > 5) {
-				System.out.println("Warning: "+this.getId()+" has failed to aqquire his first Fork "+attempt+" times");
+				System.out.println("Warning: "+this.getId()+" has failed to acquire his first Fork "+attempt+" times");
 			}
-			actorScheduleReminder(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue()+1), step);
+			Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue()+1), step);
 		}
 		this.step = step;
-		actorSetState(this, "step", step);
+		Actors.State.set(this, "step", step);
 	}
 
 	@Remote
 	public void getSecondFork(JsonNumber attempt, JsonString step) {
 		if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
 		step = Json.createValue(UUID.randomUUID().toString());
-		if (actorCall(actorRef("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
-			actorTell(this, "eat", step);
+		if (Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
+			Actors.tell(this, "eat", step);
 		} else {
 			if (attempt.intValue() > 5) {
-				System.out.println("Warning: "+this.getId()+" has failed to aqquire his second Fork "+attempt+" times");
+				System.out.println("Warning: "+this.getId()+" has failed to acquire his second Fork "+attempt+" times");
 			}
-			actorScheduleReminder(this, "getSecondFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue()+1), step);
+			Actors.Reminders.schedule(this, "getSecondFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue()+1), step);
 		}
 		this.step = step;
-		actorSetState(this, "step", step);
+		Actors.State.set(this, "step", step);
 	}
 
 	@Remote
@@ -129,12 +122,12 @@ public class Philosopher extends ActorSkeleton {
 		if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
 		step = Json.createValue(UUID.randomUUID().toString());
 		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+this.servingsEaten);
-		actorCall(actorRef("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
-		actorCall(actorRef("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
+		Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
+		Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
 		if (this.servingsEaten.intValue() < this.targetServings.intValue()) {
-			actorScheduleReminder(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step);
+			Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step);
 		} else {
-			actorCall(actorRef("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
+			Actors.call(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
 		}
 		this.servingsEaten = Json.createValue(this.servingsEaten.intValue() + 1);
 		this.step = step;
