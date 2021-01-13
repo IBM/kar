@@ -1,5 +1,31 @@
 #!/bin/bash
 
-# Script to run a kamel integration on docker
+# run integration in a local container
 
-docker run --network kar-bus --env KAFKA_BROKERS=kafka:9092 "$@"
+set -e
+
+SCRIPTDIR=$(cd $(dirname "$0") && pwd)
+
+image=
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --image|-i)
+      shift
+      image="$1"
+      shift
+      ;;
+    *)
+      array+=("$1")
+      shift
+      ;;
+  esac
+done
+
+set -- "${array[@]}"
+
+kamel local run --containerize \
+  --image ${image} \
+  --network kar-bus \
+  "${SCRIPTDIR}/kamel/CloudEventProcessor.java" \
+  "$@"

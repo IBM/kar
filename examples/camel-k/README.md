@@ -62,12 +62,6 @@ deployment template is provided in [stocks-dev.yaml](deploy/stocks-dev.yaml).
 
 ## Build and run locally
 
-To build the Camel integrations locally run:
-```
-../../scripts/kamel-local-build.sh --workspace workspace-http-source input.yaml
-../../scripts/kamel-local-build.sh --workspace workspace-slack-sink output.yaml
-```
-
 To prepare the KAR component for execution run:
 ```
 npm install --prod
@@ -81,28 +75,62 @@ This KAR component will create the necessary Kafka topics.
 
 To launch the source run:
 ```
-../../scripts/kamel-local-run.sh --workspace workspace-http-source
+../../scripts/kamel-local-run.sh input.yaml
 ```
 
 To launch the sink run:
 ```
-../../scripts/kamel-local-run.sh --workspace workspace-slack-sink
+../../scripts/kamel-local-run.sh output.yaml
 ```
 
-## Build and run using Docker development environment
+## Build and run inside a container
+
+Building the user part of the example:
+```
+docker build . -t stock-processor
+```
+
+Launching and running the user part of the example:
+```
+../../scripts/kar-docker-run.sh -app stocks -actors StockManager stock-processor
+```
+
+Building, launching and running the example source and sink parts can be done in two ways:
+(1) using docker directly
+(2) using kamel
+
+### Launching sources and sink using Docker
 
 To build container images for the three components run:
 ```
-docker build . -t stock-processor
 docker build workspace-http-source -t stock-source
 docker build workspace-slack-sink -t stock-sink
 ```
 
 To launch the example run:
 ```
-../../scripts/kar-docker-run.sh -app stocks -actors StockManager stock-processor
+
 docker run --network kar-bus stock-source --detach
 docker run --network kar-bus --env SLACK_WEBHOOK=$SLACK_WEBHOOK stock-sink --detach
+```
+
+### Launching sources and sink using Kamel
+
+Ensure Docker is available. Identify the local docker repository as something like:
+```
+export LOCAL_DOCKER_REGISTRY=docker.io/<registry-name>
+```
+
+Build base image to be used as a starting point for all the integration images.
+```
+kamel local create --base-image --container-registry ${LOCAL_DOCKER_REGISTRY}
+```
+This step will be performed by kamel if no base image is found.
+
+Launch the example:
+```
+../../scripts/kamel-docker-run.sh --image ${LOCAL_DOCKER_REGISTRY}/stock-source-image input.yaml
+../../scripts/kamel-docker-run.sh --image ${LOCAL_DOCKER_REGISTRY}/stock-sink-image output.yaml
 ```
 
 ## Build and run using Kind development cluster

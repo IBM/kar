@@ -1,8 +1,11 @@
+# camel-k: property=camel.component.kafka.brokers=${KAFKA_BROKERS}
+# camel-k: property=camel.component.slack.webhookUrl=${SLACK_WEBHOOK}
+
 - from:
-    uri: "kafka:OutputStockEvent?brokers={{env:KAFKA_BROKERS}}"
+    uri: "kafka:OutputStockEvent"
     steps:
       - process:
           ref: "transformCloudEventToMessage"
-      - to: "slack:#kar-output?webhookUrl={{env:SLACK_WEBHOOK}}"
+      - to: "slack:#kar-output"
       - log:
           message: "${body}"

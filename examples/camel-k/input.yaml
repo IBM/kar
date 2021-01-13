@@ -1,3 +1,5 @@
+# camel-k: property=camel.component.kafka.brokers=${KAFKA_BROKERS}
+
 - from:
     uri: "timer:tick"
     parameters:
@@ -12,6 +14,6 @@
           constant: "quote"
       - process:
           ref: "transformMessageToCloudEvent"
-      - to: "kafka:InputStockEvent?brokers={{env:KAFKA_BROKERS}}"
+      - to: "kafka:InputStockEvent"
       - log:
           message: "${body}"

@@ -25,7 +25,6 @@ fi
 
 BROKERS=$(echo $SECRET | jq -r .data.kafka_brokers | base64 -D)
 
-echo kamel run \
-  -p camel.component.kafka.brokers=$BROKERS \
+KAFKA_BROKERS=$BROKERS kamel run \
   $SCRIPTDIR/kamel/CloudEventProcessor.java \
   "$@"
