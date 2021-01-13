@@ -1,7 +1,7 @@
 {
   "name": "kar",
   "main": "index.js",
-  "version": "0.1.1+0fa19447",
+  "version": "0.1.1+ad4b3e3d",
   "scripts": {
     "test": "standard"
   },
@@ -11,5 +11,5 @@
     "morgan": "^1.9.1",
     "spdy": "^4.0.1"
   },
-  "yalcSig": "0fa1944795b58c259122e294c08152bb"
+  "yalcSig": "ad4b3e3d952928ff9db1c6905a88c531"
 }

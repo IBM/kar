@@ -197,17 +197,21 @@ function actorRemoveState (actor, key, subkey) {
 
 const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, state)
+const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'update', updates: state })
 
 const actorSetStateMultipleInSubmap = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
 
 const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
+
+const actorRemoveSomeState = (actor, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'clearSome', removals: keys })
 
 const actorSubmapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
 
 const actorSubmapGet = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
 
 const actorSubmapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
+
+const actorRemoveSomeSubmap = (actor, key, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clearSome', removals: keys })
 
 const actorRemoveSubmap = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
 
@@ -368,10 +372,12 @@ module.exports = {
       setMultiple: actorSetStateMultiple,
       setMultipleInSubmap: actorSetStateMultipleInSubmap,
       remove: actorRemoveState,
+      removeSome: actorRemoveSomeState,
+      removeAll: actorRemoveAllState,
+      removeSomeSubmap: actorRemoveSomeSubmap,
       removeSubmap: actorRemoveSubmap,
       getAll: actorGetAllState,
       getSubmap: actorSubmapGet,
-      removeAll: actorRemoveAllState,
       submapKeys: actorSubmapGetKeys,
       submapSize: actorSubmapSize
     }

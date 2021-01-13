@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
@@ -695,6 +696,21 @@ public class Kar {
 			}
 
 			/**
+			 * Get all of an Actor's state.
+			 *
+			 * @param actor The Actor instance.
+			 * @return A map representing the Actor's state
+			 */
+			public static Map<String, JsonValue> getAll(ActorRef actor) {
+				Response response = karClient.actorGetAllState(actor.getType(), actor.getId());
+				try {
+					return ((JsonValue) toValue(response)).asJsonObject();
+				} catch (ClassCastException e) {
+					return Collections.emptyMap();
+				}
+			}
+
+			/**
 			 * Check to see if an entry exists in an Actor's state
 			 *
 			 * @param actor The Actor instance.
@@ -740,7 +756,11 @@ public class Kar {
 					jb.add(e.getKey(), e.getValue());
 				}
 				JsonObject jup = jb.build();
-				Response response = karClient.actorSetMultipleState(actor.getType(), actor.getId(), jup);
+				JsonObjectBuilder pb = Json.createObjectBuilder();
+				pb.add("op", Json.createValue("update"));
+				pb.add("updates", jup);
+				JsonObject params = pb.build();
+				Response response = karClient.actorMapop(actor.getType(), actor.getId(), params);
 				return toInt(response);
 			}
 
@@ -758,8 +778,44 @@ public class Kar {
 			}
 
 			/**
-			 * KAR API methods for ptimized operations for storing a map
-			 * as a nested element of an Actor's state.
+			 * Remove multiple values from an Actor's state
+			 *
+			 * @param actor The Actor instance.
+			 * @param keys  The keys to delete
+			 * @return the number of entries actually removed
+			 */
+			public static int removeAll(ActorRef actor, List<String> keys) {
+				if (keys.isEmpty())
+					return 0;
+				JsonArrayBuilder jb = Json.createArrayBuilder();
+				for (String key : keys) {
+					jb.add(key);
+				}
+				JsonArray removals = jb.build();
+				JsonObjectBuilder pb = Json.createObjectBuilder();
+				pb.add("op", Json.createValue("clearSome"));
+				pb.add("removals", removals);
+				JsonObject params = pb.build();
+				Response response = karClient.actorMapop(actor.getType(), actor.getId(), params);
+				return toInt(response);
+			}
+
+			/**
+			 * Remove all elements of an Actor's user level state. Unlike
+			 * {@link Actors#remove} this method is synchronous and does not remove the
+			 * KAR-level mapping of the instance to a specific runtime Process.
+			 *
+			 * @param actor The Actor instance.
+			 * @return The number of removed key/value pairs
+			 */
+			public static int removeAll(ActorRef actor) {
+				Response response = karClient.actorDeleteAllState(actor.getType(), actor.getId());
+				return toInt(response);
+			}
+
+			/**
+			 * KAR API methods for ptimized operations for storing a map as a nested element
+			 * of an Actor's state.
 			 */
 			public static class Submap {
 				/**
@@ -767,7 +823,7 @@ public class Kar {
 				 *
 				 * @param actor  The Actor instance.
 				 * @param submap The name of the submap
-				 * @param key The subkey to use to access the instance's state
+				 * @param key    The subkey to use to access the instance's state
 				 * @return The value associated with `key/subkey`
 				 */
 				public static JsonValue get(ActorRef actor, String submap, String key) {
@@ -782,11 +838,30 @@ public class Kar {
 				}
 
 				/**
+				 * Get all key/value pairs of the given submap
+				 *
+				 * @param actor  The Actor instance
+				 * @param submap The name of the submap
+				 * @return An array containing the currently defined subkeys
+				 */
+				public static Map<String, JsonValue> getAll(ActorRef actor, String submap) {
+					JsonObjectBuilder jb = Json.createObjectBuilder();
+					jb.add("op", Json.createValue("get"));
+					JsonObject params = jb.build();
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					try {
+						return ((JsonValue) toValue(response)).asJsonObject();
+					} catch (ClassCastException e) {
+						return Collections.emptyMap();
+					}
+				}
+
+				/**
 				 * Check to see if an entry exists in a submap in an Actor's state
 				 *
 				 * @param actor  The Actor instance.
 				 * @param submap The name of the submap
-				 * @param key The key to check for in the given submap
+				 * @param key    The key to check for in the given submap
 				 * @return `true` if the actor instance has a value defined for `key/subkey`,
 				 *         `false` otherwise.
 				 */
@@ -805,7 +880,7 @@ public class Kar {
 				 *
 				 * @param actor  The Actor instance.
 				 * @param submap The name of the submap to update
-				 * @param key The key in the submap to update
+				 * @param key    The key in the submap to update
 				 * @param value  The value to store at `key/subkey`
 				 * @return The number of new state entries created by this store (0 or 1)
 				 */
@@ -818,7 +893,8 @@ public class Kar {
 				 * Store multiple values to an Actor sub-map with name `key`
 				 *
 				 * @param actor   The Actor instance.
-				 * @param submap The name of the submap to which the updates should be performed
+				 * @param submap  The name of the submap to which the updates should be
+				 *                performed
 				 * @param updates A map containing the (subkey, value) pairs to store
 				 * @return The number of new map entries created by this operation
 				 */
@@ -834,7 +910,7 @@ public class Kar {
 					pb.add("op", Json.createValue("update"));
 					pb.add("updates", jup);
 					JsonObject params = pb.build();
-					Response response = karClient.actorMapOp(actor.getType(), actor.getId(), submap, params);
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
 					return toInt(response);
 				}
 
@@ -843,7 +919,7 @@ public class Kar {
 				 *
 				 * @param actor  The Actor instance.
 				 * @param submap The name of the submap from which to delete the key
-				 * @param key The key of the entry to delete from the submap
+				 * @param key    The key of the entry to delete from the submap
 				 * @return `1` if an entry was actually removed and `0` if there was no entry
 				 *         for `key`.
 				 */
@@ -853,9 +929,33 @@ public class Kar {
 				}
 
 				/**
+				 * Remove multiple values from one submap of an Actor's state
+				 *
+				 * @param actor  The Actor instance.
+				 * @param submap The name of the submap from which to delete the keys
+				 * @param keys   The keys to delete
+				 * @return the number of entries actually removed
+				 */
+				public static int removeAll(ActorRef actor, String submap, List<String> keys) {
+					if (keys.isEmpty())
+						return 0;
+					JsonArrayBuilder jb = Json.createArrayBuilder();
+					for (String key : keys) {
+						jb.add(key);
+					}
+					JsonArray removals = jb.build();
+					JsonObjectBuilder pb = Json.createObjectBuilder();
+					pb.add("op", Json.createValue("clearSome"));
+					pb.add("removals", removals);
+					JsonObject params = pb.build();
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					return toInt(response);
+				}
+
+				/**
 				 * Remove all values from a submap in the Actor's state.
 				 *
-				 * @param actor The Actor instance
+				 * @param actor  The Actor instance
 				 * @param submap The name of the submap
 				 * @return The number of removed subkey entrys
 				 */
@@ -863,33 +963,14 @@ public class Kar {
 					JsonObjectBuilder jb = Json.createObjectBuilder();
 					jb.add("op", Json.createValue("clear"));
 					JsonObject params = jb.build();
-					Response response = karClient.actorMapOp(actor.getType(), actor.getId(), submap, params);
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
 					return toInt(response);
-				}
-
-				/**
-				 * Get all key/value pairs of the given submap
-				 *
-				 * @param actor The Actor instance
-				 * @param submap The name of the submap
-				 * @return An array containing the currently defined subkeys
-				 */
-				public static Map<String, JsonValue> getAll(ActorRef actor, String submap) {
-					JsonObjectBuilder jb = Json.createObjectBuilder();
-					jb.add("op", Json.createValue("get"));
-					JsonObject params = jb.build();
-					Response response = karClient.actorMapOp(actor.getType(), actor.getId(), submap, params);
-					try {
-						return ((JsonValue) toValue(response)).asJsonObject();
-					} catch (ClassCastException e) {
-						return Collections.emptyMap();
-					}
 				}
 
 				/**
 				 * Get the keys of the given submap
 				 *
-				 * @param actor The Actor instance
+				 * @param actor  The Actor instance
 				 * @param submap The name of the submap
 				 * @return An array containing the currently defined subkeys
 				 */
@@ -897,7 +978,7 @@ public class Kar {
 					JsonObjectBuilder jb = Json.createObjectBuilder();
 					jb.add("op", Json.createValue("keys"));
 					JsonObject params = jb.build();
-					Response response = karClient.actorMapOp(actor.getType(), actor.getId(), submap, params);
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
 					Object[] jstrings = ((JsonValue) toValue(response)).asJsonArray().toArray();
 					String[] ans = new String[jstrings.length];
 					for (int i = 0; i < jstrings.length; i++) {
@@ -909,7 +990,7 @@ public class Kar {
 				/**
 				 * Get the number of keys in the given submap
 				 *
-				 * @param actor The Actor instance
+				 * @param actor  The Actor instance
 				 * @param submap The name of the submap
 				 * @return The number of currently define keys in the submap
 				 */
@@ -917,37 +998,9 @@ public class Kar {
 					JsonObjectBuilder jb = Json.createObjectBuilder();
 					jb.add("op", Json.createValue("size"));
 					JsonObject params = jb.build();
-					Response response = karClient.actorMapOp(actor.getType(), actor.getId(), submap, params);
+					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
 					return toInt(response);
 				}
-			}
-
-			/**
-			 * Get all of an Actor's state.
-			 *
-			 * @param actor The Actor instance.
-			 * @return A map representing the Actor's state
-			 */
-			public static Map<String, JsonValue> getAll(ActorRef actor) {
-				Response response = karClient.actorGetAllState(actor.getType(), actor.getId());
-				try {
-					return ((JsonValue) toValue(response)).asJsonObject();
-				} catch (ClassCastException e) {
-					return Collections.emptyMap();
-				}
-			}
-
-			/**
-			 * Remove all elements of an Actor's user level state.
-			 * Unlike {@link Actors#remove} this method is synchronous and does not
-			 * remove the KAR-level mapping of the instance to a specific runtime Process.
-			 *
-			 * @param actor The Actor instance.
-			 * @return The number of removed key/value pairs
-			 */
-			public static int removeAll(ActorRef actor) {
-				Response response = karClient.actorDeleteAllState(actor.getType(), actor.getId());
-				return toInt(response);
 			}
 		}
 	}

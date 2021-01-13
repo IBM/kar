@@ -35,8 +35,9 @@ type actorCallResult struct {
 
 // mapOp describes the requested map operation on an Actors state
 type mapOp struct {
-	Op      string                 `json:"op"`
-	Updates map[string]interface{} `json:"updates,omitempty"`
+	Op       string                 `json:"op"`
+	Updates  map[string]interface{} `json:"updates,omitempty"`
+	Removals []string               `json:"removals,omitempty"`
 }
 
 type actorEntry struct {

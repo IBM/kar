@@ -219,10 +219,27 @@ export namespace actor {
     export function remove (actor: Actor, key: string, subkey?: string): Promise<void>;
 
     /**
+     * Remove some values from an Actor's state.
+     * @param actor The Actor instance.
+     * @param keys The keys to delete
+     * @returns the number of removed entries
+     */
+    export function removeSome (actor: Actor, keys: Array<string>): Promise<number>;
+
+    /**
+     * Remove some values from an Actor submap
+     * @param actor The Actor instance.
+     * @param key The key of the submap
+     * @params keys The keys to remove from the submap
+     * @returns the number of removed submap entries
+     */
+    export function removeSomeSubmap (actor: Actor, key:string, keys: Array<string>): Promise<number>;
+
+    /**
      * Remove all subkeys associated with the given key
      * @param actor The Actor instance
      * @param key The key
-     * @returns The number of removed subkey entrys
+     * @returns The number of removed subkey entries
      */
     export function removeSubmap (actor: Actor, key: string): Promise<number>;
 

@@ -76,9 +76,9 @@ func server(listener net.Listener) http.Server {
 	router.PUT(base+"/actor/:type/:id/state/:key", routeImplSet)
 	router.DELETE(base+"/actor/:type/:id/state/:key", routeImplDel)
 	router.HEAD(base+"/actor/:type/:id/state/:key", routeImplContainsKey)
-	router.POST(base+"/actor/:type/:id/state/:key", routeImplMapOps)
+	router.POST(base+"/actor/:type/:id/state/:key", routeImplSubmapOps)
 	router.GET(base+"/actor/:type/:id/state", routeImplGetAll)
-	router.POST(base+"/actor/:type/:id/state", routeImplSetMultiple)
+	router.POST(base+"/actor/:type/:id/state", routeImplMapOps)
 	router.DELETE(base+"/actor/:type/:id/state", routeImplDelAll)
 	router.DELETE(base+"/actor/:type/:id", routeImplDelActor)
 

@@ -160,6 +160,7 @@ func dummy3() {}
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
 // swagger:parameters idActorStateMapOps
+// swagger:parameters idActorStateSubmapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
 // swagger:parameters idActorStateSubkeyGet
@@ -190,6 +191,7 @@ type actorTypeOnlyParam struct {
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
 // swagger:parameters idActorStateMapOps
+// swagger:parameters idActorStateSubmapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
 // swagger:parameters idActorStateSubkeyGet
@@ -297,6 +299,7 @@ type reminderIDParam struct {
 }
 
 // swagger:parameters idActorStateMapOps
+// swagger:parameters idActorStateSubmapOps
 type mapopsParamWrapper struct {
 	// The request body describes the map operation to be performed
 	// in:body
@@ -414,6 +417,13 @@ type response200CallActorResult struct {
 // The result of performing a map operation on an actor's state
 // swagger:response response200StateMapOps
 type response200StateMapOps struct {
+	// The result of performing the map operation
+	Body interface{} `json:"body"`
+}
+
+// The result of performing a map operation on an actor's state
+// swagger:response response200StateSubmapOps
+type response200StateSubmapOps struct {
 	// The result of performing the map operation
 	Body interface{} `json:"body"`
 }

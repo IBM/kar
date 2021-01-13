@@ -87,6 +87,11 @@ definitions:
       op:
         type: string
         x-go-name: Op
+      removals:
+        items:
+          type: string
+        type: array
+        x-go-name: Removals
       updates:
         additionalProperties:
           type: object
@@ -962,29 +967,51 @@ paths:
       consumes:
       - application/json
       description: |-
-        ### Update multiple entries of an actor's state
+        ### Perform an operation on the actor's state
 
-        The state of the actor instance indicated by `actorType` and `actorId`
-        will be updated by atomically updated by storing all key-value pairs
-        in the request body.
-        The operation will not return until the state has been updated.
-        The result of the operation is the number of new entires that were created.
-      operationId: idActorStateSetMultiple
+        The operation indicated by the `op` field of the request body will be performed on the
+        actor instance indicated by `actorType` and `actorId`. The result of the
+        operation will be returned as the response body.
+        If there are no `key` entries in the actor instance, the operation
+        will be interpreted as being applied to an empty map.
+
+        The valid values for `op` are:
+        <ul>
+        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
+        <li>update: atomically update the actor state to contain all the key-value pairs contained in updates</li>
+        </ul>
+      operationId: idActorStateMapOps
       parameters:
-      - description: A map containing the state updates to perform
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The request body describes the map operation to be performed
         in: body
         name: Body
         schema:
-          additionalProperties:
-            type: object
-          type: object
+          $ref: '#/definitions/mapOp'
       produces:
-      - text/plain
+      - application/json
       responses:
         "200":
-          $ref: '#/responses/response200StateSetMultipleResult'
-        "400":
-          $ref: '#/responses/response400'
+          $ref: '#/responses/response200StateMapOps'
+        "404":
+          $ref: '#/responses/response404'
         "500":
           $ref: '#/responses/response500'
       schemes:
@@ -1137,12 +1164,13 @@ paths:
         The valid values for `op` are:
         <ul>
         <li>clear: remove all entires in the key actor map</li>
+        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
         <li>get: get the entire key actor map</li>
         <li>keys: return a list of subkeys that are defined in the key actor map</li>
         <li>size: return the number of entries the key actor map</li>
         <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
         </ul>
-      operationId: idActorStateMapOps
+      operationId: idActorStateSubmapOps
       parameters:
       - description: The actor type
         in: path
@@ -1171,7 +1199,7 @@ paths:
       - application/json
       responses:
         "200":
-          $ref: '#/responses/response200StateMapOps'
+          $ref: '#/responses/response200StateSubmapOps'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -2005,6 +2033,13 @@ responses:
         description: Returns 0 if an existing entry was updated and 1 if a new entry was created
         format: int64
         type: integer
+  response200StateSubmapOps:
+    description: The result of performing a map operation on an actor's state
+    headers:
+      body:
+        description: The result of performing the map operation
+    schema:
+      type: object
   response200SubscriptionCancelAllResult:
     headers:
       NumberCancelled:

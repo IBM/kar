@@ -266,7 +266,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/state/{key}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response actorMapOp(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key,
+	public Response actorSubmapOp(@PathParam("type") String type, @PathParam("id") String id, @PathParam("key") String key,
 			JsonValue params);
 
 	@DELETE
@@ -285,7 +285,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/state")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response actorSetMultipleState(@PathParam("type") String type, @PathParam("id") String id, JsonObject updates);
+	public Response actorMapop(@PathParam("type") String type, @PathParam("id") String id, JsonValue params);
 
 	@DELETE
 	@Path("actor/{type}/{id}/state")

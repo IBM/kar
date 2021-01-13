@@ -100,6 +100,11 @@ async function actorTests () {
     console.log(`    value was ${v3a}`)
     failure = true
   }
+  const numRemoved = await actor.state.removeSome(a, ['key1', 'keyNotHere', 'key10'])
+  if (numRemoved !== 2) {
+    console.log(`removeSome removed ${numRemoved} keys, was expecting to remove 2`)
+    failure = true
+  }
   await actor.state.setWithSubkey(a, 'famous', 'Allen', 'Fran')
   await actor.state.setMultipleInSubmap(a, 'famous', { Turing: 'Alan', Knuth: 'Don' })
   const fa = await actor.state.get(a, 'famous', 'Allen')
@@ -137,6 +142,11 @@ async function actorTests () {
   const fp = await actor.state.submapKeys(a, 'famous')
   if (!fp.includes('Allen') || !fp.includes('Turing')) {
     console.log(`Unexpected set of famous people ${fp}`)
+    failure = true
+  }
+  const numRemovedSub = await actor.state.removeSomeSubmap(a, 'famous', ['Allen', 'Knuth'])
+  if (numRemovedSub !== 1) {
+    console.log(`Expected removeSomeSubmap to remove 1; actually removed ${numRemovedSub}`)
     failure = true
   }
   await actor.state.removeSubmap(a, 'famous')
