@@ -1,7 +1,7 @@
 version: "3"
 services:
   zookeeper:
-    image: wurstmeister/zookeeper
+    image: zookeeper:3.4
     hostname: zookeeper
     container_name: kar_zookeeper
     networks:
