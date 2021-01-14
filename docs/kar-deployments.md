@@ -117,6 +117,11 @@ including multiple clusters and/or applications that are split between a
 cluster and edge devices (or developer laptops) see [Hybrid
 Cloud](#hybrid-cloud) below.
 
+## General Overview
+
+This section outlines some general principles that are true of
+any in-cluster deployment of KAR.
+
 For its in-cluster configurations, the KAR runtime system is deployed
 in the `kar-system` namespace and includes a mutating webhook whose
 job is to inject a "sidecar" container containing the `kar` executable
@@ -138,12 +143,12 @@ images. We discuss some common options in the text below, but cannot
 cover all possibilities. We also assume that you know how to configure
 `kubectl`, `helm`, etc. to access your cluster.
 
-Once the KAR runtime system is deployed to the `kar-system` namespace,
-you must enable one or more other namespaces for KAR
-applications. This enablement entails labeling the namespace with
-`kar.ibm.com/enabled=true` and creating the `kar.ibm.com.image-pull`
-and `kar.ibm.com.runtime-config` in the namespace.  These steps are
-automated by
+After the KAR runtime system is successfully deployed to the
+`kar-system` namespace, you must enable one or more other namespaces
+for KAR applications. This enablement entails labeling the namespace
+with `kar.ibm.com/enabled=true` and creating the
+`kar.ibm.com.image-pull` and `kar.ibm.com.runtime-config` in the
+namespace.  The steps of namespace enablement are automated by
 [kar-k8s-namespace-enable.sh](../scripts/kar-k8s-namespace-enable.sh).
 
 Once a namespace is thus enabled, you can deploy KAR application components to the
@@ -212,30 +217,60 @@ You can undeploy the KAR runtime system with
 ./scripts/kar-k8s-undeploy.sh
 ```
 
-## Deploying locally using `kind`
+## Deploying on a local Kubernetes cluster
+
+For ease of development, it can be convenient to deploy KAR to a
+Kubernetes or OpenShift cluster running on your local development
+machine.  Several options exist for creating a local cluster; we
+describe them next. In all cases, we recommend also running a local
+docker registry to enable Kubernetes to pull images without requiring
+you to push your development images to an external docker registry.
+
+### Start your local cluster.
+
+#### Docker Desktop
+
+If you are using Docker Desktop on MacOS or Windows, you
+can enable a built-in Kubernetes cluster by checking a box in the UI.
+
+#### Kind
 
 We can use [kind](https://kind.sigs.k8s.io/) to create a
 virtual Kubernetes cluster using Docker on your development machine.
-Using kind is only supported in KAR's "dev" mode where you will be
-building your own docker images of the KAR system components and
-pushing them into a local docker registry that we configure when
-deploying kind.
 
 You will need `kind` 0.9.0 installed locally.
 
-### Create your `kind` cluster and docker registry
-
+KAR requires specific configuration of `kind`.  We have automated
+this in a script.
 ```shell
 ./scripts/kind-start.sh
 ```
+#### Rancher K3s
 
-### Deploying the KAR Runtime System to the `kar-system` namespace
+TODO -- write this!
 
-First, build the necessary docker images and push them to a local
-registry that is accessible to kind with:
+### Start local docker registry
+
+The rest of our instructions assume you will run a local docker
+registry on `localhost:5000`.  To ensure one is running, execute
+```shell
+./scripts/start-local-registry.sh
+```
+
+### Build and locally publish images
+
+Next, build the necessary docker images and push them to a local
+registry.
 ```shell
 make dockerDev
 ```
+
+When you rebuild a KAR docker image and want it to be accessible to
+your Kubernetes cluster, you will need to either do `make dockerDev`
+or individually `docker push` the image to the localhost:5000 registry.
+
+### Deploying the KAR Runtime System to the `kar-system` namespace
+
 Next, deploy KAR in dev mode by doing:
 ```shell
 ./scripts/kar-k8s-deploy.sh -dev
@@ -283,9 +318,6 @@ You can undeploy the KAR runtime system with
 ```shell
 ./scripts/kar-k8s-undeploy.sh
 ```
-
-You can remove the entire `kind` cluster with `kind cluster delete`.
-
 
 # IBM Code Engine
 
