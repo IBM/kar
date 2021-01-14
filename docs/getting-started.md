@@ -60,7 +60,7 @@ Kafka as a reliable message transport (Kafka internally uses ZooKeeper
 for distributed consensus).  You can deploy these
 dependencies as docker containers using docker-compose by running:
 ```shell
-./scripts/docker-composer-start.sh
+./scripts/docker-compose-start.sh
 ```
 
 After the script completes, configure your shell environment
@@ -158,7 +158,7 @@ and removing the docker containers for Redis, Kafka, and ZooKeeper. Note that
 this will also remove all saved state for any KAR-based applications you have run. 
 Undeploy these containers using docker-compose by running:
 ```shell
-./scripts/docker-composer-stop.sh
+./scripts/docker-compose-stop.sh
 ```
 
 # Next Steps

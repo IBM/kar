@@ -121,6 +121,11 @@ Ensure Docker is available. Identify the local docker repository as something li
 export LOCAL_DOCKER_REGISTRY=docker.io/<registry-name>
 ```
 
+For this part of the example KAFKA_BROKERS needs to be set to:
+```
+export KAFKA_BROKERS=kafka:9092
+```
+
 Build base image to be used as a starting point for all the integration images.
 ```
 kamel local create --base-image --container-registry ${LOCAL_DOCKER_REGISTRY}
