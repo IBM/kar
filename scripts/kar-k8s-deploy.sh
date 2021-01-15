@@ -23,8 +23,6 @@ set -e
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-. $SCRIPTDIR/lib/kube-helpers.sh
-
 help=""
 args=""
 parse=true
@@ -119,8 +117,23 @@ fi
 
 helm install kar scripts/helm/kar -n kar-system $helmargs
 
+
+waitForPod() {
+    while true; do
+        POD_STATUS=$(kubectl -n kar-system get pods -l name="$1" -o wide | grep "$1" | awk '{print $3}')
+        READY_COUNT=$(kubectl -n kar-system get pods -l name="$1" -o wide | grep "$1" | awk '{print $2}' | awk -F / '{print $1}')
+        if [[ "$POD_STATUS" == "Running" ]] && [[ "$READY_COUNT" != "0" ]]; then
+            echo "$1 is ready."
+            break
+        fi
+        echo "Waiting for $1 to be ready."
+        kubectl get pods -n kar-system -o wide
+        sleep 10
+    done
+}
+
 if [ "$injectorOnly" == "" ]; then
-    statefulsetHealthCheck "kar-redis"
-    statefulsetHealthCheck "kar-kafka"
+    waitForPod "kar-redis"
+    waitForPod "kar-kafka"
 fi
-deploymentHealthCheck "kar-injector"
+waitForPod "kar-injector"
