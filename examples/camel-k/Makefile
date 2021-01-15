@@ -30,8 +30,8 @@ docker:
 
 dockerBuild:
 	docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(DOCKER_IMAGE_PREFIX)examples/stock-processor .
-	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-source input.yaml ../../scripts/kamel/CloudEventProcessor.java 
-	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' SLACK_WEBHOOK='{{env:SLACK_WEBHOOK}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-sink output.yaml ../../scripts/kamel/CloudEventProcessor.java 
+	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-source input.yaml CloudEventProcessor.java
+	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' SLACK_WEBHOOK='{{env:SLACK_WEBHOOK}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-sink output.yaml CloudEventProcessor.java
 
 dockerPush:
 	docker push $(DOCKER_IMAGE_PREFIX)examples/stock-processor

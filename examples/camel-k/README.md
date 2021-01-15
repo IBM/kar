@@ -93,11 +93,11 @@ This KAR component will create the necessary Kafka topics.
 
 To launch the source run:
 ```
-kamel local run ../../scripts/kamel/CloudEventProcessor.java input.yaml
+kamel local run CloudEventProcessor.java input.yaml
 ```
 To launch the sink, make sure to export the SLACK_WEBHOOK and run:
 ```
-kamel local run ../../scripts/kamel/CloudEventProcessor.java output.yaml
+kamel local run CloudEventProcessor.java output.yaml
 ```
 
 ## Prepare container images and deploy to Kubernetes
