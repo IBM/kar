@@ -60,7 +60,7 @@ export interface SubscribeOptions {
 
 export interface TopicCreationOptions {
   /** Kafka topic creation config */
-  configEntries?: Map<string,string>;
+  configEntries?: Map<string, string>;
   /** The number of Kafka paritions to create */
   numPartitions?: number;
   /** The replication factor for this topic */
@@ -122,11 +122,11 @@ export namespace actor {
    */
   export function call (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
-	/**
-	 * Asynchronously remove all user-level and runtime state of an Actor.
-	 *
-	 * @param target The Actor instance.
-	 */
+  /**
+   * Asynchronously remove all user-level and runtime state of an Actor.
+   *
+   * @param target The Actor instance.
+   */
   export function remove (target: Actor): Promise<any>;
 
   namespace reminders {
@@ -163,19 +163,24 @@ export namespace actor {
      * Get one value from an Actor's state
      * @param actor The Actor instance.
      * @param key The key to get from the instance's state
-     * @param subkey The optional subkey to get from the instance's state
-     * @returns The value associated with `key` or `key/subkey`
+     * @returns The value associated with `key`
      */
-    export function get (actor: Actor, key: string, subkey?: string): Promise<any>;
+    export function get (actor: Actor, key: string): Promise<any>;
+
+    /**
+     * Get all of an Actor's state
+     * @param actor The Actor instance.
+     * @returns A map representing the Actor's state
+     */
+    export function getAll (actor: Actor): Promise<Map<string, any>>;
 
     /**
      * Check to see if an Actor's state contains an entry
      * @param actor The Actor instance.
      * @param key The key to check for in the instance's state
-     * @param subkey The optional subkey to check for in the instance's state
-     * @returns `true` if the actor has a state entry for `key` or `key/subkey` and `false` if it does not
+     * @returns `true` if the actor has a state entry for `key` and `false` if it does not
      */
-    export function contains (actor: Actor, key: string, subkey?: string): Promise<boolean>;
+    export function contains (actor: Actor, key: string): Promise<boolean>;
 
     /**
      * Store one value to an Actor's state
@@ -186,15 +191,6 @@ export namespace actor {
     export function set (actor: Actor, key: string, value: any): Promise<void>;
 
     /**
-     * Store one value to a submap in an Actor's state
-     * @param actor The Actor instance.
-     * @param key The name of the submap being updated
-     * @param subkey The key in the submap to update
-     * @param value The value to store
-     */
-    export function setWithSubkey (actor: Actor, key: string, subkey: string, value: any): Promise<void>;
-
-    /**
      * Store multiple values to an Actor's state
      * @param actor The Actor instance.
      * @param updates The updates to make
@@ -202,21 +198,11 @@ export namespace actor {
     export function setMultiple (actor: Actor, updates: Map<string, any>): Promise<void>;
 
     /**
-     * Store multiple (subkey, value) pairs to the `key` map of an Actor's state
-     * @param actor The Actor instance.
-     * @param key the name of the map to which the updates should be performed.
-     * @param updates The updates to make
-     */
-    export function setMultipleInSubmap (actor: Actor, key: string, updates: Map<string, any>): Promise<void>;
-
-    /**
      * Remove a single value from an Actor's state.
-     * NOTE: To bulk remove all subkeys of a given key, use @see removeSubmap.
      * @param actor The Actor instance.
      * @param key The key to delete
-     * @param subkey The optional subkey to delete
      */
-    export function remove (actor: Actor, key: string, subkey?: string): Promise<void>;
+    export function remove (actor: Actor, key: string): Promise<void>;
 
     /**
      * Remove some values from an Actor's state.
@@ -227,58 +213,96 @@ export namespace actor {
     export function removeSome (actor: Actor, keys: Array<string>): Promise<number>;
 
     /**
-     * Remove some values from an Actor submap
-     * @param actor The Actor instance.
-     * @param key The key of the submap
-     * @params keys The keys to remove from the submap
-     * @returns the number of removed submap entries
-     */
-    export function removeSomeSubmap (actor: Actor, key:string, keys: Array<string>): Promise<number>;
-
-    /**
-     * Remove all subkeys associated with the given key
-     * @param actor The Actor instance
-     * @param key The key
-     * @returns The number of removed subkey entries
-     */
-    export function removeSubmap (actor: Actor, key: string): Promise<number>;
-
-    /**
-     * Get all of an Actor's state
-     * @param actor The Actor instance.
-     * @returns A map representing the Actor's state
-     */
-    export function getAll (actor: Actor): Promise<Map<string, any>>;
-
-    /**
-     * Get the contents of the `key` map of an Actor's state
-     * @param actor The Actor instance.
-     * @param key The name of the map to get
-     * @returns A contents of the map `key`
-     */
-    export function getSubmap (actor: Actor, key: String): Promise<Map<string, any>>;
-
-    /**
      * Remove an Actor's state
      * @param actor The Actor instance.
      */
     export function removeAll (actor: Actor): Promise<void>;
 
-    /**
-     * Get the subkeys associated with the given key
-     * @param actor The Actor instance
-     * @param key The key
-     * @returns An array containing the currently defined subkeys
-     */
-    export function submapKeys (actor: Actor, key: string): Promise<Array<string>>;
+    namespace submap {
+      /**
+       * Get one value from an Actor's state submap
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to access
+       * @param key The key to get from the submap
+       * @returns The value associated with `key/subkey`
+       */
+      export function get (actor: Actor, submap:string, key: string): Promise<any>;
 
-    /**
-     * Get the number of subkeys associated with the given key
-     * @param actor The Actor instance
-     * @param key The key
-     * @returns The number of currently define subkeys
-     */
-    export function submapSize (actor: Actor, key: string): Promise<number>;
+      /**
+       * Get the contents of the `key` map of an Actor's state
+       * @param actor The Actor instance.
+       * @param submap The name of the submap to get
+       * @returns The contents of submap
+       */
+      export function getAll (actor: Actor, submap: String): Promise<Map<string, any>>;
+
+      /**
+       * Check to see if an Actor's state contains an entry
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to access
+       * @param key The key to check for in the submap
+       * @returns `true` if the actor has a state entry for `key/subkey` and `false` if it does not
+       */
+      export function contains (actor: Actor, submap:string, key: string): Promise<boolean>;
+
+      /**
+       * Store one value to an Actor's state
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to access
+       * @param key The key to update in the submap
+       * @param value The value to store
+       */
+      export function set (actor: Actor, submap:string, key: string, value: any): Promise<void>;
+
+      /**
+       * Store multiple (subkey, value) pairs to the `submap` map of an Actor's state
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to update
+       * @param updates The updates to make
+       */
+      export function setMultiple (actor: Actor, submap: string, updates: Map<string, any>): Promise<void>;
+
+      /**
+       * Remove a single value from an Actor submap.
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to access
+       * @param key The key to delete
+       */
+      export function remove (actor: Actor, submap:string, key: string): Promise<void>;
+
+      /**
+       * Remove some values from an Actor submap
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to access
+       * @params keys The keys to remove from the submap
+       * @returns the number of removed submap entries
+       */
+      export function removeSome (actor: Actor, submap: string, keys: Array<string>): Promise<number>;
+
+      /**
+       * Remove an Actor submap
+       * @param actor The Actor instance.
+       * @param submap The Actor submap to remove
+       * @returns the number of removed submap entries
+       */
+      export function removeAll (actor: Actor, submap: string): Promise<number>;
+
+      /**
+       * Get the subkeys associated with the given key
+       * @param actor The Actor instance
+       * @param submap The Actor submap to access
+       * @returns An array containing keys defined in the submap
+       */
+      export function keys (actor: Actor, submap: string): Promise<Array<string>>;
+
+      /**
+       * Get the size of a submap
+       * @param actor The Actor instance
+       * @param submap The Actor submap to access
+       * @returns The size of `submap`
+       */
+      export function size (actor: Actor, submap: string): Promise<number>;
+    }
   }
 }
 

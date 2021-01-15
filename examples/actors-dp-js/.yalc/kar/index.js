@@ -183,53 +183,41 @@ function actorScheduleReminder (actor, path, options, ...args) {
   return put(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${options.id}`, opts)
 }
 
-function actorGetState (actor, key, subkey) {
-  if (subkey) {
-    return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}?nilOnAbsent=true`)
-  } else {
-    return get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
-  }
-}
+const actorStateGet = (actor, key) => get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}?nilOnAbsent=true`)
 
-function actorContainsState (actor, key, subkey) {
-  if (subkey) {
-    return head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`).then(headers => headers[':status'] === 200)
-  } else {
-    return head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`).status === 200
-  }
-}
+const actorStateGetAll = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const actorSetState = (actor, key, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, value)
+const actorStateContains = (actor, key) => head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`).status === 200
 
-const actorSetWithSubkeyState = (actor, key, subkey, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`, value)
+const actorStateSet = (actor, key, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, value)
 
-function actorRemoveState (actor, key, subkey) {
-  if (subkey) {
-    return del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`)
-  } else {
-    return del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
-  }
-}
+const actorStateSetMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'update', updates: state })
 
-const actorGetAllState = (actor) => get(`actor/${actor.kar.type}/${actor.kar.id}/state`)
+const actorStateRemove = (actor, key) => del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`)
 
-const actorSetStateMultiple = (actor, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'update', updates: state })
+const actorStateRemoveSome = (actor, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'clearSome', removals: keys })
 
-const actorSetStateMultipleInSubmap = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
+const actorStateRemoveAll = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
 
-const actorRemoveAllState = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}/state`)
+const actorSubmapGet = (actor, key, subkey) => get(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}?nilOnAbsent=true`)
 
-const actorRemoveSomeState = (actor, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { op: 'clearSome', removals: keys })
+const actorSubmapGetAll = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
 
-const actorSubmapGetKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
+const actorSubmapContains = (actor, key, subkey) => head(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`).then(headers => headers[':status'] === 200)
 
-const actorSubmapGet = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'get' })
+const actorSubmapSet = (actor, key, subkey, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`, value)
+
+const actorSubmapSetMultiple = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'update', updates: state })
+
+const actorSubmapRemove = (actor, key, subkey) => del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`)
+
+const actorSubmapRemoveSome = (actor, key, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clearSome', removals: keys })
+
+const actorSubmapRemoveAll = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
+
+const actorSubmapKeys = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'keys' })
 
 const actorSubmapSize = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'size' })
-
-const actorRemoveSomeSubmap = (actor, key, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clearSome', removals: keys })
-
-const actorRemoveSubmap = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
 
 const shutdown = () => post('system/shutdown').then(_ => session.close())
 
@@ -381,21 +369,26 @@ module.exports = {
       schedule: actorScheduleReminder
     },
     state: {
-      get: actorGetState,
-      contains: actorContainsState,
-      set: actorSetState,
-      setWithSubkey: actorSetWithSubkeyState,
-      setMultiple: actorSetStateMultiple,
-      setMultipleInSubmap: actorSetStateMultipleInSubmap,
-      remove: actorRemoveState,
-      removeSome: actorRemoveSomeState,
-      removeAll: actorRemoveAllState,
-      removeSomeSubmap: actorRemoveSomeSubmap,
-      removeSubmap: actorRemoveSubmap,
-      getAll: actorGetAllState,
-      getSubmap: actorSubmapGet,
-      submapKeys: actorSubmapGetKeys,
-      submapSize: actorSubmapSize
+      get: actorStateGet,
+      getAll: actorStateGetAll,
+      contains: actorStateContains,
+      set: actorStateSet,
+      setMultiple: actorStateSetMultiple,
+      remove: actorStateRemove,
+      removeSome: actorStateRemoveSome,
+      removeAll: actorStateRemoveAll,
+      submap: {
+        get: actorSubmapGet,
+        getAll: actorSubmapGetAll,
+        contains: actorSubmapContains,
+        set: actorSubmapSet,
+        setMultiple: actorSubmapSetMultiple,
+        remove: actorSubmapRemove,
+        removeSome: actorSubmapRemoveSome,
+        removeAll: actorSubmapRemoveAll,
+        keys: actorSubmapKeys,
+        size: actorSubmapSize
+      }
     }
   },
   events: {
