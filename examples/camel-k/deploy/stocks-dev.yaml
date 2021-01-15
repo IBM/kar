@@ -25,7 +25,7 @@ metadata:
 spec:
   containers:
   - name: stock-processor
-    image: registry:5000/examples/stock-processor
+    image: localhost:5000/examples/stock-processor
     ports:
     - containerPort: 8080
 ---
@@ -36,7 +36,7 @@ metadata:
 spec:
   containers:
   - name: stock-source
-    image: registry:5000/examples/stock-source
+    image: localhost:5000/examples/stock-source
     env:
     - name: KAFKA_BROKERS
       valueFrom:
@@ -51,7 +51,7 @@ metadata:
 spec:
   containers:
   - name: stock-sink
-    image: registry:5000/examples/stock-sink
+    image: localhost:5000/examples/stock-sink
     env:
     - name: KAFKA_BROKERS
       valueFrom:

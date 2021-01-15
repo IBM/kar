@@ -47,13 +47,15 @@ of CloudEvents in Camel sources and sinks.
 ## Dependencies
 
 Camel integrations run on a Java Virtual Machine. KAR leverages the `kamel` CLI
-from the [Camel-K project](https://camel.apache.org/camel-k/latest/index.html)
-and [Apache Maven](https://maven.apache.org) to assemble the artifacts required
-to run a Camel integration (essentially a collection of jar files).
-
-In contrast to Camel-K today, KAR does not require a Kubernetes cluster to run
-integrations. Moreover KAR does not require the Camel-K operator to deploy
-integrations to Kubernetes.
+from the [Camel-K project](https://camel.apache.org/camel-k/latest/index.html).
+At this time, we require a `kamel` CLI built from
+[source](https://github.com/apache/camel-k) as the 1.3.0 release is missing critical updates.
+```
+git clone https://github.com/apache/camel-k
+cd camel-k
+git checkout 4e0cb8
+make build-kamel
+```
 
 ## Example description
 
@@ -91,96 +93,28 @@ This KAR component will create the necessary Kafka topics.
 
 To launch the source run:
 ```
-../../scripts/kamel-local-run.sh input.yaml
+kamel local run ../../scripts/kamel/CloudEventProcessor.java input.yaml
+```
+To launch the sink, make sure to export the SLACK_WEBHOOK and run:
+```
+kamel local run ../../scripts/kamel/CloudEventProcessor.java output.yaml
 ```
 
-To launch the sink run:
-```
-../../scripts/kamel-local-run.sh output.yaml
-```
-
-## Build and run inside a container
-
-Building the user part of the example:
-```
-docker build . -t stock-processor
-```
-
-Launching and running the user part of the example:
-```
-../../scripts/kar-docker-run.sh -app stocks -actors StockManager stock-processor
-```
-
-Building, launching and running the example source and sink parts can be done in two ways:
-(1) using docker directly
-(2) using kamel
-
-### Launching sources and sink using Docker
-
-To build container images for the three components run:
-```
-docker build workspace-http-source -t stock-source
-docker build workspace-slack-sink -t stock-sink
-```
-
-To launch the example run:
-```
-
-docker run --network kar-bus stock-source --detach
-docker run --network kar-bus --env SLACK_WEBHOOK=$SLACK_WEBHOOK stock-sink --detach
-```
-
-### Launching sources and sink using Kamel
-
-Ensure Docker is available. Identify the local docker repository as something like:
-```
-export LOCAL_DOCKER_REGISTRY=docker.io/<registry-name>
-```
-
-For this part of the example KAFKA_BROKERS needs to be set to:
-```
-export KAFKA_BROKERS=kafka:9092
-```
-
-Build base image to be used as a starting point for all the integration images.
-```
-kamel local create --base-image --container-registry ${LOCAL_DOCKER_REGISTRY}
-```
-This step will be performed by kamel if no base image is found.
-
-Launch the example:
-```
-../../scripts/kamel-docker-run.sh --image ${LOCAL_DOCKER_REGISTRY}/stock-source-image input.yaml
-../../scripts/kamel-docker-run.sh --image ${LOCAL_DOCKER_REGISTRY}/stock-sink-image output.yaml
-```
-
-## Build and run using Kind development cluster
-
-To build container images for the three components run:
-```
-docker build . -t localhost:5000/examples/stock-processor
-docker build workspace-http-source -t localhost:5000/examples/stock-source
-docker build workspace-slack-sink -t localhost:5000/examples/stock-sink
-```
-
-To push these container images to the local registry run:
-```
-docker push localhost:5000/examples/stock-processor
-docker push localhost:5000/examples/stock-source
-docker push localhost:5000/examples/stock-sink
-```
+## Prepare container images and deploy to Kubernetes
 
 To deploy the example to Kubernetes, we first need to create a Kubernetes secret
 containing the Slack webhook. Run:
 ```
 kubectl create secret generic slack --from-literal=webhook=$SLACK_WEBHOOK
 ```
-
-To deploy the example run:
+To build and push container images for this example to the docker registry on `localhost:5000` run:
+```
+make dockerDev
+```
+To deploy the example to a development Kubernetes cluster run:
 ```
 kubectl apply -f deploy/stocks-dev.yaml
 ```
-
 To undeploy the example run:
 ```
 kubectl delete -f deploy/stocks-dev.yaml
