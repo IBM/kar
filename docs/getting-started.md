@@ -76,7 +76,7 @@ Kafka as a reliable message transport (Kafka internally uses ZooKeeper
 for distributed consensus).  You can deploy these
 dependencies as docker containers using docker-compose by running:
 ```shell
-./scripts/docker-compose-start.sh
+RESTART_POLICY=always ./scripts/docker-compose-start.sh
 ```
 
 After the script completes, configure your shell environment
