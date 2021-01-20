@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // source describes an event source (subscription)

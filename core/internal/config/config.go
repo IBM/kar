@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // Separator character for store keys and topic names

@@ -37,11 +37,11 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/internal/store"
+	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/internal/store"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 var (

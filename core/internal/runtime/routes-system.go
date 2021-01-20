@@ -26,9 +26,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 // swagger:route POST /v1/system/shutdown system idSystemShutdown

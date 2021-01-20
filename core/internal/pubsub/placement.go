@@ -19,8 +19,8 @@ package pubsub
 import (
 	"strings"
 
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/store"
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/internal/store"
 )
 
 func placementKeyPrefix(t string) string {

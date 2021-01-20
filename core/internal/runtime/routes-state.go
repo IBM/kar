@@ -27,10 +27,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/internal/store"
+	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/store"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 func stateKey(t, id string) string {

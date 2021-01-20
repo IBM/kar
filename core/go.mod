@@ -1,4 +1,4 @@
-module github.ibm.com/solsa/kar.git/core
+module github.com/IBM/kar.git/core
 
 go 1.15
 

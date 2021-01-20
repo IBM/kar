@@ -27,8 +27,8 @@ import (
 	"net/http"
 
 	"github.com/Shopify/sarama"
+	"github.com/IBM/kar.git/core/internal/pubsub"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
 )
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/events events idActorSubscriptionCancelAll

@@ -25,7 +25,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // dump adds a time stamp and a prefix to each line of a log

@@ -28,9 +28,9 @@ import (
 	"net/textproto"
 	"strings"
 
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
 )
 
 func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {

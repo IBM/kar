@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // Actor uniquely identifies an actor instance.

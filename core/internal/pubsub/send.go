@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // ErrRouteToActorTimeout indicates a timeout while waiting for a viable route to an Actor type.

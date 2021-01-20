@@ -30,8 +30,8 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/pkg/logger"
 	"golang.org/x/net/http2"
 )
 

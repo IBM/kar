@@ -24,9 +24,9 @@ import (
 	"os"
 	"strings"
 
-	"github.ibm.com/solsa/kar.git/core/internal/config"
-	"github.ibm.com/solsa/kar.git/core/internal/pubsub"
-	"github.ibm.com/solsa/kar.git/core/pkg/logger"
+	"github.com/IBM/kar.git/core/internal/config"
+	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 // invokeActorMethod an actor method
