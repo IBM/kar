@@ -50,7 +50,7 @@ We generate Swagger documentating the KAR REST APIs
 from comments/markup in the go code in core/internal/runtime.
 
 The generated files are committed to git in docs/api to
-make it possible to serve them from https://pages.github.ibm.com/solsa/kar/.
+make it possible to serve them from https://ibm.github.io/kar/.
 
 To regenerate the swagger, do
 ```shell
