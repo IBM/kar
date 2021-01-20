@@ -252,8 +252,6 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 </context-param>
 ```
 
-For a complete example, see the [KAR example actor server](../examples/java/actors/kar-actor-example)
-
 # Quarkus Support
 We are experimenting with the KAR Java SDK for Quarkus.  This is an early preview and has the following limitations:
 
