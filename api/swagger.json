@@ -1,0 +1,2640 @@
+{
+  "schemes": [
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "This document describes the RESTful APIs provided or assumed by the\nKubernetes Application Runtime (KAR). It consists of two sets of APIs:\n+ The **sidecar** APIs are implemented by the KAR sidecar.\n+ The **application component** APIs are meant to be implemented by application components.\n\nThe **sidecar** APIs are divided into logical groups:\n+ **Actors**: APIs to invoke actor methods.\n+ **Services**: APIs to invoke service endpoints.\n+ **Callbacks**: APIs to await the response to an asynchronous actor or service invocation.\n+ **Events**: APIs to publish to event sinks or subscribe actors to event sources.\n+ **Reminders**: APIs to schedule future actor invocations.\n+ **State**: APIs to manage the persistent state of actors.\n+ **System**: APIs for controlling the KAR runtime mesh.\n\nThe **application component** APIs are divided into logical groups:\n+ **Actor runtime**: APIs invoked by the sidecar to manage actor instances\nhosted by the application component.",
+    "title": "KAR",
+    "version": "v1"
+  },
+  "basePath": "/kar",
+  "paths": {
+    "/impl/v1/actor/{actorType}": {
+      "head": {
+        "description": "### Test to see if the actor type is provided by the targeted runtime.\n\nUsed to validate that the language level actor runtime knows how\nto instantiate an actor type.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor type validation",
+        "operationId": "idImplActorTypeGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/impl/v1/actor/{actorType}/{actorId}": {
+      "get": {
+        "description": "### Allocate the language-level state for the specified actor instance\n\nCauses the language-level actor runtime to allocate storage for the\nactor instance and to invoke its initialization/activation method\nif one is provided.  This operation must be successfully completed\nbefore any POST operations on this actor instance are performed.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor allocation",
+        "operationId": "idImplActorGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Deallocate the language-level state for the specified actor instance\n\nThe optional passivation/deactivation method for the actor type will\nbe invoked.  After it completes, the language-level storate for the actor\ninstance will be released. After this operation is invoked, no more POST\noperations on this actor instance may be performed unless a GET is first\nperformed to re-initialize the language-level state of the actor instance.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor deallocation",
+        "operationId": "idImplActorDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}": {
+      "post": {
+        "description": "### Invoke an actor method of the specified actor instance\n\nInvokes the actor method on the actor instance within the session specified in the path.\nThe body of the request will contain the actual paramters on which to invoke the method.",
+        "consumes": [
+          "application/kar+json"
+        ],
+        "produces": [
+          "application/kar+json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actor-runtime"
+        ],
+        "summary": "actor invocation",
+        "operationId": "idImplActorPost",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "example": "computeMyResult",
+            "x-go-name": "MethodName",
+            "description": "The actor method to be invoked",
+            "name": "methodName",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "format": "uuid",
+            "x-go-name": "Session",
+            "description": "The session to use for the actor method invocation.",
+            "name": "session",
+            "in": "path",
+            "required": true
+          },
+          {
+            "example": "[3, 'hello', { msg: 'Greetings' }]",
+            "description": "A possibly empty array containing the arguments with which to invoke the target actor method.",
+            "name": "ActorMethodArguments",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallActorResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "204": {
+            "$ref": "#/responses/response204ActorNoContentResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}": {
+      "delete": {
+        "description": "### Completely remove an actor instance\n\nAll user-level and runtime state of the actor instance indicated by\n`actorType` and `actorId` will be asynchronously deleted.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "actor",
+        "operationId": "idActorDelete",
+        "responses": {
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/call/{methodName}": {
+      "post": {
+        "description": "### Invoke an actor method\n\nCall invokes the `methodName` method of the\nactor instance indicated by `actorType` and `actorId`.\nThe request body must be a (possibly zero-length) JSON array whose elements\nare used as the actual parameters of the actor method.\nThe result of the call is the result of invoking the target actor method\nunless the `async` or `promise` pragma header is specified.  If the actor\nmethod returns `void` or `undefined`, then a 204 - No Content reponse is returned.",
+        "consumes": [
+          "application/kar+json"
+        ],
+        "produces": [
+          "application/kar+json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "actors"
+        ],
+        "summary": "call",
+        "operationId": "idActorCall",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "computeMyResult",
+            "x-go-name": "MethodName",
+            "description": "The actor method to be invoked",
+            "name": "methodName",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "format": "uuid",
+            "x-go-name": "Session",
+            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.",
+            "name": "session",
+            "in": "query"
+          },
+          {
+            "example": "[3, 'hello', { msg: 'Greetings' }]",
+            "description": "A possibly empty array containing the arguments with which to invoke the target actor method.",
+            "name": "ActorMethodArguments",
+            "in": "body",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallActorResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "204": {
+            "$ref": "#/responses/response204ActorNoContentResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/events": {
+      "get": {
+        "description": "### Get all subscriptions\n\nThis operation returns all subscriptions for the actor instance specified in the path.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "subscriptions",
+        "operationId": "idActorSubscriptionGetAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200SubscriptionGetAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Cancel all subscriptions\n\nThis operation cancels all subscriptions for the actor instance specified in the path.\nThe number of subscriptions cancelled is returned as the result of the operation.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "subscriptions",
+        "operationId": "idActorSubscriptionCancelAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200SubscriptionCancelAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/events/{subscriptionId}": {
+      "get": {
+        "description": "### Get a subscription\n\nThis operation returns the subscription for the actor instance specified in the path.\nIf there is no subscription with the id `subscriptionId` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`.\nIf `nilOnAbsent` is true the `404` response will be replaced with\na `200` response with a `nil` response body.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "subscriptions/id",
+        "operationId": "idActorSubscriptionGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "SubscriptionID",
+            "description": "The id of the specific subscription being targeted",
+            "name": "subscriptionID",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200SubscriptionGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "put": {
+        "description": "### Subscribe to a topic\n\nSubscribe the actor instance using the subscriptionId specified in the path\nas described by the data provided in the request body.\nIf there is already a subscription for the target actor instance with the same subscriptionId,\nthat existing subscription will be updated based on the request body.\nThe operation will not return until after the actor instance is subscribed.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "subscriptions/id",
+        "operationId": "idActorSubscribe",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "SubscriptionID",
+            "description": "The id of the specific subscription being targeted",
+            "name": "subscriptionID",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the subscription",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EventSubscribeOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Cancel a subscription\n\nThis operation cancels the subscription for the actor instance specified in the path.\nIf the subscription is successfully cancelled a `200` response with a body of `1` will be returned.\nIf the subscription is not found, a `404` response will be returned unless\nthe boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`\nis sent to true the `404` response will instead be a `200` with a body containing `0`.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "subscriptions/id",
+        "operationId": "idActorSubscriptionCancel",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "SubscriptionID",
+            "description": "The id of the specific subscription being targeted",
+            "name": "subscriptionID",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200SubscriptionCancelResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/reminders": {
+      "get": {
+        "description": "### Get all reminders\n\nThis operation returns all reminders for the actor instance specified in the path.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "reminders"
+        ],
+        "summary": "reminders",
+        "operationId": "idActorReminderGetAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderGetAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Cancel all reminders\n\nThis operation cancels all reminders for the actor instance specified in the path.\nThe number of reminders cancelled is returned as the result of the operation.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "reminders"
+        ],
+        "summary": "reminders",
+        "operationId": "idActorReminderCancelAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderCancelAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/reminders/{reminderId}": {
+      "get": {
+        "description": "### Get a reminder\n\nThis operation returns the reminder for the actor instance specified in the path.\nIf there is no reminder with the id `reminderId` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`.\nIf `nilOnAbsent` is true the `404` response will be replaced with\na `200` response with a `nil` response body.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "reminders"
+        ],
+        "summary": "reminders/id",
+        "operationId": "idActorReminderGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "put": {
+        "description": "### Schedule a reminder\n\nSchedule the reminder for the actor instance and reminderId specified in the path\nas described by the data provided in the request body.\nIf there is already a reminder for the target actor instance and reminderId,\nthat existing reminder's schedule will be updated based on the request body.\nThe operation will not return until after the reminder is scheduled.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "reminders"
+        ],
+        "summary": "reminders/id",
+        "operationId": "idActorReminderSchedule",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the reminder to be scheduled",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/scheduleReminderPayload"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Cancel a reminder\n\nThis operation cancels the reminder for the actor instance specified in the path.\nIf the reminder is successfully cancelled a `200` response with a body of `1` will be returned.\nIf the reminder is not found, a `404` response will be returned unless\nthe boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`\nis sent to true the `404` response will instead be a `200` with a body containing `0`.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "reminders"
+        ],
+        "summary": "reminders/id",
+        "operationId": "idActorReminderCancel",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ReminderID",
+            "description": "The id of the specific reminder being targeted",
+            "name": "reminderId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200ReminderCancelResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/state": {
+      "get": {
+        "description": "### Get an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state",
+        "operationId": "idActorStateGetAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateGetAllResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "post": {
+        "description": "### Perform an operation on the actor's state\n\nThe operation indicated by the `op` field of the request body will be performed on the\nactor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclearSome: remove entries in the key actor for the subkeys contained in removals\u003c/li\u003e\n\u003cli\u003eupdate: atomically update the actor state to contain all the key-value pairs contained in updates\u003c/li\u003e\n\u003c/ul\u003e",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state",
+        "operationId": "idActorStateMapOps",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the map operation to be performed",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/mapOp"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateMapOps"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Remove an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be deleted.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state",
+        "operationId": "idActorStateDeleteAll",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/state/{key}": {
+      "get": {
+        "description": "### Get a single entry of an actor's state\n\nThe `key` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry for `key` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`,\nin which case a `200` reponse with a `nil` response body will be returned.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "boolean",
+            "x-go-name": "ErrorOnAbsent",
+            "description": "Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.",
+            "name": "nilOnAbsent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "put": {
+        "description": "### Update a single entry of an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key` to contain the JSON request body.\nThe operation will not return until the state has been updated.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateSet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "post": {
+        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the `op` field of the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclear: remove all entires in the key actor map\u003c/li\u003e\n\u003cli\u003eclearSome: remove entries in the key actor for the subkeys contained in removals\u003c/li\u003e\n\u003cli\u003eget: get the entire key actor map\u003c/li\u003e\n\u003cli\u003ekeys: return a list of subkeys that are defined in the key actor map\u003c/li\u003e\n\u003cli\u003esize: return the number of entries the key actor map\u003c/li\u003e\n\u003cli\u003eupdate: update the key actor map to contain all the subkey to value mappings contained in updates\u003c/li\u003e\n\u003c/ul\u003e",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateSubmapOps",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "The request body describes the map operation to be performed",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/mapOp"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateSubmapOps"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Remove a single entry in an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by removing the entry for `key`.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if an entry was actually removed and\n`0` if there was no entry for `key`.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "head": {
+        "description": "### Check to see if single entry of an actor's state is defined\n\nCheck to see if the state of the actor instance indicated by `actorType` and `actorId`\ncontains an entry for `key`.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key",
+        "operationId": "idActorStateExists",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateExistsResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/actor/{actorType}/{actorId}/state/{key}/{subkey}": {
+      "get": {
+        "description": "### Get a single entry of an actor's state\n\nThe `key/subkey` entry of the state of the actor instance indicated by `actorType` and `actorId`\nwill be returned as the response body.\nIf there is no entry for  `key/subkey` a `404` response will be returned\nunless the boolean query parameter `nilOnAbsent` is set to `true`,\nin which case a `200` reponse with a `nil` response body will be returned.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key/subkey",
+        "operationId": "idActorStateSubkeyGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateGetResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "put": {
+        "description": "### Update a single entry of a sub-map of an actor's state\n\nThe map state of the actor instance indicated by `actorType` and `actorId`\nwill be updated by setting `key`/`subkey` to contain the JSON request body.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key/subkey",
+        "operationId": "idActorStateSubkeySet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Remove a single entry in an actor's state\n\nThe state of the actor instance indicated by `actorType` and `actorId`, and `key`\nwill be updated by removing the entry for `key/subkey`.\nThe operation will not return until the state has been updated.\nThe result of the operation is `1` if an entry was actually removed and\n`0` if there was no entry for `key`.",
+        "produces": [
+          "text/plain"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key/subkey",
+        "operationId": "idActorStateSubkeyDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateDeleteResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "head": {
+        "description": "### Check to see if single entry of an actor's state is defined\n\nCheck to see if the state of the actor instance indicated by `actorType` and `actorId`\ncontains an entry for `key`/`subkey`.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "state"
+        ],
+        "summary": "state/key/subkey",
+        "operationId": "idActorStateSubkeyExists",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "ActorType",
+            "description": "The actor type",
+            "name": "actorType",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "ActorID",
+            "description": "The actor instance id",
+            "name": "actorId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Key",
+            "description": "The key",
+            "name": "key",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Subkey",
+            "description": "The subkey",
+            "name": "subkey",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200StateExistsResult"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/await": {
+      "post": {
+        "description": "### Await the response to an actor or service call\n\nAwait blocks until the response to an asynchronous call is received and\nreturns this response.",
+        "consumes": [
+          "text/plain"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "callbacks"
+        ],
+        "summary": "await",
+        "operationId": "idAwait",
+        "parameters": [
+          {
+            "description": "The request id",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      }
+    },
+    "/v1/event/{topic}": {
+      "put": {
+        "description": "### Creates or updates a given topic\n\nParameters are specified in the body of the post, as stringified JSON.\nNo body passed causes a default creation.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "topic",
+        "operationId": "idTopicCreate",
+        "parameters": [
+          {
+            "description": "The request body describes the topic to be created",
+            "name": "Body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/topicCreateOptions"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Deletes given topic\n\nDeletes topic specified in route.",
+        "consumes": [
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "topic",
+        "operationId": "idTopicDelete",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/event/{topic}/publish": {
+      "post": {
+        "description": "### Publish an event to a topic\n\nThe event provided as the request body will be published on `topic`.\nWhen the operation returns successfully, the event is guaranteed to\neventually be published to the targeted topic.",
+        "consumes": [
+          "application/*"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "events"
+        ],
+        "summary": "publish",
+        "operationId": "idEventPublish",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Topic",
+            "description": "The topic name",
+            "name": "topic",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "An arbitrary request body to publish unchanged to the topic",
+            "name": "Event",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          }
+        }
+      }
+    },
+    "/v1/service/{service}/call/{path}": {
+      "get": {
+        "description": "### Perform a GET on a service endpoint\n\nExecute a `GET` operation on the `path` endpoint of `service`.\nThe result of performing a GET on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServiceGet",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "put": {
+        "description": "### Perfrom a PUT on a service endpoint\n\nExecute a `PUT` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a PUT on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServicePut",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "$ref": "#/responses/response201"
+          },
+          "204": {
+            "$ref": "#/responses/response204"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "post": {
+        "description": "### Perform a POST on a service endpoint\n\nExecute a `POST` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a POST on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServicePost",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "delete": {
+        "description": "### Perform a DELETE on a service endpoint\n\nExecute a `DELETE` operation on the `path` endpoint of `service`.\nThe result of performing a DELETE on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServiceDelete",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "options": {
+        "description": "### Perform an OPTIONS on a service endpoint\n\nExecute an `OPTIONS` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing an OPTIONS on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServiceOptions",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "head": {
+        "description": "### Perform a HEAD on a service endpoint\n\nExecute a `HEAD` operation on the `path` endpoint of `service`.\nThe result of performing a HEAD on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServiceHead",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      },
+      "patch": {
+        "description": "### Perform a PATCH on a service endpoint\n\nExecute a `PATCH` operation on the `path` endpoint of `service`.\nThe request body is passed through to the target endpoint.\nThe result of performing a PATCH on the target service endpoint\nis returned unless the `async` or `promise` pragma header is specified.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "services"
+        ],
+        "summary": "call",
+        "operationId": "idServicePatch",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "Service",
+            "description": "The service name",
+            "name": "service",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "Optionally specify the `async` pragma to make a non-blocking call.\nOptionally specify the `promise` pragma to make a non-blocking call and\nobtain a request id to query later.",
+            "name": "Pragma",
+            "in": "header"
+          },
+          {
+            "type": "string",
+            "example": "an/arbitrary/valid/pathSegment",
+            "x-go-name": "Path",
+            "description": "The target endpoint to be invoked by the operation",
+            "name": "path",
+            "in": "path",
+            "required": true
+          },
+          {
+            "description": "An arbitrary request body to be passed through unchanged to the target endpoint",
+            "name": "TargetRequestBody",
+            "in": "body",
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200CallResult"
+          },
+          "202": {
+            "$ref": "#/responses/response202"
+          },
+          "404": {
+            "$ref": "#/responses/response404"
+          },
+          "500": {
+            "$ref": "#/responses/response500"
+          },
+          "503": {
+            "$ref": "#/responses/response503"
+          },
+          "default": {
+            "$ref": "#/responses/responseGenericEndpointError"
+          }
+        }
+      }
+    },
+    "/v1/system/health": {
+      "get": {
+        "description": "### Health-check endpoint\n\nReturns a `200` response to indicate that the KAR runtime processes is healthy.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "system"
+        ],
+        "summary": "health",
+        "operationId": "isSystemHealth",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
+      }
+    },
+    "/v1/system/shutdown": {
+      "post": {
+        "description": "### Shutdown a single KAR runtime\n\nInitiate an orderly shutdown of the target KAR runtime process.",
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "system"
+        ],
+        "summary": "shutdown",
+        "operationId": "idSystemShutdown",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Actor": {
+      "type": "object",
+      "title": "Actor uniquely identifies an actor instance.",
+      "properties": {
+        "ID": {
+          "type": "string"
+        },
+        "Type": {
+          "type": "string"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "EventSubscribeOptions": {
+      "description": "EventSubscribeOptions documents the request body for subscribing an actor to a topic",
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "description": "The expected MIME content type of the events that will be produced by this subscription\nIf an explicit value is not provided, the default value of application/json+cloudevent will be used.",
+          "type": "string",
+          "x-go-name": "ContentType",
+          "example": "application/json"
+        },
+        "path": {
+          "description": "The actor method to be invoked with each delivered event",
+          "type": "string",
+          "x-go-name": "Path",
+          "example": "processEvent"
+        },
+        "topic": {
+          "description": "The name of the topic being subscribed to",
+          "type": "string",
+          "x-go-name": "Topic"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "Reminder": {
+      "description": "Reminder describes a time-triggered asynchronous invocation of a Path on an Actor",
+      "type": "object",
+      "properties": {
+        "Actor": {
+          "$ref": "#/definitions/Actor"
+        },
+        "encodedData": {
+          "type": "string",
+          "x-go-name": "EncodedData"
+        },
+        "id": {
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "path": {
+          "type": "string",
+          "x-go-name": "Path"
+        },
+        "period": {
+          "$ref": "#/definitions/Duration"
+        },
+        "targetTime": {
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "TargetTime"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "actorCallResult": {
+      "type": "object",
+      "title": "actorCallResult encodes the result of invoking an actor method.",
+      "properties": {
+        "error": {
+          "description": "If true, indicates that the method execution resulted in an error/exception",
+          "type": "boolean",
+          "x-go-name": "Error"
+        },
+        "message": {
+          "description": "When error is true, the error message",
+          "type": "string",
+          "x-go-name": "Message"
+        },
+        "stack": {
+          "description": "When error is true, the stack trace for the error",
+          "type": "string",
+          "x-go-name": "Stack"
+        },
+        "value": {
+          "description": "The value being returned as the result of the method",
+          "type": "object",
+          "x-go-name": "Value"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "mapOp": {
+      "description": "mapOp describes the requested map operation on an Actors state",
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "x-go-name": "Op"
+        },
+        "removals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Removals"
+        },
+        "updates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Updates"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "scheduleReminderPayload": {
+      "description": "scheduleReminderPayload is the JSON request body for scheduling a new reminder",
+      "type": "object",
+      "properties": {
+        "data": {
+          "description": "An optional parameter containing an arbitrary JSON value that will be provided as the\npayload when the `path` is invoked on the actor instance.",
+          "type": "object",
+          "x-go-name": "Data",
+          "example": "{ msg: \"Hello Friend!\" }"
+        },
+        "path": {
+          "description": "The path to invoke on the actor instance when the reminder is fired",
+          "type": "string",
+          "x-go-name": "Path",
+          "example": "sayHello"
+        },
+        "period": {
+          "description": "The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.\nIf a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time\nto compute a new TargetTime for the next invocation of the reminder.",
+          "type": "string",
+          "x-go-name": "Period",
+          "example": "30s"
+        },
+        "targetTime": {
+          "description": "The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "TargetTime"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "source": {
+      "description": "source describes an event source (subscription)",
+      "type": "object",
+      "properties": {
+        "actor": {
+          "$ref": "#/definitions/Actor"
+        },
+        "contenttype": {
+          "description": "The expected MIME type of events delivered by this subscription",
+          "type": "string",
+          "x-go-name": "ContentType"
+        },
+        "group": {
+          "description": "The group ID for this consumer",
+          "type": "string",
+          "x-go-name": "Group"
+        },
+        "id": {
+          "description": "The subscription id",
+          "type": "string",
+          "x-go-name": "ID"
+        },
+        "oldestoffset": {
+          "description": "Use the oldest available offset if no offset was previously committed",
+          "type": "boolean",
+          "x-go-name": "OffsetOldest"
+        },
+        "path": {
+          "description": "The actor method that will be invoked to deliver the event to the actor",
+          "type": "string",
+          "x-go-name": "Path"
+        },
+        "topic": {
+          "description": "The topic that is the source of events for this subscription",
+          "type": "string",
+          "x-go-name": "Topic"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    },
+    "topicCreateOptions": {
+      "description": "topicCreateOptions documents the request body for creating a topic",
+      "type": "object",
+      "properties": {
+        "configEntries": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "ConfigEntries"
+        },
+        "numPartitions": {
+          "type": "integer",
+          "format": "int32",
+          "x-go-name": "NumPartitions"
+        },
+        "replicationFactor": {
+          "type": "integer",
+          "format": "int16",
+          "x-go-name": "ReplicationFactor"
+        }
+      },
+      "x-go-package": "github.ibm.com/solsa/kar.git/core/internal/runtime"
+    }
+  },
+  "responses": {
+    "response200": {
+      "description": "A success message.",
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "OK",
+          "description": "A success message"
+        }
+      }
+    },
+    "response200CallActorResult": {
+      "description": "The result of invoking the actor method",
+      "schema": {
+        "$ref": "#/definitions/actorCallResult"
+      },
+      "headers": {
+        "Body": {
+          "description": "The result returned by the actor method"
+        }
+      }
+    },
+    "response200CallResult": {
+      "description": "The response body returned by the invoked endpoint",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The response body returned by the invoked endpoint"
+        }
+      }
+    },
+    "response200ReminderCancelAllResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of reminders that were actually cancelled"
+        }
+      }
+    },
+    "response200ReminderCancelResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true"
+        }
+      }
+    },
+    "response200ReminderGetAllResult": {
+      "headers": {
+        "Body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Reminder"
+          },
+          "example": "[{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }, { Actor: { Type: 'Foo', ID: '22' }, id: 'once', path: '/echo', targetTime: '2020-04-14T14:20:00Z', encodedData: '{\"msg\":\"carpe diem\"}' }]",
+          "description": "An array containing all matching reminders"
+        }
+      }
+    },
+    "response200ReminderGetResult": {
+      "schema": {
+        "$ref": "#/definitions/Reminder"
+      },
+      "headers": {
+        "Body": {
+          "example": "{ Actor: { Type: 'Foo', ID: '22' }, id: 'ticker', path: '/echo', targetTime: '2020-04-14T14:17:51.073Z', period: 5000000000, encodedData: '{\"msg\":\"hello\"}' }",
+          "description": "The reminder"
+        }
+      }
+    },
+    "response200StateDeleteResult": {
+      "headers": {
+        "NumberDeleted": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of key-value pairs that were deleted"
+        }
+      }
+    },
+    "response200StateExistsResult": {},
+    "response200StateGetAllResult": {
+      "schema": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "object"
+        }
+      },
+      "headers": {
+        "Response": {
+          "description": "A map containing the requested state"
+        }
+      }
+    },
+    "response200StateGetResult": {
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "Response": {
+          "description": "The requested value"
+        }
+      }
+    },
+    "response200StateMapOps": {
+      "description": "The result of performing a map operation on an actor's state",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The result of performing the map operation"
+        }
+      }
+    },
+    "response200StateSetMultipleResult": {
+      "headers": {
+        "NumberCreated": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns the number of new entries created by the operation"
+        }
+      }
+    },
+    "response200StateSetResult": {
+      "headers": {
+        "NumberCreated": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns 0 if an existing entry was updated and 1 if a new entry was created"
+        }
+      }
+    },
+    "response200StateSubmapOps": {
+      "description": "The result of performing a map operation on an actor's state",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "body": {
+          "description": "The result of performing the map operation"
+        }
+      }
+    },
+    "response200SubscriptionCancelAllResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "example": 3,
+          "description": "The number of subscriptions that were actually cancelled"
+        }
+      }
+    },
+    "response200SubscriptionCancelResult": {
+      "headers": {
+        "NumberCancelled": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true"
+        }
+      }
+    },
+    "response200SubscriptionGetAllResult": {
+      "headers": {
+        "Body": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/source"
+          },
+          "description": "An array containing all matching subscriptions"
+        }
+      }
+    },
+    "response200SubscriptionGetResult": {
+      "schema": {
+        "$ref": "#/definitions/source"
+      },
+      "headers": {
+        "Body": {
+          "description": "The subscription"
+        }
+      }
+    },
+    "response201": {},
+    "response202": {
+      "description": "An asynchronous operation has been accepted for eventual execution"
+    },
+    "response204": {},
+    "response204ActorNoContentResult": {
+      "description": "Indicates that the result of an actor method is void or undefined."
+    },
+    "response400": {
+      "description": "Response indicating a bad request",
+      "headers": {
+        "body": {
+          "type": "string",
+          "description": "A message describing the problem with the request"
+        }
+      }
+    },
+    "response404": {
+      "description": "Response indicating requested resource is not found",
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "Not Found",
+          "description": "Requested resource is not found"
+        }
+      }
+    },
+    "response500": {
+      "description": "A message describing the error",
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "Internal Server Error",
+          "description": "A message describing the error"
+        }
+      }
+    },
+    "response503": {
+      "description": "A message describing the error",
+      "headers": {
+        "body": {
+          "type": "string",
+          "example": "Service Unavailable",
+          "description": "A message describing the error"
+        }
+      }
+    },
+    "responseGenericEndpointError": {
+      "description": "An error response returned by the invoked endpoint",
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "Body": {
+          "description": "The result body returned by the invoked endpoint"
+        }
+      }
+    }
+  },
+  "x-tagGroups": [
+    {
+      "name": "sidecar",
+      "tags": [
+        "actors",
+        "callbacks",
+        "events",
+        "reminders",
+        "services",
+        "state",
+        "system"
+      ]
+    },
+    {
+      "name": "application component",
+      "tags": [
+        "actor-runtime"
+      ]
+    }
+  ]
+}

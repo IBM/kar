@@ -1,0 +1,2124 @@
+basePath: /kar
+definitions:
+  Actor:
+    properties:
+      ID:
+        type: string
+      Type:
+        type: string
+    title: Actor uniquely identifies an actor instance.
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  Duration:
+    description: |-
+      A Duration represents the elapsed time between two instants
+      as an int64 nanosecond count. The representation limits the
+      largest representable duration to approximately 290 years.
+    format: int64
+    type: integer
+    x-go-package: time
+  EventSubscribeOptions:
+    description: EventSubscribeOptions documents the request body for subscribing an actor to a topic
+    properties:
+      contentType:
+        description: |-
+          The expected MIME content type of the events that will be produced by this subscription
+          If an explicit value is not provided, the default value of application/json+cloudevent will be used.
+        example: application/json
+        type: string
+        x-go-name: ContentType
+      path:
+        description: The actor method to be invoked with each delivered event
+        example: processEvent
+        type: string
+        x-go-name: Path
+      topic:
+        description: The name of the topic being subscribed to
+        type: string
+        x-go-name: Topic
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  Reminder:
+    description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
+    properties:
+      Actor:
+        $ref: '#/definitions/Actor'
+      encodedData:
+        type: string
+        x-go-name: EncodedData
+      id:
+        type: string
+        x-go-name: ID
+      path:
+        type: string
+        x-go-name: Path
+      period:
+        $ref: '#/definitions/Duration'
+      targetTime:
+        format: date-time
+        type: string
+        x-go-name: TargetTime
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  actorCallResult:
+    properties:
+      error:
+        description: If true, indicates that the method execution resulted in an error/exception
+        type: boolean
+        x-go-name: Error
+      message:
+        description: When error is true, the error message
+        type: string
+        x-go-name: Message
+      stack:
+        description: When error is true, the stack trace for the error
+        type: string
+        x-go-name: Stack
+      value:
+        description: The value being returned as the result of the method
+        type: object
+        x-go-name: Value
+    title: actorCallResult encodes the result of invoking an actor method.
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  mapOp:
+    description: mapOp describes the requested map operation on an Actors state
+    properties:
+      op:
+        type: string
+        x-go-name: Op
+      removals:
+        items:
+          type: string
+        type: array
+        x-go-name: Removals
+      updates:
+        additionalProperties:
+          type: object
+        type: object
+        x-go-name: Updates
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  scheduleReminderPayload:
+    description: scheduleReminderPayload is the JSON request body for scheduling a new reminder
+    properties:
+      data:
+        description: |-
+          An optional parameter containing an arbitrary JSON value that will be provided as the
+          payload when the `path` is invoked on the actor instance.
+        example: '{ msg: "Hello Friend!" }'
+        type: object
+        x-go-name: Data
+      path:
+        description: The path to invoke on the actor instance when the reminder is fired
+        example: sayHello
+        type: string
+        x-go-name: Path
+      period:
+        description: |-
+          The optional period parameter is a string encoding a GoLang Duration that is used to create a periodic reminder.
+          If a period is provided, then the reminder will be fired repeatedly by adding the period to the last fire time
+          to compute a new TargetTime for the next invocation of the reminder.
+        example: 30s
+        type: string
+        x-go-name: Period
+      targetTime:
+        description: The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
+        format: date-time
+        type: string
+        x-go-name: TargetTime
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  source:
+    description: source describes an event source (subscription)
+    properties:
+      actor:
+        $ref: '#/definitions/Actor'
+      contenttype:
+        description: The expected MIME type of events delivered by this subscription
+        type: string
+        x-go-name: ContentType
+      group:
+        description: The group ID for this consumer
+        type: string
+        x-go-name: Group
+      id:
+        description: The subscription id
+        type: string
+        x-go-name: ID
+      oldestoffset:
+        description: Use the oldest available offset if no offset was previously committed
+        type: boolean
+        x-go-name: OffsetOldest
+      path:
+        description: The actor method that will be invoked to deliver the event to the actor
+        type: string
+        x-go-name: Path
+      topic:
+        description: The topic that is the source of events for this subscription
+        type: string
+        x-go-name: Topic
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+  topicCreateOptions:
+    description: topicCreateOptions documents the request body for creating a topic
+    properties:
+      configEntries:
+        additionalProperties:
+          type: string
+        type: object
+        x-go-name: ConfigEntries
+      numPartitions:
+        format: int32
+        type: integer
+        x-go-name: NumPartitions
+      replicationFactor:
+        format: int16
+        type: integer
+        x-go-name: ReplicationFactor
+    type: object
+    x-go-package: github.ibm.com/solsa/kar.git/core/internal/runtime
+info:
+  description: |-
+    This document describes the RESTful APIs provided or assumed by the
+    Kubernetes Application Runtime (KAR). It consists of two sets of APIs:
+    + The **sidecar** APIs are implemented by the KAR sidecar.
+    + The **application component** APIs are meant to be implemented by application components.
+
+    The **sidecar** APIs are divided into logical groups:
+    + **Actors**: APIs to invoke actor methods.
+    + **Services**: APIs to invoke service endpoints.
+    + **Callbacks**: APIs to await the response to an asynchronous actor or service invocation.
+    + **Events**: APIs to publish to event sinks or subscribe actors to event sources.
+    + **Reminders**: APIs to schedule future actor invocations.
+    + **State**: APIs to manage the persistent state of actors.
+    + **System**: APIs for controlling the KAR runtime mesh.
+
+    The **application component** APIs are divided into logical groups:
+    + **Actor runtime**: APIs invoked by the sidecar to manage actor instances
+    hosted by the application component.
+  title: KAR
+  version: v1
+paths:
+  /impl/v1/actor/{actorType}:
+    head:
+      description: |-
+        ### Test to see if the actor type is provided by the targeted runtime.
+
+        Used to validate that the language level actor runtime knows how
+        to instantiate an actor type.
+      operationId: idImplActorTypeGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor type validation
+      tags:
+      - actor-runtime
+  /impl/v1/actor/{actorType}/{actorId}:
+    delete:
+      description: |-
+        ### Deallocate the language-level state for the specified actor instance
+
+        The optional passivation/deactivation method for the actor type will
+        be invoked.  After it completes, the language-level storate for the actor
+        instance will be released. After this operation is invoked, no more POST
+        operations on this actor instance may be performed unless a GET is first
+        performed to re-initialize the language-level state of the actor instance.
+      operationId: idImplActorDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor deallocation
+      tags:
+      - actor-runtime
+    get:
+      description: |-
+        ### Allocate the language-level state for the specified actor instance
+
+        Causes the language-level actor runtime to allocate storage for the
+        actor instance and to invoke its initialization/activation method
+        if one is provided.  This operation must be successfully completed
+        before any POST operations on this actor instance are performed.
+      operationId: idImplActorGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor allocation
+      tags:
+      - actor-runtime
+  /impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}:
+    post:
+      consumes:
+      - application/kar+json
+      description: |-
+        ### Invoke an actor method of the specified actor instance
+
+        Invokes the actor method on the actor instance within the session specified in the path.
+        The body of the request will contain the actual paramters on which to invoke the method.
+      operationId: idImplActorPost
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The actor method to be invoked
+        example: computeMyResult
+        in: path
+        name: methodName
+        required: true
+        type: string
+        x-go-name: MethodName
+      - description: The session to use for the actor method invocation.
+        format: uuid
+        in: path
+        name: session
+        required: true
+        type: string
+        x-go-name: Session
+      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+        example: '[3, ''hello'', { msg: ''Greetings'' }]'
+        in: body
+        name: ActorMethodArguments
+        schema:
+          items:
+            type: object
+          type: array
+      produces:
+      - application/kar+json
+      responses:
+        "200":
+          $ref: '#/responses/response200CallActorResult'
+        "202":
+          $ref: '#/responses/response202'
+        "204":
+          $ref: '#/responses/response204ActorNoContentResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor invocation
+      tags:
+      - actor-runtime
+  /v1/actor/{actorType}/{actorId}:
+    delete:
+      description: |-
+        ### Completely remove an actor instance
+
+        All user-level and runtime state of the actor instance indicated by
+        `actorType` and `actorId` will be asynchronously deleted.
+      operationId: idActorDelete
+      responses:
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: actor
+      tags:
+      - actors
+  /v1/actor/{actorType}/{actorId}/call/{methodName}:
+    post:
+      consumes:
+      - application/kar+json
+      description: |-
+        ### Invoke an actor method
+
+        Call invokes the `methodName` method of the
+        actor instance indicated by `actorType` and `actorId`.
+        The request body must be a (possibly zero-length) JSON array whose elements
+        are used as the actual parameters of the actor method.
+        The result of the call is the result of invoking the target actor method
+        unless the `async` or `promise` pragma header is specified.  If the actor
+        method returns `void` or `undefined`, then a 204 - No Content reponse is returned.
+      operationId: idActorCall
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The actor method to be invoked
+        example: computeMyResult
+        in: path
+        name: methodName
+        required: true
+        type: string
+        x-go-name: MethodName
+      - description: Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
+        format: uuid
+        in: query
+        name: session
+        type: string
+        x-go-name: Session
+      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+        example: '[3, ''hello'', { msg: ''Greetings'' }]'
+        in: body
+        name: ActorMethodArguments
+        schema:
+          items:
+            type: object
+          type: array
+      produces:
+      - application/kar+json
+      responses:
+        "200":
+          $ref: '#/responses/response200CallActorResult'
+        "202":
+          $ref: '#/responses/response202'
+        "204":
+          $ref: '#/responses/response204ActorNoContentResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - actors
+  /v1/actor/{actorType}/{actorId}/events:
+    delete:
+      description: |-
+        ### Cancel all subscriptions
+
+        This operation cancels all subscriptions for the actor instance specified in the path.
+        The number of subscriptions cancelled is returned as the result of the operation.
+      operationId: idActorSubscriptionCancelAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionCancelAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: subscriptions
+      tags:
+      - events
+    get:
+      description: |-
+        ### Get all subscriptions
+
+        This operation returns all subscriptions for the actor instance specified in the path.
+      operationId: idActorSubscriptionGetAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionGetAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: subscriptions
+      tags:
+      - events
+  /v1/actor/{actorType}/{actorId}/events/{subscriptionId}:
+    delete:
+      description: |-
+        ### Cancel a subscription
+
+        This operation cancels the subscription for the actor instance specified in the path.
+        If the subscription is successfully cancelled a `200` response with a body of `1` will be returned.
+        If the subscription is not found, a `404` response will be returned unless
+        the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+        is sent to true the `404` response will instead be a `200` with a body containing `0`.
+      operationId: idActorSubscriptionCancel
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific subscription being targeted
+        in: path
+        name: subscriptionID
+        required: true
+        type: string
+        x-go-name: SubscriptionID
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionCancelResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: subscriptions/id
+      tags:
+      - events
+    get:
+      description: |-
+        ### Get a subscription
+
+        This operation returns the subscription for the actor instance specified in the path.
+        If there is no subscription with the id `subscriptionId` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`.
+        If `nilOnAbsent` is true the `404` response will be replaced with
+        a `200` response with a `nil` response body.
+      operationId: idActorSubscriptionGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific subscription being targeted
+        in: path
+        name: subscriptionID
+        required: true
+        type: string
+        x-go-name: SubscriptionID
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200SubscriptionGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: subscriptions/id
+      tags:
+      - events
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Subscribe to a topic
+
+        Subscribe the actor instance using the subscriptionId specified in the path
+        as described by the data provided in the request body.
+        If there is already a subscription for the target actor instance with the same subscriptionId,
+        that existing subscription will be updated based on the request body.
+        The operation will not return until after the actor instance is subscribed.
+      operationId: idActorSubscribe
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific subscription being targeted
+        in: path
+        name: subscriptionID
+        required: true
+        type: string
+        x-go-name: SubscriptionID
+      - description: The request body describes the subscription
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/EventSubscribeOptions'
+      produces:
+      - text/plain
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: subscriptions/id
+      tags:
+      - events
+  /v1/actor/{actorType}/{actorId}/reminders:
+    delete:
+      description: |-
+        ### Cancel all reminders
+
+        This operation cancels all reminders for the actor instance specified in the path.
+        The number of reminders cancelled is returned as the result of the operation.
+      operationId: idActorReminderCancelAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200ReminderCancelAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: reminders
+      tags:
+      - reminders
+    get:
+      description: |-
+        ### Get all reminders
+
+        This operation returns all reminders for the actor instance specified in the path.
+      operationId: idActorReminderGetAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200ReminderGetAllResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: reminders
+      tags:
+      - reminders
+  /v1/actor/{actorType}/{actorId}/reminders/{reminderId}:
+    delete:
+      description: |-
+        ### Cancel a reminder
+
+        This operation cancels the reminder for the actor instance specified in the path.
+        If the reminder is successfully cancelled a `200` response with a body of `1` will be returned.
+        If the reminder is not found, a `404` response will be returned unless
+        the boolean query parameter `nilOnAbsent` is set to `true`. If `nilOnAbsent`
+        is sent to true the `404` response will instead be a `200` with a body containing `0`.
+      operationId: idActorReminderCancel
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific reminder being targeted
+        in: path
+        name: reminderId
+        required: true
+        type: string
+        x-go-name: ReminderID
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200ReminderCancelResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: reminders/id
+      tags:
+      - reminders
+    get:
+      description: |-
+        ### Get a reminder
+
+        This operation returns the reminder for the actor instance specified in the path.
+        If there is no reminder with the id `reminderId` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`.
+        If `nilOnAbsent` is true the `404` response will be replaced with
+        a `200` response with a `nil` response body.
+      operationId: idActorReminderGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific reminder being targeted
+        in: path
+        name: reminderId
+        required: true
+        type: string
+        x-go-name: ReminderID
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200ReminderGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: reminders/id
+      tags:
+      - reminders
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Schedule a reminder
+
+        Schedule the reminder for the actor instance and reminderId specified in the path
+        as described by the data provided in the request body.
+        If there is already a reminder for the target actor instance and reminderId,
+        that existing reminder's schedule will be updated based on the request body.
+        The operation will not return until after the reminder is scheduled.
+      operationId: idActorReminderSchedule
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The id of the specific reminder being targeted
+        in: path
+        name: reminderId
+        required: true
+        type: string
+        x-go-name: ReminderID
+      - description: The request body describes the reminder to be scheduled
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/scheduleReminderPayload'
+      produces:
+      - text/plain
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+      schemes:
+      - http
+      summary: reminders/id
+      tags:
+      - reminders
+  /v1/actor/{actorType}/{actorId}/state:
+    delete:
+      description: |-
+        ### Remove an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`
+        will be deleted.
+      operationId: idActorStateDeleteAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      responses:
+        "200":
+          $ref: '#/responses/response200StateDeleteResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state
+      tags:
+      - state
+    get:
+      description: |-
+        ### Get an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`
+        will be returned as the response body.
+      operationId: idActorStateGetAll
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateGetAllResult'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state
+      tags:
+      - state
+    post:
+      consumes:
+      - application/json
+      description: |-
+        ### Perform an operation on the actor's state
+
+        The operation indicated by the `op` field of the request body will be performed on the
+        actor instance indicated by `actorType` and `actorId`. The result of the
+        operation will be returned as the response body.
+        If there are no `key` entries in the actor instance, the operation
+        will be interpreted as being applied to an empty map.
+
+        The valid values for `op` are:
+        <ul>
+        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
+        <li>update: atomically update the actor state to contain all the key-value pairs contained in updates</li>
+        </ul>
+      operationId: idActorStateMapOps
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The request body describes the map operation to be performed
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/mapOp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateMapOps'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state
+      tags:
+      - state
+  /v1/actor/{actorType}/{actorId}/state/{key}:
+    delete:
+      description: |-
+        ### Remove a single entry in an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`
+        will be updated by removing the entry for `key`.
+        The operation will not return until the state has been updated.
+        The result of the operation is `1` if an entry was actually removed and
+        `0` if there was no entry for `key`.
+      operationId: idActorStateDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200StateDeleteResult'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+    get:
+      description: |-
+        ### Get a single entry of an actor's state
+
+        The `key` entry of the state of the actor instance indicated by `actorType` and `actorId`
+        will be returned as the response body.
+        If there is no entry for `key` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`,
+        in which case a `200` reponse with a `nil` response body will be returned.
+      operationId: idActorStateGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+        in: query
+        name: nilOnAbsent
+        type: boolean
+        x-go-name: ErrorOnAbsent
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+    head:
+      consumes:
+      - application/json
+      description: |-
+        ### Check to see if single entry of an actor's state is defined
+
+        Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+        contains an entry for `key`.
+      operationId: idActorStateExists
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      responses:
+        "200":
+          $ref: '#/responses/response200StateExistsResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+    post:
+      consumes:
+      - application/json
+      description: |-
+        ### Perform an operation on the actor map `key`
+
+        The operation indicated by the `op` field of the request body will be performed on the `key` map
+        of the actor instance indicated by `actorType` and `actorId`. The result of the
+        operation will be returned as the response body.
+        If there are no `key/subkey` entries in the actor instance, the operation
+        will be interpreted as being applied to an empty map.
+
+        The valid values for `op` are:
+        <ul>
+        <li>clear: remove all entires in the key actor map</li>
+        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
+        <li>get: get the entire key actor map</li>
+        <li>keys: return a list of subkeys that are defined in the key actor map</li>
+        <li>size: return the number of entries the key actor map</li>
+        <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
+        </ul>
+      operationId: idActorStateSubmapOps
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The request body describes the map operation to be performed
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/mapOp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateSubmapOps'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Update a single entry of an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`
+        will be updated by setting `key` to contain the JSON request body.
+        The operation will not return until the state has been updated.
+      operationId: idActorStateSet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      produces:
+      - text/plain
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key
+      tags:
+      - state
+  /v1/actor/{actorType}/{actorId}/state/{key}/{subkey}:
+    delete:
+      description: |-
+        ### Remove a single entry in an actor's state
+
+        The state of the actor instance indicated by `actorType` and `actorId`, and `key`
+        will be updated by removing the entry for `key/subkey`.
+        The operation will not return until the state has been updated.
+        The result of the operation is `1` if an entry was actually removed and
+        `0` if there was no entry for `key`.
+      operationId: idActorStateSubkeyDelete
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
+      produces:
+      - text/plain
+      responses:
+        "200":
+          $ref: '#/responses/response200StateDeleteResult'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    get:
+      description: |-
+        ### Get a single entry of an actor's state
+
+        The `key/subkey` entry of the state of the actor instance indicated by `actorType` and `actorId`
+        will be returned as the response body.
+        If there is no entry for  `key/subkey` a `404` response will be returned
+        unless the boolean query parameter `nilOnAbsent` is set to `true`,
+        in which case a `200` reponse with a `nil` response body will be returned.
+      operationId: idActorStateSubkeyGet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200StateGetResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    head:
+      consumes:
+      - application/json
+      description: |-
+        ### Check to see if single entry of an actor's state is defined
+
+        Check to see if the state of the actor instance indicated by `actorType` and `actorId`
+        contains an entry for `key`/`subkey`.
+      operationId: idActorStateSubkeyExists
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
+      responses:
+        "200":
+          $ref: '#/responses/response200StateExistsResult'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Update a single entry of a sub-map of an actor's state
+
+        The map state of the actor instance indicated by `actorType` and `actorId`
+        will be updated by setting `key`/`subkey` to contain the JSON request body.
+        The operation will not return until the state has been updated.
+        The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
+      operationId: idActorStateSubkeySet
+      parameters:
+      - description: The actor type
+        in: path
+        name: actorType
+        required: true
+        type: string
+        x-go-name: ActorType
+      - description: The actor instance id
+        in: path
+        name: actorId
+        required: true
+        type: string
+        x-go-name: ActorID
+      - description: The key
+        in: path
+        name: key
+        required: true
+        type: string
+        x-go-name: Key
+      - description: The subkey
+        in: path
+        name: subkey
+        required: true
+        type: string
+        x-go-name: Subkey
+      produces:
+      - text/plain
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: state/key/subkey
+      tags:
+      - state
+  /v1/await:
+    post:
+      consumes:
+      - text/plain
+      description: |-
+        ### Await the response to an actor or service call
+
+        Await blocks until the response to an asynchronous call is received and
+        returns this response.
+      operationId: idAwait
+      parameters:
+      - description: The request id
+        in: body
+        name: Body
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: await
+      tags:
+      - callbacks
+  /v1/event/{topic}:
+    delete:
+      consumes:
+      - application/json
+      description: |-
+        ### Deletes given topic
+
+        Deletes topic specified in route.
+      operationId: idTopicDelete
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: topic
+      tags:
+      - events
+    put:
+      consumes:
+      - application/json
+      description: |-
+        ### Creates or updates a given topic
+
+        Parameters are specified in the body of the post, as stringified JSON.
+        No body passed causes a default creation.
+      operationId: idTopicCreate
+      parameters:
+      - description: The request body describes the topic to be created
+        in: body
+        name: Body
+        schema:
+          $ref: '#/definitions/topicCreateOptions'
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: topic
+      tags:
+      - events
+  /v1/event/{topic}/publish:
+    post:
+      consumes:
+      - application/*
+      description: |-
+        ### Publish an event to a topic
+
+        The event provided as the request body will be published on `topic`.
+        When the operation returns successfully, the event is guaranteed to
+        eventually be published to the targeted topic.
+      operationId: idEventPublish
+      parameters:
+      - description: The topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+        x-go-name: Topic
+      - description: An arbitrary request body to publish unchanged to the topic
+        in: body
+        name: Event
+        schema:
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+      schemes:
+      - http
+      summary: publish
+      tags:
+      - events
+  /v1/service/{service}/call/{path}:
+    delete:
+      description: |-
+        ### Perform a DELETE on a service endpoint
+
+        Execute a `DELETE` operation on the `path` endpoint of `service`.
+        The result of performing a DELETE on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceDelete
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    get:
+      description: |-
+        ### Perform a GET on a service endpoint
+
+        Execute a `GET` operation on the `path` endpoint of `service`.
+        The result of performing a GET on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceGet
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    head:
+      description: |-
+        ### Perform a HEAD on a service endpoint
+
+        Execute a `HEAD` operation on the `path` endpoint of `service`.
+        The result of performing a HEAD on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceHead
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    options:
+      description: |-
+        ### Perform an OPTIONS on a service endpoint
+
+        Execute an `OPTIONS` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing an OPTIONS on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServiceOptions
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    patch:
+      description: |-
+        ### Perform a PATCH on a service endpoint
+
+        Execute a `PATCH` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a PATCH on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePatch
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    post:
+      description: |-
+        ### Perform a POST on a service endpoint
+
+        Execute a `POST` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a POST on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePost
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      responses:
+        "200":
+          $ref: '#/responses/response200CallResult'
+        "202":
+          $ref: '#/responses/response202'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+    put:
+      description: |-
+        ### Perfrom a PUT on a service endpoint
+
+        Execute a `PUT` operation on the `path` endpoint of `service`.
+        The request body is passed through to the target endpoint.
+        The result of performing a PUT on the target service endpoint
+        is returned unless the `async` or `promise` pragma header is specified.
+      operationId: idServicePut
+      parameters:
+      - description: The service name
+        in: path
+        name: service
+        required: true
+        type: string
+        x-go-name: Service
+      - description: |-
+          Optionally specify the `async` pragma to make a non-blocking call.
+          Optionally specify the `promise` pragma to make a non-blocking call and
+          obtain a request id to query later.
+        in: header
+        name: Pragma
+        type: string
+      - description: The target endpoint to be invoked by the operation
+        example: an/arbitrary/valid/pathSegment
+        in: path
+        name: path
+        required: true
+        type: string
+        x-go-name: Path
+      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+        in: body
+        name: TargetRequestBody
+        schema:
+          type: object
+      responses:
+        "201":
+          $ref: '#/responses/response201'
+        "204":
+          $ref: '#/responses/response204'
+        "404":
+          $ref: '#/responses/response404'
+        "500":
+          $ref: '#/responses/response500'
+        "503":
+          $ref: '#/responses/response503'
+        default:
+          $ref: '#/responses/responseGenericEndpointError'
+      schemes:
+      - http
+      summary: call
+      tags:
+      - services
+  /v1/system/health:
+    get:
+      description: |-
+        ### Health-check endpoint
+
+        Returns a `200` response to indicate that the KAR runtime processes is healthy.
+      operationId: isSystemHealth
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+      schemes:
+      - http
+      summary: health
+      tags:
+      - system
+  /v1/system/shutdown:
+    post:
+      description: |-
+        ### Shutdown a single KAR runtime
+
+        Initiate an orderly shutdown of the target KAR runtime process.
+      operationId: idSystemShutdown
+      responses:
+        "200":
+          $ref: '#/responses/response200'
+      schemes:
+      - http
+      summary: shutdown
+      tags:
+      - system
+responses:
+  response200:
+    description: A success message.
+    headers:
+      body:
+        description: A success message
+        example: OK
+        type: string
+  response200CallActorResult:
+    description: The result of invoking the actor method
+    headers:
+      Body:
+        description: The result returned by the actor method
+    schema:
+      $ref: '#/definitions/actorCallResult'
+  response200CallResult:
+    description: The response body returned by the invoked endpoint
+    headers:
+      body:
+        description: The response body returned by the invoked endpoint
+    schema:
+      type: object
+  response200ReminderCancelAllResult:
+    headers:
+      NumberCancelled:
+        description: The number of reminders that were actually cancelled
+        example: 3
+        format: int64
+        type: integer
+  response200ReminderCancelResult:
+    headers:
+      NumberCancelled:
+        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true
+        format: int64
+        type: integer
+  response200ReminderGetAllResult:
+    headers:
+      Body:
+        description: An array containing all matching reminders
+        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'', path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe diem"}'' }]'
+        items:
+          $ref: '#/definitions/Reminder'
+        type: array
+  response200ReminderGetResult:
+    headers:
+      Body:
+        description: The reminder
+        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }'
+    schema:
+      $ref: '#/definitions/Reminder'
+  response200StateDeleteResult:
+    headers:
+      NumberDeleted:
+        description: The number of key-value pairs that were deleted
+        example: 3
+        format: int64
+        type: integer
+  response200StateExistsResult: {}
+  response200StateGetAllResult:
+    headers:
+      Response:
+        description: A map containing the requested state
+    schema:
+      additionalProperties:
+        type: object
+      type: object
+  response200StateGetResult:
+    headers:
+      Response:
+        description: The requested value
+    schema:
+      type: object
+  response200StateMapOps:
+    description: The result of performing a map operation on an actor's state
+    headers:
+      body:
+        description: The result of performing the map operation
+    schema:
+      type: object
+  response200StateSetMultipleResult:
+    headers:
+      NumberCreated:
+        description: Returns the number of new entries created by the operation
+        format: int64
+        type: integer
+  response200StateSetResult:
+    headers:
+      NumberCreated:
+        description: Returns 0 if an existing entry was updated and 1 if a new entry was created
+        format: int64
+        type: integer
+  response200StateSubmapOps:
+    description: The result of performing a map operation on an actor's state
+    headers:
+      body:
+        description: The result of performing the map operation
+    schema:
+      type: object
+  response200SubscriptionCancelAllResult:
+    headers:
+      NumberCancelled:
+        description: The number of subscriptions that were actually cancelled
+        example: 3
+        format: int64
+        type: integer
+  response200SubscriptionCancelResult:
+    headers:
+      NumberCancelled:
+        description: Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true
+        format: int64
+        type: integer
+  response200SubscriptionGetAllResult:
+    headers:
+      Body:
+        description: An array containing all matching subscriptions
+        items:
+          $ref: '#/definitions/source'
+        type: array
+  response200SubscriptionGetResult:
+    headers:
+      Body:
+        description: The subscription
+    schema:
+      $ref: '#/definitions/source'
+  response201: {}
+  response202:
+    description: An asynchronous operation has been accepted for eventual execution
+  response204: {}
+  response204ActorNoContentResult:
+    description: Indicates that the result of an actor method is void or undefined.
+  response400:
+    description: Response indicating a bad request
+    headers:
+      body:
+        description: A message describing the problem with the request
+        type: string
+  response404:
+    description: Response indicating requested resource is not found
+    headers:
+      body:
+        description: Requested resource is not found
+        example: Not Found
+        type: string
+  response500:
+    description: A message describing the error
+    headers:
+      body:
+        description: A message describing the error
+        example: Internal Server Error
+        type: string
+  response503:
+    description: A message describing the error
+    headers:
+      body:
+        description: A message describing the error
+        example: Service Unavailable
+        type: string
+  responseGenericEndpointError:
+    description: An error response returned by the invoked endpoint
+    headers:
+      Body:
+        description: The result body returned by the invoked endpoint
+    schema:
+      type: object
+schemes:
+- http
+swagger: "2.0"
+x-tagGroups:
+- name: sidecar
+  tags:
+  - actors
+  - callbacks
+  - events
+  - reminders
+  - services
+  - state
+  - system
+- name: application component
+  tags:
+  - actor-runtime
