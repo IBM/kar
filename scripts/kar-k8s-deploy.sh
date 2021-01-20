@@ -26,7 +26,6 @@ ROOTDIR="$SCRIPTDIR/.."
 help=""
 args=""
 parse=true
-KAR_API_KEY="none"
 kartag="latest"
 helmargs=""
 injectorOnly=""
@@ -106,3 +105,8 @@ if [ "$injectorOnly" == "" ]; then
     waitForPod "kar-kafka"
 fi
 waitForPod "kar-injector"
+
+
+# Enable default namespace
+echo "Enabling default namespace for KAR applications"
+$SCRIPTDIR/kar-k8s-namespace-enable.sh default

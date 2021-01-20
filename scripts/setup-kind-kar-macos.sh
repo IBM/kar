@@ -37,9 +37,6 @@ $SCRIPTDIR/kar-k8s-deploy.sh -dev
 echo "Building kar CLI"
 make cli
 
-echo "Setting up namespace and environment"
-$SCRIPTDIR/kar-k8s-namespace-enable.sh default
-
 source $SCRIPTDIR/kar-env-local.sh
 
 echo "KAR Setup Complete!"

@@ -159,11 +159,12 @@ cover all possibilities. We also assume that you know how to configure
 `kubectl`, `helm`, etc. to access your cluster.
 
 After the KAR runtime system is successfully deployed to the
-`kar-system` namespace, you must enable one or more other namespaces
-for KAR applications. This enablement entails labeling the namespace
+`kar-system` namespace, you can enable other namespaces
+to host KAR applications. This enablement entails labeling the namespace
 with `kar.ibm.com/enabled=true` and creating the
 `kar.ibm.com.image-pull` and `kar.ibm.com.runtime-config` in the
-namespace.  The steps of namespace enablement are automated by
+namespace. The installation process automatically enables the `default`
+namespace for KAR applications. To enable additional namespaces, you can use the script
 [kar-k8s-namespace-enable.sh](../scripts/kar-k8s-namespace-enable.sh).
 
 Once a namespace is thus enabled, you can deploy KAR application components to the
@@ -188,12 +189,6 @@ Assuming you have set your kubectl context and have done an
 can deploy KAR into your cluster in a single command:
 ```shell
 ./scripts/kar-k8s-deploy.sh
-```
-
-### Enable a namespace to run KAR-based applications.
-
-```shell
-./scripts/kar-k8s-namespace-enable.sh default
 ```
 
 ### Run a containerized example
@@ -222,12 +217,12 @@ pod "hello-server" deleted
 
 ### Undeploying
 
-You can disable a namespace for KAR applications by running
+You can disable a specific namespace for KAR applications by running
 ```shell
-./scripts/kar-k8s-namespace-disable.sh default
+./scripts/kar-k8s-namespace-disable.sh <namespace>
 ```
 
-You can undeploy the KAR runtime system with
+You can undeploy KAR entirely by running
 ```shell
 ./scripts/kar-k8s-undeploy.sh
 ```
@@ -291,13 +286,6 @@ Next, deploy KAR in dev mode by doing:
 ./scripts/kar-k8s-deploy.sh -dev
 ```
 
-### Enable a namespace to run KAR-based applications.
-
-The simplest approach is to KAR-enable the default namespace:
-```shell
-./scripts/kar-k8s-namespace-enable.sh default
-```
-
 #### Run a containerized example
 
 Run the client and server as shown below:
@@ -324,12 +312,12 @@ pod "hello-server" deleted
 
 ### Undeploying
 
-You can disable a namespace for KAR applications by running
+You can disable a specific namespace for KAR applications by running
 ```shell
-./scripts/kar-k8s-namespace-disable.sh default
+./scripts/kar-k8s-namespace-disable.sh <namespace>
 ```
 
-You can undeploy the KAR runtime system with
+You can undeploy KAR entirely with
 ```shell
 ./scripts/kar-k8s-undeploy.sh
 ```
@@ -441,7 +429,7 @@ ibmcloud ce application delete --name hello-js-server
 
 You can disable a Code Engine project for KAR applications with
 ```shell
-./scripts/kar-k8s-namespace-disable.sh default
+./scripts/kar-ce-project-disable.sh kar-project
 ```
 or delete it entirely with
 ```shell
@@ -491,11 +479,6 @@ that enables read access to that namespace.
 Install the KAR runtime system on your IKS cluster
 ```shell
 ./scripts/kar-k8s-deploy.sh -m <service-credential> -c <cr-apikey>
-```
-
-Enable a namespace for KAR applications
-```shell
-./scripts/kar-k8s-namespace-enable.sh default
 ```
 
 #### Code Engine
