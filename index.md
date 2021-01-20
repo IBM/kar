@@ -17,9 +17,9 @@
 ## KAR: Kubernetes Application Runtime
 
 The KAR runtime provides a RESTful API to application processes.
-You can browse the [swagger specification](https://pages.github.ibm.com/solsa/kar/api/swagger.json) of that API as rendered using:
-* [Redoc](https://pages.github.ibm.com/solsa/kar/api/redoc/)
-* [Swagger-UI](https://pages.github.ibm.com/solsa/kar/api/swagger-ui/)
+You can browse the [swagger specification](https://ibm.github.io/kar/api/swagger.json) of that API as rendered using:
+* [Redoc](https://ibm.github.io/kar/api/redoc/)
+* [Swagger-UI](https://ibm.github.io/kar/api/swagger-ui/)
 
 Development note: to update the swagger.json, do `make swagger-gen` on the main branch and then commit the updated swagger.json and swagger.yaml files to the gh-pages branch. TODO: Automate this via a GH action.
 
