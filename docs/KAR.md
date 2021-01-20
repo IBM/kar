@@ -33,7 +33,7 @@ Redis.
 In this document, we define and illustrate KAR's key concept using a collection
 of [examples](../examples). We assume a working KAR deployment. See [KAR
 Deployments](kar-deployments.md) for options. The full REST API documentation is
-available [here](https://pages.github.ibm.com/solsa/kar/api/redoc/).
+available [here](https://ibm.github.io/kar/api/redoc/).
 
 ## Applications
 
@@ -197,7 +197,7 @@ kar run -app hello-js -- sh -c 'curl -s -X POST -H "Content-Type: text/plain" ht
 This component makes a single synchronous request to the `greeter` service,
 outputs the response, and terminates. The URL for the request follows the schema
 specified in the [KAR REST API
-documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/). It includes
+documentation](https://ibm.github.io/kar/api/redoc/). It includes
 the target service name `greeter` and route `helloText`. The request also
 specifies the method `POST`, the payload `"Gandalf the Grey"`, and headers.
 
@@ -209,7 +209,7 @@ An asynchronous request is obtained by adding a `Pragma` header to the request.
 If the `Pragma: Async` header is specified (case insensitive), the request
 simply returns `Accepted`. If the `Pragma: Promise` header is specified (case
 insensitive), the request returns a request id. See [KAR API
-documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/) for details.
+documentation](https://ibm.github.io/kar/api/redoc/) for details.
 
 ## Requests: CLI
 
@@ -402,7 +402,7 @@ invocation of the method on the actor instance to the caller. An asynchronous
 method invocation returns as soon as KAR accepts the invocation. If desired, a
 request id can be returned from an asynchronous method invocation to permit
 querying KAR for the response later. See [KAR API
-documentation](https://pages.github.ibm.com/solsa/kar/api/redoc/) for details.
+documentation](https://ibm.github.io/kar/api/redoc/) for details.
 
 If no application component is available to instantiate the specified actor
 type, KAR persists the invocation request until it can be delivered (up to a
