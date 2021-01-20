@@ -54,7 +54,7 @@ or even spanning multiple execution environments in a
 
 2.  You will need a local clone of the KAR git repository:
 ```shell
-git clone git@github.ibm.com:solsa/kar.git
+git clone git@github.com:IBM/kar.git
 cd kar
 ```
 Unless otherwise noted, all shell commands in this document assume

@@ -138,7 +138,7 @@ public interface ActorInstance extends ActorRef {
   public void setId(String id);
 }
 ```
-The ActorInstance includes two methods to manage session IDs, which KAR uses for actor communications as part of the [KAR programming model](https://github.ibm.com/solsa/kar/blob/master/docs/KAR.md).
+The ActorInstance includes two methods to manage session IDs, which KAR uses for actor communications as part of the [KAR programming model](../docs/KAR.md).
 
 ## Actor Annotations
 
@@ -252,7 +252,7 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 </context-param>
 ```
 
-For a complete example, see the [KAR example actor server](https://github.ibm.com/solsa/kar/tree/master/examples/java/actors/kar-actor-example)
+For a complete example, see the [KAR example actor server](../examples/java/actors/kar-actor-example)
 
 # Quarkus Support
 We are experimenting with the KAR Java SDK for Quarkus.  This is an early preview and has the following limitations:
