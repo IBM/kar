@@ -31,7 +31,7 @@ spec:
       - name: kar.ibm.com.image-pull
       containers:
       - name: client
-        image: localhost:5000/kar/examples/js/service-hello
+        image: localhost:5000/kar/kar-examples-js-service-hello
         env:
         - name: MAIN
           value: client.js

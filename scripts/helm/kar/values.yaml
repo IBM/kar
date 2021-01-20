@@ -36,7 +36,7 @@ kar:
     replicaCount: 1
     imageName: 'localhost:5000/kar/kar-injector'
     imageTag: 'latest'
-    sidecarImageName: 'localhost:5000/kar/kar'
+    sidecarImageName: 'localhost:5000/kar/kar-sidecar'
     sidecarImageTag: 'latest'
 
 global:

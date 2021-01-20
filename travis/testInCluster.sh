@@ -22,7 +22,7 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
 echo "*** Running in-cluster unit tests ***"
-helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=localhost:5000/kar/examples/js/unit-tests
+helm install ut $ROOTDIR/examples/unit-tests/deploy/chart --set image=localhost:5000/kar/kar-examples-js-unit-tests
 
 if helm test ut; then
     echo "PASSED! In cluster unit-tests passed."
@@ -38,7 +38,7 @@ fi
 
 echo "*** Running in-cluster actors-ykt ***"
 
-helm install ykt $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/examples/js/actors-ykt
+helm install ykt $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/kar-examples-js-actors-ykt
 
 if helm test ykt; then
     echo "PASSED! In cluster actors-ykt passed."
@@ -55,7 +55,7 @@ fi
 
 echo "*** Running in-cluster no-sidecar actors-ykt ***"
 
-helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/examples/js/actors-ykt --set noSidecar=true
+helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/kar-examples-js-actors-ykt --set noSidecar=true
 
 if helm test ykt-sc; then
     echo "PASSED! In cluster no-sidecar actors-ykt passed."

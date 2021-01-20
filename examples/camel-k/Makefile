@@ -18,7 +18,6 @@ DOCKER_REGISTRY ?= localhost:5000
 DOCKER_NAMESPACE ?= kar
 DOCKER_IMAGE_PREFIX ?= $(DOCKER_REGISTRY)/$(DOCKER_NAMESPACE)/
 DOCKER_IMAGE_TAG ?= latest
-
 KAR_JS_SDK=$(DOCKER_IMAGE_PREFIX)sdk-nodejs-v12:$(DOCKER_IMAGE_TAG)
 
 docker:
@@ -26,11 +25,11 @@ docker:
 	make dockerPush
 
 dockerBuild:
-	docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(DOCKER_IMAGE_PREFIX)examples/stock-processor .
-	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-source input.yaml CloudEventProcessor.java
-	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' SLACK_WEBHOOK='{{env:SLACK_WEBHOOK}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)examples/stock-sink output.yaml CloudEventProcessor.java
+	docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(DOCKER_IMAGE_PREFIX)kar-examples-stock-processor .
+	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)kar-examples-stock-source input.yaml CloudEventProcessor.java
+	KAFKA_BROKERS='{{env:KAFKA_BROKERS}}' SLACK_WEBHOOK='{{env:SLACK_WEBHOOK}}' kamel local create --image $(DOCKER_IMAGE_PREFIX)kar-examples-stock-sink output.yaml CloudEventProcessor.java
 
 dockerPush:
-	docker push $(DOCKER_IMAGE_PREFIX)examples/stock-processor
-	docker push $(DOCKER_IMAGE_PREFIX)examples/stock-source
-	docker push $(DOCKER_IMAGE_PREFIX)examples/stock-sink
+	docker push $(DOCKER_IMAGE_PREFIX)kar-examples-stock-processor
+	docker push $(DOCKER_IMAGE_PREFIX)kar-examples-stock-source
+	docker push $(DOCKER_IMAGE_PREFIX)kar-examples-stock-sink

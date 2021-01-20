@@ -26,4 +26,4 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/kar/examples/java/service-hello
+    image: localhost:5000/kar/kar-examples-java-service-hello

@@ -57,7 +57,7 @@ while [ -n "$1" ]; do
         -ss|-set-string|--set-string) shift; helmargs="$helmargs --set-string $1";;
         -r|-release|--release)
             shift;
-            helmargs="$helmargs --set-string kar.injector.imageName=TODO/kar-injector --set-string kar.injector.sidecarImageName=TODO/kar"
+            helmargs="$helmargs --set-string kar.injector.imageName=quay.io/tardieu/kar-injector --set-string kar.injector.sidecarImageName=quay.io/tardieu/kar-sidecar"
             kartag="$1";;
         --) parse=;;
         *) args="$args '$1'";;

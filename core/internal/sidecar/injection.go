@@ -58,7 +58,7 @@ const (
 )
 
 func init() {
-	flag.StringVar(&sidecarImage, "sidecar_image", "localhost:5000/kar/kar", "docker image to use for kar sidecar")
+	flag.StringVar(&sidecarImage, "sidecar_image", "localhost:5000/kar/kar-sidecar", "docker image to use for kar sidecar")
 	flag.StringVar(&sidecarImageTag, "sidecar_image_tag", "latest", "docker image tag to use for kar sidecar")
 }
 

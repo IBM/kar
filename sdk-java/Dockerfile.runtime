@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG KAR_BASE=localhost:5000/kar/kar
+ARG KAR_BASE=localhost:5000/kar/kar-sidecar
 
 FROM $KAR_BASE as kar
 

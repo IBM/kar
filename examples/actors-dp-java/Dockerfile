@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-ARG JAVA_BUILDER=localhost:5000/kar/sdk-java-builder-11
-ARG JAVA_RUNTIME=localhost:5000/kar/sdk-java-runtime-11
+ARG JAVA_BUILDER=localhost:5000/kar/kar-sdk-java-builder-11
+ARG JAVA_RUNTIME=localhost:5000/kar/kar-sdk-java-runtime-11
 
 #
 # Build the artifacts using the builder image

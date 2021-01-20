@@ -35,6 +35,6 @@ spec:
     spec:
       containers:
       - name: actors
-        image: localhost:5000/kar/examples/java/actors-dp
+        image: localhost:5000/kar/kar-examples-java-actors-dp
         ports:
         - containerPort: 8080
