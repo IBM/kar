@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-DOCKER_REGISTRY ?= us.icr.io
-DOCKER_NAMESPACE ?= research/kar-dev
+DOCKER_REGISTRY ?= localhost:5000
+DOCKER_NAMESPACE ?= kar
 DOCKER_IMAGE_PREFIX ?= $(DOCKER_REGISTRY)/$(DOCKER_NAMESPACE)/
 DOCKER_IMAGE_TAG ?= latest
 
@@ -38,14 +38,14 @@ install: cli
 cli:
 	cd core && go install ./...
 
-dockerCore:
+dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar -t $(KAR_BASE) .
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
 	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .
 	cd sdk-java && docker build -f Dockerfile.runtime -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 
-dockerExamples:
+dockerBuildExamples:
 	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
 	cd examples/actors-events && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_EVENTS) .
 	cd examples/actors-ykt && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_YKT) .
@@ -70,19 +70,15 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JAVA_DP)
 	docker push $(KAR_EXAMPLE_JAVA_HELLO)
 
-dockerBuildAndPush:
-	make dockerCore
-	make dockerExamples
+docker:
+	make dockerBuildCore
+	make dockerBuildExamples
 	make dockerPushCore
 	make dockerPushExamples
 
 dockerBuild:
 	make dockerCore
 	make dockerExamples
-
-dockerDev:
-	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerCore dockerExamples
-	DOCKER_IMAGE_PREFIX=localhost:5000/ make dockerPushCore dockerPushExamples
 
 installJavaSDK:
 	cd sdk-java && mvn -q install
@@ -93,5 +89,3 @@ swagger-gen:
 
 swagger-serve:
 	swagger serve docs/api/swagger.yaml
-
-.PHONY: docker

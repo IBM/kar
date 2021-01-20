@@ -14,24 +14,27 @@
 # limitations under the License.
 #
 
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: hello-client
+  name: java-dining-philosophers
   labels:
-    name: hello-client
+    app: java-dp
 spec:
+  selector:
+    matchLabels:
+      app: java-dp
   template:
     metadata:
+      labels:
+        app: java-dp
       annotations:
-        kar.ibm.com/app: hello-js
+        kar.ibm.com/app: dp
+        kar.ibm.com/actors: Cafe,Fork,Philosopher,Table
+        kar.ibm.com/appPort: "8080"
     spec:
-      restartPolicy: OnFailure
-      imagePullSecrets:
-      - name: kar.ibm.com.image-pull
       containers:
-      - name: client
-        image: us.icr.io/research/kar-dev/examples/js/service-hello
-        env:
-        - name: MAIN
-          value: client.js
+      - name: actors
+        image: localhost:5000/kar/examples/java/actors-dp
+        ports:
+        - containerPort: 8080

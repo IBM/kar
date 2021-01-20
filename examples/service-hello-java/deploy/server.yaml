@@ -19,11 +19,11 @@ kind: Pod
 metadata:
   name: hello-server
   annotations:
-    kar.ibm.com/app: hello-js
+    kar.ibm.com/app: hello-java
     kar.ibm.com/service: greeter
 spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/examples/js/service-hello
+    image: localhost:5000/kar/examples/java/service-hello

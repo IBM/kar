@@ -156,7 +156,7 @@ metadata:
 spec:
   containers:
   - name: server
-    image: localhost:5000/examples/js/service-hello
+    image: localhost:5000/kar/examples/js/service-hello
 ```
 Ideally the server should be listening on the port specified by the
 `KAR_APP_PORT` environment variable, for instance

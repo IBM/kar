@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG KAR_BASE=us.icr.io/research/kar-dev/kar
+ARG KAR_BASE=localhost:5000/kar/kar
 
 FROM $KAR_BASE as kar
 

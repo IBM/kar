@@ -32,16 +32,16 @@ SHORT_COMMIT=`git rev-parse --short HEAD`
 if [ ${BRANCH} == "master" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push commit hash tagged images
     # disable because can't auto-delete old images in RIS namespace
-    # DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make dockerBuildAndPush
+    # DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make docker
 
     # push `latest` tag images
-    DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=latest make dockerBuildAndPush
+    DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=latest make docker
 else
     if [ ${BRANCH} == ${IMAGE_TAG} ]; then
         # A git tag operation, push to kar-prod
-        DOCKER_NAMESPACE=research/kar-prod DOCKER_IMAGE_TAG=${IMAGE_TAG} make dockerBuildAndPush
+        DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-prod DOCKER_IMAGE_TAG=${IMAGE_TAG} make docker
     else
         # A push to some branch; push commit-taged image to kar-stage
-        DOCKER_NAMESPACE=research/kar-stage DOCKER_IMAGE_TAG=${BRANCH}-${SHORT_COMMIT} make dockerBuildAndPush
+        DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-stage DOCKER_IMAGE_TAG=${BRANCH}-${SHORT_COMMIT} make docker
     fi
 fi

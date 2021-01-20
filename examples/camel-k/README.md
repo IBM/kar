@@ -76,7 +76,7 @@ for the Slack channel is provided via the environment variable `SLACK_WEBHOOK`.
 The Camel source is implemented in file [input.yaml](input.yaml). The Camel sink
 is implemented in file [output.yaml](output.yaml). The KAR component is
 implemented in JavaScript in file [processor.js](processor.js). A Kubernetes
-deployment template is provided in [stocks-dev.yaml](deploy/stocks-dev.yaml).
+deployment template is provided in [stocks.yaml](deploy/stocks.yaml).
 
 ## Build and run locally
 
@@ -113,9 +113,9 @@ make dockerDev
 ```
 To deploy the example to a development Kubernetes cluster run:
 ```
-kubectl apply -f deploy/stocks-dev.yaml
+kubectl apply -f deploy/stocks.yaml
 ```
 To undeploy the example run:
 ```
-kubectl delete -f deploy/stocks-dev.yaml
+kubectl delete -f deploy/stocks.yaml
 ```

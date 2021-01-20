@@ -34,9 +34,9 @@ redis:
 kar:
   injector:
     replicaCount: 1
-    imageName: 'us.icr.io/research/kar-dev/kar-injector'
+    imageName: 'localhost:5000/kar/kar-injector'
     imageTag: 'latest'
-    sidecarImageName: 'us.icr.io/research/kar-dev/kar'
+    sidecarImageName: 'localhost:5000/kar/kar'
     sidecarImageTag: 'latest'
 
 global:

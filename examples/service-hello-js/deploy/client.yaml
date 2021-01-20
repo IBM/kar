@@ -14,16 +14,24 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: hello-server
-  annotations:
-    kar.ibm.com/app: hello-java
-    kar.ibm.com/service: greeter
+  name: hello-client
+  labels:
+    name: hello-client
 spec:
-  imagePullSecrets:
-  - name: kar.ibm.com.image-pull
-  containers:
-  - name: server
-    image: localhost:5000/examples/java/service-hello
+  template:
+    metadata:
+      annotations:
+        kar.ibm.com/app: hello-js
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
+      containers:
+      - name: client
+        image: localhost:5000/kar/examples/js/service-hello
+        env:
+        - name: MAIN
+          value: client.js

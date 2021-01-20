@@ -14,27 +14,16 @@
 # limitations under the License.
 #
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
-  name: java-dining-philosophers
-  labels:
-    app: java-dp
+  name: hello-server
+  annotations:
+    kar.ibm.com/app: hello-js
+    kar.ibm.com/service: greeter
 spec:
-  selector:
-    matchLabels:
-      app: java-dp
-  template:
-    metadata:
-      labels:
-        app: java-dp
-      annotations:
-        kar.ibm.com/app: dp
-        kar.ibm.com/actors: Cafe,Fork,Philosopher,Table
-        kar.ibm.com/appPort: "8080"
-    spec:
-      containers:
-      - name: actors
-        image: localhost:5000/examples/java/actors-dp
-        ports:
-        - containerPort: 8080
+  imagePullSecrets:
+  - name: kar.ibm.com.image-pull
+  containers:
+  - name: server
+    image: localhost:5000/kar/examples/js/service-hello

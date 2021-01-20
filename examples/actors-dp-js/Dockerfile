@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG JS_RUNTIME=us.icr.io/research/kar-dev/sdk-nodejs-v12
+ARG JS_RUNTIME=localhost:5000/kar/sdk-nodejs-v12
 
 FROM $JS_RUNTIME
 

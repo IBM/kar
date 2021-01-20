@@ -35,6 +35,6 @@ spec:
     spec:
       containers:
       - name: actor-server
-        image: localhost:5000/examples/java/actors
+        image: localhost:5000/kar/examples/java/actors
         ports:
         - containerPort: 8080

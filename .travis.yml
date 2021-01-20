@@ -23,7 +23,7 @@ jobs:
       script:
         -  ./scripts/kind-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
-        - make dockerDev || travis_terminate 1
+        - make docker || travis_terminate 1
         - (./scripts/kar-k8s-deploy.sh -dev && ./scripts/kar-k8s-namespace-enable.sh default) || travis_terminate 1
         - ./travis/testInCluster.sh
     - stage: deploy

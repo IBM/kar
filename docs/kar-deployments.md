@@ -65,7 +65,6 @@ deploying to a Kubernetes cluster or using other public cloud managed
 services in your deployment, that you have the necessary clis and
 tools already installed and have some familiarity with using them.
 
-
 # Clusterless
 
 The Clusterless deployment mode runs Redis, Kafka, and ZooKeeper
@@ -278,11 +277,11 @@ registry on `localhost:5000`.  To ensure one is running, execute
 Next, build the necessary docker images and push them to a local
 registry.
 ```shell
-make dockerDev
+make docker
 ```
 
 When you rebuild a KAR docker image and want it to be accessible to
-your Kubernetes cluster, you will need to either do `make dockerDev`
+your Kubernetes cluster, you will need to either do `make docker`
 or individually `docker push` the image to the localhost:5000 registry.
 
 ### Deploying the KAR Runtime System to the `kar-system` namespace
@@ -304,12 +303,12 @@ The simplest approach is to KAR-enable the default namespace:
 Run the client and server as shown below:
 ```shell
 $ cd examples/service-hello-js
-$ kubectl apply -f deploy/server-dev.yaml
+$ kubectl apply -f deploy/server.yaml
 pod/hello-server created
 $ kubectl get pods
 NAME           READY   STATUS    RESTARTS   AGE
 hello-server   2/2     Running   0          3s
-$ kubectl apply -f deploy/client-dev.yaml
+$ kubectl apply -f deploy/client.yaml
 job.batch/hello-client created
 $ kubectl logs jobs/hello-client -c client
 Hello John Doe!
@@ -317,9 +316,9 @@ Hello John Doe!
 $ kubectl logs hello-server -c server
 Hello John Doe!
 Hello John Doe!
-$ kubectl delete -f deploy/client-dev.yaml
+$ kubectl delete -f deploy/client.yaml
 job.batch "hello-client" deleted
-$ kubectl delete -f deploy/server-dev.yaml
+$ kubectl delete -f deploy/server.yaml
 pod "hello-server" deleted
 ```
 
@@ -420,7 +419,7 @@ wraps `ibmcloud ce` to simplify the process. It automatically targets
 the current Code Engine project (change the targeted project with
 `ibmcloud ce project target <project-name>`).
 ```shell
-./scripts/kar-ce-run.sh -app hello -image us.icr.io/research/kar-dev/examples/js/service-hello -name hello-js-server -service greeter
+./scripts/kar-ce-run.sh -app hello -image TODO/examples/js/service-hello -name hello-js-server -service greeter
 ```
 
 Once the server component is deployed, you can use the `kar` cli to

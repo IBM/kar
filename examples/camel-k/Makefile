@@ -14,15 +14,12 @@
 # limitations under the License.
 #
 
-DOCKER_REGISTRY ?= us.icr.io
-DOCKER_NAMESPACE ?= research/kar-dev
+DOCKER_REGISTRY ?= localhost:5000
+DOCKER_NAMESPACE ?= kar
 DOCKER_IMAGE_PREFIX ?= $(DOCKER_REGISTRY)/$(DOCKER_NAMESPACE)/
 DOCKER_IMAGE_TAG ?= latest
 
 KAR_JS_SDK=$(DOCKER_IMAGE_PREFIX)sdk-nodejs-v12:$(DOCKER_IMAGE_TAG)
-
-dockerDev:
-	DOCKER_IMAGE_PREFIX=localhost:5000/ make docker
 
 docker:
 	make dockerBuild
