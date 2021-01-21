@@ -152,19 +152,19 @@ the following annotations:
    + kar.ibm.com/runtimePort: sets the `-runtime_port` argument of `kar run`
    + kar.ibm.com/extraArgs: additional command line arguments for `kar run`
 
-Your cluster must be configured with the appropriate image pull
-secrets for both your application images and the KAR runtime
-images. We discuss some common options in the text below, but cannot
-cover all possibilities. We also assume that you know how to configure
-`kubectl`, `helm`, etc. to access your cluster.
+By default, the KAR runtime images will be pulled from our public quay.io
+image repository. It is also possible to configure KAR to pull its runtime
+images from a private registry; this results in an additional
+`kar.ibm.com.image-pull` secret being created.
 
 After the KAR runtime system is successfully deployed to the
 `kar-system` namespace, you can enable other namespaces
 to host KAR applications. This enablement entails labeling the namespace
-with `kar.ibm.com/enabled=true` and creating the
-`kar.ibm.com.image-pull` and `kar.ibm.com.runtime-config` in the
-namespace. The installation process automatically enables the `default`
-namespace for KAR applications. To enable additional namespaces, you can use the script
+with `kar.ibm.com/enabled=true` and replicating the
+`kar.ibm.com.runtime-config` secret and, optionally, the `kar.ibm.com.image-pull`
+secret in the namespace. The base installation script
+automatically enables the `default` namespace for KAR applications.
+To enable additional namespaces, you can use the script
 [kar-k8s-namespace-enable.sh](../scripts/kar-k8s-namespace-enable.sh).
 
 Once a namespace is thus enabled, you can deploy KAR application components to the
@@ -178,14 +178,9 @@ namespace using Helm or kubectl by adding the annotations described above.
 
 You will need a cluster on which you have the cluster-admin role.
 
-When deploying on an IBM Cloud managed cluster, you will use pre-built
-images from the KAR project namespace in the IBM Cloud Container
-Registry.
-
 ### Deploying the KAR Runtime System to the `kar-system` namespace
 
-Assuming you have set your kubectl context and have done an
-`ibmcloud login` into the RIS IBM Research Shared account, you
+Assuming you have set your kubectl context, you
 can deploy KAR into your cluster in a single command:
 ```shell
 ./scripts/kar-k8s-deploy.sh
@@ -196,12 +191,12 @@ can deploy KAR into your cluster in a single command:
 Run the client and server as shown below:
 ```shell
 $ cd examples/service-hello-js
-$ kubectl apply -f deploy/server-icr.yaml
+$ kubectl apply -f deploy/server-quay.yaml
 pod/hello-server created
 $ kubectl get pods
 NAME           READY   STATUS    RESTARTS   AGE
 hello-server   2/2     Running   0          3s
-$ kubectl apply -f deploy/client-icr.yaml
+$ kubectl apply -f deploy/client-quay.yaml
 job.batch/hello-client created
 $ kubectl logs jobs/hello-client -c client
 Hello John Doe!
@@ -209,9 +204,9 @@ Hello John Doe!
 $ kubectl logs hello-server -c server
 Hello John Doe!
 Hello John Doe!
-$ kubectl delete -f deploy/client-icr.yaml
+$ kubectl delete -f deploy/client-quay.yaml
 job.batch "hello-client" deleted
-$ kubectl delete -f deploy/server-icr.yaml
+$ kubectl delete -f deploy/server-quay.yaml
 pod "hello-server" deleted
 ```
 
@@ -364,11 +359,6 @@ You will need a Database for Redis instance.  Once it is allocated,
 create a service credential to access it, using the same name as you
 used for the EventStreams service credential.
 
-### IBM Cloud Container Registry Access
-
-You will need an IBM Cloud Container Registry namespace and an apikey
-that enables read access to that namespace.
-
 ### Code Engine Project
 
 Create a Code Engine project
@@ -377,18 +367,18 @@ ibmcloud ce project create --name kar-project
 ```
 
 Then, configure the project for KAR by creating the
-`kar.ibm.com.runtime-config` and `kar.ibm.com.image-pull`
-secrets. This step is automated by a script that takes the
-service credential name and container registry apikey as arguments and
+`kar.ibm.com.runtime-config` secret.
+This step is automated by a script that takes the
+service credential name and
 uses the `ibmcloud` cli to extract information and create the secrets.
 ```shell
-./scripts/kar-ce-project-enable.sh <service-credential> <cr-apikey>
+./scripts/kar-ce-project-enable.sh <service-credential>
 ```
 
 ### Optionally configure your local environment
 
 Because we are using a Redis and Kafka instance that are accessible
-both to containers running in IBM Code Engine and to you laptop, we
+both to containers running in IBM Code Engine and to your laptop, we
 have the option of deploying applications with some components running
 on the cloud in IBM Code Engine and others running locally. To enable
 this option, you need to setup your local environment so that `kar`
@@ -413,7 +403,7 @@ the current Code Engine project (change the targeted project with
 Once the server component is deployed, you can use the `kar` cli to
 invoke the service directly:
 ```shell
-kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
+kar rest -app hello post greeter helloJson '{"name": "Alan Turing"}'
 ```
 
 You've just run your first hybrid cloud application that uses KAR to
@@ -467,25 +457,20 @@ You will need a Database for Redis instance.  Once it is allocated,
 create a service credential to access it, using the same name as you
 used for the EventStreams service credential.
 
-### IBM Cloud Container Registry Access
-
-You will need an IBM Cloud Container Registry namespace and an apikey
-that enables read access to that namespace.
-
 ### Configuring compute engines
 
 #### Kubernetes or OpenShift clusters
 
 Install the KAR runtime system on your IKS cluster
 ```shell
-./scripts/kar-k8s-deploy.sh -m <service-credential> -c <cr-apikey>
+./scripts/kar-k8s-deploy.sh -m <service-credential>
 ```
 
 #### Code Engine
 
 Enable a project for KAR applications
 ```shell
-./scripts/kar-ce-project-enable.sh <service-credential> <cr-apikey>
+./scripts/kar-ce-project-enable.sh <service-credential>
 ```
 
 #### Local environment or VMs
