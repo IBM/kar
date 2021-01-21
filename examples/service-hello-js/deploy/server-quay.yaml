@@ -26,4 +26,4 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: quay.io/tardieu/kar-examples-js-service-hello
+    image: quay.io/ibm/kar-examples-js-service-hello
