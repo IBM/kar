@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Script to run a KAR component on Code Engine
+# Script to run a KAR component on IBM Code Engine
 
 set -e
 
@@ -76,6 +76,10 @@ while [ -n "$1" ]; do
             shift;
             name="$1"
             ;;
+        -registry-secret)
+            shift;
+            ceargs="$ceargs --registry-secret $1"
+            ;;
         -service)
             shift;
             service="$1"
@@ -105,6 +109,7 @@ where [options] includes:
     -service <service>        invoke kar with -service <service>
     -port <port>              invoke kar with -app_port <port> (default 8080)
     -externalize              make app port accessible via public URL (default cluster_local)
+    -registry-secret <sec>    name of Code Engine registry secret to use
     -env KEY=VALUE            add the binding KEY=VALUE to the container's environment
     -scale <N>                run N replicas of this component (default 1)
     -v <level>                invoke kar with -v <level>       (default error)
@@ -137,7 +142,7 @@ if [ "$actors" != "" ]; then
 fi
 
 ceargs="$ceargs --image $image --name $name --min-scale $scale --max-scale $scale --cpu 1 --port http1:$port"
-ceargs="$ceargs --registry-secret kar.ibm.com.image-pull --env-from-secret kar.ibm.com.runtime-config $cluster_local $nowait"
+ceargs="$ceargs --env-from-secret kar.ibm.com.runtime-config $cluster_local $nowait"
 ceargs="$ceargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 ceargs="$ceargs --env KAR_EXTRA_ARGS=\"$karargs\""
 

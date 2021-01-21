@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# This script enables the current code-engine project for
+# This script enables the current IBM Code Engine project for
 # running KAR applications by creating a secret that
 # enables the use of "Databases for Redis" and "Event Streams"
 # services on the IBM Cloud.
@@ -28,7 +28,7 @@
 
 if [ $# -lt 1 ];
 then
-   echo "Usage: kar-code-engine-project-enable.sh <service-key> <cr-apikey>"
+   echo "Usage: kar-code-engine-project-enable.sh <service-key>"
    exit 1
 fi
 
@@ -38,7 +38,6 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
 SERVICE_KEY=$1
-CR_API_KEY=$2
 
 echo "Extracting credentials from service key"
 . ${SCRIPTDIR}/kar-env-ibmcloud.sh $SERVICE_KEY
@@ -46,6 +45,7 @@ echo "Extracting credentials from service key"
 echo "Creating runtime-config secret in code-engine project"
 ibmcloud code-engine secret create --name kar.ibm.com.runtime-config \
      --from-literal REDIS_ENABLE_TLS=$REDIS_ENABLE_TLS \
+     --from-literal REDIS_CA=$REDIS_CA \
      --from-literal REDIS_HOST=$REDIS_HOST \
      --from-literal REDIS_PORT=$REDIS_PORT \
      --from-literal REDIS_PASSWORD=$REDIS_PASSWORD \
