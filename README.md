@@ -134,7 +134,7 @@ minimal overheads.
 + Check out our [examples](examples/README.md).
 + Read about the KAR [Programming Model](docs/KAR.md).
 + Browse the Swagger specification of the [KAR
-  API](https://ibm.github.io//kar/api/redoc/).
+  API](https://ibm.github.io/kar/api/redoc/).
 
 # License
 
