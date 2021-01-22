@@ -121,6 +121,19 @@ public class Kar {
 		}
 	}
 
+	private static String responseToString(Response response) {
+		if (response.hasEntity()) {
+			MediaType type = response.getMediaType();
+			MediaType basicType = new MediaType(type.getType(), type.getSubtype());
+			if (basicType.equals(MediaType.APPLICATION_JSON_TYPE) || basicType.equals(KarRest.KAR_ACTOR_JSON_TYPE)) {
+				return response.readEntity(JsonValue.class).toString();
+			} else if (basicType.equals(MediaType.TEXT_PLAIN_TYPE)) {
+				return response.readEntity(String.class);
+			}
+		}
+		return null;
+	}
+
 	private static Reminder[] toReminderArray(Response response) {
 		try {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
@@ -491,7 +504,8 @@ public class Kar {
 				return callProcessResponse(response);
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
-					throw new ActorMethodNotFoundException("Method not found: " + actor.getType() + "." + path, e);
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
@@ -518,7 +532,8 @@ public class Kar {
 				return callProcessResponse(response);
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
-					throw new ActorMethodNotFoundException("Method not found: " + actor.getType() + "." + path, e);
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
@@ -544,7 +559,8 @@ public class Kar {
 				return callProcessResponse(response);
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
-					throw new ActorMethodNotFoundException("Method not found: " + actor.getType() + "." + path, e);
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
