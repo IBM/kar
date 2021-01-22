@@ -1,7 +1,6 @@
 language: go
 services:
   - docker
-sudo: required
 
 go:
   - 1.15.x
