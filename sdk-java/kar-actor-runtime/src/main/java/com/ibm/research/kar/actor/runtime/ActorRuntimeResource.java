@@ -119,12 +119,12 @@ public class ActorRuntimeResource {
 
 		ActorInstance actorObj = this.actorManager.getActor(type, id);
 		if (actorObj == null) {
-			return Response.status(Response.Status.NOT_FOUND).entity("Actor instance not found " + type + "actor" + id).build();
+			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
 		}
 
 		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path, args.size());
 		if (actorMethod == null) {
-			return Response.status(Response.Status.NOT_FOUND).entity("Cannot find method " + path + " with " + args.size() + " arguments").build();
+			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
 		}
 
 		// set the session
