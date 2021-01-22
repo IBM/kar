@@ -26,3 +26,6 @@ jobs:
         - make docker || travis_terminate 1
         - ./scripts/kar-k8s-deploy.sh || travis_terminate 1
         - ./travis/testInCluster.sh
+    - stage: deploy
+      script: "./travis/pushImages.sh main latest"
+      if: NOT type in (pull_request) AND branch = main AND repo = ibm/kar

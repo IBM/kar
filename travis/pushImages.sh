@@ -25,23 +25,9 @@ BRANCH=$1
 IMAGE_TAG=$2
 cd $ROOTDIR
 
-docker login -u iamapikey -p "${DOCKER_APIKEY_RIS}" us.icr.io
+docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" "${DOCKER_REGISTRY}"
 
-SHORT_COMMIT=`git rev-parse --short HEAD`
-
-if [ ${BRANCH} == "master" ] && [ ${IMAGE_TAG} == "latest" ]; then
-    # push commit hash tagged images
-    # disable because can't auto-delete old images in RIS namespace
-    # DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=dev-${SHORT_COMMIT} make docker
-
+if [ ${BRANCH} == "main" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push `latest` tag images
-    DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-dev DOCKER_IMAGE_TAG=latest make docker
-else
-    if [ ${BRANCH} == ${IMAGE_TAG} ]; then
-        # A git tag operation, push to kar-prod
-        DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-prod DOCKER_IMAGE_TAG=${IMAGE_TAG} make docker
-    else
-        # A push to some branch; push commit-taged image to kar-stage
-        DOCKER_REGISTRY=us.icr.io DOCKER_NAMESPACE=research/kar-stage DOCKER_IMAGE_TAG=${BRANCH}-${SHORT_COMMIT} make docker
-    fi
+    DOCKER_IMAGE_TAG=latest make docker
 fi
