@@ -25,9 +25,9 @@ BRANCH=$1
 IMAGE_TAG=$2
 cd $ROOTDIR
 
-docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" "${DOCKER_REGISTRY}"
+docker login -u "${QUAY_USERNAME}" -p "${QUAY_PASSWORD}" quay.io
 
 if [ ${BRANCH} == "main" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push `latest` tag images
-    DOCKER_IMAGE_TAG=latest make docker
+    DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
 fi
