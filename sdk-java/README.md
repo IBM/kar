@@ -208,7 +208,7 @@ We have tested the Java actor runtime using openliberty. `kar-actor-runtime` wil
 
     <groupId>com.ibm.research.kar.example.actors</groupId>
     <artifactId>kar-example-actors</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -223,7 +223,7 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 <dependency>
 	<groupId>com.ibm.research.kar</groupId>
 	<artifactId>kar-actor-runtime</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>0.5.0-SNAPSHOT</version>
 </dependency>
 ```
 `kar-actor-runtime` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
