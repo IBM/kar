@@ -29,5 +29,5 @@ docker login -u "${QUAY_USERNAME}" -p "${QUAY_PASSWORD}" quay.io
 
 if [ ${BRANCH} == "main" ] && [ ${IMAGE_TAG} == "latest" ]; then
     # push `latest` tag images
-    DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
+    KAR_VERSION=$(git rev-parse --short HEAD) DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
 fi

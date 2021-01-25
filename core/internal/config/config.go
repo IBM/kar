@@ -30,12 +30,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/google/uuid"
 )
 
 // Separator character for store keys and topic names
 const Separator = "_" // must not be a legal DNS name character
+
+var Version = "unofficial"
 
 const (
 	// RunCmd is the command "run"
@@ -50,6 +52,8 @@ const (
 	PurgeCmd = "purge"
 	// DrainCmd is the command "drain"
 	DrainCmd = "drain"
+	// VersionCmd is the command "version"
+	VersionCmd = "version"
 	// HelpCmd is the command "help"
 	HelpCmd = "help"
 )
@@ -204,6 +208,7 @@ Available commands:
   rest    perform a REST operation on a service endpoint
   purge   purge application messages and state
   drain   drain application messages
+  version print version
   help    print help message`
 
 	description := `Use "kar COMMAND -h" for more information about a command`
@@ -283,6 +288,10 @@ Available commands:
 	case DrainCmd:
 		usage = "kar drain [OPTIONS]"
 		description = "Drain application messages"
+
+	case VersionCmd:
+		fmt.Println(Version)
+		os.Exit(0)
 
 	case "-help":
 		fallthrough

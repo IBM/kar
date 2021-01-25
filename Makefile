@@ -19,6 +19,8 @@ DOCKER_NAMESPACE ?= kar
 DOCKER_IMAGE_PREFIX ?= $(DOCKER_REGISTRY)/$(DOCKER_NAMESPACE)/
 DOCKER_IMAGE_TAG ?= latest
 
+KAR_VERSION ?= unofficial
+
 KAR_BASE=$(DOCKER_IMAGE_PREFIX)kar-sidecar:$(DOCKER_IMAGE_TAG)
 KAR_INJECTOR=$(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
 KAR_JS_SDK=$(DOCKER_IMAGE_PREFIX)kar-sdk-nodejs-v12:$(DOCKER_IMAGE_TAG)
@@ -36,7 +38,7 @@ KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(D
 install: cli
 
 cli:
-	cd core && go install ./...
+	cd core && go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$(KAR_VERSION)" ./...
 
 dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar -t $(KAR_BASE) .
