@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { actor } = require('kar')
+const { actor } = require('kar-sdk')
 
 const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))

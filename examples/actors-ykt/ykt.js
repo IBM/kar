@@ -16,7 +16,7 @@
 
 const express = require('express')
 
-const { actor, events, sys } = require('kar')
+const { actor, events, sys } = require('kar-sdk')
 
 // CloudEvents SDK for defining a structured HTTP request receiver.
 const { CloudEvent } = require('cloudevents')
