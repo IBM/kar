@@ -55,7 +55,7 @@
 		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
 		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
 		<version.microprofile>3.3</version.microprofile>
-		<version.kar-java-sdk>0.5.0-SNAPSHOT</version.kar-java-sdk>
+		<version.kar-java-sdk>0.6.0-SNAPSHOT</version.kar-java-sdk>
 		<version.slf4j>1.7.25</version.slf4j>
 		<jaeger.version>0.34.0</jaeger.version>
 		<!-- Liberty configuration -->
