@@ -1,8 +1,8 @@
 {
-  "name": "kar",
+  "name": "kar-sdk",
   "main": "index.js",
   "types": "index.d.ts",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "KAR SDK for JavaScript and TypeScript",
   "homepage": "https://github.com/IBM/kar",
   "scripts": {
