@@ -26,5 +26,5 @@ jobs:
         - ./scripts/kar-k8s-deploy.sh || travis_terminate 1
         - ./travis/testInCluster.sh
     - stage: deploy
-      script: "./travis/pushImages.sh main latest"
-      if: NOT type in (pull_request) AND branch = main AND repo = IBM/kar
+      script: ./travis/pushImages.sh
+      if: NOT type in (pull_request) AND repo = IBM/kar AND (branch = main OR tag is PRESENT)
