@@ -102,6 +102,14 @@
 	      </excludes>
 	    </configuration>
 	  </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+	    <configuration>
+              <!-- exclude packages that are not included in this profile -->
+	      <excludePackageNames>com.ibm.research.kar.standalone</excludePackageNames>
+	    </configuration>
+          </plugin>
 	</plugins>
       </build>
     </profile>

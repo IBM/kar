@@ -84,6 +84,14 @@
 	    <artifactId>maven-jar-plugin</artifactId>
 	    <version>${version.maven-jar-plugin}</version>
 	  </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+	    <configuration>
+              <!-- exclude packages that are not included in this profile -->
+	      <excludePackageNames>com.ibm.research.kar.actor.runtime.quarkus</excludePackageNames>
+	    </configuration>
+          </plugin>
 	</plugins>
       </build>
     </profile>
