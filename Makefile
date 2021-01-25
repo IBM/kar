@@ -41,7 +41,7 @@ cli:
 	cd core && go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$(KAR_VERSION)" ./...
 
 dockerBuildCore:
-	cd core && docker build --build-arg KAR_BINARY=kar -t $(KAR_BASE) .
+	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
 	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .

@@ -26,7 +26,10 @@ RUN go mod download
 COPY pkg pkg
 COPY internal internal
 COPY cmd cmd
-RUN CGO_ENABLED=0 go install ./...
+
+ARG KAR_VERSION=unofficial
+
+RUN CGO_ENABLED=0 go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$KAR_VERSION" ./...
 
 # Create image containing nothing but the sidecar
 FROM scratch
