@@ -34,9 +34,9 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.ibm.research.kar</groupId>
+      <groupId>${project.groupId}</groupId>
       <artifactId>kar-rest-client</artifactId>
-      <version>0.6.0-SNAPSHOT</version>
+      <version>${project.version}</version>
     </dependency>
   </dependencies>
 
@@ -135,9 +135,9 @@
 	  <artifactId>quarkus-rest-client-jsonb</artifactId>
 	</dependency>
 	<dependency>
-	  <groupId>com.ibm.research.kar</groupId>
-	  <artifactId>kar-rest-client</artifactId>
-	  <version>0.6.0-SNAPSHOT</version>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>kar-rest-client</artifactId>
+          <version>${project.version}</version>
 	</dependency>
       </dependencies>
       <build>
@@ -238,9 +238,9 @@
 	  <artifactId>quarkus-rest-client-jsonb</artifactId>
 	</dependency>
 	<dependency>
-	  <groupId>com.ibm.research.kar</groupId>
-	  <artifactId>kar-rest-client</artifactId>
-	  <version>0.6.0-SNAPSHOT</version>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>kar-rest-client</artifactId>
+          <version>${project.version}</version>
 	</dependency>
       </dependencies>
       <build>
