@@ -7,7 +7,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "uuid": "^8.3.0",
-    "kar": "file:.yalc/kar"
+    "kar-sdk": "^0.1.0"
   },
   "devDependencies": {
     "mocha": "^7.1.1",

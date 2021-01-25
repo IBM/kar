@@ -24,8 +24,7 @@ WORKDIR /kar/app
 ENV MAIN=ykt.js
 
 # Copy dependencies first; they change rarely
-COPY package.json package-lock.json yalc.lock ./
-COPY .yalc .yalc
+COPY package.json package-lock.json ./
 RUN npm install --prod
 
 # Copy in application source

@@ -7,7 +7,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "fetch-retry": "^3.1.0",
-    "kar": "file:.yalc/kar",
+    "kar-sdk": "^0.1.0",
     "node-fetch": "^2.6.0"
   },
   "devDependencies": {
