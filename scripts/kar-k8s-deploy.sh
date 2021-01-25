@@ -23,11 +23,19 @@ set -e
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
+version=$(kar version)
+case "$version" in
+  unofficial)
+    helmargs=""
+    kartag="latest";;
+  *)
+    helmargs="$helmargs --set-string kar.injector.imageName=quay.io/ibm/kar-injector --set-string kar.injector.sidecarImageName=quay.io/ibm/kar-sidecar"
+    kartag="$version";;
+esac
+
 help=""
 args=""
 parse=true
-kartag="latest"
-helmargs=""
 injectorOnly=""
 while [ -n "$1" ]; do
     if [ -z "$parse" ]; then
