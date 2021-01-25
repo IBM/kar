@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { call, asyncCall, actor } = require('kar')
+const { call, asyncCall, actor } = require('kar-sdk')
 
 async function main () {
   // synchronous call

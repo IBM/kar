@@ -1,4 +1,4 @@
-#
+<!--
 # Copyright IBM Corporation 2020,2021
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,20 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+-->
 
-ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v12
+# KAR SDK for JavaScript and TypeScript
 
-FROM $JS_RUNTIME
-
-WORKDIR /kar/app
-
-# Default to running actor server
-ENV MAIN=ykt.js
-
-# Copy dependencies first; they change rarely
-COPY package.json package-lock.json ./
-RUN npm install --prod
-
-# Copy in application source
-COPY *.js ./
+See https://github.com/IBM/kar for documentation.

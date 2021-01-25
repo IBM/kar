@@ -15,7 +15,7 @@
  */
 
 const express = require('express')
-const { actor, sys } = require('kar')
+const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 
 const verbose = process.env.VERBOSE

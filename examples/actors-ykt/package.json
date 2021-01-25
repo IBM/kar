@@ -7,7 +7,7 @@
   "dependencies": {
     "cloudevents": "^3.2.0",
     "express": "^4.17.1",
-    "kar": "file:.yalc/kar"
+    "kar-sdk": "^0.1.0"
   },
   "devDependencies": {
     "mocha": "^7.1.1",

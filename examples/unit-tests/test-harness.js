@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { actor, call, events, sys } = require('kar')
+const { actor, call, events, sys } = require('kar-sdk')
 
 const truthy = s => s && s.toLowerCase() !== 'false' && s !== '0'
 const verbose = truthy(process.env.VERBOSE)

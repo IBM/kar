@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar')
+const { actor, sys } = require('kar-sdk')
 const express = require('express')
 const app = express()
 

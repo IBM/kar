@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { actor } = require('kar')
+const { actor } = require('kar-sdk')
 
 async function main () {
   let x = 0

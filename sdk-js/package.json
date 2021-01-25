@@ -1,7 +1,10 @@
 {
-  "name": "kar",
+  "name": "kar-sdk",
   "main": "index.js",
-  "version": "0.1.1",
+  "types": "index.d.ts",
+  "version": "0.1.0",
+  "description": "KAR SDK for JavaScript and TypeScript",
+  "homepage": "https://github.com/IBM/kar",
   "scripts": {
     "test": "standard"
   },
@@ -15,5 +18,20 @@
     "mocha": "^7.1.1",
     "pre-commit": "^1.2.2",
     "standard": "^14.3.3"
-  }
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "license": "Apache-2.0",
+  "contributors": [
+    {
+      "name": "Olivier Tardieu",
+      "email": "tardieu@us.ibm.com"
+    },
+    {
+      "name": "Dave Grove",
+      "email": "groved@us.ibm.com"
+    }
+  ]
 }

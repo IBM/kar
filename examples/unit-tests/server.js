@@ -15,7 +15,7 @@
  */
 
 const express = require('express')
-const { actor, events, sys } = require('kar')
+const { actor, events, sys } = require('kar-sdk')
 const cloudevents = require('cloudevents-sdk/v1')
 
 const app = express()

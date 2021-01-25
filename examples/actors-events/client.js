@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { events } = require('kar')
+const { events } = require('kar-sdk')
 const { CloudEvent } = require('cloudevents')
 
 // main function
