@@ -77,10 +77,10 @@ if [ -n "$help" ]; then
     cat << EOF
 Usage: kar-deploy.sh [options]
 where [options] includes:
-    -f -file <config.yaml>    pass `-f <config.yaml>` to `helm install kar`
+    -f -file <config.yaml>    pass -f <config.yaml> to helm install kar
     -m -managed <service-key> use managed EventStreams and Redis accessed via service-key
-    -s -set key=value         pass `--set key=value to `helm install kar`
-    -r -release <version>     deploy a kar release instead of development images
+    -s -set key=value         pass --set key=value to helm install kar
+    -r -release <version>     deploy the specified release
 EOF
     exit 0
 fi
