@@ -21,13 +21,14 @@ set -eu
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-BRANCH=$1
-IMAGE_TAG=$2
 cd $ROOTDIR
 
 docker login -u "${QUAY_USERNAME}" -p "${QUAY_PASSWORD}" quay.io
 
-if [ ${BRANCH} == "main" ] && [ ${IMAGE_TAG} == "latest" ]; then
+if [ ${TRAVIS_BRANCH} == "main" ]; then
     # push `latest` tag images
-    KAR_VERSION=$(git rev-parse --short HEAD) DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
+    KAR_VERSION=$(git rev-parse --short ${TRAVIS_COMMIT}) DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
+else
+    # push tagged images
+    KAR_VERSION="${TRAVIS_BRANCH:1}" DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG="${TRAVIS_BRANCH:1}" make docker
 fi
