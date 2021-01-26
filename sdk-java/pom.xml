@@ -21,6 +21,32 @@
   <description>KAR Java SDK</description>
   <url>https://github.com/IBM/kar/</url>
 
+  <properties>
+    <version.java-compiler>11</version.java-compiler>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+    <version.maven-enforcer-plugin>3.0.0-M3</version.maven-enforcer-plugin>
+    <version.maven-gpg-plugin>1.5</version.maven-gpg-plugin>
+    <version.maven-help>3.2.0</version.maven-help>
+    <version.maven-jar-plugin>3.2.0</version.maven-jar-plugin>
+    <version.maven-javadoc-plugin>2.9.1</version.maven-javadoc-plugin>
+    <version.maven-source-plugin>2.2.1</version.maven-source-plugin>
+    <version.versions-maven-plugin>2.7</version.versions-maven-plugin>
+    <version.nexus-staging-maven-plugin>1.6.7</version.nexus-staging-maven-plugin>
+    <version.microprofile>3.3</version.microprofile>
+    <version.cxf-rt-rs-mp-client>3.4.0</version.cxf-rt-rs-mp-client>
+    <version.glassfish-json>1.1.4</version.glassfish-json>
+    <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+    <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
+    <quarkus-plugin.version>1.8.1.Final</quarkus-plugin.version>
+    <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
+    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
+    <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
+    <surefire-plugin.version>2.22.1</surefire-plugin.version>
+    <jandex-plugin.version>1.0.8</jandex-plugin.version>
+  </properties>
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -77,7 +103,7 @@
         <plugin>
 	  <groupId>org.apache.maven.plugins</groupId>
 	  <artifactId>maven-enforcer-plugin</artifactId>
-	  <version>3.0.0-M3</version>
+	  <version>${version.maven-enforcer-plugin}</version>
 	  <executions>
 	    <execution>
 	      <id>enforce-maven</id>
@@ -98,7 +124,7 @@
         <plugin>
 	  <groupId>org.codehaus.mojo</groupId>
 	  <artifactId>versions-maven-plugin</artifactId>
-	  <version>2.7</version>
+	  <version>${version.versions-maven-plugin}</version>
 	  <configuration>
 	    <generateBackupPoms>false</generateBackupPoms>
 	  </configuration>
@@ -107,7 +133,7 @@
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
           <artifactId>nexus-staging-maven-plugin</artifactId>
-          <version>1.6.7</version>
+          <version>${version.nexus-staging-maven-plugin}</version>
           <extensions>true</extensions>
           <configuration>
             <serverId>ossrh</serverId>
@@ -115,6 +141,16 @@
             <autoReleaseAfterClose>false</autoReleaseAfterClose>
           </configuration>
         </plugin>
+
+	<plugin>
+	  <groupId>org.apache.maven.plugins</groupId>
+	  <artifactId>maven-compiler-plugin</artifactId>
+	  <version>${version.maven-compiler-plugin}</version>
+	  <configuration>
+	    <release>${version.java-compiler}</release>
+	  </configuration>
+        </plugin>
+
       </plugins>
     </pluginManagement>
   </build>
@@ -127,7 +163,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>2.2.1</version>
+            <version>${version.maven-source-plugin}</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -141,7 +177,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.9.1</version>
+            <version>${version.maven-javadoc-plugin}</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>
@@ -155,7 +191,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.5</version>
+            <version>${version.maven-gpg-plugin}</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
