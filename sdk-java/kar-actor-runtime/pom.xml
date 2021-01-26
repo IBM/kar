@@ -15,23 +15,6 @@
   <name>kar-rest-client</name>
   <description>KAR Java SDK actor runtime</description>
 
-  <properties>
-    <version.maven-jar-plugin>3.2.0</version.maven-jar-plugin>
-    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
-    <version.microprofile>3.3</version.microprofile>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-    <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
-    <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
-    <quarkus-plugin.version>1.8.1.Final</quarkus-plugin.version>
-    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
-    <version.java-compiler>11</version.java-compiler>
-    <surefire-plugin.version>2.22.1</surefire-plugin.version>
-    <version.java-compiler>11</version.java-compiler>
-    <jandex-plugin.version>1.0.8</jandex-plugin.version>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
