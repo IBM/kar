@@ -38,6 +38,7 @@
     <version.cxf-rt-rs-mp-client>3.4.0</version.cxf-rt-rs-mp-client>
     <version.glassfish-json>1.1.4</version.glassfish-json>
     <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+    <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
     <quarkus-plugin.version>1.8.1.Final</quarkus-plugin.version>
     <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
