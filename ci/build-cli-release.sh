@@ -21,7 +21,7 @@ KAR_VERSION=${KAR_VERSION:="unofficial"}
 CIDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$CIDIR/.."
 
-cd $ROOTDIR/CORE
+cd $ROOTDIR/core
 mkdir -p build
 
 buildOne() {
