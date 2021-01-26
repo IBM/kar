@@ -6,7 +6,7 @@ go:
   - 1.15.x
 
 before_install:
-  - ./travis/setup.sh
+  - ./ci/setup.sh
 
 jobs:
   include:
@@ -16,15 +16,15 @@ jobs:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - make installJavaSDK || travis_terminate 1
-        - ./travis/testLocal.sh
-        - ./travis/testJavaLocal.sh
+        - ./ci/testLocal.sh
+        - ./ci/testJavaLocal.sh
     - name: in-cluster
       script:
         -  ./scripts/kind-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - make docker || travis_terminate 1
         - ./scripts/kar-k8s-deploy.sh || travis_terminate 1
-        - ./travis/testInCluster.sh
+        - ./ci/testInCluster.sh
     - stage: deploy
-      script: ./travis/pushImages.sh
+      script: ./ci/pushImages.sh
       if: NOT type in (pull_request) AND repo = IBM/kar AND (branch = main OR tag =~ ^v)

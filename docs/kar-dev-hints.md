@@ -41,7 +41,7 @@ yalc push
 
 ### Local Development - Running test cases
 
-The scripts in the `travis` directory are a good way
+The scripts in the `ci` directory are a good way
 execute test cases during development.
 
 ### Swagger API documentation
