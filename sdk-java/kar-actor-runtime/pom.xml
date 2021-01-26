@@ -60,7 +60,6 @@
 	    <artifactId>maven-compiler-plugin</artifactId>
 	    <version>${version.maven-compiler-plugin}</version>
 	    <configuration>
-	      <release>${version.java-compiler}</release>
 	      <excludes>
 		<exclude>com/ibm/research/kar/actor/runtime/quarkus/**</exclude>
 	      </excludes>
@@ -161,7 +160,6 @@
 	    <artifactId>maven-compiler-plugin</artifactId>
 	    <version>${version.maven-compiler-plugin}</version>
 	    <configuration>
-	      <release>${version.java-compiler}</release>
 	      <excludes>
 		<exclude>com/ibm/research/kar/actor/runtime/ActorManagerImpl.java</exclude>
 	      </excludes>

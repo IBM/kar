@@ -141,6 +141,16 @@
             <autoReleaseAfterClose>false</autoReleaseAfterClose>
           </configuration>
         </plugin>
+
+	<plugin>
+	  <groupId>org.apache.maven.plugins</groupId>
+	  <artifactId>maven-compiler-plugin</artifactId>
+	  <version>${version.maven-compiler-plugin}</version>
+	  <configuration>
+	    <release>${version.java-compiler}</release>
+	  </configuration>
+        </plugin>
+
       </plugins>
     </pluginManagement>
   </build>
