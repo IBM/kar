@@ -70,6 +70,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${version.maven-javadoc-plugin}</version>
 	    <configuration>
               <!-- exclude packages that are not included in this profile -->
 	      <excludePackageNames>com.ibm.research.kar.actor.runtime.quarkus</excludePackageNames>
