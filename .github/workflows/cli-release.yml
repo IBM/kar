@@ -1,0 +1,60 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+    - 'testv*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Make CLI Release
+
+jobs:
+  build:
+    name: Make CLI Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build CLI
+        run: |
+          KAR_VERSION=${{ github.ref }} ./ci/build-cli-release.sh
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: true
+      - name: Upload MacOS amd64
+        id: upload-mac-amd64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./core/build/kar-mac-amd64.zip
+          asset_name: kar-mac-amd64.zip
+          asset_content_type: application/zip
+      - name: Upload Windows amd64
+        id: upload-windows-amd64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./core/build/kar-windows-amd64.zip
+          asset_name: kar-windows-amd64.zip
+          asset_content_type: application/zip
+      - name: Upload Linux amd64
+        id: upload-linux-amd64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} 
+          asset_path: ./core/build/kar-linux-amd64.tgz
+          asset_name: kar-${{ github.ref }}-linux-amd64.tgz
+          asset_content_type: application/gzip
+
+
