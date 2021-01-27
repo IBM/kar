@@ -31,7 +31,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: false
+          draft: true
           prerelease: false
       - name: Upload MacOS amd64
         id: upload-mac-amd64
