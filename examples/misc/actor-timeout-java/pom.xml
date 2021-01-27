@@ -6,7 +6,7 @@
 
 	<groupId>com.ibm.research.kar</groupId>
 	<artifactId>actor-timeout</artifactId>
-	<version>0.5.0-SNAPSHOT</version>
+	<version>0.6.0-SNAPSHOT</version>
 	<packaging>war</packaging>
 
 	<properties>
@@ -19,7 +19,7 @@
 		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
 		<version.microprofile>3.3</version.microprofile>
 		<liberty.var.app.context.root>/</liberty.var.app.context.root>
-		<version.kar-java-sdk>0.5.0-SNAPSHOT</version.kar-java-sdk>
+		<version.kar-java-sdk>0.6.0</version.kar-java-sdk>
 	</properties>
 
 	<dependencies>
