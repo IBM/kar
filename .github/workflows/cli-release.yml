@@ -2,7 +2,7 @@ on:
   push:
     # Sequence of patterns matched against refs/tags
     tags:
-    - 'testv*' # Push events to matching v*, i.e. v1.0, v20.15.10
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 name: Make CLI Release
 
@@ -19,7 +19,7 @@ jobs:
           go-version: '1.15'
       - name: Get Version
         id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/testv}
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v}
       - name: Build CLI
         run: |
           KAR_VERSION=${{ steps.get_version.outputs.VERSION }} ./ci/build-cli-release.sh
@@ -31,8 +31,8 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: true
-          prerelease: true
+          draft: false
+          prerelease: false
       - name: Upload MacOS amd64
         id: upload-mac-amd64
         uses: actions/upload-release-asset@v1
