@@ -10,6 +10,7 @@ jobs:
   build:
     name: Make CLI Release
     runs-on: ubuntu-latest
+    if: github.repository == "IBM/kar"
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
