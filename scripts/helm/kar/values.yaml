@@ -32,12 +32,11 @@ redis:
     password: 'mustOverrideIfInternalIsFalse'
 
 kar:
+  version: 0.2.1
   injector:
     replicaCount: 1
-    imageName: 'localhost:5000/kar/kar-injector'
-    imageTag: 'latest'
-    sidecarImageName: 'localhost:5000/kar/kar-sidecar'
-    sidecarImageTag: 'latest'
+    imageName: 'quay.io/ibm/kar-injector'
+    sidecarImageName: 'quay.io/ibm/kar-sidecar'
 
 global:
   kafkaExternalHost: localhost

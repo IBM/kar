@@ -26,7 +26,7 @@ ROOTDIR="$SCRIPTDIR/.."
 version=$(kar version)
 case "$version" in
   unofficial)
-    helmargs=""
+    helmargs="$helmargs --set-string kar.injector.imageName=localhost:5000/kar/kar-injector --set-string kar.injector.sidecarImageName=localhost:5000/kar/kar-sidecar"
     kartag="latest";;
   *)
     helmargs="$helmargs --set-string kar.injector.imageName=quay.io/ibm/kar-injector --set-string kar.injector.sidecarImageName=quay.io/ibm/kar-sidecar"
@@ -85,7 +85,7 @@ EOF
     exit 0
 fi
 
-helmargs="--set-string kar.injector.imageTag=$kartag --set-string kar.injector.sidecarImageTag=$kartag $helmargs"
+helmargs="$helmargs --set-string kar.version=$kartag "
 
 cd $ROOTDIR
 
