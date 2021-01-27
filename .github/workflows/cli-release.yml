@@ -17,9 +17,12 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '1.15'
+      - name: Get Version
+        id: get_version
+        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/testv}
       - name: Build CLI
         run: |
-          KAR_VERSION=${{ github.ref }} ./ci/build-cli-release.sh
+          KAR_VERSION=${{ steps.get_version.outputs.VERSION }} ./ci/build-cli-release.sh
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -27,7 +30,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
           draft: true
           prerelease: true
       - name: Upload MacOS amd64
@@ -58,7 +61,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} 
           asset_path: ./core/build/kar-linux-amd64.tgz
-          asset_name: kar-${{ github.ref }}-linux-amd64.tgz
+          asset_name: kar-linux-amd64.tgz
           asset_content_type: application/gzip
 
 
