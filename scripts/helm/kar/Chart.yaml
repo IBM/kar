@@ -18,8 +18,8 @@ apiVersion: v2
 name: kar
 description: Kubernetes Application Runtime (KAR)
 type: application
-version: 0.2.1
-appVersion: 0.2.1
+version: 0.6.0
+appVersion: 0.6.0
 dependencies:
 - name: kar-kafka
   condition: kafka.internal
