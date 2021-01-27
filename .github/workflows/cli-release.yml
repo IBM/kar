@@ -10,7 +10,7 @@ jobs:
   build:
     name: Make CLI Release
     runs-on: ubuntu-latest
-    if: github.repository == "IBM/kar"
+    if: github.repository == 'dgrove-oss/kar'
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -32,7 +32,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: true
+          draft: false
           prerelease: false
       - name: Upload MacOS amd64
         id: upload-mac-amd64
