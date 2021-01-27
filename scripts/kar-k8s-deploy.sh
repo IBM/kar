@@ -91,29 +91,8 @@ cd $ROOTDIR
 
 kubectl create namespace kar-system 2>/dev/null || true
 
-helm install kar scripts/helm/kar -n kar-system $helmargs
-
-
-waitForPod() {
-    while true; do
-        POD_STATUS=$(kubectl -n kar-system get pods -l name="$1" -o wide | grep "$1" | awk '{print $3}')
-        READY_COUNT=$(kubectl -n kar-system get pods -l name="$1" -o wide | grep "$1" | awk '{print $2}' | awk -F / '{print $1}')
-        if [[ "$POD_STATUS" == "Running" ]] && [[ "$READY_COUNT" != "0" ]]; then
-            echo "$1 is ready."
-            break
-        fi
-        echo "Waiting for $1 to be ready."
-        kubectl get pods -n kar-system -o wide
-        sleep 10
-    done
-}
-
-if [ "$injectorOnly" == "" ]; then
-    waitForPod "kar-redis"
-    waitForPod "kar-kafka"
-fi
-waitForPod "kar-injector"
-
+echo "Deploying KAR runtime; this may take several minutes"
+helm install kar scripts/helm/kar --wait -n kar-system $helmargs
 
 # Enable default namespace
 echo "Enabling default namespace for KAR applications"
