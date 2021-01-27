@@ -4,7 +4,7 @@
   <parent>
     <groupId>com.ibm.research.kar</groupId>
     <artifactId>kar-java</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.6.0</version>
   </parent>
 
   <artifactId>kar-rest-client</artifactId>
