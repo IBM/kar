@@ -37,8 +37,8 @@ spec:
       - name: kar.ibm.com.image-pull
       containers:
       - name: injector
-        image: {{ printf "%s:%s" .Values.kar.injector.imageName .Values.kar.injector.imageTag }}
-        command: ["/kar/bin/kar-injector", "-tls_cert_file", "/var/run/secrets/kar.ibm.com/tls/tls.crt", "-tls_private_key_file", "/var/run/secrets/kar.ibm.com/tls/tls.key", "-port", "8443", "-sidecar_image", "{{ .Values.kar.injector.sidecarImageName }}", "-sidecar_image_tag", "{{ .Values.kar.injector.sidecarImageTag }}" ]
+        image: {{ printf "%s:%s" .Values.kar.injector.imageName .Values.kar.version }}
+        command: ["/kar/bin/kar-injector", "-tls_cert_file", "/var/run/secrets/kar.ibm.com/tls/tls.crt", "-tls_private_key_file", "/var/run/secrets/kar.ibm.com/tls/tls.key", "-port", "8443", "-sidecar_image", "{{ .Values.kar.injector.sidecarImageName }}", "-sidecar_image_tag", "{{ .Values.kar.version }}" ]
         ports:
         - containerPort: 8443
           name: webhook-api
