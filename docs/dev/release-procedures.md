@@ -1,0 +1,95 @@
+# Making a KAR Release
+
+## Release Contents
+
+A release of the core KAR system generates a number of artifacts:
+
++ A source release (github release page)
++ Prebuilt `kar` cli (github release page)
++ Tagged container images (quay.io)
++ Java SDK: com.ibm.research.kar pom/jars (central repository)
++ JavaScript SDK: kar-sdk (npmjs)
++ Helm chart for deploying kar (gh-pages branch)
++ Swagger specification (gh-pages branch)
+
+## Release Procedures
+
+### Prepare and publish SDKs
+
+#### Java SDK
+
+1. Bump version `mvn versions:set -DnewVersion=x.y.z`
+2. Publish to The Central Repository
+    + `mvn clean deploy -P release`
+    + `mvn nexus-staging:close -DstagingRepositoryId=comibmresearchkar-NNNN`
+    + `mvn nexus-staging:release -DstagingRepositoryId=comibmresearchkar-NNNN`
+3. Commit version bump to main branch
+
+#### JavaScript SDK
+
+1. update `version` in package.json and package-lock.json
+2. Commit version bump to main branch
+3. Publish to npmjs
+   + `npm login`
+   + `npm publish --dry-run`
+   + Verify that what will be being published looks right:
+```
+npm notice 📦  kar-sdk@0.6.0
+npm notice === Tarball Contents ===
+npm notice 11.4kB LICENSE.txt
+npm notice 685B   README.md
+npm notice 14.3kB index.d.ts
+npm notice 17.2kB index.js
+npm notice 728B   package.json
+npm notice === Tarball Details ===
+npm notice name:          kar-sdk
+npm notice version:       0.6.0
+npm notice filename:      kar-sdk-0.6.0.tgz
+npm notice package size:  11.1 kB
+npm notice unpacked size: 44.3 kB
+npm notice shasum:        2aa258e5df3b80b847d23fe88e62d2c42e7b5284
+npm notice integrity:     sha512-Bjj8oYJ1Ghn3o[...]bQXNEgOyrsCzg==
+npm notice total files:   5
+```
+   + `npm publish --public`
+
+### Publish Helm Chart
+
+1. Update version numbers in:
+    + scripts/helm/kar/Chart.yaml
+    + scripts/helm/kar/values.yaml
+2. Commit change to main branch
+3. `helm package scripts/charts/kar`
+4. switch to gh-pages branch
+5. copy in kar-x.y.z.tgz
+5. `helm repo index charts --url https://ibm.github.io/kar/charts`
+6. Commit updated index.yaml and new kar-x.y.z.tgz to gh-pages
+
+### Update examples to use new SDKs
+
+1. examples/*java*
+   + pom.xml: update version.kar-java-sdk to x.y.z
+   + `mvn versions:set -DnewVersion=x.y.z`
+
+2. examples/*js*
+   + update package.json and package-lock.json
+
+3. PR version bumps; all should run successfully. Merge.
+
+
+### Tag repository
+
+1. `git tag -s vx.y.z`
+2. `git push --tags upstream`
+3. Tags starting with `v` trigger build processes that:
+    * push tagged images to quay.io (via travis-ci)
+    * make a github release with source and cli tarballs (via github actions)
+   Monitor to make sure all of these builds are successful.
+
+### Cleanup
+
+1. Change Java-SDK pom to x.y.(z+1)-SNAPSHOT
+`mvn versions:set -DnewVersion=x.y.(+1)-SNAPSHOT`
+
+2. PR version changes to main.
+
