@@ -52,20 +52,14 @@ or even spanning multiple execution environments in a
 
 1. Have an installation of Docker Desktop (Mac/Windows) or Docker Engine (Linux).
 
-2.  You will need a local clone of the KAR git repository:
-```shell
-git clone https://github.com/IBM/kar.git
-cd kar
-```
-Unless otherwise noted, all shell commands in this document assume
-you are at the top-level directory of your local clone of the kar repo.
+2. Download the `kar` cli for your platform and the source release
+   from the most recent KAR release at https://github.com/ibm/kar/releases.
 
-3. You will need the `kar` cli.  Currently you must build `kar` from
-source, which requires a Go development environment to be available on
-your machine. If you have Go installed, then build `kar` with
-```shell
-make cli
-```
+3. Put the `kar` cli binary on your path.
+
+4. Unzip/untar the source release. Unless otherwise noted,
+   all shell commands in this document assume you are at the top-level
+   directory of the KAR source release.
 
 # Local Clusterless Deployment
 
@@ -128,12 +122,6 @@ For more details on the Node.js example, see its [README](../examples/service-he
 ### Prerequisites
 
 1. You will need Java 11 and Maven 3.6+ installed.
-
-### Build the Java SDK and publish to your local .m2 repository
-
-```shell
-make installJavaSDK
-```
 
 ### Run the Hello World Java Example
 
