@@ -36,10 +36,6 @@ ROOTDIR="$SCRIPTDIR/.."
 
 . $ROOTDIR/scripts/kar-env-local.sh
 
-echo "Building Java KAR SDK"
-cd $ROOTDIR/sdk-java
-mvn clean install
-
 echo "Building Java Hello Service"
 cd $ROOTDIR/examples/service-hello-java
 mvn clean package
@@ -59,7 +55,7 @@ run $PID kar run -app java-hello java -jar target/kar-hello-client-jar-with-depe
 
 #################
 
-echo "Building Java Dining Philsopophers"
+echo "Building Java Dining Philsopophers against released Java-SDK"
 cd $ROOTDIR/examples/actors-dp-java
 mvn clean package
 
@@ -74,3 +70,25 @@ echo "Building and launching test harness"
 cd $ROOTDIR/examples/actors-dp-js
 npm install --prod
 run $PID kar run -app dp node tester.js
+
+#################
+
+echo "Building Java KAR SDK locally"
+cd $ROOTDIR/sdk-java
+mvn clean install
+
+echo "Building Java Dining Philsopophers against local Java KAR SDK"
+cd $ROOTDIR/examples/actors-dp-java
+mvn -Dversion.kar-java-sdk=0.6.1-SNAPSHOT clean package
+
+echo "Launching Java DP Server"
+kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
+PID=$!
+
+# Sleep 10 seconds to given liberty time to come up
+sleep 10
+
+echo "Building and launching test harness"
+cd $ROOTDIR/examples/actors-dp-js
+npm install --prod
+run $PID kar run -app dp-local node tester.js

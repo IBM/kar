@@ -91,6 +91,7 @@ KAR's REST API to make the service call via a `kar` sidecar.
 The server code in HelloServices.java uses standard JAX-RS annotations like `@POST`,
 `@Path` and `@Consumes` to specify the endpoints provided by the server.
 
-One KAR-specific detail is the use of the `KAR_APP_PORT` environment variable
-in the specification of the `httpPort` in server.xml.  This enables the `kar` sidecar
-to control the port that the JVM process will use to accept incoming requests.
+The only KAR-specific detail is the use of the `KAR_APP_PORT` environment variable
+in the specification of the `httpPort` in [server.xml](./server/src/main/liberty/config/server.xml).
+This enables the `kar` sidecar to control the port that the JVM process
+will use to accept incoming requests.
