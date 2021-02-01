@@ -136,8 +136,8 @@ minimal overheads.
   for deploying KAR-based applications on a wide range of platforms.
 + Check out our [examples](examples/README.md).
 + Read about the KAR [Programming Model](docs/KAR.md).
-+ Browse the Swagger specification of the [KAR
-  API](https://ibm.github.io/kar/api/redoc/).
++ Check out some larger [applications](https://github.com/IBM/kar-apps) that use KAR.
++ Browse the Swagger specification of the [KAR API](https://ibm.github.io/kar/api/redoc/).
 
 # License
 
