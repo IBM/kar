@@ -1,115 +1,76 @@
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
+	 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
 
-	<groupId>com.ibm.research.kar.example</groupId>
-	<artifactId>kar-hello-server</artifactId>
-	<version>0.6.0-SNAPSHOT</version>
-	<packaging>war</packaging>
+  <groupId>com.ibm.research.kar.example</groupId>
+  <artifactId>kar-hello-server</artifactId>
+  <version>0.6.0-SNAPSHOT</version>
+  <packaging>war</packaging>
 
-        <name>kar-hello-server </name>
-        <description>KAR Greeting Service example server</description>
-        <url>https://github.com/IBM/kar/</url>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <failOnMissingWebXml>false</failOnMissingWebXml>
 
-       <licenses>
-          <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-          </license>
-        </licenses>
+    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
+    <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
+    <version.microprofile>3.3</version.microprofile>
+    <version.slf4j>1.7.25</version.slf4j>
+    <jaeger.version>0.34.0</jaeger.version>
+    <!-- Liberty configuration -->
+    <liberty.var.app.context.root>/</liberty.var.app.context.root>
+    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+    <version.java-compiler>11</version.java-compiler>
+    <version.glassfish-json>1.1.4</version.glassfish-json>
+    <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+  </properties>
 
-        <developers>
-          <developer>
-            <name>Paul Castro</name>
-            <email>castrop@us.ibm.com</email>
-            <organization>IBM Research</organization>
-            <organizationUrl>https://www.research.ibm.com</organizationUrl>
-          </developer>
-          <developer>
-            <name>Dave Grove</name>
-            <email>groved@us.ibm.com</email>
-            <organization>IBM Research</organization>
-            <organizationUrl>https://www.research.ibm.com</organizationUrl>
-          </developer>
-          <developer>
-            <name>Olivier Tardieu</name>
-            <email>tardieu@us.ibm.com</email>
-            <organization>IBM Research</organization>
-            <organizationUrl>https://www.research.ibm.com</organizationUrl>
-          </developer>
-        </developers>
+  <dependencies>
+    <!-- OpenLiberty dependencies -->
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>8.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.microprofile</groupId>
+      <artifactId>microprofile</artifactId>
+      <version>${version.microprofile}</version>
+      <type>pom</type>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
 
-        <scm>
-          <connection>scm:git:git://github.com/IBM/kar.git</connection>
-          <developerConnection>scm:git:ssh://github.com:IBM/kar.git</developerConnection>
-          <url>http://github.com/IBM/kar/tree/main</url>
-        </scm>
-
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<failOnMissingWebXml>false</failOnMissingWebXml>
-
-		<version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
-		<version.maven-war-plugin>3.3.0</version.maven-war-plugin>
-		<version.microprofile>3.3</version.microprofile>
-		<version.kar-java-sdk>0.6.0</version.kar-java-sdk>
-		<version.slf4j>1.7.25</version.slf4j>
-		<jaeger.version>0.34.0</jaeger.version>
-		<!-- Liberty configuration -->
-		<liberty.var.app.context.root>/</liberty.var.app.context.root>
-		<version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
-		<version.java-compiler>11</version.java-compiler>
-		<version.glassfish-json>1.1.4</version.glassfish-json>
-		<version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
-	</properties>
-
-	<dependencies>
-		<!-- Provided dependencies -->
-		<dependency>
-			<groupId>javax</groupId>
-			<artifactId>javaee-api</artifactId>
-			<version>8.0</version>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.microprofile</groupId>
-			<artifactId>microprofile</artifactId>
-			<version>${version.microprofile}</version>
-			<type>pom</type>
-			<scope>provided</scope>
-		</dependency>
-	</dependencies>
-
-	<build>
-		<finalName>${project.artifactId}</finalName>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>${version.maven-compiler-plugin}</version>
-				<configuration>
-					<release>${version.java-compiler}</release>
-				</configuration>
-			</plugin>
-			<plugin>
-				<artifactId>maven-war-plugin</artifactId>
-				<version>${version.maven-war-plugin}</version>
-			</plugin>
-			<plugin>
-				<groupId>io.openliberty.tools</groupId>
-				<artifactId>liberty-maven-plugin</artifactId>
-				<version>${version.liberty-maven-plugin}</version>
-				<configuration>
-					<runtimeArtifact>
-						<groupId>io.openliberty</groupId>
-						<artifactId>openliberty-runtime</artifactId>
-						<type>zip</type>
-					</runtimeArtifact>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
+  <build>
+    <finalName>${project.artifactId}</finalName>
+    <plugins>
+      <plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-compiler-plugin</artifactId>
+	<version>${version.maven-compiler-plugin}</version>
+	<configuration>
+	  <release>${version.java-compiler}</release>
+	</configuration>
+      </plugin>
+      <plugin>
+	<artifactId>maven-war-plugin</artifactId>
+	<version>${version.maven-war-plugin}</version>
+      </plugin>
+      <plugin>
+	<groupId>io.openliberty.tools</groupId>
+	<artifactId>liberty-maven-plugin</artifactId>
+	<version>${version.liberty-maven-plugin}</version>
+	<configuration>
+	  <runtimeArtifact>
+	    <groupId>io.openliberty</groupId>
+	    <artifactId>openliberty-runtime</artifactId>
+	    <type>zip</type>
+	  </runtimeArtifact>
+	</configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>
