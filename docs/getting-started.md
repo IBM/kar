@@ -57,9 +57,14 @@ or even spanning multiple execution environments in a
 
 3. Put the `kar` cli binary on your path.
 
-4. Unzip/untar the source release. Unless otherwise noted,
-   all shell commands in this document assume you are at the top-level
-   directory of the KAR source release.
+4. Unzip/untar the source release.
+
+Unless otherwise noted, all shell commands in this document assume you
+are at the top-level directory of the KAR source release.
+
+To ensure the instructions are compatible with your version of KAR,
+always consult the `docs/getting-started.md` in your local copy; not
+the online version which tracks the tip of the KAR `main` branch.
 
 # Local Clusterless Deployment
 
