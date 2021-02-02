@@ -152,10 +152,14 @@ the following annotations:
    + kar.ibm.com/runtimePort: sets the `-runtime_port` argument of `kar run`
    + kar.ibm.com/extraArgs: additional command line arguments for `kar run`
 
-By default, the KAR runtime images will be pulled from our public quay.io
-image repository. It is also possible to configure KAR to pull its runtime
-images from a private registry; this results in an additional
-`kar.ibm.com.image-pull` secret being created.
+If you are using a release version of the `kar` cli then, by default,
+the matching KAR runtime images will be pulled from our public quay.io
+image repository. If you have built your own `kar` cli from source then,
+by default, the KAR runtime images will be pulled from your local image
+repository that is expected to be running at `localhost:5000`. It is also
+possible to configure KAR to pull its runtime images from a non-local
+private registry; this results in an additional `kar.ibm.com.image-pull`
+secret being created.
 
 After the KAR runtime system is successfully deployed to the
 `kar-system` namespace, you can enable other namespaces
@@ -208,6 +212,14 @@ $ kubectl delete -f deploy/client-quay.yaml
 job.batch "hello-client" deleted
 $ kubectl delete -f deploy/server-quay.yaml
 pod "hello-server" deleted
+```
+
+If you have built your own docker images and pushed
+them to your `localhost:5000 registry`,
+you use them by doing:
+```
+$ kubectl apply -f deploy/server.yaml
+$ kubectl apply -f deploy/client.yaml
 ```
 
 ### Undeploying
@@ -278,7 +290,7 @@ or individually `docker push` the image to the localhost:5000 registry.
 
 Next, deploy KAR in dev mode by doing:
 ```shell
-./scripts/kar-k8s-deploy.sh -dev
+./scripts/kar-k8s-deploy.sh
 ```
 
 #### Run a containerized example
@@ -397,7 +409,7 @@ wraps `ibmcloud ce` to simplify the process. It automatically targets
 the current Code Engine project (change the targeted project with
 `ibmcloud ce project target <project-name>`).
 ```shell
-./scripts/kar-ce-run.sh -app hello -image TODO/examples/js/service-hello -name hello-js-server -service greeter
+./scripts/kar-ce-run.sh -app hello -image quay.io/ibm/kar-examples-js-service-hello -name hello-js-server -service greeter
 ```
 
 Once the server component is deployed, you can use the `kar` cli to
