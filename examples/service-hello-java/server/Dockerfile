@@ -24,6 +24,7 @@ FROM $JAVA_BUILDER as builder
 
 WORKDIR /kar/app
 COPY pom.xml ./
+RUN mvn -q dependency:go-offline
 COPY src src
 RUN mvn -q package
 
