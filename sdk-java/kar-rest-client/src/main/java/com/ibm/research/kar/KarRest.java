@@ -370,4 +370,11 @@ public interface KarRest extends AutoCloseable {
 	@Path("system/shutdown")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
 	public Response shutdown();
+
+	@GET
+	@Path("system/information/{component}")
+	@ClientHeaderParam(name = "Accepts", value = "application/json")
+	@Retry(maxRetries = KarConfig.MAX_RETRY)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response systemInformation(@PathParam("component") String component);
 }
