@@ -532,6 +532,12 @@ type response200StateSetMultipleResult struct {
 	NumberCreated int
 }
 
+// swagger:response response200SystemInfoResult
+type response200SystemInfoResult struct {
+	// Returns information about a system component
+	ComponentInfo interface{}
+}
+
 // swagger:response response201
 type success201 struct {
 }

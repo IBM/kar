@@ -2120,10 +2120,32 @@
           "system"
         ],
         "summary": "health",
-        "operationId": "isSystemHealth",
+        "operationId": "idSystemHealth",
         "responses": {
           "200": {
             "$ref": "#/responses/response200"
+          }
+        }
+      }
+    },
+    "/v1/system/information/{component}": {
+      "get": {
+        "description": "### System information\n\nReturns information about a specified component, controlled by the call path",
+        "produces": [
+          "text/plain",
+          "application/json"
+        ],
+        "schemes": [
+          "http"
+        ],
+        "tags": [
+          "system"
+        ],
+        "summary": "information",
+        "operationId": "idSystemInfo",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/response200SystemInfoResult"
           }
         }
       }
@@ -2555,6 +2577,16 @@
       "headers": {
         "Body": {
           "description": "The subscription"
+        }
+      }
+    },
+    "response200SystemInfoResult": {
+      "schema": {
+        "type": "object"
+      },
+      "headers": {
+        "ComponentInfo": {
+          "description": "Returns information about a system component"
         }
       }
     },

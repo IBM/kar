@@ -49,7 +49,7 @@ func routeImplShutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 	cancel()
 }
 
-// swagger:route GET /v1/system/health system isSystemHealth
+// swagger:route GET /v1/system/health system idSystemHealth
 //
 // health
 //
@@ -75,9 +75,21 @@ func routeImplPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 	fmt.Fprint(w, "OK")
 }
 
+// swagger:route GET /v1/system/information/{component} system idSystemInfo
+//
+// information
+//
+// ### System information
+//
 // Returns information about a specified component, controlled by the call path
-// Options are given by the cases
-// Format type (text/plain vs application/json) is controlled by Accept header in call
+//
+//     Schemes: http
+//     Produces:
+//     - text/plain
+//     - application/json
+//     Responses:
+//       200: response200SystemInfoResult
+//
 func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	format := "text/plain"
 	if r.Header.Get("Accept") == "application/json" {
