@@ -1155,5 +1155,15 @@ public class Kar {
 		public static void shutdown() {
 			karClient.shutdown();
 		}
+
+		/**
+		 * Get information about a system component.
+		 * @param component
+		 * @return information about the given component
+		 */
+		public static Object information(String component) {
+			Response response = karClient.systemInformation(component);
+			return toValue(response);
+		}
 	}
 }
