@@ -1918,13 +1918,31 @@ paths:
         ### Health-check endpoint
 
         Returns a `200` response to indicate that the KAR runtime processes is healthy.
-      operationId: isSystemHealth
+      operationId: idSystemHealth
       responses:
         "200":
           $ref: '#/responses/response200'
       schemes:
       - http
       summary: health
+      tags:
+      - system
+  /v1/system/information/{component}:
+    get:
+      description: |-
+        ### System information
+
+        Returns information about a specified component, controlled by the call path
+      operationId: idSystemInfo
+      produces:
+      - text/plain
+      - application/json
+      responses:
+        "200":
+          $ref: '#/responses/response200SystemInfoResult'
+      schemes:
+      - http
+      summary: information
       tags:
       - system
   /v1/system/shutdown:
@@ -2066,6 +2084,12 @@ responses:
         description: The subscription
     schema:
       $ref: '#/definitions/source'
+  response200SystemInfoResult:
+    headers:
+      ComponentInfo:
+        description: Returns information about a system component
+    schema:
+      type: object
   response201: {}
   response202:
     description: An asynchronous operation has been accepted for eventual execution
