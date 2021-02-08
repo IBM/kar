@@ -255,7 +255,7 @@ can enable a built-in Kubernetes cluster by checking a box in the UI.
 We can use [kind](https://kind.sigs.k8s.io/) to create a
 virtual Kubernetes cluster using Docker on your development machine.
 
-You will need `kind` 0.9.0 installed locally.
+You will need `kind` 0.10.0 installed locally.
 
 KAR requires specific configuration of `kind`.  We have automated
 this in a script.
