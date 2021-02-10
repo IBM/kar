@@ -138,6 +138,8 @@ minimal overheads.
 + Read about the KAR [Programming Model](docs/KAR.md).
 + Check out some larger [applications](https://github.com/IBM/kar-apps) that use KAR.
 + Browse the Swagger specification of the [KAR API](https://ibm.github.io/kar/api/redoc/).
++ See [Notes for KAR Developers](docs/kar-dev-hints.md) for detailed
+  instructions on how to build KAR for source.
 
 # License
 
