@@ -83,7 +83,7 @@ dockerBuild:
 	make dockerExamples
 
 installJavaSDK:
-	cd sdk-java && mvn -q install
+	cd sdk-java && mvn install
 
 swagger-gen:
 	cd core && swagger generate spec -o ../docs/api/swagger.yaml
