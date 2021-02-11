@@ -20,16 +20,31 @@ This file collects various hints and tips that are useful to
 people who are developing the KAR runtime system, but are not
 relevant to using KAR to build applications.
 
-### Local Development - JavaScript SDK - Yalc
+## Building KAR from source
 
-We use [yalc](https://www.npmjs.com/package/yalc) to keep the example packages
-and the JavaScript SDK package in sync. When making and testing local changes to
-the JavaScript SDK these changes need to be propagated to the examples projects
-using `yalc`. First install `yalc`:
+Download a source tarball or clone this repository. To build the cli run:
+```shell
+make cli
+```
+To build and push the docker images to the local registry run:
+```shell
+make docker
+```
+
+## Developing the JavaScript SDK
+
+The JavaScript examples included is this repository are configured to install
+the latest release of the `kar-sdk` NPM package.
+
+In order to run these examples against a local copy of the JavaScript SDK code,
+it is necessary to alter the `kar-sdk` configuration specified in the
+`package.json` files for the examples. We recommend using
+[yalc](https://www.npmjs.com/package/yalc) to manage this process. First install
+`yalc`:
 ```shell
 $ npm i -g yalc
 ```
-Then configure `yalc` for `KAR`:
+Then configure `yalc` for KAR and the examples projets to use `yalc`:
 ```shell
 ./scripts/setup-yalc.sh
 ```
@@ -39,14 +54,14 @@ cd sdk-js
 yalc push
 ```
 
-### Local Development - Running test cases
+## Running test cases
 
 The scripts in the `ci` directory are a good way
 execute test cases during development.
 
-### Swagger API documentation
+## Swagger API documentation
 
-We generate Swagger documentating the KAR REST APIs
+We generate Swagger documenting the KAR REST APIs
 from comments/markup in the go code in core/internal/runtime.
 
 The generated files are committed to git in docs/api to

@@ -22,10 +22,11 @@ ROOTDIR="$SCRIPTDIR/.."
 cd $ROOTDIR/sdk-js
 yalc publish
 
-EXAMPLES=$(find $ROOTDIR/examples -name .yalc -print0 -maxdepth 3 | xargs -0 -n1 dirname)
+EXAMPLES=$(find $ROOTDIR/examples -name package.json -print0 -maxdepth 3 | xargs -0 -n1 dirname)
 
 for e in $EXAMPLES
 do
     cd $e
-    yalc update
+    yalc add kar-sdk
+    npm install
 done
