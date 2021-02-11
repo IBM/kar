@@ -54,6 +54,35 @@ cd sdk-js
 yalc push
 ```
 
+## Developing the Java SDK
+
+The Java  examples included is this repository are configured to
+depend on the latest release of the `com.ibm.research.kar` maven packages.
+
+To run these examples against a local copy of the Java SDK code,
+it is necessary to first build and install a `SNAPSHOT` version of the
+Java SDK maven artifacts and then override the build dependency to use them.
+
+First build and install your local Java SDK SNAPSHOT version with
+```shell
+make installJavaSDK
+```
+
+Then execute the maven command to build the example, with
+the command line override of `-Dversion.kar-java-sdk=x.y.z-SNAPSHOT`
+where `x.y.z-SNAPSHOT` corresponds to the `version` defined in
+[sdk-java/pom.xml](../sdk-java/pom.xml).
+
+For example, to run the actors-dp-java server using a locally built
+Java SDK, first build it with the version override:
+```shell
+mvn package -Dversion.kar-java-sdk=x.y.z-SNAPSHOT
+```
+Then run it normally:
+```
+kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
+```
+
 ## Running test cases
 
 The scripts in the `ci` directory are a good way
