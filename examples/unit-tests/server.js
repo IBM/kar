@@ -16,7 +16,7 @@
 
 const express = require('express')
 const { actor, events, sys } = require('kar-sdk')
-const cloudevents = require('cloudevents-sdk/v1')
+const cloudevents = require('cloudevents')
 
 const app = express()
 
@@ -52,7 +52,7 @@ class Foo {
   }
 
   accumulate (event) {
-    this.count += event.spec.payload.data
+    this.count += event.data
   }
 
   async pubsub (topic) {
@@ -61,27 +61,27 @@ class Foo {
     await events.subscribe(this, 'accumulate', topic) // subscribe actor to topic
 
     // Create event 1:
-    const e1 = cloudevents.event()
-      .type(type)
-      .source(source)
-      .id(1)
-      .data(1)
+    var e1 = new cloudevents.CloudEvent({
+      type: type,
+      source: source,
+      data: 1
+    })
     await events.publish(topic, e1)
 
     // Create event 2:
-    const e2 = cloudevents.event()
-      .type(type)
-      .source(source)
-      .id(2)
-      .data(2)
+    var e2 = new cloudevents.CloudEvent({
+      type: type,
+      source: source,
+      data: 2
+    })
     await events.publish(topic, e2)
 
     // Create event 3:
-    const e3 = cloudevents.event()
-      .type(type)
-      .source(source)
-      .id(3)
-      .data(3)
+    var e3 = new cloudevents.CloudEvent({
+      type: type,
+      source: source,
+      data: 3
+    })
     await events.publish(topic, e3)
 
     return 'OK'

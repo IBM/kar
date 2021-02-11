@@ -5,7 +5,7 @@
     "test": "standard"
   },
   "dependencies": {
-    "cloudevents": "^3.2.0",
+    "cloudevents": "^4.0.0",
     "express": "^4.17.1",
     "kar-sdk": "^0.6.0"
   },
