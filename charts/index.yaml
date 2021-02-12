@@ -2,8 +2,31 @@ apiVersion: v1
 entries:
   kar:
   - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2021-02-12T18:53:47.734678-05:00"
+    dependencies:
+    - condition: kafka.internal
+      import-values:
+      - child: kafka
+        parent: kafka
+      name: kar-kafka
+      repository: ""
+    - condition: redis.internal
+      import-values:
+      - child: redis
+        parent: redis
+      name: kar-redis
+      repository: ""
+    description: Kubernetes Application Runtime (KAR)
+    digest: f79e02f50e849d3e8b9720e2e10d5d5779440409e793bb75b2e6cc376186cb9c
+    name: kar
+    type: application
+    urls:
+    - https://ibm.github.io/kar/charts/kar-1.0.0.tgz
+    version: 1.0.0
+  - apiVersion: v2
     appVersion: 0.6.0
-    created: "2021-01-27T17:37:02.169183-05:00"
+    created: "2021-02-12T18:53:47.732394-05:00"
     dependencies:
     - condition: kafka.internal
       import-values:
@@ -26,7 +49,7 @@ entries:
     version: 0.6.0
   - apiVersion: v2
     appVersion: 0.2.1
-    created: "2021-01-27T17:37:02.168438-05:00"
+    created: "2021-02-12T18:53:47.731585-05:00"
     dependencies:
     - condition: kafka.internal
       import-values:
@@ -47,4 +70,4 @@ entries:
     urls:
     - https://ibm.github.io/kar/charts/kar-0.2.1.tgz
     version: 0.2.1
-generated: "2021-01-27T17:37:02.166125-05:00"
+generated: "2021-02-12T18:53:47.730562-05:00"
