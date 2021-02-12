@@ -88,9 +88,9 @@ spec:
         - name: kafka-external
           containerPort: {{ .Values.kafka.portExternal }}
         readinessProbe:
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           timeoutSeconds: 5
-          periodSeconds: 15
+          periodSeconds: 10
           exec:
             command:
             - /opt/kafka/bin/kafka-topics.sh
