@@ -79,7 +79,7 @@ mvn clean install
 
 echo "Building Java Dining Philsopophers against local Java KAR SDK"
 cd $ROOTDIR/examples/actors-dp-java
-mvn -Dversion.kar-java-sdk=1.0.0-SNAPSHOT clean package
+mvn -Dversion.kar-java-sdk=1.0.1-SNAPSHOT clean package
 
 echo "Launching Java DP Server"
 kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
