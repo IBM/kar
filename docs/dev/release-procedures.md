@@ -59,7 +59,7 @@ npm notice total files:   5
     + scripts/helm/kar/Chart.yaml
     + scripts/helm/kar/values.yaml
 2. Commit change to main branch
-3. `helm package scripts/charts/kar`
+3. `helm package scripts/helm/kar`
 4. switch to gh-pages branch
 5. copy in kar-x.y.z.tgz
 5. `helm repo index charts --url https://ibm.github.io/kar/charts`
