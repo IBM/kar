@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "kar-sdk": "^0.1.0"
+    "kar-sdk": "^1.0.0"
   },
   "devDependencies": {
     "mocha": "^7.1.1",
