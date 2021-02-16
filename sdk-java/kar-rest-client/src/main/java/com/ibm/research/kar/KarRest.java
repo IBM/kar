@@ -43,7 +43,7 @@ import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
-@Timeout(600000)
+@Timeout(0)
 @Path("kar/v1")
 @RegisterProvider(JSONProvider.class)
 public interface KarRest extends AutoCloseable {

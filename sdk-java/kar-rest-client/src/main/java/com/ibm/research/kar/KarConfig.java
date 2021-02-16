@@ -26,7 +26,7 @@ public class KarConfig {
 	 */
 
 	// default read/write connection timeout
-	public static int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 600000;
+	public static int DEFAULT_CONNECTION_TIMEOUT_MILLIS = 0;
 
 	// comma-delimited list of actor class names
 	public static String ACTOR_CLASS_STR;
