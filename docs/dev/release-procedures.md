@@ -76,7 +76,6 @@ npm notice total files:   5
 
 3. PR version bumps; all should run successfully. Merge.
 
-
 ### Tag repository
 
 1. `git tag -s vx.y.z`
