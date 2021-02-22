@@ -75,11 +75,13 @@ run $PID kar run -app dp node tester.js
 
 echo "Building Java KAR SDK locally"
 cd $ROOTDIR/sdk-java
-mvn clean install
+mvn clean
+mvn versions:set -DnewVersion=99.99.99-SNAPSHOT
+mvn install
 
 echo "Building Java Dining Philsopophers against local Java KAR SDK"
 cd $ROOTDIR/examples/actors-dp-java
-mvn -Dversion.kar-java-sdk=1.0.1-SNAPSHOT clean package
+mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
 
 echo "Launching Java DP Server"
 kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run &

@@ -15,7 +15,6 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
-        - make installJavaSDK || travis_terminate 1
         - ./ci/testLocal.sh
         - ./ci/testJavaLocal.sh
     - name: in-cluster
