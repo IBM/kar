@@ -49,7 +49,7 @@ We have limited supportfor Quarkus. To run the example locally using Quarkus, fi
 
 Then in one window start up the server code:
 ```shell
- kar run -app dp -actors Cafe,Fork,Philosopher,Table java -jar target/actor-dp-quarkus-0.5.0-SNAPSHOT-runner.jar
+ kar run -app dp -actors Cafe,Fork,Philosopher,Table java -jar target/actor-dp-quarkus-1.0.0-runner.jar
 ```
 In a second window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell

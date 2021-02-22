@@ -6,11 +6,11 @@
 
   <groupId>com.ibm.research.kar.example</groupId>
   <artifactId>kar-timeout-server-front</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <packaging>war</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.0.1-SNAPSHOT</version.kar-java-sdk>
+    <version.kar-java-sdk>1.0.1</version.kar-java-sdk>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <failOnMissingWebXml>false</failOnMissingWebXml>
