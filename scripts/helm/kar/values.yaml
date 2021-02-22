@@ -32,7 +32,7 @@ redis:
     password: 'mustOverrideIfInternalIsFalse'
 
 kar:
-  version: 1.0.0
+  version: 1.0.1
   injector:
     replicaCount: 1
     imageName: 'quay.io/ibm/kar-injector'
