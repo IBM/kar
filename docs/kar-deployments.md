@@ -75,7 +75,7 @@ and the KAR service mesh all run as local processes on your machine.
 
 Deploy Redis, Kafka, and ZooKeeper using docker-compose by running:
 ```shell
-./scripts/docker-composer.start.sh
+./scripts/docker-composer-start.sh
 ```
 
 After the script completes, configure your shell environment
@@ -119,7 +119,7 @@ kar rest -app hello-js post greeter helloJson '{"name": "Alan Turing"}'
 Undeploy the Redis, Kafka, and ZooKeeper containers using
 docker-compose by running:
 ```shell
-./scripts/docker-composer.stop.sh
+./scripts/docker-composer-stop.sh
 ```
 
 # Kubernetes and OpenShift
