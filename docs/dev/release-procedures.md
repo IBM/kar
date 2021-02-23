@@ -14,6 +14,11 @@ A release of the core KAR system generates a number of artifacts:
 
 ## Release Procedures
 
+### Update CHANGELOG.md
+
+1. Summarize non-trivial changes from `git log` into CHANGELOG.md
+2. Commit update CHANGELOG.md to main.
+
 ### Prepare and publish SDKs
 
 #### Java SDK
@@ -84,6 +89,7 @@ npm notice total files:   5
     * push tagged images to quay.io (via travis-ci)
     * make a github release with source and cli tarballs (via github actions)
    Monitor to make sure all of these builds are successful.
+4. Update the git release with the CHANGELOG
 
 ### Cleanup
 
