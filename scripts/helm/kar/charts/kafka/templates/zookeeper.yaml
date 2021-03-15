@@ -77,3 +77,6 @@ spec:
             - /bin/bash
             - -c
             - "echo ruok | nc -w 1 localhost {{ .Values.zk.port }} | grep imok"
+        env:
+        - name: ZOO_4LW_COMMANDS_WHITELIST
+          value: "srvr,ruok"

@@ -17,14 +17,14 @@
 version: "3"
 services:
   zookeeper:
-    image: zookeeper:3.4
+    image: zookeeper:3.5
     hostname: zookeeper
     container_name: kar_zookeeper
     restart: ${RESTART_POLICY:-no}
     networks:
       - kar-bus
   kafka:
-    image: wurstmeister/kafka:2.12-2.4.0
+    image: wurstmeister/kafka:2.13-2.6.0
     hostname: kafka
     container_name: kar_kafka
     restart: ${RESTART_POLICY:-no}

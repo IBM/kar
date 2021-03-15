@@ -17,7 +17,7 @@
 zk:
   imageRegistry: 'docker.io'
   imageName: 'zookeeper'
-  imageTag: '3.4'
+  imageTag: '3.5'
   port: 2181
   serverPort: 2888
   leaderElectionPort: 3888
@@ -25,8 +25,8 @@ zk:
 kafka:
   imageRegistry: 'docker.io'
   imageName: 'wurstmeister/kafka'
-  imageTag: '2.12-2.4.0'
-  version: '2.4.0'
+  imageTag: '2.13-2.6.0'
+  version: '2.6.0'
   portInternal: 9092
   portExternal: 9093
   username: ''
