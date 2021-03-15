@@ -118,7 +118,7 @@ if [ "$actors" != "" ]; then
 fi
 
 runargs="$runargs --label kar.ibm.com/app=$app --network kar-bus --detach"
-runargs="$runargs --env KAFKA_BROKERS=kafka:9092 --env KAFKA_VERSION=2.4.0"
+runargs="$runargs --env KAFKA_BROKERS=kafka:9092 --env KAFKA_VERSION=2.6.0"
 runargs="$runargs --env REDIS_HOST=redis --env REDIS_PORT=6379 --env REDIS_PASSWORD=passw0rd"
 runargs="$runargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 runargs="$runargs --env KAR_EXTRA_ARGS=\"$karargs\""
