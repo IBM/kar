@@ -37,6 +37,7 @@ help=""
 args=""
 parse=true
 injectorOnly=""
+openshift=""
 while [ -n "$1" ]; do
     if [ -z "$parse" ]; then
         args="$args '$1'"
@@ -45,6 +46,7 @@ while [ -n "$1" ]; do
     fi
     case "$1" in
         -h|-help|--help) help="1"; break;;
+        -os|-openshift) openshift="1";;
         -m|-managed|--managed)
             shift;
             serviceKey="$1"
@@ -81,6 +83,7 @@ where [options] includes:
     -m -managed <service-key> use managed EventStreams and Redis accessed via service-key
     -s -set key=value         pass --set key=value to helm install kar
     -r -release <version>     deploy the specified release
+    -os -openshift            deploy to OpenShift
 EOF
     exit 0
 fi
@@ -90,6 +93,12 @@ helmargs="$helmargs --set-string kar.version=$kartag "
 cd $ROOTDIR
 
 kubectl create namespace kar-system 2>/dev/null || true
+
+if [ -n "$openshift" ]; then
+    oc create sa sa-with-anyuid -n kar-system
+    oc adm policy add-scc-to-user anyuid -z sa-with-anyuid -n kar-system
+    helmargs="$helmargs --set-string global.openshift=true"
+fi
 
 echo "Deploying KAR runtime; this may take several minutes"
 helm install kar scripts/helm/kar --wait -n kar-system $helmargs

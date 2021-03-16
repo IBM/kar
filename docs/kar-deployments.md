@@ -185,10 +185,20 @@ You will need a cluster on which you have the cluster-admin role.
 ### Deploying the KAR Runtime System to the `kar-system` namespace
 
 Assuming you have set your kubectl context, you
-can deploy KAR into your cluster in a single command:
+can deploy KAR into your IKS cluster in a single command:
 ```shell
 ./scripts/kar-k8s-deploy.sh
 ```
+For an OpenShift cluster add `-os` to the command:
+```shell
+./scripts/kar-k8s-deploy.sh -os
+```
+
+Note that if you are using a locally built development version of the
+`kar` cli, the `kar-k8s-deploy.sh` script will default to trying to
+deploy images from your localhost docker registry. This registry is
+not reachable from an IBM Cloud cluster, so you will need to add
+`-r <some KAR version number>` to pull the needed KAR images from `quay.io`.
 
 ### Run a containerized example
 
@@ -212,14 +222,6 @@ $ kubectl delete -f deploy/client-quay.yaml
 job.batch "hello-client" deleted
 $ kubectl delete -f deploy/server-quay.yaml
 pod "hello-server" deleted
-```
-
-If you have built your own docker images and pushed
-them to your `localhost:5000 registry`,
-you use them by doing:
-```
-$ kubectl apply -f deploy/server.yaml
-$ kubectl apply -f deploy/client.yaml
 ```
 
 ### Undeploying

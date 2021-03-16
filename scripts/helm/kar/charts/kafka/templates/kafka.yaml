@@ -75,6 +75,9 @@ spec:
         {{- include "kar.selectorLabels" . | nindent 8 }}
         name: kar-kafka
     spec:
+{{- if .Values.global.openshift }}
+      serviceAccountName: sa-with-anyuid
+{{- end }}
       initContainers:
       - name: wait-for-zookeeper
         image: busybox
