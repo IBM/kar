@@ -58,6 +58,9 @@ spec:
         {{- include "kar.selectorLabels" . | nindent 8 }}
         name: kar-zookeeper
     spec:
+{{- if .Values.global.openshift }}
+      serviceAccountName: sa-with-anyuid
+{{- end }}
       containers:
       - name: zk
         image: {{ .Values.zk.imageRegistry }}/{{ .Values.zk.imageName }}:{{ .Values.zk.imageTag }}
