@@ -15,10 +15,14 @@
 -->
 
 # KAR: A Runtime for the Hybrid Cloud
-	
+
+# KAR 1.0.2 - 2021-03-30
++ support for deploying on OpenShift 4.x (#73)
++ upgrade to zookeeper 3.5 and kafka 2.6
+
 # KAR 1.0.1 - 2021-02-22
 + Add testcases for Java timeout scenario (#61, #62)
 + Java SDK: infinite default timeout (#59)
-	
+
 # KAR 1.0.0 - 2021-02-12
-First stable release	
+First stable release
