@@ -29,9 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/cenkalti/backoff/v4"
 	"golang.org/x/net/http2"
 )
 
@@ -53,7 +53,7 @@ func init() {
 		t1.MaxIdleConnsPerHost = 256
 		transport = t1
 	}
-	client = http.Client{Transport: transport} // TODO adjust timeout
+	client = http.Client{Transport: transport}
 	if config.RequestTimeout >= 0 {
 		client.Timeout = config.RequestTimeout
 	}
@@ -106,7 +106,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		var res *http.Response
 		start := time.Now()
 		res, err = client.Do(req)
-		if elapsed := time.Now().Sub(start); elapsed > config.ActorTimeout/2 {
+		if elapsed := time.Now().Sub(start); config.ActorTimeout > 0 && elapsed > config.ActorTimeout/2 {
 			if err != nil {
 				logger.Info("%v with path %v completed with an error in %v seconds", method, msg["path"], elapsed.Seconds())
 			} else {

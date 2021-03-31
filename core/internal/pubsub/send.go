@@ -27,9 +27,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Shopify/sarama"
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/Shopify/sarama"
 )
 
 // ErrRouteToActorTimeout indicates a timeout while waiting for a viable route to an Actor type.
@@ -55,16 +55,25 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 		ch := tick
 		mu.RUnlock()
 		logger.Info("no sidecar for service %s, waiting for new session", service)
-		select {
-		case <-ch:
-		case <-ctx.Done():
-			err = ctx.Err()
-			return
-		case <-time.After(config.ServiceTimeout):
-			err = ErrRouteToServiceTimeout
-			return
+
+		if config.ServiceTimeout > 0 {
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				err = ctx.Err()
+				return
+			case <-time.After(config.ServiceTimeout):
+				err = ErrRouteToServiceTimeout
+				return
+			}
+		} else {
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				err = ctx.Err()
+				return
+			}
 		}
-		// TODO timeout
 	}
 }
 
@@ -108,14 +117,23 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			ch := tick
 			mu.RUnlock()
 			logger.Info("no sidecar for actor type %s, waiting for new session", t)
-			select {
-			case <-ch:
-			case <-ctx.Done():
-				err = ctx.Err()
-				return
-			case <-time.After(config.ActorTimeout):
-				err = ErrRouteToActorTimeout
-				return
+			if config.ActorTimeout > 0 {
+				select {
+				case <-ch:
+				case <-ctx.Done():
+					err = ctx.Err()
+					return
+				case <-time.After(config.ActorTimeout):
+					err = ErrRouteToActorTimeout
+					return
+				}
+			} else {
+				select {
+				case <-ch:
+				case <-ctx.Done():
+					err = ctx.Err()
+					return
+				}
 			}
 		}
 		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)

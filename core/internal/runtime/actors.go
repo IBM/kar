@@ -98,12 +98,20 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// another session is in progress
 				busy := e.busy // read while holding the lock
 				<-e.lock
-				select {
-				case <-busy: // wait
-				case <-ctx.Done():
-					return nil, false, ctx.Err()
-				case <-time.After(config.ActorTimeout):
-					return nil, false, errActorAcquireTimeout
+				if config.ActorTimeout > 0 {
+					select {
+					case <-busy: // wait
+					case <-ctx.Done():
+						return nil, false, ctx.Err()
+					case <-time.After(config.ActorTimeout):
+						return nil, false, errActorAcquireTimeout
+					}
+				} else {
+					select {
+					case <-busy: // wait
+					case <-ctx.Done():
+						return nil, false, ctx.Err()
+					}
 				}
 				// loop around
 				// no fairness issue trying to reacquire because we waited on busy
