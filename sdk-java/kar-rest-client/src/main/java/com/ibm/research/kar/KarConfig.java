@@ -37,6 +37,9 @@ public class KarConfig {
 	// elide implementation details from actor method stack traces
 	public static boolean SHORTEN_ACTOR_STACKTRACES = true;
 
+	// truncate really long stack traces to avoid exceeding maximum Kafka message size.
+	public static int MAX_BACKTRACE_LENGTH = 750 * 1024;
+
 	/********
 	 * TBD settable variables microprofile-config.properties
 	 */
