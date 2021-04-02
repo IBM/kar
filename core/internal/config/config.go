@@ -137,9 +137,9 @@ var (
 	// Hostname is the name of the host
 	Hostname string
 
-	// RequestTimeout is how long to wait in a Redis/http call before timing out
+	// RequestRetryLimit is how long to retry failing connections in a Redis/http call before giving up
 	// A negative time will apply default durations
-	RequestTimeout time.Duration
+	RequestRetryLimit time.Duration
 
 	// ActorBusyTimeout is how long to wait on a busy actor instance before timing out and returning an error.
 	ActorBusyTimeout time.Duration
@@ -188,7 +188,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.BoolVar(&RedisTLSSkipVerify, "redis_tls_skip_verify", false, "Skip server name verification for Redis when connecting over TLS")
 	f.StringVar(&redisCABase64, "redis_ca_cert", "", "The base64-encoded Redis CA certificate if any")
 
-	f.DurationVar(&RequestTimeout, "timeout", -1*time.Second, "Time to wait before timing out calls")
+	f.DurationVar(&RequestRetryLimit, "request_retry_limit", -1*time.Second, "Time limit on retrying failing redis/http connections (<0 is infinite)")
 	f.DurationVar(&LongRedisOperation, "redis_slow_op_threshold", 1*time.Second, "Threshold for reporting long-running redis operations")
 
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")

@@ -54,8 +54,8 @@ func init() {
 		transport = t1
 	}
 	client = http.Client{Transport: transport}
-	if config.RequestTimeout >= 0 {
-		client.Timeout = config.RequestTimeout
+	if config.RequestRetryLimit >= 0 {
+		client.Timeout = config.RequestRetryLimit
 	}
 }
 
@@ -99,8 +99,8 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 	}
 	var reply *Reply
 	b := backoff.NewExponentialBackOff()
-	if config.RequestTimeout >= 0 {
-		b.MaxElapsedTime = config.RequestTimeout
+	if config.RequestRetryLimit >= 0 {
+		b.MaxElapsedTime = config.RequestRetryLimit
 	}
 	err = backoff.Retry(func() error {
 		var res *http.Response
