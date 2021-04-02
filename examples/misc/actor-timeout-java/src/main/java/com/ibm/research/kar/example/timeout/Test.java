@@ -16,9 +16,9 @@
 
 package com.ibm.research.kar.example.timeout;
 
-import static com.ibm.research.kar.Kar.actorCall;
-import static com.ibm.research.kar.Kar.actorTell;
-import static com.ibm.research.kar.Kar.actorRef;
+import static com.ibm.research.kar.Kar.Actors.call;
+import static com.ibm.research.kar.Kar.Actors.tell;
+import static com.ibm.research.kar.Kar.Actors.ref;
 
 import javax.json.JsonString;
 
@@ -32,22 +32,22 @@ public class Test extends ActorSkeleton {
 
   @Remote public void A() {
     System.out.println("Entering method A");
-    actorCall(this, this, "B"); // synchronous call to self within the same session -> OK
+    call(this, this, "B"); // synchronous call to self within the same session -> OK
     System.out.println("Exiting method A");
   }
 
   @Remote public void B() {
     System.out.println("Entering method B");
-    actorCall(this, "A"); // synchronous call to self in a new session -> deadlock
+    call(this, "A"); // synchronous call to self in a new session -> deadlock
     System.out.println("Exiting method B");
   }
 
   @Remote public void asyncA() {
-    actorTell(this, "A");
+    tell(this, "A");
   }
 
   @Remote public void externalA(JsonString target) {
-    ActorRef other = actorRef("Test", target.getString());
-    actorCall(other, "A");
+    ActorRef other = ref("Test", target.getString());
+    call(other, "A");
   }
 }
