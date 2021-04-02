@@ -25,7 +25,7 @@ kar run -app echo -service echo node server.js
 
 In a second window run:
 ```shell
-kar run -app echo -service_timeout 3600s node client.js
+kar run -app echo node client.js
 ```
 
 In the first window, kill the server while the second request is being

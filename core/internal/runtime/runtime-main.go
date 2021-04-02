@@ -226,7 +226,7 @@ func Main() {
 
 		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
 		appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
-		requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestTimeout.Milliseconds())
+		requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestRetryLimit.Milliseconds())
 		logger.Info("%s %s", runtimePort, appPort)
 
 		wg.Add(1)

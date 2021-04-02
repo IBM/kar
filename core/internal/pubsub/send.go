@@ -56,13 +56,13 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 		mu.RUnlock()
 		logger.Info("no sidecar for service %s, waiting for new session", service)
 
-		if config.ServiceTimeout > 0 {
+		if config.MissingComponentTimeout > 0 {
 			select {
 			case <-ch:
 			case <-ctx.Done():
 				err = ctx.Err()
 				return
-			case <-time.After(config.ServiceTimeout):
+			case <-time.After(config.MissingComponentTimeout):
 				err = ErrRouteToServiceTimeout
 				return
 			}
@@ -117,13 +117,13 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			ch := tick
 			mu.RUnlock()
 			logger.Info("no sidecar for actor type %s, waiting for new session", t)
-			if config.ActorTimeout > 0 {
+			if config.MissingComponentTimeout > 0 {
 				select {
 				case <-ch:
 				case <-ctx.Done():
 					err = ctx.Err()
 					return
-				case <-time.After(config.ActorTimeout):
+				case <-time.After(config.MissingComponentTimeout):
 					err = ErrRouteToActorTimeout
 					return
 				}
