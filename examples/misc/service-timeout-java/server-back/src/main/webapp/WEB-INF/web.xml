@@ -6,10 +6,6 @@
   <display-name>KAR service timeout test</display-name>
 
   <context-param>
-    <param-name>kar-connection-timeout-millis</param-name>
-    <param-value>600000</param-value>
-  </context-param>
-  <context-param>
     <param-name>kar-actor-classes</param-name>
     <param-value>
       com.ibm.research.kar.example.timeout.backend.SlowAdder

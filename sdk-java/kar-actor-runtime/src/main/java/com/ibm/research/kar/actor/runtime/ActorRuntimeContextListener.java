@@ -35,25 +35,37 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 
 	public static final String KAR_ACTOR_CLASSES = "kar-actor-classes";
 	public static final String KAR_ACTOR_TYPES = "kar-actor-types";
-	public static final String KAR_CONNECTION_TIMEOUT = "kar-connection-timeout-millis";
+	public static final String KAR_SIDECAR_CONNECTION_TIMEOUT = "kar-sidecar-connection-timeout-millis";
 	public static final String KAR_SHORTEN_ACTOR_STACKTRACES = "kar-shorten-actor-stacktraces";
+	public static final String KAR_MAX_STACKTRACE_SIZE = "kar-max-stacktrace-size";
 
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
 		ServletContext ctx = servletContextEvent.getServletContext();
 
-		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_CLASSES);
-		KarConfig.ACTOR_TYPE_NAME_STR = ctx.getInitParameter(ActorRuntimeContextListener.KAR_ACTOR_TYPES);
-		String tmp = ctx.getInitParameter(ActorRuntimeContextListener.KAR_SHORTEN_ACTOR_STACKTRACES);
+		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(KAR_ACTOR_CLASSES);
+		KarConfig.ACTOR_TYPE_NAME_STR = ctx.getInitParameter(KAR_ACTOR_TYPES);
+
+		String tmp = ctx.getInitParameter(KAR_SHORTEN_ACTOR_STACKTRACES);
 		if (tmp != null) {
 			KarConfig.SHORTEN_ACTOR_STACKTRACES = Boolean.parseBoolean(tmp);
 		}
 
-		String timeOut = ctx.getInitParameter(ActorRuntimeContextListener.KAR_CONNECTION_TIMEOUT);
+		String timeOut = ctx.getInitParameter(KAR_SIDECAR_CONNECTION_TIMEOUT);
 		if (timeOut != null) {
 			try {
-				logger.info("Setting default connection timeout to " + timeOut);
-				KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS = Integer.parseInt(timeOut);
+				logger.warning("Setting sidecar connection timeout to " + timeOut);
+				KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS = Integer.parseInt(timeOut);
+			} catch (NumberFormatException ex) {
+				ex.printStackTrace();
+			}
+		}
+
+		String backTraceLength = ctx.getInitParameter(KAR_MAX_STACKTRACE_SIZE);
+		if (backTraceLength != null) {
+			try {
+				logger.info("Setting max backtrace length to " + backTraceLength);
+				KarConfig.MAX_STACKTRACE_SIZE = Integer.parseInt(backTraceLength);
 			} catch (NumberFormatException ex) {
 				ex.printStackTrace();
 			}

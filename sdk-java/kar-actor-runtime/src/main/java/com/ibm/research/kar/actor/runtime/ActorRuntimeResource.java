@@ -166,8 +166,8 @@ public class ActorRuntimeResource {
 			PrintWriter pw = new PrintWriter(sw);
 			t.printStackTrace(pw);
 			String backtrace = sw.toString();
-			if (backtrace.length() > KarConfig.MAX_BACKTRACE_LENGTH) {
-				backtrace = backtrace.substring(0, KarConfig.MAX_BACKTRACE_LENGTH) + "\n...Backtrace truncated due to message length restrictions\n";
+			if (backtrace.length() > KarConfig.MAX_STACKTRACE_SIZE) {
+				backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
 			}
 			ro.add("stack", sw.toString());
 			return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro.build()).build();
