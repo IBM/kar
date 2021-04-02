@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.example.timeout.backend;
+package com.ibm.research.kar.example.timeout.middle;
 
 import javax.ws.rs.core.Application;
 import javax.ws.rs.ApplicationPath;
@@ -23,5 +23,5 @@ import javax.ws.rs.ApplicationPath;
  * Simple Greeting Application
  */
 @ApplicationPath("/")
-public class BackendApplication extends Application {
+public class MiddleApplication extends Application {
 }

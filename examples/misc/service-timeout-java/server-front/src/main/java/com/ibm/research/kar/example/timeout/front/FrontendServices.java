@@ -53,8 +53,8 @@ public class FrontendServices {
       jb.add("delay", delay);
       jb.add("data", i);
       System.out.println("Initiating request "+i);
-      JsonObject response = (JsonObject)Kar.Services.call("backend", "echo", jb.build());
-      if (response.getInt("payload") != -i) {
+      JsonObject response = (JsonObject)Kar.Services.call("middle", "doubler", jb.build());
+      if (response.getInt("payload") != (2*i + 2)) {
         System.out.println("Error: unexpected response payload "+response.getInt("payload"));
         return JsonValue.FALSE;
       }
