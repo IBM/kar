@@ -13,6 +13,7 @@
 
   <modules>
     <module>server-back</module>
+    <module>server-middle</module>
     <module>server-front</module>
   </modules>
 

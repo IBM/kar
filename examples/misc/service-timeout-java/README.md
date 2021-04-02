@@ -16,10 +16,13 @@
 
 # Service timeout scenario
 
-A test case for fault tolerance to demonstrate that
-server A making calls to service B via the KAR REST
-API will not notice that service B fails and is restarted.
-
+A skeleton of the component interactions found in the reefer application.
+A front end component invokes a KAR service in the middle server,
+which in turn invokes two actor calls on a backend server.
+Each call can be configured with think times for the middle and
+backend.  By setting these values and/or killing and restarting
+processes we can simulate a variety of failure and timeout
+scenarios in a simple environment.
 
 
 ## Building
@@ -31,24 +34,30 @@ Build the application components by doing `mvn package`
 1. Launch the Backend Server
 ```shell
 cd server-back
-kar run -app jst -service_timeout 3600s -app_port 9080 -service backend mvn liberty:run
+kar run -app jst -actor_timeout 3600s -app_port 9080 -actors SlowAdder mvn liberty:run
 ```
 
-2. Launch the Frontend Server
+2. Launch the Middle Server
 ```shell
-cd server-back
-kar run -app jst -service_timeout 3600s -app_port 9081 -service frontend mvn liberty:run
+cd server-middle
+kar run -app jst -service_timeout 3600s -app_port 9081 -service middle mvn liberty:run
 ```
 
-3. Invoke the runTest method on the frontend
+3. Launch the Frontend Server
+```shell
+cd server-front
+kar run -app jst -service_timeout 3600s -app_port 9082 -service frontend mvn liberty:run
+```
+
+4. Invoke the runTest method on the frontend
 ```shell
 kar rest -app jst -service_timeout 3600s post frontend runTest '{"count":5, "delay":5}'
 ```
 
-4. Wait for a request to be processed; then kill the backend server in
+5. Wait for a request to be processed; then kill the middle and/or backend server in
 the middle of processing a request.
 
-5. After some time (but less than the 3600s timeout), restart the
-backend server. The inflight request should be re-issued and the
+6. After some time (but less than the 3600s timeout), restart the
+killed server(s). The inflight request should be re-issued and the
 frontend server should resume and successfully complete its
 computation.
