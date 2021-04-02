@@ -74,8 +74,8 @@ public class Kar {
 
 		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(Kar.getUri());
 
-		return builder.readTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
-				.connectTimeout(KarConfig.DEFAULT_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
+		return builder.readTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				.connectTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 	}
 
 	protected static URI getUri() {
