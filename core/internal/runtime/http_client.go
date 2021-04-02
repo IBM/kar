@@ -106,7 +106,7 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		var res *http.Response
 		start := time.Now()
 		res, err = client.Do(req)
-		if elapsed := time.Now().Sub(start); config.ActorTimeout > 0 && elapsed > config.ActorTimeout/2 {
+		if elapsed := time.Now().Sub(start); config.ActorBusyTimeout > 0 && elapsed > config.ActorBusyTimeout/2 {
 			if err != nil {
 				logger.Info("%v with path %v completed with an error in %v seconds", method, msg["path"], elapsed.Seconds())
 			} else {

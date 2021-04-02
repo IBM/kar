@@ -141,11 +141,11 @@ var (
 	// A negative time will apply default durations
 	RequestTimeout time.Duration
 
-	// ActorTimeout is how long to wait on a busy actor instance or missing actor type before timing it out and returning an error.
-	ActorTimeout time.Duration
+	// ActorBusyTimeout is how long to wait on a busy actor instance before timing out and returning an error.
+	ActorBusyTimeout time.Duration
 
-	// ServiceTimeout is how long to wait on a busy or missing service before timing it out and returning an error.
-	ServiceTimeout time.Duration
+	// MissingComponentTimeout is how long to wait on a missing service or actor type before timing out and returning an error.
+	MissingComponentTimeout time.Duration
 
 	// GetSystemComponent describes what system information to get
 	GetSystemComponent string
@@ -258,8 +258,8 @@ Available commands:
 		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
-		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy/unknown actors before timing out (0 is infinite)")
-		flag.DurationVar(&ServiceTimeout, "service_timeout", 2*time.Minute, "Time to wait on busy/unknown service before timing out (0 is infinite)")
+		flag.DurationVar(&ActorBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
+		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
 
 	case GetCmd:
 		usage = "kar get [OPTIONS]"
@@ -271,7 +271,8 @@ Available commands:
 		flag.StringVar(&GetOutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
 
 	case InvokeCmd:
-		flag.DurationVar(&ActorTimeout, "actor_timeout", 2*time.Minute, "Time to wait on busy/unknown actors before timing out (0 is infinite)")
+		flag.DurationVar(&ActorBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
+		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
 		usage = "kar invoke [OPTIONS] ACTOR_TYPE ACTOR_ID METHOD [ARGS]"
 		description = "Invoke actor instance"
 
@@ -279,7 +280,7 @@ Available commands:
 		usage = "kar rest [OPTIONS] REST_METHOD SERVICE_NAME PATH [REQUEST_BODY]"
 		description = "Peform a REST operation on a service endpoint"
 		flag.StringVar(&RestBodyContentType, "content_type", "application/json", "Content-Type of request body")
-		flag.DurationVar(&ServiceTimeout, "service_timeout", 2*time.Minute, "Time to wait on busy/unknown service before timing out (0 is infinite)")
+		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
 
 	case PurgeCmd:
 		usage = "kar purge [OPTIONS]"

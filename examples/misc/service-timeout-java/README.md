@@ -34,30 +34,30 @@ Build the application components by doing `mvn package`
 1. Launch the Backend Server
 ```shell
 cd server-back
-kar run -app jst -actor_timeout 3600s -app_port 9080 -actors SlowAdder mvn liberty:run
+kar run -app jst -app_port 9080 -actors SlowAdder mvn liberty:run
 ```
 
 2. Launch the Middle Server
 ```shell
 cd server-middle
-kar run -app jst -service_timeout 3600s -app_port 9081 -service middle mvn liberty:run
+kar run -app jst -app_port 9081 -service middle mvn liberty:run
 ```
 
 3. Launch the Frontend Server
 ```shell
 cd server-front
-kar run -app jst -service_timeout 3600s -app_port 9082 -service frontend mvn liberty:run
+kar run -app jst -app_port 9082 -service frontend mvn liberty:run
 ```
 
 4. Invoke the runTest method on the frontend
 ```shell
-kar rest -app jst -service_timeout 3600s post frontend runTest '{"count":5, "delay":5}'
+kar rest -app jst post frontend runTest '{"count":5, "delay":5}'
 ```
 
-5. Wait for a request to be processed; then kill the middle and/or backend server in
-the middle of processing a request.
+5. Wait for a request to be processed; then kill the middle and/or
+backend server in the middle of processing a request.
 
-6. After some time (but less than the 3600s timeout), restart the
-killed server(s). The inflight request should be re-issued and the
-frontend server should resume and successfully complete its
+6. After an arbitray amount of time (seconds. minutes or hours)
+restart the killed server(s). The inflight request should be re-issued
+and the frontend server should resume and successfully complete its
 computation.

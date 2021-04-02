@@ -98,12 +98,12 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// another session is in progress
 				busy := e.busy // read while holding the lock
 				<-e.lock
-				if config.ActorTimeout > 0 {
+				if config.ActorBusyTimeout > 0 {
 					select {
 					case <-busy: // wait
 					case <-ctx.Done():
 						return nil, false, ctx.Err()
-					case <-time.After(config.ActorTimeout):
+					case <-time.After(config.ActorBusyTimeout):
 						return nil, false, errActorAcquireTimeout
 					}
 				} else {
