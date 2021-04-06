@@ -165,7 +165,6 @@ $ ./deploy/runClientLocally.sh
 
 ```
 $ ./deploy/runServerLocally.sh
-Daves-MacBook-Pro:actors-ykt dgrove$ ./deploy/runServerLocally.sh
 2020/04/24 16:51:09 [WARNING] starting...
 2020/04/24 16:51:11 [INFO] setup session for topic kar_ykt, generation 1, claims [0]
 2020/04/24 16:51:11 [INFO] KAR_RUNTIME_PORT=58417 KAR_APP_PORT=8080
