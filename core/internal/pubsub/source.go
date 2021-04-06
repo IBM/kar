@@ -366,7 +366,7 @@ func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetad
 		entries = append(entries, entry{memberID: memberID})
 	}
 
-	// TODO: Olivier, can this loop be further simplified now that the !e.avoid is gone?
+	// TODO: Can this loop be further simplified now that the !e.avoid is gone?
 	for i, e := range entries {
 		if i != 0 {
 			entries[i] = entries[0]
