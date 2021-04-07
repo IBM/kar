@@ -28,9 +28,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Shopify/sarama"
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/Shopify/sarama"
 )
 
 var (
@@ -212,6 +212,7 @@ type sidecarData struct {
 	Services   []string `json:"services"`
 }
 
+// GetSidecars --
 func GetSidecars(format string) (string, error) {
 	information := make(map[string]*sidecarData)
 
@@ -252,6 +253,7 @@ func GetSidecars(format string) (string, error) {
 	return str.String(), nil
 }
 
+// GetSidecarID --
 func GetSidecarID(format string) (string, error) {
 	if format == "json" || format == "application/json" {
 		return fmt.Sprintf("{\"id\":\"%s\"}", config.ID), nil
