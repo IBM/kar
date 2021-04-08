@@ -40,7 +40,7 @@ const group = "simple-consumer-group"
 
 // Repetitions (must match process B's reps):
 var warmUpReps = 10
-var timedReps = 30
+var timedReps = 100
 
 func populateValues() {
 	if len(kafkaBrokers) == 0 {

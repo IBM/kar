@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar-sdk')
+const { actor, sys, call } = require('kar-sdk')
 
 // retry http requests up to 10 times over 10s
 const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
@@ -22,11 +22,6 @@ const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
 if (!process.env.KAR_RUNTIME_PORT) {
   console.error('KAR_RUNTIME_PORT must be set. Aborting.')
   process.exit(1)
-}
-
-// request url for a given KAR service and route on that service
-function call_url(service, route) {
-  return `http://127.0.0.1:${process.env.KAR_RUNTIME_PORT}/kar/v1/service/${service}/call/${route}`
 }
 
 function sleep(ms) {
@@ -43,12 +38,8 @@ async function measureCall(numDiscardedCalls, numTimedCalls) {
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
     var start = Date.now();
-    result = await fetch(call_url('bench', 'bench-text'), {
-      method: 'POST',
-      body: 'Test',
-      headers: { 'Content-Type': 'text/plain' }
-    })
-    await result.text()
+    result = await call('bench', 'bench-json', { 'body': 'test' })
+    await result
     var callDuation = Date.now() - start;
 
     // Postprocessing.
@@ -75,15 +66,13 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
     var start = Date.now();
-    result = await fetch(call_url('bench', 'bench-text-one-way'), {
-      method: 'POST',
-      body: 'Test',
-      headers: { 'Content-Type': 'text/plain' }
-    })
-    remoteStamp = await result.text()
+    result = await call('bench', 'bench-json-one-way', { 'body': 'test' })
+    remoteStamp = await result
     localStamp = Date.now();
 
     // Postprocessing.
+    // if HTTP2 is enabled then the stamp needs to be extracted like so:
+    remoteStamp = remoteStamp.body
     var oneWayCall = parseInt(remoteStamp) - start;
     var responseCall = localStamp - parseInt(remoteStamp)
     if (i >= numDiscardedCalls) {

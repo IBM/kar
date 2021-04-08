@@ -47,6 +47,11 @@ app.post('/bench-text-one-way', (req, res) => {
   res.send(stamp.toString())
 })
 
+app.post('/bench-json-one-way', (req, res) => {
+  stamp = Date.now()
+  res.json({ 'body': stamp.toString() })
+})
+
 class BenchActor {
   async simpleMethod() {
     return this.count
@@ -76,4 +81,9 @@ app.post('/shutdown', async (_reg, res) => {
 // start server on port $KAR_APP_PORT
 console.log('Starting server...')
 app.use(sys.actorRuntime({ BenchActor }))
-const server = app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+
+// HTTP:
+// const server = app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+
+// HTTP2:
+const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
