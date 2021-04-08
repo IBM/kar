@@ -20,6 +20,7 @@ metadata:
   name: bench-server
   annotations:
     kar.ibm.com/app: kar-bench-js
+    kar.ibm.com/actors: BenchActor
     kar.ibm.com/service: bench
 spec:
   imagePullSecrets:
@@ -27,3 +28,6 @@ spec:
   containers:
   - name: server
     image: quay.io/ibm/kar-bench-js-image
+    env:
+    - name: KAR_EXTRA_ARGS
+      value: -actors BenchActor
