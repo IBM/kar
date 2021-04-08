@@ -21,10 +21,10 @@ kar run -app bench-js node client.js
 
 To run the benchmark, in one window run:
 ```
-kar run -http2 -app bench-js -service bench -actors BenchActor node server.js
+kar run -h2c -app bench-js -service bench -actors BenchActor node server.js
 ```
 
 in another window run:
 ```
-kar run -http2 -app bench-js node client.js
+kar run -h2c -app bench-js node client.js
 ```

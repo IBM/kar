@@ -71,8 +71,10 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
     localStamp = Date.now();
 
     // Postprocessing.
-    // if HTTP2 is enabled then the stamp needs to be extracted like so:
+    // HTTP2: if enabled then the stamp needs to be extracted from the body
+    // explicitly otherwise the time stamp will be in remoteStamp.
     remoteStamp = remoteStamp.body
+
     var oneWayCall = parseInt(remoteStamp) - start;
     var responseCall = localStamp - parseInt(remoteStamp)
     if (i >= numDiscardedCalls) {
