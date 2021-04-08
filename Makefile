@@ -58,7 +58,7 @@ dockerBuildExamples:
 	cd examples/service-hello-java/server && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_HELLO) .
 
 dockerBuildBenchmarks:
-    cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
+	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
 
 dockerPushCore:
 	docker push $(KAR_BASE)
@@ -77,7 +77,7 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JAVA_HELLO)
 
 dockerPushBenchmarks:
-    docker push $(KAR_BENCH_JS_IMAGE)
+	docker push $(KAR_BENCH_JS_IMAGE)
 
 docker:
 	make dockerBuildCore
