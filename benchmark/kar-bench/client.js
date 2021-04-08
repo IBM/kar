@@ -16,9 +16,6 @@
 
 const { actor, sys, call } = require('kar-sdk')
 
-// retry http requests up to 10 times over 10s
-const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
-
 if (!process.env.KAR_RUNTIME_PORT) {
   console.error('KAR_RUNTIME_PORT must be set. Aborting.')
   process.exit(1)
