@@ -26,4 +26,4 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: quay.io/ibm/kar-bench-server-js
+    image: quay.io/ibm/kar-bench-js-image

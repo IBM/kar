@@ -14,24 +14,21 @@
 # limitations under the License.
 #
 
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kar-bench-client
-  labels:
-    name: kar-bench-client
-spec:
-  template:
-    metadata:
-      annotations:
-        kar.ibm.com/app: kar-bench-js
-    spec:
-      restartPolicy: OnFailure
-      imagePullSecrets:
-      - name: kar.ibm.com.image-pull
-      containers:
-      - name: client
-        image: quay.io/ibm/kar-bench-js-image
-        env:
-        - name: MAIN
-          value: client.js
+DOCKER_REGISTRY ?= localhost:5000
+DOCKER_NAMESPACE ?= kar
+DOCKER_IMAGE_PREFIX ?= $(DOCKER_REGISTRY)/$(DOCKER_NAMESPACE)/
+DOCKER_IMAGE_TAG ?= latest
+
+KAR_VERSION ?= unofficial
+
+KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
+
+dockerBuild:
+	docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
+
+dockerPush:
+	docker push $(KAR_BENCH_JS_IMAGE)
+
+docker:
+	make dockerBuild
+	make dockerPush
