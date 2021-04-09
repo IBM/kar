@@ -28,8 +28,12 @@ const kafkaTLSSkipVerify = false
 
 var kafkaUsername = ""
 var kafkaPassword = ""
-var kafkaVersion = "2.2.0"
-var kafkaBrokers = []string{"localhost:31093"}
+var kafkaVersion = "2.6.0"
+
+// Local:
+// var kafkaBrokers = []string{"localhost:31093"}
+// Cluster:
+var kafkaBrokers = []string{}
 
 // Topics. To be created beforehand using script.
 const topic = "simple-topic"

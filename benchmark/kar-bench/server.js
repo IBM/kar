@@ -43,12 +43,12 @@ app.post('/bench-json', (req, res) => {
 })
 
 app.post('/bench-text-one-way', (req, res) => {
-  stamp = Date.now()
+  stamp = new Date().getTime()
   res.send(stamp.toString())
 })
 
 app.post('/bench-json-one-way', (req, res) => {
-  stamp = Date.now()
+  stamp = new Date().getTime()
   res.json({ 'body': stamp.toString() })
 })
 
@@ -58,7 +58,7 @@ class BenchActor {
   }
 
   async timedMethod() {
-    return Date.now().toString()
+    return new Date().getTime().toString()
   }
 
   async activate() {
