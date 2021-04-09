@@ -108,7 +108,7 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls, podIP) {
 
 // main method
 async function main() {
-  podIP = null
+  podIP = process.env.POD_IP
   // If we could call kubectl inside the Job then we could get the
   // pod IP automatically.
   // child = exec('kubectl get pod http-bench-server -o yaml',
