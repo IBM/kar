@@ -28,8 +28,13 @@ const kafkaTLSSkipVerify = false
 
 var kafkaUsername = ""
 var kafkaPassword = ""
-var kafkaVersion = "2.2.0"
-var kafkaBrokers = []string{"localhost:31093"}
+var kafkaVersion = "2.6.0"
+
+// Local:
+// var kafkaBrokers = []string{"localhost:31093"}
+
+// Inside the kind cluster:
+var kafkaBrokers = []string{}
 
 // Topics. To be created beforehand using script.
 const topic = "simple-topic"
@@ -264,6 +269,8 @@ func createProducer() sarama.SyncProducer {
 }
 
 func main() {
+	log.Info("Starting consumer...")
+	log.Infof("Kafka brokers is %v", kafkaBrokers)
 	// Create the event producer.
 	// Set producer to nil if return message is not desired.
 	producer := createProducer()

@@ -14,26 +14,17 @@
 # limitations under the License.
 #
 
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: kar-bench-client
-  labels:
-    name: kar-bench-client
-spec:
-  template:
-    metadata:
-      annotations:
-        kar.ibm.com/app: kar-bench-js
-    spec:
-      restartPolicy: OnFailure
-      imagePullSecrets:
-      - name: kar.ibm.com.image-pull
-      containers:
-      - name: client
-        image: localhost:5000/kar/kar-bench-js-image
-        env:
-        - name: MAIN
-          value: client.js
-        - name: KAR_EXTRA_ARGS
-          value: -h2c
+# Resolve dependencies
+FROM golang:1.15.11-alpine AS build
+RUN apk add git
+RUN go get -v "github.com/Shopify/sarama"
+RUN go get -v "github.com/prometheus/common/log"
+
+# Build executable
+FROM golang:1.15.11-alpine AS builder
+COPY --from=build /go /go
+ENV CGO_ENABLED=0
+WORKDIR /src
+COPY main.go .
+RUN go build -o consumer .
+CMD ["/src/consumer"]

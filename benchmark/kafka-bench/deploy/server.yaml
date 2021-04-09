@@ -14,26 +14,20 @@
 # limitations under the License.
 #
 
-apiVersion: batch/v1
-kind: Job
+apiVersion: v1
+kind: Pod
 metadata:
-  name: kar-bench-client
-  labels:
-    name: kar-bench-client
+  name: kafka-bench-consumer
 spec:
-  template:
-    metadata:
-      annotations:
-        kar.ibm.com/app: kar-bench-js
-    spec:
-      restartPolicy: OnFailure
-      imagePullSecrets:
-      - name: kar.ibm.com.image-pull
-      containers:
-      - name: client
-        image: localhost:5000/kar/kar-bench-js-image
-        env:
-        - name: MAIN
-          value: client.js
-        - name: KAR_EXTRA_ARGS
-          value: -h2c
+  imagePullSecrets:
+  - name: kar.ibm.com.image-pull
+  containers:
+  - name: consumer
+    image: localhost:5000/kar/kar-kafka-bench-consumer
+    env:
+    - name: KAFKA_BROKERS
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_brokers
+

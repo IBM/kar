@@ -35,6 +35,8 @@ KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)kar-examples-js-unit-tests:$(DOCKER_I
 KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-java-actors-dp:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(DOCKER_IMAGE_TAG)
 KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
+KAFKA_BENCH_CONSUMER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-consumer:$(DOCKER_IMAGE_TAG)
+KAFKA_BENCH_PRODUCER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-producer:$(DOCKER_IMAGE_TAG)
 
 install: cli
 
@@ -59,6 +61,8 @@ dockerBuildExamples:
 
 dockerBuildBenchmarks:
 	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
+	cd benchmark/kafka-bench/consumer && docker build -t $(KAFKA_BENCH_CONSUMER) .
+	cd benchmark/kafka-bench/producer && docker build -t $(KAFKA_BENCH_PRODUCER) .
 
 dockerPushCore:
 	docker push $(KAR_BASE)
@@ -78,6 +82,8 @@ dockerPushExamples:
 
 dockerPushBenchmarks:
 	docker push $(KAR_BENCH_JS_IMAGE)
+	docker push $(KAFKA_BENCH_CONSUMER)
+	docker push $(KAFKA_BENCH_PRODUCER)
 
 docker:
 	make dockerBuildCore
