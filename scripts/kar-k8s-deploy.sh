@@ -60,6 +60,7 @@ while [ -n "$1" ]; do
             helmargs="$helmargs --set-string redis.externalConfig.host=$REDIS_HOST"
             helmargs="$helmargs --set-string redis.externalConfig.port=$REDIS_PORT"
             helmargs="$helmargs --set-string redis.externalConfig.password=$REDIS_PASSWORD"
+            helmargs="$helmargs --set-string redis.externalConfig.ca=$REDIS_CA"
             injectorOnly="true"
             ;;
         -f|-file|--file) shift; helmargs="$helmargs -f $1";;
