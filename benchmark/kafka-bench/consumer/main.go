@@ -32,6 +32,7 @@ var kafkaVersion = "2.6.0"
 
 // Local:
 // var kafkaBrokers = []string{"localhost:31093"}
+
 // Inside the kind cluster:
 var kafkaBrokers = []string{}
 
