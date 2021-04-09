@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -22,18 +23,11 @@ var (
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 )
 
-// Specify brokers address. This is default one
-const kafkaEnableTLS = false
-const kafkaTLSSkipVerify = false
-
+var kafkaTLSSkipVerify = false
+var kafkaEnableTLS = false
 var kafkaUsername = ""
 var kafkaPassword = ""
-var kafkaVersion = "2.6.0"
-
-// Local:
-// var kafkaBrokers = []string{"localhost:31093"}
-
-// Inside the kind cluster:
+var kafkaVersion = ""
 var kafkaBrokers = []string{}
 
 // Topics. To be created beforehand using script.
@@ -48,20 +42,35 @@ var warmUpReps = 10
 var timedReps = 100
 
 func populateValues() {
-	if len(kafkaBrokers) == 0 {
-		kafkaBrokers = strings.Split(os.Getenv("KAFKA_BROKERS"), ",")
+	var err error
+
+	if tmp := os.Getenv("KAFKA_BROKERS"); tmp != "" {
+		kafkaBrokers = strings.Split(tmp, ",")
 	}
 
-	if kafkaUsername == "" {
-		kafkaUsername = os.Getenv("KAFKA_USERNAME")
+	if tmp := os.Getenv("KAFKA_USERNAME"); tmp != "" {
+		kafkaUsername = tmp
 	}
 
-	if kafkaPassword == "" {
-		kafkaPassword = os.Getenv("KAFKA_PASSWORD")
+	if tmp := os.Getenv("KAFKA_PASSWORD"); tmp != "" {
+		kafkaPassword = tmp
 	}
 
-	if kafkaVersion == "" {
-		kafkaVersion = os.Getenv("KAFKA_VERSION")
+	if tmp := os.Getenv("KAFKA_USERNAME"); tmp != "" {
+		kafkaUsername = tmp
+	}
+	if kafkaPassword != "" && kafkaUsername == "" {
+		kafkaUsername = "token"
+	}
+
+	if tmp := os.Getenv("KAFKA_VERSION"); tmp != "" {
+		kafkaVersion = tmp
+	}
+
+	if tmp := os.Getenv("KAFKA_ENABLE_TLS"); tmp != "" {
+		if kafkaEnableTLS, err = strconv.ParseBool(tmp); err != nil {
+			fmt.Printf("error parsing KAFKA_TLS_SKIP_VERIFY as boolean")
+		}
 	}
 }
 
