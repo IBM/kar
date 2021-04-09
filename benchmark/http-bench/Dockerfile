@@ -14,20 +14,18 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: Pod
-metadata:
-  name: kar-bench-server
-  annotations:
-    kar.ibm.com/app: kar-bench-js
-    kar.ibm.com/actors: BenchActor
-    kar.ibm.com/service: bench
-spec:
-  imagePullSecrets:
-  - name: kar.ibm.com.image-pull
-  containers:
-  - name: server
-    image: localhost:5000/kar/kar-bench-js-image
-    env:
-    - name: KAR_EXTRA_ARGS
-      value: -h2c -actors BenchActor
+ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v12
+
+FROM $JS_RUNTIME
+
+WORKDIR /kar/app
+
+# Default to running actor server
+ENV MAIN=server.js
+
+# Copy dependencies first; they change rarely
+COPY package.json package-lock.json ./
+RUN npm install --prod
+
+# Copy in application source
+COPY *.js ./

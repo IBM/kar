@@ -14,19 +14,34 @@
  * limitations under the License.
  */
 
+// Import module.
+var exec = require('child_process').exec, child;
+
 // retry http requests up to 10 times over 10s
 const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
 
 // request url for a given KAR service and route on that service
-function call_url(route) {
-  return `http://127.0.0.1:9000/${route}`
+function call_url(route, podIP) {
+  // Local:
+  // return `http://127.0.0.1:9000/${route}`
+
+  // Kubernetes:
+  if (podIP) {
+    return `http://{podIP}:9000/${route}`
+  }
+
+  // Replace pod IP with a valid value.
+  return `http://10.244.1.93:9000/${route}`
+
+  // With service (slow):
+  // return `http://http-bench-server-service.default.svc.cluster.local:9000/${route}`
 }
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function measureCall(numDiscardedCalls, numTimedCalls) {
+async function measureCall(numDiscardedCalls, numTimedCalls, podIP) {
   // Result:
   sumOfAllCalls = 0
 
@@ -35,14 +50,14 @@ async function measureCall(numDiscardedCalls, numTimedCalls) {
 
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
-    var start = Date.now();
-    result = await fetch(call_url('bench-text'), {
+    var start = new Date().getTime()
+    result = await fetch(call_url('bench-text', podIP), {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
     await result.text()
-    var callDuation = Date.now() - start;
+    var callDuation = new Date().getTime() - start;
 
     // Postprocessing.
     if (i >= numDiscardedCalls) {
@@ -56,7 +71,7 @@ async function measureCall(numDiscardedCalls, numTimedCalls) {
   return sumOfAllCalls
 }
 
-async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
+async function measureOneWayCall(numDiscardedCalls, numTimedCalls, podIP) {
   // Results:
   sumOfAllRequests = 0
   sumOfAllResponses = 0
@@ -67,14 +82,14 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
 
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
-    var start = Date.now();
-    result = await fetch(call_url('bench-text-one-way'), {
+    var start = new Date().getTime()
+    result = await fetch(call_url('bench-text-one-way', podIP), {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
     remoteStamp = await result.text()
-    localStamp = Date.now();
+    localStamp = new Date().getTime()
 
     // Postprocessing.
     var oneWayCall = parseInt(remoteStamp) - start;
@@ -93,6 +108,25 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
 
 // main method
 async function main() {
+  podIP = null
+  // If we could call kubectl inside the Job then we could get the
+  // pod IP automatically.
+  // child = exec('kubectl get pod http-bench-server -o yaml',
+  //   function (error, stdout, stderr) {
+  //     words = stdout.split(" ")
+  //     var N = words.length;
+  //     for (var i = 0; i < N; i++) {
+  //       if (words[i] == "podIP:") {
+  //         podIP = words[i + 1]
+  //         break
+  //       }
+  //     }
+
+  //     if (error !== null) {
+  //       console.log('exec error: ' + error);
+  //     }
+  //   });
+
   numTimedCalls = 100
   sumOfAllCalls = await measureCall(10, numTimedCalls)
   averageCallDuration = sumOfAllCalls / numTimedCalls

@@ -14,20 +14,21 @@
 # limitations under the License.
 #
 
-apiVersion: v1
-kind: Pod
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: kar-bench-server
-  annotations:
-    kar.ibm.com/app: kar-bench-js
-    kar.ibm.com/actors: BenchActor
-    kar.ibm.com/service: bench
+  name: http-bench-client
+  labels:
+    name: http-bench-client
 spec:
-  imagePullSecrets:
-  - name: kar.ibm.com.image-pull
-  containers:
-  - name: server
-    image: localhost:5000/kar/kar-bench-js-image
-    env:
-    - name: KAR_EXTRA_ARGS
-      value: -h2c -actors BenchActor
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+      - name: kar.ibm.com.image-pull
+      containers:
+      - name: client
+        image: localhost:5000/kar/kar-http-bench-js-image
+        env:
+        - name: MAIN
+          value: client.js

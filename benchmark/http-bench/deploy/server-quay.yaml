@@ -17,17 +17,27 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: kar-bench-server
-  annotations:
-    kar.ibm.com/app: kar-bench-js
-    kar.ibm.com/actors: BenchActor
-    kar.ibm.com/service: bench
+  name: http-bench-server
+  labels:
+    name: test-server
 spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/kar/kar-bench-js-image
-    env:
-    - name: KAR_EXTRA_ARGS
-      value: -h2c -actors BenchActor
+    image: quay.io/ibm/kar-http-bench-js-image
+    ports:
+    - containerPort: 9000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-bench-server-service
+spec:
+  selector:
+    name: test-server
+  ports:
+  - port: 9000
+    targetPort: 9000
+    protocol: TCP
