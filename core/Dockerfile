@@ -31,8 +31,8 @@ ARG KAR_VERSION=unofficial
 
 RUN CGO_ENABLED=0 go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$KAR_VERSION" ./...
 
-# Create image containing nothing but the sidecar
-FROM scratch
+# Create image containing the sidecar
+FROM alpine:3.11
 ARG KAR_BINARY
 
 COPY --from=builder /go/bin/$KAR_BINARY /kar/bin/$KAR_BINARY
