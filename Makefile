@@ -37,6 +37,7 @@ KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(D
 KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
 KAFKA_BENCH_CONSUMER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-consumer:$(DOCKER_IMAGE_TAG)
 KAFKA_BENCH_PRODUCER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-producer:$(DOCKER_IMAGE_TAG)
+KAR_HTTP_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-http-bench-js-image:$(DOCKER_IMAGE_TAG)
 
 install: cli
 
@@ -63,6 +64,7 @@ dockerBuildBenchmarks:
 	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
 	cd benchmark/kafka-bench/consumer && docker build -t $(KAFKA_BENCH_CONSUMER) .
 	cd benchmark/kafka-bench/producer && docker build -t $(KAFKA_BENCH_PRODUCER) .
+	cd benchmark/http-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_HTTP_BENCH_JS_IMAGE) .
 
 dockerPushCore:
 	docker push $(KAR_BASE)
@@ -84,6 +86,7 @@ dockerPushBenchmarks:
 	docker push $(KAR_BENCH_JS_IMAGE)
 	docker push $(KAFKA_BENCH_CONSUMER)
 	docker push $(KAFKA_BENCH_PRODUCER)
+	docker push $(KAR_HTTP_BENCH_JS_IMAGE)
 
 docker:
 	make dockerBuildCore

@@ -22,7 +22,7 @@ spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
   containers:
-  - name: consumer
+  - name: producer
     image: localhost:5000/kar/kar-kafka-bench-producer
     env:
     - name: KAFKA_BROKERS

@@ -36,10 +36,13 @@ app.post('/bench-json', (req, res) => {
 })
 
 app.post('/bench-text-one-way', (req, res) => {
-  stamp = Date.now()
+  stamp = new Date().getTime()
   res.send(stamp.toString())
 })
 
 // start server on port $KAR_APP_PORT
 console.log('Starting server...')
-const server = app.listen(9000, '127.0.0.1')
+// Local:
+// const server = app.listen(9000, '127.0.0.1')
+// Kubernetes:
+const server = app.listen(9000)
