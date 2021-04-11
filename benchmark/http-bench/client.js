@@ -14,130 +14,103 @@
  * limitations under the License.
  */
 
-// Import module.
-var exec = require('child_process').exec, child;
-
 // retry http requests up to 10 times over 10s
 const fetch = require('fetch-retry')(require('node-fetch'), { retries: 10 })
 
-// request url for a given KAR service and route on that service
-function call_url(route, podIP) {
-  // Local:
-  // return `http://127.0.0.1:9000/${route}`
+// Time between messages:
+const sleepTime = 10 // ms
 
-  // Kubernetes:
-  if (podIP) {
-    return `http://{podIP}:9000/${route}`
-  }
+// Number of timed calls
+const numTimedCalls = 100
 
-  // Replace pod IP with a valid value.
-  return `http://10.244.1.93:9000/${route}`
+// Number of warmup calls.
+const numDiscardedCalls = 10
 
-  // With service (slow):
-  // return `http://http-bench-server-service.default.svc.cluster.local:9000/${route}`
+const stats = {
+  endToEnd: [],
+  request: [],
+  response: []
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function clearStats () {
+  console.log('Cleared statistics')
+  stats.endToEnd = []
+  stats.request = []
+  stats.response = []
 }
 
-async function measureCall(numDiscardedCalls, numTimedCalls, podIP) {
-  // Result:
-  sumOfAllCalls = 0
+function reportMetrics (data, tag) {
+  const mean = data.reduce((a, b) => a + b, 0) / data.length
+  const squareDiffs = data.map(x => (x - mean) * (x - mean))
+  const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length
+  const stdDev = Math.sqrt(avgSquareDiff)
+  console.log(`${tag}: samples = ${data.length}; mean = ${mean.toFixed(3)}; stddev = ${stdDev.toFixed(3)}`)
+}
 
-  // Variables created once.
-  var result
+function reportStats () {
+  reportMetrics(stats.endToEnd, 'HTTP: end-to-end')
+  reportMetrics(stats.request, 'HTTP: one-way-request')
+  reportMetrics(stats.response, 'HTTP: one-way-response')
+}
 
-  // Perform requests discarding the first numDiscardedCalls.
-  for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
-    var start = new Date().getTime()
-    result = await fetch(call_url('bench-text', podIP), {
+// request url for a given server:port and route on that server
+function call_url (route, serverIP) {
+  return `http://${serverIP}:9000/${route}`
+}
+
+function sleep (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function measureCall (numCalls, serverIP) {
+  const url = call_url('bench-text', serverIP)
+  // Perform requests.
+  for (let i = 0; i < numCalls; i++) {
+    var start = Date.now()
+    const result = await fetch(url, {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
     await result.text()
-    var callDuation = new Date().getTime() - start;
-
-    // Postprocessing.
-    if (i >= numDiscardedCalls) {
-      sumOfAllCalls += callDuation
-      if (numTimedCalls < 50) {
-        console.log(`Durations: ${i - numDiscardedCalls}: ${callDuation} ms`)
-      }
-    }
-    await sleep(100)
+    stats.endToEnd.push(Date.now() - start)
+    await sleep(sleepTime)
   }
-  return sumOfAllCalls
 }
 
-async function measureOneWayCall(numDiscardedCalls, numTimedCalls, podIP) {
-  // Results:
-  sumOfAllRequests = 0
-  sumOfAllResponses = 0
-
-  // Create variables once.
-  var result
-  var remoteStamp, localStamp
-
-  // Perform requests discarding the first numDiscardedCalls.
-  for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
-    var start = new Date().getTime()
-    result = await fetch(call_url('bench-text-one-way', podIP), {
+async function measureOneWayCall (numCalls, serverIP) {
+  const url = call_url('bench-text-one-way', serverIP)
+  // Perform requests
+  for (let i = 0; i < numCalls; i++) {
+    var start = Date.now()
+    const result = await fetch(url, {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
-    remoteStamp = await result.text()
-    localStamp = new Date().getTime()
+    const remoteStamp = await result.text()
+    const localStamp = Date.now()
 
-    // Postprocessing.
-    var oneWayCall = parseInt(remoteStamp) - start;
-    var responseCall = localStamp - parseInt(remoteStamp)
-    if (i >= numDiscardedCalls) {
-      sumOfAllRequests += oneWayCall
-      sumOfAllResponses += responseCall
-      if (numTimedCalls < 50) {
-        console.log(`Durations: ${i - numDiscardedCalls}: ${oneWayCall} ms`)
-      }
-    }
-    await sleep(100)
+    stats.request.push(parseInt(remoteStamp) - start)
+    stats.response.push(localStamp - parseInt(remoteStamp))
+    await sleep(sleepTime)
   }
-  return [sumOfAllRequests, sumOfAllResponses]
 }
 
 // main method
-async function main() {
-  podIP = process.env.POD_IP
-  // If we could call kubectl inside the Job then we could get the
-  // pod IP automatically.
-  // child = exec('kubectl get pod http-bench-server -o yaml',
-  //   function (error, stdout, stderr) {
-  //     words = stdout.split(" ")
-  //     var N = words.length;
-  //     for (var i = 0; i < N; i++) {
-  //       if (words[i] == "podIP:") {
-  //         podIP = words[i + 1]
-  //         break
-  //       }
-  //     }
+async function main () {
+  const serverIP = process.env.SERVER_IP || 'localhost'
 
-  //     if (error !== null) {
-  //       console.log('exec error: ' + error);
-  //     }
-  //   });
+  console.log(`Executing ${numDiscardedCalls} warmup operations`)
+  await measureCall(numDiscardedCalls, serverIP)
+  await measureOneWayCall(numDiscardedCalls, serverIP)
+  reportStats()
+  clearStats()
 
-  numTimedCalls = 100
-  sumOfAllCalls = await measureCall(10, numTimedCalls)
-  averageCallDuration = sumOfAllCalls / numTimedCalls
-  console.log(`Average service call duration: ${averageCallDuration} ms`)
-
-  {
-    let [sumOfAllRequests, sumOfAllResponses] = await measureOneWayCall(10, numTimedCalls)
-    averageRequestDuration = sumOfAllRequests / numTimedCalls
-    averageResponseDuration = sumOfAllResponses / numTimedCalls
-    console.log(`Average service request duration: ${averageRequestDuration} ms`)
-    console.log(`Average service response duration: ${averageResponseDuration} ms`)
+  while (true) {
+    await measureCall(numTimedCalls, serverIP)
+    await measureOneWayCall(numTimedCalls, serverIP)
+    reportStats()
   }
 }
 

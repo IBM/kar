@@ -43,31 +43,31 @@ app.post('/bench-json', (req, res) => {
 })
 
 app.post('/bench-text-one-way', (req, res) => {
-  stamp = new Date().getTime()
+  const stamp = new Date().getTime()
   res.send(stamp.toString())
 })
 
 app.post('/bench-json-one-way', (req, res) => {
-  stamp = new Date().getTime()
-  res.json({ 'body': stamp.toString() })
+  const stamp = new Date().getTime()
+  res.json({ body: stamp.toString() })
 })
 
 class BenchActor {
-  async simpleMethod() {
+  async simpleMethod () {
     return this.count
   }
 
-  async timedMethod() {
+  async timedMethod () {
     return new Date().getTime().toString()
   }
 
-  async activate() {
+  async activate () {
     this.count = 0
-    console.log(`BenchActor activated`)
+    console.log('BenchActor activated')
   }
 
-  async deactivate() {
-    console.log(`BenchActor deactivated`)
+  async deactivate () {
+    console.log('BenchActor deactivated')
   }
 }
 
