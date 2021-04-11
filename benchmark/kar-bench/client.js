@@ -32,13 +32,13 @@ if (!process.env.KAR_RUNTIME_PORT) {
   process.exit(1)
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function sleep (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function measureCall(numDiscardedCalls, numTimedCalls) {
+async function measureCall (numDiscardedCalls, numTimedCalls) {
   // Result:
-  sumOfAllCalls = 0
+  var sumOfAllCalls = 0
 
   // Variables created once.
   var result
@@ -46,9 +46,9 @@ async function measureCall(numDiscardedCalls, numTimedCalls) {
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
     var start = new Date().getTime()
-    result = await call('bench', 'bench-json', { 'body': 'test' })
+    result = await call('bench', 'bench-json', { body: 'test' })
     await result
-    var callDuation = new Date().getTime() - start;
+    var callDuation = new Date().getTime() - start
 
     // Postprocessing.
     if (i >= numDiscardedCalls) {
@@ -62,10 +62,10 @@ async function measureCall(numDiscardedCalls, numTimedCalls) {
   return sumOfAllCalls
 }
 
-async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
+async function measureOneWayCall (numDiscardedCalls, numTimedCalls) {
   // Results:
-  sumOfAllRequests = 0
-  sumOfAllResponses = 0
+  var sumOfAllRequests = 0
+  var sumOfAllResponses = 0
 
   // Create variables once.
   var result
@@ -74,7 +74,7 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
   // Perform requests discarding the first numDiscardedCalls.
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
     var start = new Date().getTime()
-    result = await call('bench', 'bench-json-one-way', { 'body': 'test' })
+    result = await call('bench', 'bench-json-one-way', { body: 'test' })
     remoteStamp = await result
     localStamp = new Date().getTime()
 
@@ -83,7 +83,7 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
     // explicitly otherwise the time stamp will be in remoteStamp.
     remoteStamp = remoteStamp.body
 
-    var oneWayCall = parseInt(remoteStamp) - start;
+    var oneWayCall = parseInt(remoteStamp) - start
     var responseCall = localStamp - parseInt(remoteStamp)
     if (i >= numDiscardedCalls) {
       sumOfAllRequests += oneWayCall
@@ -97,9 +97,9 @@ async function measureOneWayCall(numDiscardedCalls, numTimedCalls) {
   return [sumOfAllRequests, sumOfAllResponses]
 }
 
-async function measureActorCall(numDiscardedCalls, numTimedCalls) {
+async function measureActorCall (numDiscardedCalls, numTimedCalls) {
   // Result:
-  sumOfAllCalls = 0
+  var sumOfAllCalls = 0
 
   // Variables created once.
   var response
@@ -109,7 +109,7 @@ async function measureActorCall(numDiscardedCalls, numTimedCalls) {
   for (let i = 0; i < numDiscardedCalls + numTimedCalls; i++) {
     var start = new Date().getTime()
     response = await actor.call(actorClass, 'simpleMethod')
-    var callDuation = new Date().getTime() - start;
+    var callDuation = new Date().getTime() - start
 
     // Postprocessing.
     if (i >= numDiscardedCalls) {
@@ -126,10 +126,10 @@ async function measureActorCall(numDiscardedCalls, numTimedCalls) {
   return sumOfAllCalls
 }
 
-async function measureActorOneWayCall(numDiscardedCalls, numTimedCalls) {
+async function measureActorOneWayCall (numDiscardedCalls, numTimedCalls) {
   // Results:
-  sumOfAllRequests = 0
-  sumOfAllResponses = 0
+  var sumOfAllRequests = 0
+  var sumOfAllResponses = 0
 
   // Create variables once.
   var remoteStamp, localStamp
@@ -160,15 +160,15 @@ async function measureActorOneWayCall(numDiscardedCalls, numTimedCalls) {
 }
 
 // main method
-async function main() {
-  sumOfAllCalls = await measureCall(numDiscardedCalls, numTimedCalls)
-  averageCallDuration = sumOfAllCalls / numTimedCalls
+async function main () {
+  var sumOfAllCalls = await measureCall(numDiscardedCalls, numTimedCalls)
+  var averageCallDuration = sumOfAllCalls / numTimedCalls
   console.log(`Average service call duration: ${averageCallDuration} ms`)
 
   {
     let [sumOfAllRequests, sumOfAllResponses] = await measureOneWayCall(numDiscardedCalls, numTimedCalls)
-    averageRequestDuration = sumOfAllRequests / numTimedCalls
-    averageResponseDuration = sumOfAllResponses / numTimedCalls
+    const averageRequestDuration = sumOfAllRequests / numTimedCalls
+    const averageResponseDuration = sumOfAllResponses / numTimedCalls
     console.log(`Average service request duration: ${averageRequestDuration} ms`)
     console.log(`Average service response duration: ${averageResponseDuration} ms`)
   }
