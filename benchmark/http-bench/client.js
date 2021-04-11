@@ -99,7 +99,7 @@ async function measureOneWayCall (numCalls, serverIP) {
 
 // main method
 async function main () {
-  const serverIP = process.env.POD_IP || 'localhost'
+  const serverIP = process.env.SERVER_IP || 'localhost'
 
   console.log(`Executing ${numDiscardedCalls} warmup operations`)
   await measureCall(numDiscardedCalls, serverIP)
