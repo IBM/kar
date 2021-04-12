@@ -30,4 +30,9 @@ spec:
         secretKeyRef:
           name: kar.ibm.com.runtime-config
           key: kafka_brokers
+    - name: KAFKA_VERSION
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_version
 
