@@ -66,14 +66,15 @@ async function measureCall (numCalls, serverIP) {
   const url = call_url('bench-text', serverIP)
   // Perform requests.
   for (let i = 0; i < numCalls; i++) {
-    var start = Date.now()
+    const start = process.hrtime.bigint()
     const result = await fetch(url, {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
     await result.text()
-    stats.endToEnd.push(Date.now() - start)
+    const end = process.hrtime.bigint()
+    stats.endToEnd.push(Number(end - start) / 1e6)
     await sleep(sleepTime)
   }
 }
@@ -82,17 +83,18 @@ async function measureOneWayCall (numCalls, serverIP) {
   const url = call_url('bench-text-one-way', serverIP)
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
-    var start = Date.now()
+    var start = process.hrtime.bigint()
     const result = await fetch(url, {
       method: 'POST',
       body: 'Test',
       headers: { 'Content-Type': 'text/plain' }
     })
     const remoteStamp = await result.text()
-    const localStamp = Date.now()
+    const end = process.hrtime.bigint()
+    const midTime = BigInt(remoteStamp)
 
-    stats.request.push(parseInt(remoteStamp) - start)
-    stats.response.push(localStamp - parseInt(remoteStamp))
+    stats.request.push(Number(midTime - start) / 1e6)
+    stats.response.push(Number(end - midTime) / 1e6)
     await sleep(sleepTime)
   }
 }

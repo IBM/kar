@@ -36,7 +36,7 @@ app.post('/bench-json', (req, res) => {
 })
 
 app.post('/bench-text-one-way', (req, res) => {
-  stamp = new Date().getTime()
+  const stamp = process.hrtime.bigint()
   res.send(stamp.toString())
 })
 
