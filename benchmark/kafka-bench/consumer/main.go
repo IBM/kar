@@ -28,7 +28,7 @@ var kafkaEnableTLS = false
 var kafkaUsername = ""
 var kafkaPassword = ""
 var kafkaVersion = ""
-var kafkaBrokers = []string{}
+var kafkaBrokers = []string{"localhost:31093"}
 
 // Topics. To be created beforehand using script.
 const topic = "simple-topic"
