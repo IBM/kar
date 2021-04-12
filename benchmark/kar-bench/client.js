@@ -76,10 +76,10 @@ function reportStats () {
 async function measureCall (numCalls) {
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
-    const start = Date.now()
+    const start = process.hrtime.bigint()
     const result = await call('bench', 'bench-json', { body: 'test' })
     await result
-    stats.serviceEndToEnd.push(Date.now() - start)
+    stats.serviceEndToEnd.push(Number(process.hrtime.bigint() - start) / 1e6)
     await sleep(sleepTime)
   }
 }
@@ -87,18 +87,19 @@ async function measureCall (numCalls) {
 async function measureOneWayCall (numCalls) {
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
-    var start = Date.now()
+    var start = process.hrtime.bigint()
     const result = await call('bench', 'bench-json-one-way', { body: 'test' })
     var remoteStamp = await result
-    const localStamp = Date.now()
+    const end = process.hrtime.bigint()
+    const midTime = BigInt(remoteStamp.body)
 
     // Postprocessing.
     // HTTP2: if enabled then the stamp needs to be extracted from the body
     // explicitly otherwise the time stamp will be in remoteStamp.
     remoteStamp = remoteStamp.body
 
-    stats.serviceOneWayRequest.push(parseInt(remoteStamp) - start)
-    stats.serviceOneWayResponse.push(localStamp - parseInt(remoteStamp))
+    stats.serviceOneWayRequest.push(Number(midTime - start) / 1e6)
+    stats.serviceOneWayResponse.push(Number(end - midTime) / 1e6)
     await sleep(sleepTime)
   }
 }
@@ -108,10 +109,10 @@ async function measureActorCall (numCalls) {
 
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
-    const start = Date.now()
+    const start = process.hrtime.bigint()
     const response = await actor.call(actorClass, 'simpleMethod')
     await response
-    stats.actorEndToEnd.push(Date.now() - start)
+    stats.actorEndToEnd.push(Number(process.hrtime.bigint() - start) / 1e6)
     await sleep(sleepTime)
   }
 }
@@ -121,11 +122,12 @@ async function measureActorOneWayCall (numCalls) {
 
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
-    const start = Date.now()
+    const start = process.hrtime.bigint()
     const remoteStamp = await actor.call(actorClass, 'timedMethod')
-    const localStamp = Date.now()
-    stats.actorOneWayRequest.push(parseInt(remoteStamp) - start)
-    stats.actorOneWayResponse.push(localStamp - parseInt(remoteStamp))
+    const end = process.hrtime.bigint()
+    const midTime = BigInt(remoteStamp)
+    stats.actorOneWayRequest.push(Number(midTime - start) / 1e6)
+    stats.actorOneWayResponse.push(Number(end - midTime) / 1e6)
     await sleep(sleepTime)
   }
 }
