@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"os/signal"
@@ -28,7 +29,7 @@ var kafkaTLSSkipVerify = false
 var kafkaUsername = ""
 var kafkaPassword = ""
 var kafkaVersion = ""
-var kafkaBrokers = []string{}
+var kafkaBrokers = []string{"localhost:31093"}
 
 // Topics. To be created beforehand using script.
 const topic = "simple-topic"
@@ -40,6 +41,8 @@ const returnGroup = "return-consumer-group"
 // Repetitions (must match process B's reps):
 var warmUpReps = 10
 var timedReps = 100
+
+var endToEndTimings = []float64{}
 
 func populateValues() {
 	var err error
@@ -151,15 +154,21 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 			log.Info("Time parse error!")
 		}
 		duration := currentTime.Sub(startTime).Microseconds()
-		if count >= warmUpReps {
-			accDuration += float64(duration)
-			if count == warmUpReps+timedReps-1 {
-				log.Infof("Average Kafka end-to-end time: %v ms", (accDuration/float64(count))/1000.0)
-				count = -1
+
+		// Post-process durations.
+		count++
+		if count > warmUpReps {
+			// Save duration data.
+			endToEndTimings = append(endToEndTimings, float64(duration)/1000.0)
+
+			// At the end print the average.
+			accDuration += float64(duration) / 1000.0
+			if count == warmUpReps+timedReps {
+				log.Infof("Average Kafka end-to-end time: %v ms", (accDuration / float64(timedReps)))
+				count = 0
 				accDuration = 0
 			}
 		}
-		count++
 
 		// Mark message as processed.
 		session.MarkMessage(message, "")
@@ -243,6 +252,33 @@ func createProducer() sarama.SyncProducer {
 	return producer
 }
 
+func average(data []float64) float64 {
+	// Compute sum.
+	var sum float64 = 0
+	for _, elem := range data {
+		sum += elem
+	}
+
+	// Compute average:
+	return sum / float64(len(data))
+}
+
+func printTimingReport(data []float64) {
+	// Assumption: input is a list of ms durations.
+	avg := average(data)
+
+	// Compute standard deviation
+	var deviations = []float64{}
+	for _, time := range data {
+		deviation := time - avg
+		deviations = append(deviations, deviation*deviation)
+	}
+	standardDeviation := math.Sqrt(average(deviations))
+
+	// Print report:
+	log.Infof(`Kafka: end-to-end: samples = %v; mean = %v; stddev = %v`, len(data), avg, standardDeviation)
+}
+
 func main() {
 	// Create and subscribe consumer group.
 	wg, handler, closed, _, err := subscribe(ctx, returnTopic, returnGroup)
@@ -278,6 +314,8 @@ func main() {
 	}
 
 	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)
+
+	printTimingReport(endToEndTimings)
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)

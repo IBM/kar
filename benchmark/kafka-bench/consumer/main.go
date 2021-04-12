@@ -162,18 +162,17 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		if err != nil {
 			log.Info("Time parse error!")
 		}
+		// Post-process.
+		count++
 		duration := currentTime.Sub(startTime).Microseconds()
 		if count >= warmUpReps {
-			accDuration += float64(duration)
-			if count == warmUpReps+timedReps-1 {
-				log.Infof("Average Kafka request time: %v ms", (accDuration/float64(count))/1000.0)
-				count = -1
+			accDuration += float64(duration) / 1000.0
+			if count == warmUpReps+timedReps {
+				log.Infof("Average Kafka request time: %v ms", (accDuration / float64(timedReps)))
+				count = 0
 				accDuration = 0
 			}
 		}
-
-		// Always increment.
-		count++
 
 		// Mark message as processed.
 		session.MarkMessage(message, "")
