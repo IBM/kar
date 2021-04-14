@@ -85,9 +85,9 @@ spec:
 {{- end }}
 {{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
       volumes:
-        - name: {{ .Release.Name }}-kafka-pvc
+        - name: kar-kafka-pvc
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-kafka-pvc
+            claimName: kar-kafka-pvc
 {{- end }}
       initContainers:
       - name: wait-for-zookeeper
@@ -99,7 +99,7 @@ spec:
 {{- if .Values.global.persistence }}
         volumeMounts:
         - mountPath: /kafka
-          name: {{ .Release.Name }}-kafka-pvc
+          name: kar-kafka-pvc
 {{- end }}
         ports:
         - name: kafka-internal
@@ -147,7 +147,7 @@ spec:
 {{- if and .Values.global.replicatedServices .Values.global.persistence }}
   volumeClaimTemplates:
   - metadata:
-      name: {{ .Release.Name }}-kafka-pvc
+      name: kar-kafka-pvc
     spec:
       accessModes:
         - ReadWriteOnce
@@ -161,10 +161,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-kafka-pvc
+  name: kar-kafka-pvc
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ .Release.Name }}-kafka-pvc
+    name: kar-kafka-pvc
 spec:
   accessModes:
     - ReadWriteOnce

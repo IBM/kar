@@ -63,22 +63,23 @@ spec:
 {{- end }}
 {{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
       volumes:
-        - name: {{ .Release.Name }}-zookeeper-pvc-data
+        - name: kar-zookeeper-pvc-data
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-zookeeper-pvc-data
-        - name: {{ .Release.Name }}-zookeeper-pvc-datalog
+            claimName: kar-zookeeper-pvc-data
+        - name: kar-zookeeper-pvc-datalog
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-zookeeper-pvc-datalog
+            claimName: kar-zookeeper-pvc-datalog
 {{- end }}
       containers:
       - name: zk
         image: {{ .Values.zk.imageRegistry }}/{{ .Values.zk.imageName }}:{{ .Values.zk.imageTag }}
-        volumeMounts:
+        command: ["/bin/bash", "-c", "hostname -s | awk -F '-' '{print $NF}'> /data/myid; cat /data/myid; /docker-entrypoint.sh zkServer.sh start-foreground"]
 {{- if .Values.global.persistence }}
+        volumeMounts:
         - mountPath: /data
-          name: {{ .Release.Name }}-zookeeper-pvc-data
+          name: kar-zookeeper-pvc-data
         - mountPath: /datalog
-          name: {{ .Release.Name }}-zookeeper-pvc-datalog
+          name: kar-zookeeper-pvc-datalog
 {{- end }}
         ports:
         - name: zookeeper
@@ -99,12 +100,14 @@ spec:
         env:
         - name: ZOO_4LW_COMMANDS_WHITELIST
           value: "srvr,ruok"
+        - name: ZOO_SERVERS
+          value: "server.0={{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }}"
 
 {{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we really need them */}}
 {{- if and .Values.global.replicatedServices .Values.global.persistence }}
   volumeClaimTemplates:
   - metadata:
-      name: {{ .Release.Name }}-zookeeper-pvc-data
+      name: kar-zookeeper-pvc-data
       labels:
         {{- include "kar.labels" . | nindent 4 }}
     spec:
@@ -114,7 +117,7 @@ spec:
         requests:
           storage: 256Mi
   - metadata:
-      name: {{ .Release.Name }}-zookeeper-pvc-datalog
+      name: kar-zookeeper-pvc-datalog
       labels:
         {{- include "kar.labels" . | nindent 4 }}
     spec:
@@ -130,10 +133,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-zookeeper-pvc-data
+  name: kar-zookeeper-pvc-data
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ .Release.Name }}-zookeeper-pvc-data
+    name: kar-zookeeper-pvc-data
 spec:
   accessModes:
     - ReadWriteOnce
@@ -144,10 +147,10 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-zookeeper-pvc-datalog
+  name: kar-zookeeper-pvc-datalog
   labels:
     {{- include "kar.labels" . | nindent 4 }}
-    name: {{ .Release.Name }}-zookeeper-pvc-datalog
+    name: kar-zookeeper-pvc-datalog
 spec:
   accessModes:
     - ReadWriteOnce

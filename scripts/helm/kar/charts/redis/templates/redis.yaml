@@ -71,9 +71,9 @@ spec:
     spec:
 {{- if .Values.global.persistence }}
       volumes:
-        - name: {{ .Release.Name }}-redis-pvc
+        - name: kar-redis-pvc
           persistentVolumeClaim:
-            claimName: {{ .Release.Name }}-redis-pvc
+            claimName: kar-redis-pvc
 {{- end }}
       containers:
       - name: redis
@@ -82,7 +82,7 @@ spec:
 {{- if .Values.global.persistence }}
         volumeMounts:
         - mountPath: /data
-          name: {{ .Release.Name }}-redis-pvc
+          name: kar-redis-pvc
 {{- end }}
         ports:
         - name: redis
@@ -96,7 +96,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ .Release.Name }}-redis-pvc
+  name: kar-redis-pvc
   labels:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-redis-pvc
