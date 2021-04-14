@@ -39,8 +39,8 @@ const returnTopic = "return-topic"
 const returnGroup = "return-consumer-group"
 
 // Repetitions (must match process B's reps):
-var warmUpReps = 10
-var timedReps = 100
+var warmUpReps = 100
+var timedReps = 10000
 
 var endToEndTimings = []float64{}
 
@@ -310,7 +310,7 @@ func main() {
 			panic(err)
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(20 * time.Millisecond)
 	}
 
 	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", topic, partition, offset)

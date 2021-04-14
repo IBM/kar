@@ -38,8 +38,8 @@ const returnTopic = "return-topic"
 const group = "simple-consumer-group"
 
 // Repetitions (must match process B's reps):
-var warmUpReps = 10
-var timedReps = 100
+var warmUpReps = 100
+var timedReps = 10000
 
 func populateValues() {
 	var err error
