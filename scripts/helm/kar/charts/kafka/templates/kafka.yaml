@@ -83,6 +83,12 @@ spec:
 {{- if .Values.global.openshift }}
       serviceAccountName: sa-with-anyuid
 {{- end }}
+{{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
+      volumes:
+        - name: {{ .Release.Name }}-kafka-pvc
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-kafka-pvc
+{{- end }}
       initContainers:
       - name: wait-for-zookeeper
         image: busybox
@@ -93,7 +99,7 @@ spec:
 {{- if .Values.global.persistence }}
         volumeMounts:
         - mountPath: /kafka
-          name: "{{ .Release.Name }}-kafka-pvc"
+          name: {{ .Release.Name }}-kafka-pvc
 {{- end }}
         ports:
         - name: kafka-internal
@@ -137,15 +143,32 @@ spec:
         - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
           value: "false"
 
-{{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we absolutely need them */}}
+{{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we really need them */}}
 {{- if and .Values.global.replicatedServices .Values.global.persistence }}
   volumeClaimTemplates:
   - metadata:
-      name: "{{ .Release.Name }}-kafka-pvc"
+      name: {{ .Release.Name }}-kafka-pvc
     spec:
       accessModes:
         - ReadWriteOnce
       resources:
         requests:
           storage: 1Gi
+{{- end }}
+
+{{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-kafka-pvc
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: {{ .Release.Name }}-kafka-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 {{- end }}
