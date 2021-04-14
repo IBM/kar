@@ -35,7 +35,7 @@ kar-zookeeper-0.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.cl
 kar-zookeeper-1.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
 {{- define "kar.zookeeper_host_two" -}}
-kar-zookeeper-1.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
+kar-zookeeper-2.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
 
 {{/* host name for server.N in kafka cluster */}}
