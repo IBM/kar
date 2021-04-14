@@ -46,7 +46,12 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-zookeeper
 spec:
+  podManagementPolicy: "Parallel"
+{{- if .Values.global.replicatedServices }}
+  replicas: 3
+{{ else }}
   replicas: 1
+{{- end }}
   selector:
     matchLabels:
       {{- include "kar.selectorLabels" . | nindent 6 }}
@@ -101,7 +106,11 @@ spec:
         - name: ZOO_4LW_COMMANDS_WHITELIST
           value: "srvr,ruok"
         - name: ZOO_SERVERS
+{{- if .Values.global.replicatedServices }}
+          value: "server.0={{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }} server.1={{ include "kar.zookeeper_host_one" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }} server.2={{ include "kar.zookeeper_host_two" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }}"
+{{ else }}
           value: "server.0={{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }}"
+{{- end }}
 
 {{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we really need them */}}
 {{- if and .Values.global.replicatedServices .Values.global.persistence }}
@@ -109,7 +118,7 @@ spec:
   - metadata:
       name: kar-zookeeper-pvc-data
       labels:
-        {{- include "kar.labels" . | nindent 4 }}
+        {{- include "kar.labels" . | nindent 8 }}
     spec:
       accessModes:
         - ReadWriteOnce
@@ -119,7 +128,7 @@ spec:
   - metadata:
       name: kar-zookeeper-pvc-datalog
       labels:
-        {{- include "kar.labels" . | nindent 4 }}
+        {{- include "kar.labels" . | nindent 8 }}
     spec:
       accessModes:
         - ReadWriteOnce

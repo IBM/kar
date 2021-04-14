@@ -27,12 +27,24 @@ app.kubernetes.io/name: kar
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
-{{/* host name for server.0 in zookeeper cluster */}}
+{{/* host name for server.N in zookeeper cluster */}}
 {{- define "kar.zookeeper_host_zero" -}}
 kar-zookeeper-0.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
+{{- define "kar.zookeeper_host_one" -}}
+kar-zookeeper-1.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
+{{- end -}}
+{{- define "kar.zookeeper_host_two" -}}
+kar-zookeeper-1.kar-zookeeper.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
+{{- end -}}
 
-{{/* host name for server.0 in kafka cluster */}}
+{{/* host name for server.N in kafka cluster */}}
 {{- define "kar.kafka_host_zero" -}}
 kar-kafka-0.kar-kafka.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
+{{- end -}}
+{{- define "kar.kafka_host_one" -}}
+kar-kafka-1.kar-kafka.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
+{{- end -}}
+{{- define "kar.kafka_host_two" -}}
+kar-kafka-2.kar-kafka.{{ $.Release.Namespace }}.svc.{{ .Values.global.clusterSubDomain }}
 {{- end -}}
