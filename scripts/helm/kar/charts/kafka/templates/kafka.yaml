@@ -91,7 +91,7 @@ spec:
 {{- end }}
       initContainers:
       - name: wait-for-zookeeper
-        image: busybox
+        image: busybox:1.33
         command: ["sh", "-c", 'result=1; until [ $result -eq 0 ]; do OK=$(echo ruok | nc -w 1 {{ include "kar.zookeeper_host_zero" . }} {{ .Values.zk.port }}); if [ "$OK" == "imok" ]; then result=0; echo "zookeeper returned imok!"; else echo waiting for zookeeper to be ready; sleep 1; fi; done; echo "Success: zookeeper is up"']
       containers:
       - name: kafka
