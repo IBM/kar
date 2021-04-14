@@ -63,6 +63,7 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-kafka
 spec:
+  podManagementPolicy: "Parallel"
 {{- if .Values.global.replicatedServices }}
   replicas: 3
 {{ else }}
@@ -89,6 +90,11 @@ spec:
       containers:
       - name: kafka
         image: {{ .Values.kafka.imageRegistry }}/{{ .Values.kafka.imageName }}:{{ .Values.kafka.imageTag }}
+{{- if .Values.global.persistence }}
+        volumeMounts:
+        - mountPath: /kafka
+          name: "{{ .Release.Name }}-kafka-pvc"
+{{- end }}
         ports:
         - name: kafka-internal
           containerPort: {{ .Values.kafka.portInternal }}
@@ -130,3 +136,16 @@ spec:
           value: {{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.port }}
         - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
           value: "false"
+
+{{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we absolutely need them */}}
+{{- if and .Values.global.replicatedServices .Values.global.persistence }}
+  volumeClaimTemplates:
+  - metadata:
+      name: "{{ .Release.Name }}-kafka-pvc"
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+{{- end }}
