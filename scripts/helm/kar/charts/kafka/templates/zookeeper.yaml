@@ -46,7 +46,12 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-zookeeper
 spec:
+  podManagementPolicy: "Parallel"
+{{- if .Values.global.replicatedServices }}
+  replicas: 3
+{{ else }}
   replicas: 1
+{{- end }}
   selector:
     matchLabels:
       {{- include "kar.selectorLabels" . | nindent 6 }}
@@ -61,9 +66,26 @@ spec:
 {{- if .Values.global.openshift }}
       serviceAccountName: sa-with-anyuid
 {{- end }}
+{{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
+      volumes:
+        - name: kar-zookeeper-pvc-data
+          persistentVolumeClaim:
+            claimName: kar-zookeeper-pvc-data
+        - name: kar-zookeeper-pvc-datalog
+          persistentVolumeClaim:
+            claimName: kar-zookeeper-pvc-datalog
+{{- end }}
       containers:
       - name: zk
         image: {{ .Values.zk.imageRegistry }}/{{ .Values.zk.imageName }}:{{ .Values.zk.imageTag }}
+        command: ["/bin/bash", "-c", "hostname -s | awk -F '-' '{print $NF}'> /data/myid; cat /data/myid; /docker-entrypoint.sh zkServer.sh start-foreground"]
+{{- if .Values.global.persistence }}
+        volumeMounts:
+        - mountPath: /data
+          name: kar-zookeeper-pvc-data
+        - mountPath: /datalog
+          name: kar-zookeeper-pvc-datalog
+{{- end }}
         ports:
         - name: zookeeper
           containerPort: {{ .Values.zk.port }}
@@ -83,3 +105,65 @@ spec:
         env:
         - name: ZOO_4LW_COMMANDS_WHITELIST
           value: "srvr,ruok"
+        - name: ZOO_SERVERS
+{{- if .Values.global.replicatedServices }}
+          value: "server.0={{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }} server.1={{ include "kar.zookeeper_host_one" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }} server.2={{ include "kar.zookeeper_host_two" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }}"
+{{ else }}
+          value: "server.0={{ include "kar.zookeeper_host_zero" . }}:{{ .Values.zk.serverPort }}:{{ .Values.zk.leaderElectionPort }};{{ .Values.zk.port }}"
+{{- end }}
+
+{{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we really need them */}}
+{{- if and .Values.global.replicatedServices .Values.global.persistence }}
+  volumeClaimTemplates:
+  - metadata:
+      name: kar-zookeeper-pvc-data
+      labels:
+        {{- include "kar.labels" . | nindent 8 }}
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 256Mi
+  - metadata:
+      name: kar-zookeeper-pvc-datalog
+      labels:
+        {{- include "kar.labels" . | nindent 8 }}
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 256Mi
+{{- end }}
+
+{{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kar-zookeeper-pvc-data
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar-zookeeper-pvc-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kar-zookeeper-pvc-datalog
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar-zookeeper-pvc-datalog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 256Mi
+{{- end }}

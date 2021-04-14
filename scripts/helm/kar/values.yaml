@@ -39,6 +39,8 @@ kar:
     sidecarImageName: 'quay.io/ibm/kar-sidecar'
 
 global:
+  replicatedServices: false
+  persistence: true
   kafkaExternalHost: localhost
   kafkaNodePort: 31093
   redisNodePort: 31379

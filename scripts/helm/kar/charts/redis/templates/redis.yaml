@@ -69,13 +69,41 @@ spec:
         {{- include "kar.selectorLabels" . | nindent 8 }}
         name: kar-redis
     spec:
+{{- if .Values.global.persistence }}
+      volumes:
+        - name: kar-redis-pvc
+          persistentVolumeClaim:
+            claimName: kar-redis-pvc
+{{- end }}
       containers:
       - name: redis
         image: {{ .Values.redis.imageRegistry }}/{{ .Values.redis.imageName }}:{{ .Values.redis.imageTag }}
         command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass $REDIS_PASSWORD"]
+{{- if .Values.global.persistence }}
+        volumeMounts:
+        - mountPath: /data
+          name: kar-redis-pvc
+{{- end }}
         ports:
         - name: redis
           containerPort: {{ .Values.redis.port }}
         env:
         - name: REDIS_PASSWORD
           value: {{ .Values.redis.password }}
+
+{{- if .Values.global.persistence }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kar-redis-pvc
+  labels:
+    {{- include "kar.labels" . | nindent 4 }}
+    name: kar-redis-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+{{- end }}
