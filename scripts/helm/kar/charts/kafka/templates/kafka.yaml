@@ -63,7 +63,11 @@ metadata:
     {{- include "kar.labels" . | nindent 4 }}
     name: kar-kafka
 spec:
+{{- if .Values.global.replicatedServices }}
+  replicas: 3
+{{ else }}
   replicas: 1
+{{- end }}
   selector:
     matchLabels:
       {{- include "kar.selectorLabels" . | nindent 6 }}
@@ -102,12 +106,24 @@ spec:
         env:
         - name: HOSTNAME_COMMAND
           value: hostname -f
+        - name: BROKER_ID_COMMAND
+          value: "hostname | awk -F'-' '{print $NF}'"
+{{- if .Values.global.replicatedServices }}
+        # Exposing a replicated Kafka cluster requires complex ingress setup; leave as a future TODO
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: INCLUSTER:PLAINTEXT
+        - name: KAFKA_LISTENERS
+          value: INCLUSTER://:{{ .Values.kafka.portInternal }}
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: INCLUSTER://_{HOSTNAME_COMMAND}:{{ .Values.kafka.portInternal }}
+{{ else }}
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
           value: INCLUSTER:PLAINTEXT,EXTERNAL:PLAINTEXT
         - name: KAFKA_LISTENERS
           value: INCLUSTER://:{{ .Values.kafka.portInternal }},EXTERNAL://:{{ .Values.kafka.portExternal }}
         - name: KAFKA_ADVERTISED_LISTENERS
           value: INCLUSTER://_{HOSTNAME_COMMAND}:{{ .Values.kafka.portInternal }},EXTERNAL://{{ .Values.global.kafkaExternalHost }}:{{ .Values.global.kafkaNodePort }}
+{{- end }}
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: INCLUSTER
         - name: KAFKA_ZOOKEEPER_CONNECT
