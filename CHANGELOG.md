@@ -16,6 +16,13 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.3 - 2021-04-14
++ Support for persistent volumes and zookeeper/kafka replication (#95)
++ Improve naming and documentation of timeout kar arguments (#82)
++ Java SDK configuration cleanups (#81)
++ Implement infinite service/actor timeout in sidecar (#79)
++ Truncate large backtraces to avoid exceeding Kafka message size (#78)
+
 # KAR 1.0.2 - 2021-03-30
 + support for deploying on OpenShift 4.x (#73)
 + upgrade to zookeeper 3.5 and kafka 2.6
