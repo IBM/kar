@@ -76,7 +76,7 @@ npm notice total files:   5
    + pom.xml: update version.kar-java-sdk to x.y.z
    + `mvn versions:set -DnewVersion=x.y.z`
 
-2. examples/*js*
+2. examples/*js* benchmark/*
    + update package.json and package-lock.json
 
 3. PR version bumps; all should run successfully. Merge.
