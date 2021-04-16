@@ -22,26 +22,34 @@ const verbose = process.env.VERBOSE
 
 class Fork {
   async activate () {
-    this.inUseBy = await actor.state.get(this, 'inUseBy') || 'nobody'
+    Object.assign(this, await actor.state.getAll(this))
+    this.inUseBy = this.inUseBy || 'nobody' // fresh Fork; state has never been persisted
   }
 
-  async pickUp (who) {
-    if (this.inUseBy === 'nobody') {
+  state (who) { return this[who] === undefined ? -1 : this[who] }
+
+  async pickUp (who, operation) {
+    if (this.inUseBy === 'nobody' && (this.state(who) + 1) === operation) {
       this.inUseBy = who
-      await actor.state.set(this, 'inUseBy', who)
+      this[who] = operation
+      const update = { inUseBy: this.inUseBy }
+      update[who] = operation
+      await actor.state.setMultiple(this, update)
       return true
-    } else if (this.inUseBy === who) {
-      // can happen if pickUp is re-executed due to a failure
+    } else if (this.inUseBy === who && this.state(who) === operation) {
       return true
     } else {
       return false
     }
   }
 
-  async putDown (who) {
-    if (this.inUseBy === who) { // can be false if putDown is re-executed due to failure
+  async putDown (who, operation) {
+    if (this.inUseBy === who && (this.state(who) + 1) === operation) {
       this.inUseBy = 'nobody'
-      await actor.state.set(this, 'inUseBy', this.inUseBy)
+      this[who] = operation
+      const update = { inUseBy: this.inUseBy }
+      update[who] = operation
+      await actor.state.setMultiple(this, update)
     }
   }
 }
@@ -73,7 +81,7 @@ class Philosopher {
   async getFirstFork (attempt, step) {
     if (this.step !== step) throw new Error('unexpected step')
     step = uuidv4()
-    if (await actor.call(actor.proxy('Fork', this.firstFork), 'pickUp', this.kar.id)) {
+    if (await actor.call(actor.proxy('Fork', this.firstFork), 'pickUp', this.kar.id, 2 * this.servingsEaten)) {
       await actor.tell(this, 'getSecondFork', 1, step)
     } else {
       if (attempt > 5) {
@@ -88,7 +96,7 @@ class Philosopher {
   async getSecondFork (attempt, step) {
     if (this.step !== step) throw new Error('unexpected step')
     step = uuidv4()
-    if (await actor.call(actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id)) {
+    if (await actor.call(actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id, 2 * this.servingsEaten)) {
       await actor.tell(this, 'eat', step)
     } else {
       if (attempt > 5) {
@@ -104,8 +112,8 @@ class Philosopher {
     if (this.step !== step) throw new Error('unexpected step')
     step = uuidv4()
     if (verbose) console.log(`${this.kar.id} ate serving number ${this.servingsEaten}`)
-    await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
-    await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
+    await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id, 2 * this.servingsEaten + 1)
+    await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id, 2 * this.servingsEaten + 1)
     if (this.servingsEaten < this.targetServings) {
       await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1, step)
     } else {
