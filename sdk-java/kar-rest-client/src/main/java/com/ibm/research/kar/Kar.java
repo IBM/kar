@@ -694,7 +694,14 @@ public class Kar {
 						goPeriod += period.toMinutes() + "m";
 						period.minusMinutes(period.toMinutes());
 					}
-					goPeriod += period.getSeconds() + "s";
+					if (period.toSeconds() > 0) {
+						goPeriod += period.toSeconds() + "s";
+						period.minusSeconds(period.toSeconds());
+					}
+					if (period.toMillis() > 0) {
+						goPeriod += period.toMillis() + "ms";
+						period.minusMillis(period.toMillis());
+					}
 					builder.add("period", goPeriod);
 				}
 				builder.add("data", packArgs(args));
