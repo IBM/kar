@@ -60,7 +60,7 @@ kind create cluster --config ${SCRIPTDIR}/kind/kind-cluster.yaml --name kind --i
 ########
 
 # Connect the registry to the cluster network
-docker network connect kind "${reg_name}"
+docker network connect kind "${reg_name}" || true
 
 for node in $(kind get nodes --name kind); do
   kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:5000";
