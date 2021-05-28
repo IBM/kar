@@ -18,7 +18,8 @@ definitions:
     type: integer
     x-go-package: time
   EventSubscribeOptions:
-    description: EventSubscribeOptions documents the request body for subscribing an actor to a topic
+    description: EventSubscribeOptions documents the request body for subscribing
+      an actor to a topic
     properties:
       contentType:
         description: |-
@@ -39,7 +40,8 @@ definitions:
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
   Reminder:
-    description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
+    description: Reminder describes a time-triggered asynchronous invocation of a
+      Path on an Actor
     properties:
       Actor:
         $ref: '#/definitions/Actor'
@@ -100,7 +102,8 @@ definitions:
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
   scheduleReminderPayload:
-    description: scheduleReminderPayload is the JSON request body for scheduling a new reminder
+    description: scheduleReminderPayload is the JSON request body for scheduling a
+      new reminder
     properties:
       data:
         description: |-
@@ -110,7 +113,8 @@ definitions:
         type: object
         x-go-name: Data
       path:
-        description: The path to invoke on the actor instance when the reminder is fired
+        description: The path to invoke on the actor instance when the reminder is
+          fired
         example: sayHello
         type: string
         x-go-name: Path
@@ -123,7 +127,8 @@ definitions:
         type: string
         x-go-name: Period
       targetTime:
-        description: The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
+        description: The time at which the reminder should first fire, specified as
+          a string in an ISO-8601 compliant format
         format: date-time
         type: string
         x-go-name: TargetTime
@@ -151,7 +156,8 @@ definitions:
         type: boolean
         x-go-name: OffsetOldest
       path:
-        description: The actor method that will be invoked to deliver the event to the actor
+        description: The actor method that will be invoked to deliver the event to
+          the actor
         type: string
         x-go-name: Path
       topic:
@@ -334,7 +340,8 @@ paths:
         required: true
         type: string
         x-go-name: Session
-      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+      - description: A possibly empty array containing the arguments with which to
+          invoke the target actor method.
         example: '[3, ''hello'', { msg: ''Greetings'' }]'
         in: body
         name: ActorMethodArguments
@@ -422,13 +429,15 @@ paths:
         required: true
         type: string
         x-go-name: MethodName
-      - description: Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
+      - description: Optionally specific the session to use when performing the call.  Enables
+          re-entrancy for nested actor calls.
         format: uuid
         in: query
         name: session
         type: string
         x-go-name: Session
-      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+      - description: A possibly empty array containing the arguments with which to
+          invoke the target actor method.
         example: '[3, ''hello'', { msg: ''Greetings'' }]'
         in: body
         name: ActorMethodArguments
@@ -554,7 +563,8 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -604,7 +614,8 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -775,7 +786,8 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -825,7 +837,8 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -994,12 +1007,6 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: The key
-        in: path
-        name: key
-        required: true
-        type: string
-        x-go-name: Key
       - description: The request body describes the map operation to be performed
         in: body
         name: Body
@@ -1090,7 +1097,8 @@ paths:
         required: true
         type: string
         x-go-name: Key
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -1730,7 +1738,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1783,7 +1792,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1836,7 +1846,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1889,7 +1900,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1983,6 +1995,7 @@ responses:
     schema:
       type: object
   response200ReminderCancelAllResult:
+    description: ""
     headers:
       NumberCancelled:
         description: The number of reminders that were actually cancelled
@@ -1990,35 +2003,48 @@ responses:
         format: int64
         type: integer
   response200ReminderCancelResult:
+    description: ""
     headers:
       NumberCancelled:
-        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true
+        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError`
+          was true
         format: int64
         type: integer
   response200ReminderGetAllResult:
+    description: ""
     headers:
       Body:
         description: An array containing all matching reminders
-        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'', path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe diem"}'' }]'
+        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'',
+          path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe
+          diem"}'' }]'
         items:
           $ref: '#/definitions/Reminder'
         type: array
   response200ReminderGetResult:
+    description: ""
     headers:
       Body:
         description: The reminder
-        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }'
+        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }'
     schema:
       $ref: '#/definitions/Reminder'
   response200StateDeleteResult:
+    description: ""
     headers:
       NumberDeleted:
         description: The number of key-value pairs that were deleted
         example: 3
         format: int64
         type: integer
-  response200StateExistsResult: {}
+  response200StateExistsResult:
+    description: ""
   response200StateGetAllResult:
+    description: ""
     headers:
       Response:
         description: A map containing the requested state
@@ -2027,6 +2053,7 @@ responses:
         type: object
       type: object
   response200StateGetResult:
+    description: ""
     headers:
       Response:
         description: The requested value
@@ -2040,15 +2067,18 @@ responses:
     schema:
       type: object
   response200StateSetMultipleResult:
+    description: ""
     headers:
       NumberCreated:
         description: Returns the number of new entries created by the operation
         format: int64
         type: integer
   response200StateSetResult:
+    description: ""
     headers:
       NumberCreated:
-        description: Returns 0 if an existing entry was updated and 1 if a new entry was created
+        description: Returns 0 if an existing entry was updated and 1 if a new entry
+          was created
         format: int64
         type: integer
   response200StateSubmapOps:
@@ -2059,6 +2089,7 @@ responses:
     schema:
       type: object
   response200SubscriptionCancelAllResult:
+    description: ""
     headers:
       NumberCancelled:
         description: The number of subscriptions that were actually cancelled
@@ -2066,12 +2097,15 @@ responses:
         format: int64
         type: integer
   response200SubscriptionCancelResult:
+    description: ""
     headers:
       NumberCancelled:
-        description: Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true
+        description: Returns 1 if a subscription was cancelled, 0 if not found and
+          `nilOnError` was true
         format: int64
         type: integer
   response200SubscriptionGetAllResult:
+    description: ""
     headers:
       Body:
         description: An array containing all matching subscriptions
@@ -2079,21 +2113,25 @@ responses:
           $ref: '#/definitions/source'
         type: array
   response200SubscriptionGetResult:
+    description: ""
     headers:
       Body:
         description: The subscription
     schema:
       $ref: '#/definitions/source'
   response200SystemInfoResult:
+    description: ""
     headers:
       ComponentInfo:
         description: Returns information about a system component
     schema:
       type: object
-  response201: {}
+  response201:
+    description: ""
   response202:
     description: An asynchronous operation has been accepted for eventual execution
-  response204: {}
+  response204:
+    description: ""
   response204ActorNoContentResult:
     description: Indicates that the result of an actor method is void or undefined.
   response400:

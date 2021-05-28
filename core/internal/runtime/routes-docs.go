@@ -206,7 +206,6 @@ type actorTypeOnlyParam struct {
 // swagger:parameters idActorStateExists
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
-// swagger:parameters idActorStateMapOps
 // swagger:parameters idActorStateSubmapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
