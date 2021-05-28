@@ -306,21 +306,22 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
 			return
 		}
+		mapVals, err := store.HMGet(stateKey, mapKeys)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("HMGET failed: %v", err), http.StatusInternalServerError)
+			return
+		}
 
-		// Construct the response map by looking up each subkey
+		// Construct the response map by splicing together mapKeys and mapVals
 		subkeyPrefix := nestedEntryKeyPrefix(mapName)
 		m := map[string]interface{}{}
 		for i := range mapKeys {
-			if vstr, err := store.HGet(stateKey, mapKeys[i]); err == store.ErrNil {
-				// Map contains nil for this key; elide the entry
-			} else if err != nil {
-				http.Error(w, fmt.Sprintf("HKEY failed: %v", err), http.StatusInternalServerError)
-				return
-			} else {
+			val := mapVals[i]
+			if val != "" {
 				userSubkey := strings.TrimPrefix(mapKeys[i], subkeyPrefix)
 				var userValue interface{}
-				if json.Unmarshal([]byte(vstr), &userValue) != nil {
-					http.Error(w, fmt.Sprintf("Failed to deserialize result of HGET: %v", err), http.StatusInternalServerError)
+				if json.Unmarshal([]byte(val), &userValue) != nil {
+					http.Error(w, fmt.Sprintf("Failed to deserialize value: %v", err), http.StatusInternalServerError)
 					return
 				}
 				m[userSubkey] = userValue
