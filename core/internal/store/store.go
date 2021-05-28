@@ -25,9 +25,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/gomodule/redigo/redis"
 )
 
 var (
@@ -210,6 +210,16 @@ func HDelMultiple(hash string, keys []string) (int, error) {
 		args[i+1] = keys[i]
 	}
 	return redis.Int(do("HDEL", args...))
+}
+
+//HMGet hash key[]
+func HMGet(hash string, keys []string) ([]string, error) {
+	args := make([]interface{}, len(keys)+1)
+	args[0] = hash
+	for i := range keys {
+		args[i+1] = keys[i]
+	}
+	return redis.Strings(do("HMGET", args...))
 }
 
 // HGetAll hash
