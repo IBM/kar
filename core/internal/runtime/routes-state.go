@@ -303,13 +303,16 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "get":
 		mapKeys, err := getSubMapKeys(stateKey, mapName)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("getSubMapKeys failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		mapVals, err := store.HMGet(stateKey, mapKeys)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("HMGET failed: %v", err), http.StatusInternalServerError)
-			return
+		mapVals := make([]string, 0)
+		if len(mapKeys) > 0 {
+			mapVals, err = store.HMGet(stateKey, mapKeys)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("HMGET failed: %v", err), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		// Construct the response map by splicing together mapKeys and mapVals
@@ -345,7 +348,7 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	case "size":
 		mapKeys, err := getSubMapKeys(stateKey, mapName)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("HKEYS failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("getSubMapKeys failed: %v", err), http.StatusInternalServerError)
 			return
 		}
 		response = len(mapKeys)
@@ -374,21 +377,22 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 }
 
 func getSubMapKeys(stateKey string, mapName string) ([]string, error) {
-	// TODO: Future performance optimization.
-	//       We should instead use HScan to incrementally accumulate the
-	//       list of keys to avoid long latency operations on Redis.
-	keys, err := store.HKeys(stateKey)
-	if err != nil {
-		return nil, err
-	}
-	subkeyPrefix := nestedEntryKeyPrefix(mapName)
-	flatKey := flatEntryKey(mapName)
 	mapKeys := []string{}
-	for i := range keys {
-		if keys[i] != flatKey && strings.HasPrefix(keys[i], subkeyPrefix) {
-			mapKeys = append(mapKeys, keys[i])
+	cursor := 0
+	subkeyPrefix := nestedEntryKeyPrefix(mapName) + "*"
+	for {
+		cursor, result, err := store.HScan(stateKey, cursor, subkeyPrefix)
+		if err != nil {
+			return nil, err
+		}
+		for curIndex := 0; curIndex < len(result); curIndex += 2 {
+			mapKeys = append(mapKeys, result[curIndex])
+		}
+		if cursor == 0 {
+			break
 		}
 	}
+
 	return mapKeys, nil
 }
 

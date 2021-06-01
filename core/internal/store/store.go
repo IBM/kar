@@ -212,7 +212,7 @@ func HDelMultiple(hash string, keys []string) (int, error) {
 	return redis.Int(do("HDEL", args...))
 }
 
-//HMGet hash key[]
+// HMGet hash key[]
 func HMGet(hash string, keys []string) ([]string, error) {
 	args := make([]interface{}, len(keys)+1)
 	args[0] = hash
@@ -220,6 +220,27 @@ func HMGet(hash string, keys []string) ([]string, error) {
 		args[i+1] = keys[i]
 	}
 	return redis.Strings(do("HMGET", args...))
+}
+
+// HScan hash cursor [MATCH match]
+func HScan(hash string, cursor int, match string) (int, []string, error) {
+	var response []interface{}
+	var err error
+	if match != "" {
+		response, err = redis.Values(do("HSCAN", hash, cursor, "MATCH", match))
+	} else {
+		response, err = redis.Values(do("HSCAN", hash, cursor))
+	}
+	if err != nil {
+		return 0, nil, err
+	}
+	cursor, _ = strconv.Atoi(string(response[0].([]byte)))
+	data := response[1].([]interface{})
+	ans := make([]string, len(data))
+	for i := range data {
+		ans[i] = string(data[i].([]byte))
+	}
+	return cursor, ans, nil
 }
 
 // HGetAll hash
