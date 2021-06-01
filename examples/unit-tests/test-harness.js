@@ -170,6 +170,11 @@ async function actorTests () {
     console.log('Submap clear did not remove all keys')
     failure = true
   }
+  const fpm2 = await actor.state.submap.getAll(a, 'famous')
+  if (!fpm2.size === 0) {
+    console.log('Submap get on empty subMap did not return empty map')
+    failure = true
+  }
 
   await actor.state.remove(a, 'key2')
   const v4 = await actor.state.getAll(a)
