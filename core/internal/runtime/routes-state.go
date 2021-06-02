@@ -381,10 +381,11 @@ func getSubMapKeys(stateKey string, mapName string) ([]string, error) {
 	cursor := 0
 	subkeyPrefix := nestedEntryKeyPrefix(mapName) + "*"
 	for {
-		cursor, result, err := store.HScan(stateKey, cursor, subkeyPrefix)
+		newCursor, result, err := store.HScan(stateKey, cursor, subkeyPrefix)
 		if err != nil {
 			return nil, err
 		}
+		cursor = newCursor
 		for curIndex := 0; curIndex < len(result); curIndex += 2 {
 			mapKeys = append(mapKeys, result[curIndex])
 		}
