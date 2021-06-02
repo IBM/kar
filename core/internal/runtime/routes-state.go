@@ -276,14 +276,18 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	var response interface{}
 	switch op.Op {
 	case "clear":
-		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		mapKeys := []string{}
+		err := subMapScan(stateKey, mapName, func(key string, value string) error {
+			mapKeys = append(mapKeys, key)
+			return nil
+		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("submapOps:clear: subMapScan failed: %v", err), http.StatusInternalServerError)
 			return
 		}
 		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("submapOps: HDEL failed  %v", err), http.StatusInternalServerError)
 			return
 		}
 		response = numCleared
@@ -295,63 +299,55 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		}
 		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("submapOps: HDEL failed  %v", err), http.StatusInternalServerError)
 			return
 		}
 		response = numCleared
 
 	case "get":
-		mapKeys, err := getSubMapKeys(stateKey, mapName)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("getSubMapKeys failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-		mapVals := make([]string, 0)
-		if len(mapKeys) > 0 {
-			mapVals, err = store.HMGet(stateKey, mapKeys)
-			if err != nil {
-				http.Error(w, fmt.Sprintf("HMGET failed: %v", err), http.StatusInternalServerError)
-				return
-			}
-		}
-
-		// Construct the response map by splicing together mapKeys and mapVals
-		subkeyPrefix := nestedEntryKeyPrefix(mapName)
 		m := map[string]interface{}{}
-		for i := range mapKeys {
-			val := mapVals[i]
-			if val != "" {
-				userSubkey := strings.TrimPrefix(mapKeys[i], subkeyPrefix)
+		subkeyPrefix := nestedEntryKeyPrefix(mapName)
+		err := subMapScan(stateKey, mapName, func(key string, value string) error {
+			if value != "" {
+				userSubkey := strings.TrimPrefix(key, subkeyPrefix)
 				var userValue interface{}
-				if json.Unmarshal([]byte(val), &userValue) != nil {
-					http.Error(w, fmt.Sprintf("Failed to deserialize value: %v", err), http.StatusInternalServerError)
-					return
+				if json.Unmarshal([]byte(value), &userValue) != nil {
+					return fmt.Errorf("Failed to deserialize submap value: %v", value)
 				}
 				m[userSubkey] = userValue
 			}
+			return nil
+		})
+		if err != nil {
+			http.Error(w, fmt.Sprintf("submapOps:get: subMapScan failed: %v", err), http.StatusInternalServerError)
+			return
 		}
 		response = m
 
 	case "keys":
-		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		userKeys := []string{}
+		subkeyPrefix := nestedEntryKeyPrefix(mapName)
+		err := subMapScan(stateKey, mapName, func(key string, value string) error {
+			userKeys = append(userKeys, strings.TrimPrefix(key, subkeyPrefix))
+			return nil
+		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("submapOps:keys: subMapScan failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		cleanedKeys := make([]string, 0, len(mapKeys))
-		subkeyPrefix := nestedEntryKeyPrefix(mapName)
-		for i := range mapKeys {
-			cleanedKeys = append(cleanedKeys, strings.TrimPrefix(mapKeys[i], subkeyPrefix))
-		}
-		response = cleanedKeys
+		response = userKeys
 
 	case "size":
-		mapKeys, err := getSubMapKeys(stateKey, mapName)
+		size := 0
+		err := subMapScan(stateKey, mapName, func(key string, value string) error {
+			size = size + 1
+			return nil
+		})
 		if err != nil {
-			http.Error(w, fmt.Sprintf("getSubMapKeys failed: %v", err), http.StatusInternalServerError)
+			http.Error(w, fmt.Sprintf("submapOps:size: subMapScan failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		response = len(mapKeys)
+		response = size
 
 	case "update":
 		numUpdated, err := actorSetMultiple(stateKey, mapName, op.Updates)
@@ -376,25 +372,26 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	fmt.Fprint(w, string(buf))
 }
 
-func getSubMapKeys(stateKey string, mapName string) ([]string, error) {
-	mapKeys := []string{}
+func subMapScan(stateKey string, mapName string, op func(key string, value string) error) error {
 	cursor := 0
 	subkeyPrefix := nestedEntryKeyPrefix(mapName) + "*"
 	for {
 		newCursor, result, err := store.HScan(stateKey, cursor, subkeyPrefix)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		cursor = newCursor
 		for curIndex := 0; curIndex < len(result); curIndex += 2 {
-			mapKeys = append(mapKeys, result[curIndex])
+			if innerErr := op(result[curIndex], result[curIndex+1]); innerErr != nil {
+				return innerErr
+			}
 		}
 		if cursor == 0 {
 			break
 		}
 	}
 
-	return mapKeys, nil
+	return nil
 }
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/state/{key} state idActorStateDelete

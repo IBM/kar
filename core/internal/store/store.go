@@ -227,14 +227,17 @@ func HScan(hash string, cursor int, match string) (int, []string, error) {
 	var response []interface{}
 	var err error
 	if match != "" {
-		response, err = redis.Values(do("HSCAN", hash, cursor, "MATCH", match))
+		response, err = redis.Values(do("HSCAN", hash, cursor, "MATCH", match, "COUNT", 1000)) // if we are filtering, increase count by quite a bit to compensate
 	} else {
 		response, err = redis.Values(do("HSCAN", hash, cursor))
 	}
 	if err != nil {
 		return 0, nil, err
 	}
-	cursor, _ = strconv.Atoi(string(response[0].([]byte)))
+	cursor, err = strconv.Atoi(string(response[0].([]byte)))
+	if err != nil {
+		return 0, nil, err
+	}
 	data := response[1].([]interface{})
 	ans := make([]string, len(data))
 	for i := range data {
