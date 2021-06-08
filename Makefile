@@ -97,8 +97,8 @@ docker:
 	make dockerPushBenchmarks
 
 dockerBuild:
-	make dockerCore
-	make dockerExamples
+	make dockerBuildCore
+	make dockerBuildExamples
 
 installJavaSDK:
 	cd sdk-java && mvn install
