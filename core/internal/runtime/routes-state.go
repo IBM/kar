@@ -29,7 +29,6 @@ import (
 
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/internal/store"
-	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -246,11 +245,9 @@ func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 // The valid values for `op` are:
 // <ul>
 // <li>clear: remove all entires in the key actor map</li>
-// <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
 // <li>get: get the entire key actor map</li>
 // <li>keys: return a list of subkeys that are defined in the key actor map</li>
 // <li>size: return the number of entries the key actor map</li>
-// <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
 // </ul>
 //
 //     Consumes:
@@ -264,7 +261,7 @@ func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 //       500: response500
 //
 func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var op mapOp
+	var op submapOp
 	if err := json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
 		http.Error(w, "Request body was not a MapOp", http.StatusBadRequest)
 		return
@@ -284,18 +281,6 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		if err != nil {
 			http.Error(w, fmt.Sprintf("submapOps:clear: subMapScan failed: %v", err), http.StatusInternalServerError)
 			return
-		}
-		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("submapOps: HDEL failed  %v", err), http.StatusInternalServerError)
-			return
-		}
-		response = numCleared
-
-	case "clearSome":
-		mapKeys := []string{}
-		for _, subkey := range op.Removals {
-			mapKeys = append(mapKeys, nestedEntryKey(mapName, subkey))
 		}
 		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
 		if err != nil {
@@ -348,14 +333,6 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			return
 		}
 		response = size
-
-	case "update":
-		numUpdated, err := actorSetMultiple(stateKey, mapName, op.Updates)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: setMultiple failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-		response = numUpdated
 
 	default:
 		http.Error(w, fmt.Sprintf("Unsupported map operation %v", op.Op), http.StatusBadRequest)
@@ -500,23 +477,18 @@ func actorGetAllState(actorType string, actorID string) (map[string]interface{},
 	return m, nil
 }
 
-// swagger:route POST /v1/actor/{actorType}/{actorId}/state state idActorStateMapOps
+// swagger:route POST /v1/actor/{actorType}/{actorId}/state state idActorStateUpdate
 //
 // state
 //
-// ### Perform an operation on the actor's state
+// ### Perform a multi-element update operation on the actor's state
 //
-// The operation indicated by the `op` field of the request body will be performed on the
-// actor instance indicated by `actorType` and `actorId`. The result of the
-// operation will be returned as the response body.
-// If there are no `key` entries in the actor instance, the operation
-// will be interpreted as being applied to an empty map.
-//
-// The valid values for `op` are:
-// <ul>
-// <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
-// <li>update: atomically update the actor state to contain all the key-value pairs contained in updates</li>
-// </ul>
+// The state updates contained in the request body will be performed on the
+// actor instance indicated by `actorType` and `actorId`.
+// All removal operations will be performed first, then all update
+// operations will be performed.
+// The result of the operation will contain the number of state elements
+// removed and updated.
 //
 //     Consumes:
 //     - application/json
@@ -524,70 +496,80 @@ func actorGetAllState(actorType string, actorID string) (map[string]interface{},
 //     - application/json
 //     Schemes: http
 //     Responses:
-//       200: response200StateMapOps
+//       200: response200StateUpdate
 //       404: response404
 //       500: response500
 //
-func routeImplMapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var op mapOp
-	if err := json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
-		http.Error(w, "Request body was not a MapOp", http.StatusBadRequest)
+func routeImplStateUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	var op stateUpdateOp
+	var err error
+	if err = json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
+		http.Error(w, "Request body was not a StateUpdateOp", http.StatusBadRequest)
 		return
 	}
 
 	stateKey := stateKey(ps.ByName("type"), ps.ByName("id"))
 	var response interface{}
 
-	switch op.Op {
-	case "clearSome":
-		mapKeys := []string{}
-		for _, key := range op.Removals {
-			mapKeys = append(mapKeys, flatEntryKey(key))
+	// First build up the keys to remove from the actor state
+	toClear := []string{}
+	for _, key := range op.Removals {
+		toClear = append(toClear, flatEntryKey(key))
+	}
+	for mapName, removals := range op.SubmapRemovals {
+		for _, subkey := range removals {
+			toClear = append(toClear, nestedEntryKey(mapName, subkey))
 		}
-		numCleared, err := store.HDelMultiple(stateKey, mapKeys)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("mapOps: HDEL failed  %v", err), http.StatusInternalServerError)
-			return
-		}
-		response = numCleared
-
-	case "update":
-		numSet, err := actorSetMultiple(stateKey, config.Separator, op.Updates)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("setMultiple failed: %v", err), http.StatusInternalServerError)
-		}
-		response = numSet
-
-	default:
-		http.Error(w, fmt.Sprintf("Unsupported map operation %v", op.Op), http.StatusBadRequest)
-		return
 	}
 
+	// Second construct the updates to apply to the actor state
+	toUpdate := map[string]string{}
+	for k, v := range op.Updates {
+		s, err := json.Marshal(v)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("StateUpdate: malformed update %v[%v] = %v. Error was %v", stateKey, k, v, err), http.StatusBadRequest)
+			return
+		}
+		toUpdate[flatEntryKey(k)] = string(s)
+	}
+	for mapName, updates := range op.SubmapUpdates {
+		for k, v := range updates {
+			s, err := json.Marshal(v)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("StateUpdate: malformed update %v[%v][%v] = %v. Error was %v", stateKey, mapName, k, v, err), http.StatusBadRequest)
+				return
+			}
+			toUpdate[nestedEntryKey(mapName, k)] = string(s)
+		}
+	}
+
+	// Third, apply the removals and then the updates.
+	numCleared := 0
+	numAdded := 0
+	if len(toClear) > 0 {
+		numCleared, err = store.HDelMultiple(stateKey, toClear)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("StateUpate: HDEL failed  %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+	if len(toUpdate) > 0 {
+		numAdded, err = store.HSetMultiple(stateKey, toUpdate)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("StateUpate: HSET failed  %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	response = response200StateUpdateOp{Removed: numCleared, Added: numAdded}
 	buf, err := json.Marshal(response)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("mapOps: error marshalling response %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("StateUpdate: error marshalling response %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprint(w, string(buf))
-}
-
-func actorSetMultiple(stateKey string, key string, updates map[string]interface{}) (int, error) {
-	m := map[string]string{}
-	for i, v := range updates {
-		s, err := json.Marshal(v)
-		if err != nil {
-			logger.Error("setMultiple: %v[%v] = %v failed due to %v", stateKey, i, v, err)
-			return 0, err
-		}
-		if key == config.Separator {
-			m[flatEntryKey(i)] = string(s)
-		} else {
-			m[nestedEntryKey(key, i)] = string(s)
-		}
-	}
-	return store.HSetMultiple(stateKey, m)
 }
 
 // swagger:route DELETE /v1/actor/{actorType}/{actorId}/state state idActorStateDeleteAll

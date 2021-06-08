@@ -83,24 +83,6 @@ definitions:
     title: actorCallResult encodes the result of invoking an actor method.
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
-  mapOp:
-    description: mapOp describes the requested map operation on an Actors state
-    properties:
-      op:
-        type: string
-        x-go-name: Op
-      removals:
-        items:
-          type: string
-        type: array
-        x-go-name: Removals
-      updates:
-        additionalProperties:
-          type: object
-        type: object
-        x-go-name: Updates
-    type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
   scheduleReminderPayload:
     description: scheduleReminderPayload is the JSON request body for scheduling a
       new reminder
@@ -164,6 +146,45 @@ definitions:
         description: The topic that is the source of events for this subscription
         type: string
         x-go-name: Topic
+    type: object
+    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+  stateUpdateOp:
+    description: stateUpdateOp describes a multi-element update operation on an Actors
+      state
+    properties:
+      removals:
+        items:
+          type: string
+        type: array
+        x-go-name: Removals
+      submapremovals:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+        x-go-name: SubmapRemovals
+      submapupdates:
+        additionalProperties:
+          additionalProperties:
+            type: object
+          type: object
+        type: object
+        x-go-name: SubmapUpdates
+      updates:
+        additionalProperties:
+          type: object
+        type: object
+        x-go-name: Updates
+    type: object
+    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+  submapOp:
+    description: submapOp describes the requested operation on a submap in an Actors
+      state
+    properties:
+      op:
+        type: string
+        x-go-name: Op
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
   topicCreateOptions:
@@ -980,20 +1001,15 @@ paths:
       consumes:
       - application/json
       description: |-
-        ### Perform an operation on the actor's state
+        ### Perform a multi-element update operation on the actor's state
 
-        The operation indicated by the `op` field of the request body will be performed on the
-        actor instance indicated by `actorType` and `actorId`. The result of the
-        operation will be returned as the response body.
-        If there are no `key` entries in the actor instance, the operation
-        will be interpreted as being applied to an empty map.
-
-        The valid values for `op` are:
-        <ul>
-        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
-        <li>update: atomically update the actor state to contain all the key-value pairs contained in updates</li>
-        </ul>
-      operationId: idActorStateMapOps
+        The state updates contained in the request body will be performed on the
+        actor instance indicated by `actorType` and `actorId`.
+        All removal operations will be performed first, then all update
+        operations will be performed.
+        The result of the operation will contain the number of state elements
+        removed and updated.
+      operationId: idActorStateUpdate
       parameters:
       - description: The actor type
         in: path
@@ -1007,16 +1023,17 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: The request body describes the map operation to be performed
+      - description: The request body describes the multi-element update operation
+          to be performed
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/mapOp'
+          $ref: '#/definitions/stateUpdateOp'
       produces:
       - application/json
       responses:
         "200":
-          $ref: '#/responses/response200StateMapOps'
+          $ref: '#/responses/response200StateUpdate'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1172,11 +1189,9 @@ paths:
         The valid values for `op` are:
         <ul>
         <li>clear: remove all entires in the key actor map</li>
-        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
         <li>get: get the entire key actor map</li>
         <li>keys: return a list of subkeys that are defined in the key actor map</li>
         <li>size: return the number of entries the key actor map</li>
-        <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
         </ul>
       operationId: idActorStateSubmapOps
       parameters:
@@ -1198,11 +1213,11 @@ paths:
         required: true
         type: string
         x-go-name: Key
-      - description: The request body describes the map operation to be performed
+      - description: The request body describes the submap operation to be performed
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/mapOp'
+          $ref: '#/definitions/submapOp'
       produces:
       - application/json
       responses:
@@ -2059,13 +2074,6 @@ responses:
         description: The requested value
     schema:
       type: object
-  response200StateMapOps:
-    description: The result of performing a map operation on an actor's state
-    headers:
-      body:
-        description: The result of performing the map operation
-    schema:
-      type: object
   response200StateSetMultipleResult:
     description: ""
     headers:
@@ -2082,12 +2090,23 @@ responses:
         format: int64
         type: integer
   response200StateSubmapOps:
-    description: The result of performing a map operation on an actor's state
+    description: The result of performing an operation on an submap of actor's state
     headers:
       body:
-        description: The result of performing the map operation
+        description: The result of performing the supmap operation
     schema:
       type: object
+  response200StateUpdate:
+    description: The result of performing an update operation on an actor's state
+    headers:
+      added:
+        description: The number of entires added by the operation
+        format: int64
+        type: integer
+      removed:
+        description: The number of entries removed by the operation
+        format: int64
+        type: integer
   response200SubscriptionCancelAllResult:
     description: ""
     headers:

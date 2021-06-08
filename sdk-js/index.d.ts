@@ -37,6 +37,28 @@ export interface Actor {
 }
 
 /**
+ * The body of a multi-element actor state update operation
+ */
+export interface ActorStateUpdate {
+  /** Keys to remove from the actor state */
+  removals: Array<string>
+  /** A mapping from submap names to the keys to remove from each submap */
+  submapremovals: Map<string, Array<string>>
+  /** The updates to perform to the actors state */
+  updates: Map<string, any>
+  /** A mapping from submap names to the updates to perform on each submap */
+  submapupdates: Map<string, Map<String, any>>
+}
+
+/**
+ * The result of a multi-element actor state update
+ */
+export interface ActorStateUpdateResult {
+  added: number
+  removed: number
+}
+
+/**
  * A Reminder
  */
 export interface Reminder {
@@ -233,6 +255,13 @@ export namespace actor {
      * @param actor The Actor instance.
      */
     export function removeAll (actor: Actor): Promise<void>;
+
+    /**
+     * Perform a multi-element update operation to an Actor's state
+     * @param actor The Actor instance
+     * @param changes The collection of removals and updates to perform
+     */
+    export function update (actor: Actor, changes:ActorStateUpdate): Promise<ActorStateUpdateResult>
 
     namespace submap {
       /**
