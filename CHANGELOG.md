@@ -16,6 +16,14 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.4 - 2021-06-08
++ Support for general multi-element Actor state updates (#117)
++ Optimize submap operations by using HSCAN (#115, #114, #112)
++ Default to Kubernetes 1.20 on kind (#110)
++ Ignore docker network connect error (#109)
++ Always add docker registry to kind network (#107)
++ Allow millisecond granularity periods for reminders (#105)
+
 # KAR 1.0.3 - 2021-04-14
 + Support for persistent volumes and zookeeper/kafka replication (#95)
 + Improve naming and documentation of timeout kar arguments (#82)
