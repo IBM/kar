@@ -10,7 +10,7 @@
   <packaging>war</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.0.3</version.kar-java-sdk>
+    <version.kar-java-sdk>1.0.4</version.kar-java-sdk>
     <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
