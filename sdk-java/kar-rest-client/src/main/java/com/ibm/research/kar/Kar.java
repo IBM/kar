@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -715,6 +716,14 @@ public class Kar {
 		 * KAR API methods for Actor State
 		 */
 		public static class State {
+			public static class ActorUpdateResult {
+				public final int added;
+				public final int removed;
+				ActorUpdateResult(int added, int removed) {
+					this.added = added;
+					this.removed = removed;
+				}
+			};
 
 			/**
 			 * Get one value from an Actor's state
@@ -790,17 +799,8 @@ public class Kar {
 			public static int set(ActorRef actor, Map<String, JsonValue> updates) {
 				if (updates.isEmpty())
 					return 0;
-				JsonObjectBuilder jb = Json.createObjectBuilder();
-				for (Entry<String, JsonValue> e : updates.entrySet()) {
-					jb.add(e.getKey(), e.getValue());
-				}
-				JsonObject jup = jb.build();
-				JsonObjectBuilder pb = Json.createObjectBuilder();
-				pb.add("op", Json.createValue("update"));
-				pb.add("updates", jup);
-				JsonObject params = pb.build();
-				Response response = karClient.actorMapop(actor.getType(), actor.getId(), params);
-				return toInt(response);
+				ActorUpdateResult result = update(actor, Collections.emptyList(), Collections.emptyMap(), updates, Collections.emptyMap());
+				return result.removed;
 			}
 
 			/**
@@ -826,17 +826,8 @@ public class Kar {
 			public static int removeAll(ActorRef actor, List<String> keys) {
 				if (keys.isEmpty())
 					return 0;
-				JsonArrayBuilder jb = Json.createArrayBuilder();
-				for (String key : keys) {
-					jb.add(key);
-				}
-				JsonArray removals = jb.build();
-				JsonObjectBuilder pb = Json.createObjectBuilder();
-				pb.add("op", Json.createValue("clearSome"));
-				pb.add("removals", removals);
-				JsonObject params = pb.build();
-				Response response = karClient.actorMapop(actor.getType(), actor.getId(), params);
-				return toInt(response);
+				ActorUpdateResult res = update(actor, keys, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
+				return res.removed;
 			}
 
 			/**
@@ -853,7 +844,70 @@ public class Kar {
 			}
 
 			/**
-			 * KAR API methods for ptimized operations for storing a map as a nested element
+			 * Perform a multi-element update operation on a Actor's state. This method is
+			 * the most general form of Actor state update and enables both top-level keys
+			 * and submap keys to be removed and updated in a single KAR operation.
+			 * @param actor The Actor instance.
+			 * @param removals The keys to remove from the actor state
+			 * @param submapRemovals A mapping from submap names to the keys to remove from each submap
+			 * @param updates The updates to perform to the actors state
+			 * @param submapUpdates A mapping from submap names to the updates to perform on each submap
+			 * @return An object containing the number of state entries removed and added by the update.
+			 */
+			public static ActorUpdateResult update(ActorRef actor, List<String> removals, Map<String, List<String>> submapRemovals, Map<String, JsonValue> updates, Map<String, Map<String, JsonValue>> submapUpdates) {
+				JsonObjectBuilder requestBuilder = Json.createObjectBuilder();
+
+				if (!removals.isEmpty()) {
+					JsonArrayBuilder jb = Json.createArrayBuilder();
+					for (String k : removals) {
+						jb.add(k);
+					}
+					requestBuilder.add("removals", jb.build());
+				}
+
+				if (!submapRemovals.isEmpty()) {
+					JsonObjectBuilder smr = Json.createObjectBuilder();
+					for (Entry<String, List<String>> e : submapRemovals.entrySet()) {
+						JsonArrayBuilder jb = Json.createArrayBuilder();
+						for (String k : e.getValue()) {
+							jb.add(k);
+						}
+						smr.add(e.getKey(), jb.build());
+					}
+					requestBuilder.add("submapremovals", smr.build());
+				}
+
+				if (!updates.isEmpty()) {
+					JsonObjectBuilder u = Json.createObjectBuilder();
+					for (Entry<String, JsonValue> e : updates.entrySet()) {
+						u.add(e.getKey(), e.getValue());
+					}
+					requestBuilder.add("updates", u.build());
+				}
+
+				if (!submapUpdates.isEmpty()) {
+					JsonObjectBuilder smu = Json.createObjectBuilder();
+					for (Entry<String, Map<String, JsonValue>> e : submapUpdates.entrySet()) {
+						JsonObjectBuilder u = Json.createObjectBuilder();
+						for (Entry<String, JsonValue> e2 : e.getValue().entrySet()) {
+							u.add(e2.getKey(), e2.getValue());
+						}
+						smu.add(e.getKey(), u.build());
+					}
+					requestBuilder.add("submapupdates", smu.build());
+				}
+
+				JsonObject params = requestBuilder.build();
+				Response response = karClient.actorUpdate(actor.getType(), actor.getId(), params);
+				JsonObject responseObject = ((JsonValue)toValue(response)).asJsonObject();
+				int added = responseObject.getInt("added");
+				int removed = responseObject.getInt("removed");
+
+				return new ActorUpdateResult(added, removed);
+			}
+
+			/**
+			 * KAR API methods for optimized operations for storing a map as a nested element
 			 * of an Actor's state.
 			 */
 			public static class Submap {
@@ -940,17 +994,10 @@ public class Kar {
 				public static int set(ActorRef actor, String submap, Map<String, JsonValue> updates) {
 					if (updates.isEmpty())
 						return 0;
-					JsonObjectBuilder jb = Json.createObjectBuilder();
-					for (Entry<String, JsonValue> e : updates.entrySet()) {
-						jb.add(e.getKey(), e.getValue());
-					}
-					JsonObject jup = jb.build();
-					JsonObjectBuilder pb = Json.createObjectBuilder();
-					pb.add("op", Json.createValue("update"));
-					pb.add("updates", jup);
-					JsonObject params = pb.build();
-					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
-					return toInt(response);
+					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
+					tmp.put(submap, updates);
+					ActorUpdateResult res = update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), tmp);
+					return res.added;
 				}
 
 				/**
@@ -978,17 +1025,11 @@ public class Kar {
 				public static int removeAll(ActorRef actor, String submap, List<String> keys) {
 					if (keys.isEmpty())
 						return 0;
-					JsonArrayBuilder jb = Json.createArrayBuilder();
-					for (String key : keys) {
-						jb.add(key);
-					}
-					JsonArray removals = jb.build();
-					JsonObjectBuilder pb = Json.createObjectBuilder();
-					pb.add("op", Json.createValue("clearSome"));
-					pb.add("removals", removals);
-					JsonObject params = pb.build();
-					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
-					return toInt(response);
+
+					Map<String, List<String>> tmp = new HashMap<String, List<String>>();
+					tmp.put(submap, keys);
+					ActorUpdateResult res = update(actor, Collections.emptyList(), tmp, Collections.emptyMap(), Collections.emptyMap());
+					return res.removed;
 				}
 
 				/**
