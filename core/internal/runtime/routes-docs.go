@@ -175,7 +175,7 @@ func dummy3() {}
 // swagger:parameters idActorStateExists
 // swagger:parameters idActorStateGet
 // swagger:parameters idActorStateSet
-// swagger:parameters idActorStateMapOps
+// swagger:parameters idActorStateUpdate
 // swagger:parameters idActorStateSubmapOps
 // swagger:parameters idActorStateSubkeyDelete
 // swagger:parameters idActorStateSubkeyExists
@@ -313,12 +313,18 @@ type reminderIDParam struct {
 	ReminderID string `json:"reminderId"`
 }
 
-// swagger:parameters idActorStateMapOps
+// swagger:parameters idActorStateUpdate
+type updateParamWrapper struct {
+	// The request body describes the multi-element update operation to be performed
+	// in:body
+	Body stateUpdateOp
+}
+
 // swagger:parameters idActorStateSubmapOps
 type mapopsParamWrapper struct {
-	// The request body describes the map operation to be performed
+	// The request body describes the submap operation to be performed
 	// in:body
-	Body mapOp
+	Body submapOp
 }
 
 // swagger:parameters idActorReminderSchedule
@@ -429,17 +435,19 @@ type response200CallActorResult struct {
 	Body actorCallResult
 }
 
-// The result of performing a map operation on an actor's state
-// swagger:response response200StateMapOps
-type response200StateMapOps struct {
-	// The result of performing the map operation
-	Body interface{} `json:"body"`
+// The result of performing an update operation on an actor's state
+// swagger:response response200StateUpdate
+type response200StateUpdateOp struct {
+	// The number of entries removed by the operation
+	Removed int `json:"removed"`
+	// The number of entires added by the operation
+	Added int `json:"added"`
 }
 
-// The result of performing a map operation on an actor's state
+// The result of performing an operation on an submap of actor's state
 // swagger:response response200StateSubmapOps
 type response200StateSubmapOps struct {
-	// The result of performing the map operation
+	// The result of performing the supmap operation
 	Body interface{} `json:"body"`
 }
 

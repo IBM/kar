@@ -49,11 +49,17 @@ type actorCallResult struct {
 	Stack string `json:"stack,omitempty"`
 }
 
-// mapOp describes the requested map operation on an Actors state
-type mapOp struct {
-	Op       string                 `json:"op"`
-	Updates  map[string]interface{} `json:"updates,omitempty"`
-	Removals []string               `json:"removals,omitempty"`
+// stateUpdateOp describes a multi-element update operation on an Actors state
+type stateUpdateOp struct {
+	Updates        map[string]interface{}            `json:"updates,omitempty"`
+	SubmapUpdates  map[string]map[string]interface{} `json:"submapupdates,omitempty"`
+	Removals       []string                          `json:"removals,omitempty"`
+	SubmapRemovals map[string][]string               `json:"submapremovals,omitempty"`
+}
+
+// submapOp describes the requested operation on a submap in an Actors state
+type submapOp struct {
+	Op string `json:"op"`
 }
 
 type actorEntry struct {
