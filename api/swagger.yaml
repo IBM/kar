@@ -18,7 +18,8 @@ definitions:
     type: integer
     x-go-package: time
   EventSubscribeOptions:
-    description: EventSubscribeOptions documents the request body for subscribing an actor to a topic
+    description: EventSubscribeOptions documents the request body for subscribing
+      an actor to a topic
     properties:
       contentType:
         description: |-
@@ -39,7 +40,8 @@ definitions:
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
   Reminder:
-    description: Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
+    description: Reminder describes a time-triggered asynchronous invocation of a
+      Path on an Actor
     properties:
       Actor:
         $ref: '#/definitions/Actor'
@@ -81,26 +83,9 @@ definitions:
     title: actorCallResult encodes the result of invoking an actor method.
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
-  mapOp:
-    description: mapOp describes the requested map operation on an Actors state
-    properties:
-      op:
-        type: string
-        x-go-name: Op
-      removals:
-        items:
-          type: string
-        type: array
-        x-go-name: Removals
-      updates:
-        additionalProperties:
-          type: object
-        type: object
-        x-go-name: Updates
-    type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
   scheduleReminderPayload:
-    description: scheduleReminderPayload is the JSON request body for scheduling a new reminder
+    description: scheduleReminderPayload is the JSON request body for scheduling a
+      new reminder
     properties:
       data:
         description: |-
@@ -110,7 +95,8 @@ definitions:
         type: object
         x-go-name: Data
       path:
-        description: The path to invoke on the actor instance when the reminder is fired
+        description: The path to invoke on the actor instance when the reminder is
+          fired
         example: sayHello
         type: string
         x-go-name: Path
@@ -123,7 +109,8 @@ definitions:
         type: string
         x-go-name: Period
       targetTime:
-        description: The time at which the reminder should first fire, specified as a string in an ISO-8601 compliant format
+        description: The time at which the reminder should first fire, specified as
+          a string in an ISO-8601 compliant format
         format: date-time
         type: string
         x-go-name: TargetTime
@@ -151,13 +138,53 @@ definitions:
         type: boolean
         x-go-name: OffsetOldest
       path:
-        description: The actor method that will be invoked to deliver the event to the actor
+        description: The actor method that will be invoked to deliver the event to
+          the actor
         type: string
         x-go-name: Path
       topic:
         description: The topic that is the source of events for this subscription
         type: string
         x-go-name: Topic
+    type: object
+    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+  stateUpdateOp:
+    description: stateUpdateOp describes a multi-element update operation on an Actors
+      state
+    properties:
+      removals:
+        items:
+          type: string
+        type: array
+        x-go-name: Removals
+      submapremovals:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+        x-go-name: SubmapRemovals
+      submapupdates:
+        additionalProperties:
+          additionalProperties:
+            type: object
+          type: object
+        type: object
+        x-go-name: SubmapUpdates
+      updates:
+        additionalProperties:
+          type: object
+        type: object
+        x-go-name: Updates
+    type: object
+    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+  submapOp:
+    description: submapOp describes the requested operation on a submap in an Actors
+      state
+    properties:
+      op:
+        type: string
+        x-go-name: Op
     type: object
     x-go-package: github.com/IBM/kar.git/core/internal/runtime
   topicCreateOptions:
@@ -334,7 +361,8 @@ paths:
         required: true
         type: string
         x-go-name: Session
-      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+      - description: A possibly empty array containing the arguments with which to
+          invoke the target actor method.
         example: '[3, ''hello'', { msg: ''Greetings'' }]'
         in: body
         name: ActorMethodArguments
@@ -422,13 +450,15 @@ paths:
         required: true
         type: string
         x-go-name: MethodName
-      - description: Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
+      - description: Optionally specific the session to use when performing the call.  Enables
+          re-entrancy for nested actor calls.
         format: uuid
         in: query
         name: session
         type: string
         x-go-name: Session
-      - description: A possibly empty array containing the arguments with which to invoke the target actor method.
+      - description: A possibly empty array containing the arguments with which to
+          invoke the target actor method.
         example: '[3, ''hello'', { msg: ''Greetings'' }]'
         in: body
         name: ActorMethodArguments
@@ -554,7 +584,8 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -604,7 +635,8 @@ paths:
         required: true
         type: string
         x-go-name: SubscriptionID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -775,7 +807,8 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -825,7 +858,8 @@ paths:
         required: true
         type: string
         x-go-name: ReminderID
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -967,20 +1001,15 @@ paths:
       consumes:
       - application/json
       description: |-
-        ### Perform an operation on the actor's state
+        ### Perform a multi-element update operation on the actor's state
 
-        The operation indicated by the `op` field of the request body will be performed on the
-        actor instance indicated by `actorType` and `actorId`. The result of the
-        operation will be returned as the response body.
-        If there are no `key` entries in the actor instance, the operation
-        will be interpreted as being applied to an empty map.
-
-        The valid values for `op` are:
-        <ul>
-        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
-        <li>update: atomically update the actor state to contain all the key-value pairs contained in updates</li>
-        </ul>
-      operationId: idActorStateMapOps
+        The state updates contained in the request body will be performed on the
+        actor instance indicated by `actorType` and `actorId`.
+        All removal operations will be performed first, then all update
+        operations will be performed.
+        The result of the operation will contain the number of state elements
+        removed and updated.
+      operationId: idActorStateUpdate
       parameters:
       - description: The actor type
         in: path
@@ -994,22 +1023,17 @@ paths:
         required: true
         type: string
         x-go-name: ActorID
-      - description: The key
-        in: path
-        name: key
-        required: true
-        type: string
-        x-go-name: Key
-      - description: The request body describes the map operation to be performed
+      - description: The request body describes the multi-element update operation
+          to be performed
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/mapOp'
+          $ref: '#/definitions/stateUpdateOp'
       produces:
       - application/json
       responses:
         "200":
-          $ref: '#/responses/response200StateMapOps'
+          $ref: '#/responses/response200StateUpdate'
         "404":
           $ref: '#/responses/response404'
         "500":
@@ -1090,7 +1114,8 @@ paths:
         required: true
         type: string
         x-go-name: Key
-      - description: Replace a REST-style `404` response with a `200` and nil response body when the requested key is not found.
+      - description: Replace a REST-style `404` response with a `200` and nil response
+          body when the requested key is not found.
         in: query
         name: nilOnAbsent
         type: boolean
@@ -1164,11 +1189,9 @@ paths:
         The valid values for `op` are:
         <ul>
         <li>clear: remove all entires in the key actor map</li>
-        <li>clearSome: remove entries in the key actor for the subkeys contained in removals</li>
         <li>get: get the entire key actor map</li>
         <li>keys: return a list of subkeys that are defined in the key actor map</li>
         <li>size: return the number of entries the key actor map</li>
-        <li>update: update the key actor map to contain all the subkey to value mappings contained in updates</li>
         </ul>
       operationId: idActorStateSubmapOps
       parameters:
@@ -1190,11 +1213,11 @@ paths:
         required: true
         type: string
         x-go-name: Key
-      - description: The request body describes the map operation to be performed
+      - description: The request body describes the submap operation to be performed
         in: body
         name: Body
         schema:
-          $ref: '#/definitions/mapOp'
+          $ref: '#/definitions/submapOp'
       produces:
       - application/json
       responses:
@@ -1730,7 +1753,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1783,7 +1807,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1836,7 +1861,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1889,7 +1915,8 @@ paths:
         required: true
         type: string
         x-go-name: Path
-      - description: An arbitrary request body to be passed through unchanged to the target endpoint
+      - description: An arbitrary request body to be passed through unchanged to the
+          target endpoint
         in: body
         name: TargetRequestBody
         schema:
@@ -1983,6 +2010,7 @@ responses:
     schema:
       type: object
   response200ReminderCancelAllResult:
+    description: ""
     headers:
       NumberCancelled:
         description: The number of reminders that were actually cancelled
@@ -1990,35 +2018,48 @@ responses:
         format: int64
         type: integer
   response200ReminderCancelResult:
+    description: ""
     headers:
       NumberCancelled:
-        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError` was true
+        description: Returns 1 if a reminder was cancelled, 0 if not found and `nilOnError`
+          was true
         format: int64
         type: integer
   response200ReminderGetAllResult:
+    description: ""
     headers:
       Body:
         description: An array containing all matching reminders
-        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'', path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe diem"}'' }]'
+        example: '[{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }, { Actor: { Type: ''Foo'', ID: ''22'' }, id: ''once'',
+          path: ''/echo'', targetTime: ''2020-04-14T14:20:00Z'', encodedData: ''{"msg":"carpe
+          diem"}'' }]'
         items:
           $ref: '#/definitions/Reminder'
         type: array
   response200ReminderGetResult:
+    description: ""
     headers:
       Body:
         description: The reminder
-        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'', targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData: ''{"msg":"hello"}'' }'
+        example: '{ Actor: { Type: ''Foo'', ID: ''22'' }, id: ''ticker'', path: ''/echo'',
+          targetTime: ''2020-04-14T14:17:51.073Z'', period: 5000000000, encodedData:
+          ''{"msg":"hello"}'' }'
     schema:
       $ref: '#/definitions/Reminder'
   response200StateDeleteResult:
+    description: ""
     headers:
       NumberDeleted:
         description: The number of key-value pairs that were deleted
         example: 3
         format: int64
         type: integer
-  response200StateExistsResult: {}
+  response200StateExistsResult:
+    description: ""
   response200StateGetAllResult:
+    description: ""
     headers:
       Response:
         description: A map containing the requested state
@@ -2027,38 +2068,47 @@ responses:
         type: object
       type: object
   response200StateGetResult:
+    description: ""
     headers:
       Response:
         description: The requested value
     schema:
       type: object
-  response200StateMapOps:
-    description: The result of performing a map operation on an actor's state
-    headers:
-      body:
-        description: The result of performing the map operation
-    schema:
-      type: object
   response200StateSetMultipleResult:
+    description: ""
     headers:
       NumberCreated:
         description: Returns the number of new entries created by the operation
         format: int64
         type: integer
   response200StateSetResult:
+    description: ""
     headers:
       NumberCreated:
-        description: Returns 0 if an existing entry was updated and 1 if a new entry was created
+        description: Returns 0 if an existing entry was updated and 1 if a new entry
+          was created
         format: int64
         type: integer
   response200StateSubmapOps:
-    description: The result of performing a map operation on an actor's state
+    description: The result of performing an operation on an submap of actor's state
     headers:
       body:
-        description: The result of performing the map operation
+        description: The result of performing the supmap operation
     schema:
       type: object
+  response200StateUpdate:
+    description: The result of performing an update operation on an actor's state
+    headers:
+      added:
+        description: The number of entires added by the operation
+        format: int64
+        type: integer
+      removed:
+        description: The number of entries removed by the operation
+        format: int64
+        type: integer
   response200SubscriptionCancelAllResult:
+    description: ""
     headers:
       NumberCancelled:
         description: The number of subscriptions that were actually cancelled
@@ -2066,12 +2116,15 @@ responses:
         format: int64
         type: integer
   response200SubscriptionCancelResult:
+    description: ""
     headers:
       NumberCancelled:
-        description: Returns 1 if a subscription was cancelled, 0 if not found and `nilOnError` was true
+        description: Returns 1 if a subscription was cancelled, 0 if not found and
+          `nilOnError` was true
         format: int64
         type: integer
   response200SubscriptionGetAllResult:
+    description: ""
     headers:
       Body:
         description: An array containing all matching subscriptions
@@ -2079,21 +2132,25 @@ responses:
           $ref: '#/definitions/source'
         type: array
   response200SubscriptionGetResult:
+    description: ""
     headers:
       Body:
         description: The subscription
     schema:
       $ref: '#/definitions/source'
   response200SystemInfoResult:
+    description: ""
     headers:
       ComponentInfo:
         description: Returns information about a system component
     schema:
       type: object
-  response201: {}
+  response201:
+    description: ""
   response202:
     description: An asynchronous operation has been accepted for eventual execution
-  response204: {}
+  response204:
+    description: ""
   response204ActorNoContentResult:
     description: Indicates that the result of an actor method is void or undefined.
   response400:

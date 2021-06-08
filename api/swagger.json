@@ -922,7 +922,7 @@
         }
       },
       "post": {
-        "description": "### Perform an operation on the actor's state\n\nThe operation indicated by the `op` field of the request body will be performed on the\nactor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclearSome: remove entries in the key actor for the subkeys contained in removals\u003c/li\u003e\n\u003cli\u003eupdate: atomically update the actor state to contain all the key-value pairs contained in updates\u003c/li\u003e\n\u003c/ul\u003e",
+        "description": "### Perform a multi-element update operation on the actor's state\n\nThe state updates contained in the request body will be performed on the\nactor instance indicated by `actorType` and `actorId`.\nAll removal operations will be performed first, then all update\noperations will be performed.\nThe result of the operation will contain the number of state elements\nremoved and updated.",
         "consumes": [
           "application/json"
         ],
@@ -936,7 +936,7 @@
           "state"
         ],
         "summary": "state",
-        "operationId": "idActorStateMapOps",
+        "operationId": "idActorStateUpdate",
         "parameters": [
           {
             "type": "string",
@@ -955,25 +955,17 @@
             "required": true
           },
           {
-            "type": "string",
-            "x-go-name": "Key",
-            "description": "The key",
-            "name": "key",
-            "in": "path",
-            "required": true
-          },
-          {
-            "description": "The request body describes the map operation to be performed",
+            "description": "The request body describes the multi-element update operation to be performed",
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/mapOp"
+              "$ref": "#/definitions/stateUpdateOp"
             }
           }
         ],
         "responses": {
           "200": {
-            "$ref": "#/responses/response200StateMapOps"
+            "$ref": "#/responses/response200StateUpdate"
           },
           "404": {
             "$ref": "#/responses/response404"
@@ -1138,7 +1130,7 @@
         }
       },
       "post": {
-        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the `op` field of the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclear: remove all entires in the key actor map\u003c/li\u003e\n\u003cli\u003eclearSome: remove entries in the key actor for the subkeys contained in removals\u003c/li\u003e\n\u003cli\u003eget: get the entire key actor map\u003c/li\u003e\n\u003cli\u003ekeys: return a list of subkeys that are defined in the key actor map\u003c/li\u003e\n\u003cli\u003esize: return the number of entries the key actor map\u003c/li\u003e\n\u003cli\u003eupdate: update the key actor map to contain all the subkey to value mappings contained in updates\u003c/li\u003e\n\u003c/ul\u003e",
+        "description": "### Perform an operation on the actor map `key`\n\nThe operation indicated by the `op` field of the request body will be performed on the `key` map\nof the actor instance indicated by `actorType` and `actorId`. The result of the\noperation will be returned as the response body.\nIf there are no `key/subkey` entries in the actor instance, the operation\nwill be interpreted as being applied to an empty map.\n\nThe valid values for `op` are:\n\u003cul\u003e\n\u003cli\u003eclear: remove all entires in the key actor map\u003c/li\u003e\n\u003cli\u003eget: get the entire key actor map\u003c/li\u003e\n\u003cli\u003ekeys: return a list of subkeys that are defined in the key actor map\u003c/li\u003e\n\u003cli\u003esize: return the number of entries the key actor map\u003c/li\u003e\n\u003c/ul\u003e",
         "consumes": [
           "application/json"
         ],
@@ -1179,11 +1171,11 @@
             "required": true
           },
           {
-            "description": "The request body describes the map operation to be performed",
+            "description": "The request body describes the submap operation to be performed",
             "name": "Body",
             "in": "body",
             "schema": {
-              "$ref": "#/definitions/mapOp"
+              "$ref": "#/definitions/submapOp"
             }
           }
         ],
@@ -2270,31 +2262,6 @@
       },
       "x-go-package": "github.com/IBM/kar.git/core/internal/runtime"
     },
-    "mapOp": {
-      "description": "mapOp describes the requested map operation on an Actors state",
-      "type": "object",
-      "properties": {
-        "op": {
-          "type": "string",
-          "x-go-name": "Op"
-        },
-        "removals": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "x-go-name": "Removals"
-        },
-        "updates": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          },
-          "x-go-name": "Updates"
-        }
-      },
-      "x-go-package": "github.com/IBM/kar.git/core/internal/runtime"
-    },
     "scheduleReminderPayload": {
       "description": "scheduleReminderPayload is the JSON request body for scheduling a new reminder",
       "type": "object",
@@ -2366,6 +2333,58 @@
       },
       "x-go-package": "github.com/IBM/kar.git/core/internal/runtime"
     },
+    "stateUpdateOp": {
+      "description": "stateUpdateOp describes a multi-element update operation on an Actors state",
+      "type": "object",
+      "properties": {
+        "removals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "Removals"
+        },
+        "submapremovals": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "x-go-name": "SubmapRemovals"
+        },
+        "submapupdates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "x-go-name": "SubmapUpdates"
+        },
+        "updates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "x-go-name": "Updates"
+        }
+      },
+      "x-go-package": "github.com/IBM/kar.git/core/internal/runtime"
+    },
+    "submapOp": {
+      "description": "submapOp describes the requested operation on a submap in an Actors state",
+      "type": "object",
+      "properties": {
+        "op": {
+          "type": "string",
+          "x-go-name": "Op"
+        }
+      },
+      "x-go-package": "github.com/IBM/kar.git/core/internal/runtime"
+    },
     "topicCreateOptions": {
       "description": "topicCreateOptions documents the request body for creating a topic",
       "type": "object",
@@ -2425,6 +2444,7 @@
       }
     },
     "response200ReminderCancelAllResult": {
+      "description": "",
       "headers": {
         "NumberCancelled": {
           "type": "integer",
@@ -2435,6 +2455,7 @@
       }
     },
     "response200ReminderCancelResult": {
+      "description": "",
       "headers": {
         "NumberCancelled": {
           "type": "integer",
@@ -2444,6 +2465,7 @@
       }
     },
     "response200ReminderGetAllResult": {
+      "description": "",
       "headers": {
         "Body": {
           "type": "array",
@@ -2456,6 +2478,7 @@
       }
     },
     "response200ReminderGetResult": {
+      "description": "",
       "schema": {
         "$ref": "#/definitions/Reminder"
       },
@@ -2467,6 +2490,7 @@
       }
     },
     "response200StateDeleteResult": {
+      "description": "",
       "headers": {
         "NumberDeleted": {
           "type": "integer",
@@ -2476,8 +2500,11 @@
         }
       }
     },
-    "response200StateExistsResult": {},
+    "response200StateExistsResult": {
+      "description": ""
+    },
     "response200StateGetAllResult": {
+      "description": "",
       "schema": {
         "type": "object",
         "additionalProperties": {
@@ -2491,6 +2518,7 @@
       }
     },
     "response200StateGetResult": {
+      "description": "",
       "schema": {
         "type": "object"
       },
@@ -2500,18 +2528,8 @@
         }
       }
     },
-    "response200StateMapOps": {
-      "description": "The result of performing a map operation on an actor's state",
-      "schema": {
-        "type": "object"
-      },
-      "headers": {
-        "body": {
-          "description": "The result of performing the map operation"
-        }
-      }
-    },
     "response200StateSetMultipleResult": {
+      "description": "",
       "headers": {
         "NumberCreated": {
           "type": "integer",
@@ -2521,6 +2539,7 @@
       }
     },
     "response200StateSetResult": {
+      "description": "",
       "headers": {
         "NumberCreated": {
           "type": "integer",
@@ -2530,17 +2549,33 @@
       }
     },
     "response200StateSubmapOps": {
-      "description": "The result of performing a map operation on an actor's state",
+      "description": "The result of performing an operation on an submap of actor's state",
       "schema": {
         "type": "object"
       },
       "headers": {
         "body": {
-          "description": "The result of performing the map operation"
+          "description": "The result of performing the supmap operation"
+        }
+      }
+    },
+    "response200StateUpdate": {
+      "description": "The result of performing an update operation on an actor's state",
+      "headers": {
+        "added": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The number of entires added by the operation"
+        },
+        "removed": {
+          "type": "integer",
+          "format": "int64",
+          "description": "The number of entries removed by the operation"
         }
       }
     },
     "response200SubscriptionCancelAllResult": {
+      "description": "",
       "headers": {
         "NumberCancelled": {
           "type": "integer",
@@ -2551,6 +2586,7 @@
       }
     },
     "response200SubscriptionCancelResult": {
+      "description": "",
       "headers": {
         "NumberCancelled": {
           "type": "integer",
@@ -2560,6 +2596,7 @@
       }
     },
     "response200SubscriptionGetAllResult": {
+      "description": "",
       "headers": {
         "Body": {
           "type": "array",
@@ -2571,6 +2608,7 @@
       }
     },
     "response200SubscriptionGetResult": {
+      "description": "",
       "schema": {
         "$ref": "#/definitions/source"
       },
@@ -2581,6 +2619,7 @@
       }
     },
     "response200SystemInfoResult": {
+      "description": "",
       "schema": {
         "type": "object"
       },
@@ -2590,11 +2629,15 @@
         }
       }
     },
-    "response201": {},
+    "response201": {
+      "description": ""
+    },
     "response202": {
       "description": "An asynchronous operation has been accepted for eventual execution"
     },
-    "response204": {},
+    "response204": {
+      "description": ""
+    },
     "response204ActorNoContentResult": {
       "description": "Indicates that the result of an actor method is void or undefined."
     },
