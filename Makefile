@@ -62,8 +62,9 @@ dockerBuildExamples:
 
 dockerBuildBenchmarks:
 	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
-	cd benchmark/kafka-bench/consumer && docker build -t $(KAFKA_BENCH_CONSUMER) .
-	cd benchmark/kafka-bench/producer && docker build -t $(KAFKA_BENCH_PRODUCER) .
+	# DISABLED DUE TO https://github.com/IBM/kar/issues/118
+#	cd benchmark/kafka-bench/consumer && docker build -t $(KAFKA_BENCH_CONSUMER) .
+#	cd benchmark/kafka-bench/producer && docker build -t $(KAFKA_BENCH_PRODUCER) .
 	cd benchmark/http-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_HTTP_BENCH_JS_IMAGE) .
 
 dockerPushCore:
