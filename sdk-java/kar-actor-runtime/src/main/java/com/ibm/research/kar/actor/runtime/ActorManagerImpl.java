@@ -52,6 +52,7 @@ public class ActorManagerImpl implements ActorManager {
 	private Map<String, ActorModel> actorMap;
 
 	@PostConstruct
+	@Lock(LockType.WRITE)
 	public void initialize() {
 		logger.info(LOG_PREFIX + "initialize: Intializing Actor map");
 		this.actorMap = new HashMap<String, ActorModel>();
