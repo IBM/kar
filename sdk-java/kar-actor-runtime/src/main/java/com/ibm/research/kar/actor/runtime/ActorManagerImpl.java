@@ -23,13 +23,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
-import javax.ejb.ConcurrencyManagement;
-import javax.ejb.ConcurrencyManagementType;
-import javax.ejb.Lock;
-import javax.ejb.LockType;
 import javax.ejb.Singleton;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -43,19 +40,21 @@ import com.ibm.research.kar.actor.annotations.Remote;
 
 @Singleton
 @ApplicationScoped
-@ConcurrencyManagement(ConcurrencyManagementType.CONTAINER)
 public class ActorManagerImpl implements ActorManager {
 
 	private final static String LOG_PREFIX = "ActorManagerImpl.";
 	private final Logger logger = Logger.getLogger(ActorManagerImpl.class.getName());
 
-	private Map<String, ActorModel> actorMap;
+	// This map is read only once it is initialized.
+	private HashMap<String, ActorType> actorTypes;
+	// This map is concurrently updated.
+	private ConcurrentHashMap<String, ActorInstance> actorInstances;
 
 	@PostConstruct
-	@Lock(LockType.WRITE)
 	public void initialize() {
 		logger.info(LOG_PREFIX + "initialize: Intializing Actor map");
-		this.actorMap = new HashMap<String, ActorModel>();
+		this.actorInstances = new ConcurrentHashMap<String, ActorInstance>();
+		actorTypes = new HashMap<String, ActorType>();
 
 		logger.info(
 				LOG_PREFIX + "initialize: Got init params " + KarConfig.ACTOR_CLASS_STR + ":" + KarConfig.ACTOR_TYPE_NAME_STR);
@@ -93,13 +92,15 @@ public class ActorManagerImpl implements ActorManager {
 								if (method.isAnnotationPresent(Remote.class)) {
 									try {
 										MethodHandle mh = lookup.unreflect(method);
-										String key = method.getName()+":"+method.getParameterCount();
+										String key = method.getName() + ":" + method.getParameterCount();
 										if (remoteMethods.containsKey(key)) {
-											logger.severe("Unsupported static overload of "+method.getName()+". Multiple overloads with "+method.getParameterCount()+" arguments");
-											logger.severe("Method "+method.toString()+" failed to be registered as a @Remote method");
+											logger.severe("Unsupported static overload of " + method.getName() + ". Multiple overloads with "
+													+ method.getParameterCount() + " arguments");
+											logger.severe("Method " + method.toString() + " failed to be registered as a @Remote method");
 										} else {
-											logger.info(LOG_PREFIX + "initialize: adding " + key + " to remote methods for "+ actorClassName);
-											remoteMethods.put(method.getName()+":"+method.getParameterTypes().length, mh);
+											logger
+													.info(LOG_PREFIX + "initialize: adding " + key + " to remote methods for " + actorClassName);
+											remoteMethods.put(method.getName() + ":" + method.getParameterTypes().length, mh);
 										}
 									} catch (IllegalAccessException e) {
 										logger.severe(LOG_PREFIX + "initialize: IllegalAccessException when adding" + method.getName()
@@ -120,24 +121,11 @@ public class ActorManagerImpl implements ActorManager {
 												LOG_PREFIX + "initialize: IllegalAccessException adding deactivate to " + actorClassName);
 									}
 								}
-
 							}
-							// create new ActorModel
-							ActorModel actorModel = new ActorModel();
 
 							String karTypeName = nameList.get(classList.indexOf(actorClassName));
-
-							// add kar type and class for future (?) bookeeping
-							actorModel.setType(karTypeName);
-							actorModel.setActorClass(actorClass);
-
-							// add methods so we don't have to look them up later
-							actorModel.setActivateMethod(activateMethod); // ok to be null
-							actorModel.setDeactivateMethod(deactivateMethod); // ok to be null
-							actorModel.setRemoteMethods(remoteMethods); // ok to be empty
-
-							// put new ActorModel in ActorMap with KAR type as key
-							actorMap.put(karTypeName, actorModel);
+							ActorType at = new ActorType(karTypeName, actorClass, remoteMethods, activateMethod, deactivateMethod);
+							actorTypes.put(karTypeName, at);
 						} else {
 							if (!isAnnotated) {
 								logger.severe(LOG_PREFIX + "initialize: " + actorClassName + " is not annotated with @Actor");
@@ -155,29 +143,26 @@ public class ActorManagerImpl implements ActorManager {
 
 			}
 
-			logger.info(LOG_PREFIX + "initialize: actor map initialized with " + actorMap.size() + " entries");
+			logger.info(LOG_PREFIX + "initialize: actor map initialized with " + actorTypes.size() + " entries");
 		}
 	}
 
-	@Lock(LockType.READ)
 	public ActorInstance getActor(String type, String id) {
-		ActorModel model = this.actorMap.get(type);
-		return model != null ? model.getActorInstances().get(id) : null;
+		return actorInstances.get(actorInstanceKey(type, id));
 	}
 
-	@Lock(LockType.WRITE)
 	public ActorInstance createActor(String type, String id) {
-		ActorModel actorModel = actorMap.get(type);
-		if (actorModel == null) {
+		ActorType actorType = actorTypes.get(type);
+		if (actorType == null) {
 			return null;
 		}
 
+		Class<ActorInstance> actorClass = actorType.getActorClass();
 		try {
-			Class<ActorInstance> actorClass = actorModel.getActorClass();
 			ActorInstance actorObj = actorClass.getConstructor().newInstance();
 			actorObj.setType(type);
 			actorObj.setId(id);
-			actorModel.getActorInstances().put(id, actorObj);
+			actorInstances.put(actorInstanceKey(type, id), actorObj);
 			return actorObj;
 		} catch (Throwable t) {
 			logger.severe(LOG_PREFIX + "createActor: " + t.toString());
@@ -185,40 +170,31 @@ public class ActorManagerImpl implements ActorManager {
 		}
 	}
 
-	@Lock(LockType.WRITE)
 	public boolean deleteActor(String type, String id) {
-		ActorModel actorModel = this.actorMap.get(type);
-		if (actorModel != null) {
-			return actorModel.getActorInstances().remove(id) != null;
-		} else {
-			return false;
-		}
+		return actorInstances.remove(actorInstanceKey(type, id)) != null;
 	}
 
-	@Lock(LockType.READ)
 	public boolean hasActorType(String type) {
-		return this.actorMap.containsKey(type);
+		return this.actorTypes.containsKey(type);
 	}
 
-	@Override
-	@Lock(LockType.READ)
 	public MethodHandle getActorMethod(String type, String name, int numParams) {
-		ActorModel model = this.actorMap.get(type);
-		return model != null ? model.getRemoteMethods().get(name+":"+numParams) : null;
+		ActorType actorType = this.actorTypes.get(type);
+		return actorType != null ? actorType.getRemoteMethods().get(name + ":" + numParams) : null;
 	}
 
-	@Override
-	@Lock(LockType.READ)
 	public MethodHandle getActorActivateMethod(String type) {
-		ActorModel model = this.actorMap.get(type);
-		return model != null ? model.getActivateMethod() : null;
+		ActorType actorType = this.actorTypes.get(type);
+		return actorType != null ? actorType.getActivateMethod() : null;
 	}
 
-	@Override
-	@Lock(LockType.READ)
 	public MethodHandle getActorDeactivateMethod(String type) {
-		ActorModel model = this.actorMap.get(type);
-		return model != null ? model.getDeactivateMethod() : null;
+		ActorType actorType = this.actorTypes.get(type);
+		return actorType != null ? actorType.getDeactivateMethod() : null;
+	}
+
+	private String actorInstanceKey(String type, String instance) {
+		return type + ":" + instance;
 	}
 
 }

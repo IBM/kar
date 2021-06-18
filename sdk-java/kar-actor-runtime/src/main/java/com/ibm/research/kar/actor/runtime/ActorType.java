@@ -17,87 +17,52 @@
 package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.ibm.research.kar.actor.ActorInstance;
 
-public final class ActorModel {
+public final class ActorType {
 
 	// KAR type
-	private String type;
+	private final String type;
 
 	// java.lang.Class for the Actor
-	private Class<ActorInstance> actorClass;
+	private final Class<ActorInstance> actorClass;
 
 	// Lookup for callable remote methods
-	private Map<String, MethodHandle> remoteMethods;
+	private final Map<String, MethodHandle> remoteMethods;
 
 	// Lookup for init method
-	private MethodHandle activateMethod;
+	private final MethodHandle activateMethod;
 
 	// Lookup for deinit method
-	private MethodHandle deactivateMethod;
+	private final MethodHandle deactivateMethod;
 
-	// Map of instances of this actor type indexed by id
-	private Map<String, ActorInstance> actorInstances;
-
-
-	public ActorModel() {
-		this.remoteMethods = new HashMap<String,MethodHandle>();
-		this.actorInstances = new HashMap<String,ActorInstance>();
+	public ActorType(String type, Class<ActorInstance> cls, Map<String, MethodHandle> methods, MethodHandle activate, MethodHandle deactivate) {
+		this.type = type;
+		this.actorClass = cls;
+		this.remoteMethods = methods;
+		this.activateMethod = activate;
+		this.deactivateMethod = deactivate;
 	}
-
-	/*
-	 * Getters and Setters
-	 */
 
 	public String getType() {
 		return type;
 	}
 
-	public void setType(String type) {
-		this.type = type;
-	}
-
-
 	public Class<ActorInstance> getActorClass() {
 		return actorClass;
-	}
-
-	public void setActorClass(Class<ActorInstance> cls) {
-		this.actorClass = cls;
 	}
 
 	public Map<String, MethodHandle> getRemoteMethods() {
 		return remoteMethods;
 	}
 
-	public void setRemoteMethods(Map<String, MethodHandle> remoteMethods) {
-		this.remoteMethods = remoteMethods;
-	}
-
 	public MethodHandle getActivateMethod() {
 		return activateMethod;
 	}
 
-	public void setActivateMethod(MethodHandle activateMethod) {
-		this.activateMethod = activateMethod;
-	}
-
 	public MethodHandle getDeactivateMethod() {
 		return deactivateMethod;
-	}
-
-	public void setDeactivateMethod(MethodHandle deactivateMethod) {
-		this.deactivateMethod = deactivateMethod;
-	}
-
-	public Map<String, ActorInstance> getActorInstances() {
-		return actorInstances;
-	}
-
-	public void setActorInstances(Map<String, ActorInstance> actorInstances) {
-		this.actorInstances = actorInstances;
 	}
 }
