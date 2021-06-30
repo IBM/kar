@@ -34,39 +34,8 @@ class Transaction {
   }
 }
 
-class Account1 {
+class Account {
   async activate () {
-    console.log("Here 1")
-    this.currBalance = await actor.state.get(this, 'currBalance') || 1000
-    this.txnIds = await actor.state.get(this, 'txnIds') || []
-  }
-
-  async getBalance() {
-    return this.currBalance
-  }
-
-  async updateBalance (txnId, amt) {
-    let txnIds = await actor.state.get(this, 'txnIds') || []
-    if (txnIds.includes(txnId)) {
-      // This account has already executed this transaction.
-      return true
-    }
-    let success = false
-    if ((this.currBalance - amt) >= 0) {
-      this.currBalance -= amt
-      this.txnIds.push(txnId)
-      await actor.state.setMultiple(this, {currBalance: this.currBalance, txnIds: this.txnIds})
-      console.log(`Updated ${this.kar.id}'s balance to ${this.currBalance}.`)
-      success = true
-    }
-    return success
-  }
-}
-
-
-class Account2 {
-  async activate () {
-    console.log("Here 2")
     this.currBalance = await actor.state.get(this, 'currBalance') || 1000
     this.txnIds = await actor.state.get(this, 'txnIds') || []
   }
@@ -95,5 +64,5 @@ class Account2 {
 
 // Server setup: register actors with KAR and start express
 const app = express()
-app.use(sys.actorRuntime({ Account1, Account2, Transaction }))
-app.listen(process.argv[2], process.env.KAR_APP_HOST || '127.0.0.1')
+app.use(sys.actorRuntime({ Account1:Account, Account2:Account, Transaction }))
+app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

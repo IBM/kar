@@ -36,10 +36,10 @@ async function testTermination (success) {
 
 async function main () {
   let success = false
-  const acct1 = actor.proxy('Account1', uuidv4())
+  const acct1 = actor.proxy('Account1', "123")
   console.log(await actor.call(acct1, 'getBalance'))
 
-  const acct2 = actor.proxy('Account2', uuidv4())
+  const acct2 = actor.proxy('Account2', "456")
   console.log(await actor.call(acct2, 'getBalance'))
 
   const txn1 = actor.proxy('Transaction')
