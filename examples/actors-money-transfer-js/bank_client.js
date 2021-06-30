@@ -42,8 +42,14 @@ async function main () {
   const acct2 = actor.proxy('Account2', "456")
   console.log(await actor.call(acct2, 'getBalance'))
 
-  const txn1 = actor.proxy('Transaction')
+  const txn1 = actor.proxy('Transaction', '1234')
   success = await actor.call(txn1, 'transfer', acct1, acct2, 40)
+  console.log(await actor.call(acct1, 'getBalance'))
+  console.log(await actor.call(acct2, 'getBalance'))
+
+  // Re-executing a transaction does not change the balance
+  const txn2 = actor.proxy('Transaction', '1234')
+  success = await actor.call(txn2, 'transfer', acct1, acct2, 40)
   console.log(await actor.call(acct1, 'getBalance'))
   console.log(await actor.call(acct2, 'getBalance'))
 
