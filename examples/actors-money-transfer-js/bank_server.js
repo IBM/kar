@@ -27,8 +27,12 @@ class Transaction {
 
   async transfer (sender, receiver, amt) {
     if (await actor.call(sender, 'updateBalance', this.txnId, amt)) {
-      await actor.call(receiver, 'updateBalance', this.txnId, -amt)
-      return true
+      if (await actor.call(receiver, 'updateBalance', this.txnId, -amt)) {
+        return true
+      } 
+      // The second transfer did not succeed; rollback the first transfer.
+      await actor.call(sender, 'updateBalance', uuidv4(), -amt)
+      return false
     }
     return false
   }

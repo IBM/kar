@@ -53,6 +53,14 @@ async function main () {
   console.log(await actor.call(acct1, 'getBalance'))
   console.log(await actor.call(acct2, 'getBalance'))
 
+  // Attempt to transfer more than current balance of acct2. 
+  // acct2 updateBalance fails, reverting acct1's transfer.
+  const txn3 = actor.proxy('Transaction')
+  const acct2Balance = await actor.call(acct2, 'getBalance')
+  success = await actor.call(txn3, 'transfer', acct1, acct2, -(acct2Balance+1))
+  console.log(await actor.call(acct1, 'getBalance'))
+  console.log(await actor.call(acct2, 'getBalance'))
+
   console.log('Transaction success status:', success)
   testTermination(success)
 }
