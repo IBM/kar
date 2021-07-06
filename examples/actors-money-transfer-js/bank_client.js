@@ -21,19 +21,6 @@ const sleep = (milliseconds) => {
   return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-async function testTermination (success) {
-  if (!success) {
-    console.log('FAILED; setting non-zero exit code')
-    process.exitCode = 0
-  } else {
-    console.log('SUCCESS')
-    process.exitCode = 1
-  }
-
-  console.log('Terminating sidecar')
-  await sys.shutdown()
-}
-
 async function main () {
   let success = false
   const acct1 = actor.proxy('Account1', "123")
@@ -46,12 +33,14 @@ async function main () {
   success = await actor.call(txn1, 'transfer', acct1, acct2, 40)
   console.log(await actor.call(acct1, 'getBalance'))
   console.log(await actor.call(acct2, 'getBalance'))
+  console.log('Transaction success status:', success)
 
-  // Re-executing a transaction does not change the balance
+  // Re-executing a txn does not change the balance, unless the first txn failed.
   const txn2 = actor.proxy('Transaction', '1234')
   success = await actor.call(txn2, 'transfer', acct1, acct2, 40)
   console.log(await actor.call(acct1, 'getBalance'))
   console.log(await actor.call(acct2, 'getBalance'))
+  console.log('Transaction success status:', success)
 
   // Attempt to transfer more than current balance of acct2. 
   // acct2 updateBalance fails, reverting acct1's transfer.
@@ -62,7 +51,8 @@ async function main () {
   console.log(await actor.call(acct2, 'getBalance'))
 
   console.log('Transaction success status:', success)
-  testTermination(success)
+  console.log('Terminating sidecar')
+  await sys.shutdown()
 }
 
 main()
