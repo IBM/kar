@@ -85,6 +85,10 @@ class Account {
     this.preparedTxns = that.preparedTxns || {}
     this.committedTxns = that.committedTxns || {}
   }
+  async setBalance(balance) {
+    this.exactBalance = balance
+    actor.state.set(this, 'exactBalance', this.exactBalance)
+  }
 
   async getAvailableBalance() {
     return this.exactBalance - this.debits
