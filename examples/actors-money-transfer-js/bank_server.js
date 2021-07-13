@@ -101,11 +101,10 @@ class Account {
       // Already prepared this txn.
       return this.preparedTxns[txnId]
     }
-    console.log('Debits: ', this.debits, " Credits: ", this.credits)
-    amt > 0? this.debits += amt : this.credits -= amt
-    console.log('Debits: ', this.debits, " Credits: ", this.credits)
-    const prepared = await this.getAvailableBalance() > 0? true : false
+    const prepared = (this.exactBalance - amt > 0)
     this.preparedTxns[txnId] = prepared
+    if (prepared) { amt > 0? this.debits += amt : this.credits -= amt }
+    console.log('Debits: ', this.debits, " Credits: ", this.credits)
     await actor.state.setMultiple(this, {debits: this.debits, credits: this.credits,
       preparedTxns: this.preparedTxns})
     return prepared
@@ -126,7 +125,7 @@ class Account {
     if (decision == true) {
       this.exactBalance -= amt
     }
-    amt > 0? this.debits -= amt : this.credits += amt
+    if (this.preparedTxns[txnId]) { amt > 0? this.debits -= amt : this.credits += amt }
     await actor.state.setMultiple(this, {exactBalance: this.exactBalance, debits: this.debits,
       credits: this.credits, committedTxns : this.committedTxns})
     console.log(`Committed transaction ${txnId}. Exact balance is ${this.exactBalance}.\n`)
