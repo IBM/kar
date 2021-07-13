@@ -24,33 +24,34 @@ const sleep = (milliseconds) => {
 async function main () {
   let success = false
   const acct1 = actor.proxy('Account1', "123")
-  console.log(await actor.call(acct1, 'getBalance'))
+  console.log('Account 1: Available Balance =', await actor.call(acct1, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct1, 'getExactBalance'))
 
   const acct2 = actor.proxy('Account2', "456")
-  console.log(await actor.call(acct2, 'getBalance'))
+  console.log('Account 2: Available Balance =', await actor.call(acct2, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct2, 'getExactBalance'), '\n')
 
-  const txn1 = actor.proxy('Transaction', '1234')
+  const txn1 = actor.proxy('Transaction', uuidv4())
   success = await actor.call(txn1, 'transfer', acct1, acct2, 40)
-  console.log(await actor.call(acct1, 'getBalance'))
-  console.log(await actor.call(acct2, 'getBalance'))
   console.log('Transaction success status:', success)
-
-  // Re-executing a txn does not change the balance, unless the first txn failed.
-  const txn2 = actor.proxy('Transaction', '1234')
-  success = await actor.call(txn2, 'transfer', acct1, acct2, 40)
-  console.log(await actor.call(acct1, 'getBalance'))
-  console.log(await actor.call(acct2, 'getBalance'))
-  console.log('Transaction success status:', success)
-
+  console.log('Account 1: Available Balance =', await actor.call(acct1, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct1, 'getExactBalance'))
+  console.log('Account 2: Available Balance =', await actor.call(acct2, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct2, 'getExactBalance'))
+  console.log('Transaction completion status: ', await actor.call(txn1, 'txnComplete'), '\n')
+  
   // Attempt to transfer more than current balance of acct2. 
   // acct2 updateBalance fails, reverting acct1's transfer.
-  const txn3 = actor.proxy('Transaction')
-  const acct2Balance = await actor.call(acct2, 'getBalance')
+  const txn3 = actor.proxy('Transaction', uuidv4())
+  const acct2Balance = await actor.call(acct2, 'getAvailableBalance')
   success = await actor.call(txn3, 'transfer', acct1, acct2, -(acct2Balance+1))
-  console.log(await actor.call(acct1, 'getBalance'))
-  console.log(await actor.call(acct2, 'getBalance'))
-
   console.log('Transaction success status:', success)
+  console.log('Account 1: Available Balance =', await actor.call(acct1, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct1, 'getExactBalance'))
+  console.log('Account 2: Available Balance =', await actor.call(acct2, 'getAvailableBalance'), 
+  'Exact Balance = ', await actor.call(acct2, 'getExactBalance'))
+  console.log('Transaction completion status: ', await actor.call(txn1, 'txnComplete'), '\n')
+
   console.log('Terminating sidecar')
   await sys.shutdown()
 }
