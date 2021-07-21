@@ -60,7 +60,6 @@ class Participant {
   }
   
   async commit(txnId, decision, amt) {
-    // await new Promise(r => setTimeout(r, 5000));
     if (!(txnId in this.preparedTxns)) { throw new Error('An unprepared txn cannot be committed') }
     console.log(`Received commit for txn ${txnId}`)
     this.committedTxns = await actor.state.get(this, 'committedTxns') || {}

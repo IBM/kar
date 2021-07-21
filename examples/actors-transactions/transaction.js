@@ -51,6 +51,7 @@ class Transaction {
         for (const i in votes) { decision = decision && await votes[i]() }
         await actor.state.set(this, 'decision', decision)
       } catch (error) {
+        console.log(error.toString())
         // If decision is not already set, abort this txn as something went wrong.
         if (await actor.state.get(this, 'decision') == null) {
           decision = false
@@ -70,13 +71,13 @@ class Transaction {
     try {
       let done = []
       for (const i in prtpnts) {
-        await actor.asyncCall(prtpnts[i], 'commit', this.txnId, decision, operations[i])
+        done.push(await actor.asyncCall(prtpnts[i], 'commit', this.txnId, decision, operations[i]))
       }
-      for (const i in done) { await done[i]()}
+      for (const i in done) { await done[i]() }
       await actor.state.set(this, 'commitComplete', true)
     } catch (error) {
       console.log(error.toString())
-      return this.transact(prtpnts, operations)
+      return this.sendCommitAsync(prtpnts, operations, decision)
     }
   }
 }
