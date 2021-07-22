@@ -16,6 +16,11 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.5 - 2021-07-22
++ Use factory to create JsonObjectBuilder and JsonArrayBuilder instances (#126)
++ Update to kind 0.11.1 (#125)
++ Rationalize concurrency controls for Java actor runtime (#123)
+
 # KAR 1.0.4 - 2021-06-08
 + Support for general multi-element Actor state updates (#117)
 + Optimize submap operations by using HSCAN (#115, #114, #112)
