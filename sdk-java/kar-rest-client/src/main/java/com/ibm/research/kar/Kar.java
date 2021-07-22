@@ -32,6 +32,7 @@ import java.util.logging.Logger;
 import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
+import javax.json.JsonBuilderFactory;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
@@ -57,6 +58,8 @@ public class Kar {
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
 	private static KarRest karClient = buildRestClient();
+
+	private static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 
 	public Kar() {
 	}
@@ -91,7 +94,7 @@ public class Kar {
 	}
 
 	private static JsonArray packArgs(JsonValue[] args) {
-		JsonArrayBuilder ja = Json.createArrayBuilder();
+		JsonArrayBuilder ja = factory.createArrayBuilder();
 		for (JsonValue a : args) {
 			ja.add(a);
 		}
@@ -679,7 +682,7 @@ public class Kar {
 			 */
 			public static void schedule(ActorRef actor, String path, String reminderId, Instant targetTime, Duration period,
 					JsonValue... args) {
-				JsonObjectBuilder builder = Json.createObjectBuilder();
+				JsonObjectBuilder builder = factory.createObjectBuilder();
 				builder.add("path", "/" + path);
 				builder.add("targetTime", targetTime.toString());
 
@@ -855,10 +858,10 @@ public class Kar {
 			 * @return An object containing the number of state entries removed and added by the update.
 			 */
 			public static ActorUpdateResult update(ActorRef actor, List<String> removals, Map<String, List<String>> submapRemovals, Map<String, JsonValue> updates, Map<String, Map<String, JsonValue>> submapUpdates) {
-				JsonObjectBuilder requestBuilder = Json.createObjectBuilder();
+				JsonObjectBuilder requestBuilder = factory.createObjectBuilder();
 
 				if (!removals.isEmpty()) {
-					JsonArrayBuilder jb = Json.createArrayBuilder();
+					JsonArrayBuilder jb = factory.createArrayBuilder();
 					for (String k : removals) {
 						jb.add(k);
 					}
@@ -866,9 +869,9 @@ public class Kar {
 				}
 
 				if (!submapRemovals.isEmpty()) {
-					JsonObjectBuilder smr = Json.createObjectBuilder();
+					JsonObjectBuilder smr = factory.createObjectBuilder();
 					for (Entry<String, List<String>> e : submapRemovals.entrySet()) {
-						JsonArrayBuilder jb = Json.createArrayBuilder();
+						JsonArrayBuilder jb = factory.createArrayBuilder();
 						for (String k : e.getValue()) {
 							jb.add(k);
 						}
@@ -878,7 +881,7 @@ public class Kar {
 				}
 
 				if (!updates.isEmpty()) {
-					JsonObjectBuilder u = Json.createObjectBuilder();
+					JsonObjectBuilder u = factory.createObjectBuilder();
 					for (Entry<String, JsonValue> e : updates.entrySet()) {
 						u.add(e.getKey(), e.getValue());
 					}
@@ -886,9 +889,9 @@ public class Kar {
 				}
 
 				if (!submapUpdates.isEmpty()) {
-					JsonObjectBuilder smu = Json.createObjectBuilder();
+					JsonObjectBuilder smu = factory.createObjectBuilder();
 					for (Entry<String, Map<String, JsonValue>> e : submapUpdates.entrySet()) {
-						JsonObjectBuilder u = Json.createObjectBuilder();
+						JsonObjectBuilder u = factory.createObjectBuilder();
 						for (Entry<String, JsonValue> e2 : e.getValue().entrySet()) {
 							u.add(e2.getKey(), e2.getValue());
 						}
@@ -938,7 +941,7 @@ public class Kar {
 				 * @return An array containing the currently defined subkeys
 				 */
 				public static Map<String, JsonValue> getAll(ActorRef actor, String submap) {
-					JsonObjectBuilder jb = Json.createObjectBuilder();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
 					jb.add("op", Json.createValue("get"));
 					JsonObject params = jb.build();
 					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
@@ -1040,7 +1043,7 @@ public class Kar {
 				 * @return The number of removed subkey entrys
 				 */
 				public static int removeAll(ActorRef actor, String submap) {
-					JsonObjectBuilder jb = Json.createObjectBuilder();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
 					jb.add("op", Json.createValue("clear"));
 					JsonObject params = jb.build();
 					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
@@ -1055,7 +1058,7 @@ public class Kar {
 				 * @return An array containing the currently defined subkeys
 				 */
 				public static String[] keys(ActorRef actor, String submap) {
-					JsonObjectBuilder jb = Json.createObjectBuilder();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
 					jb.add("op", Json.createValue("keys"));
 					JsonObject params = jb.build();
 					Response response = karClient.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
@@ -1157,7 +1160,7 @@ public class Kar {
 		 * @param subscriptionId The subscriptionId to use for this subscription
 		 */
 		public static void subscribe(ActorRef actor, String path, String topic, String subscriptionId) {
-			JsonObjectBuilder builder = Json.createObjectBuilder();
+			JsonObjectBuilder builder = factory.createObjectBuilder();
 			builder.add("path", "/" + path);
 			builder.add("topic", topic);
 			JsonObject data = builder.build();
