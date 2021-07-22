@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "express": "^4.17.1",
-    "kar-sdk": "^1.0.4",
+    "kar-sdk": "^1.0.5",
     "node-fetch": "^2.6.0"
   },
   "devDependencies": {
