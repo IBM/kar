@@ -17,7 +17,6 @@
 package com.ibm.research.kar.actor.runtime;
 
 import java.lang.invoke.MethodHandle;
-import java.util.logging.Logger;
 
 import java.io.StringWriter;
 import java.io.PrintWriter;
@@ -46,9 +45,6 @@ import com.ibm.research.kar.actor.ActorInstance;
 
 @Path("actor")
 public class ActorRuntimeResource {
-
-	private static Logger logger = Logger.getLogger(ActorRuntimeResource.class.getName());
-	private final static String LOG_PREFIX = "ActorRuntimeResource.";
 
 	@Inject
 	ActorManager actorManager;
