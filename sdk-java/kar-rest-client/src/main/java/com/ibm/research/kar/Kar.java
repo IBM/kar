@@ -1188,8 +1188,8 @@ public class Kar {
 		/**
 		 * Publish an event on a topic.
 		 *
-		 * @param topic
-		 * @param event
+		 * @param topic the name of the topic on which to publish
+		 * @param event the event to publish
 		 */
 		public static void publish(String topic, JsonValue event) {
 			karClient.eventPublish(topic, event);
@@ -1209,7 +1209,7 @@ public class Kar {
 
 		/**
 		 * Get information about a system component.
-		 * @param component
+		 * @param component The component whose information is being requested
 		 * @return information about the given component
 		 */
 		public static Object information(String component) {
