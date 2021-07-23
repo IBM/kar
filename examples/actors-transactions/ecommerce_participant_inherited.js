@@ -40,21 +40,22 @@ class Item extends gp.GenericParticipant {
   }
 
   async prepare(txnId, order) {
-    let prepared = await super.prepare(txnId)
-    if (prepared != null) { /* This txn is already prepared. */ return prepared }
-    prepared = ((this.quantity - (this.reservedQuantity + order)) > 0)
-    if (prepared) { this.reservedQuantity += order }
+    let localDecision = await super.prepare(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = ((this.quantity - (this.reservedQuantity + order)) > 0)
+    if (localDecision) { this.reservedQuantity += order }
     console.log('Reserverd quantity: ', this.reservedQuantity)
-    await super.writePrepared(txnId, prepared, {reservedQuantity: this.reservedQuantity})
-    return prepared
+    await super.writePrepared(txnId, localDecision, {reservedQuantity: this.reservedQuantity})
+    return localDecision
   }
   
   async commit(txnId, decision, order) {
     let continueCommit = await super.commit(txnId, decision)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     if (decision == true) { this.quantity -= order }
-    if (await super.isTxnPreparedTrue(txnId)) { this.reservedQuantity -= order }
-    await super.writeCommit( {quantity: this.quantity, reservedQuantity: this.reservedQuantity} )
+    if (await super.getTxnLocalDecision(txnId)) { this.reservedQuantity -= order }
+    await super.writeCommit(txnId, decision, {quantity: this.quantity,
+                            reservedQuantity: this.reservedQuantity} )
     console.log(`Committed transaction ${txnId}. Exact quantity left is ${this.quantity}.\n`)
     return
   }

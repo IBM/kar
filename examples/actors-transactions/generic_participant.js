@@ -44,12 +44,13 @@ class GenericParticipant {
   async writePrepared(txnId, prepared, dataMap) {
     /* Write 'preparedTxns' along with application specific data atomically. */
     this.preparedTxns[txnId] = prepared
-    dataMap['preparedTxns'] = this.preparedTxns
-    await actor.state.setMultiple(this, dataMap)
+    const mapToWrite = Object.assign({ preparedTxns: this.preparedTxns }, dataMap)
+    await actor.state.setMultiple(this, mapToWrite)
   }
   
-  async isTxnPreparedTrue(txnId) {
+  async getTxnLocalDecision(txnId) {
     /* Can be true or false */
+    this.preparedTxns = await actor.state.get(this, 'preparedTxns') || {}
     return this.preparedTxns[txnId]
   }
 
@@ -57,25 +58,25 @@ class GenericParticipant {
     /* Check if txn is already committed or not. Return true only if this particular
     call to commit succeeds; retrun false if txn is already committed or txn is not 
     prepared, indicating this call to commit failed. */
-    if (!(txnId in this.preparedTxns)) { 
+    console.log(`Received commit for txn ${txnId} with decision `, decision)
+    this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
+    if (!(txnId in this.preparedTxns)) {
+      this.preparedTxns[txnId] = false
+      this.committedTxns[txnId] = false
+      await actor.state.setMultiple(this, {preparedTxns: this.preparedTxns,
+                                    committedTxns: this.committedTxns})
       console.log('An unprepared txn', txnId, ' cannot be committed')
       return false
     }
-    console.log(`Received commit for txn ${txnId}`)
-    this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
-    if (txnId in this.committedTxns) {
-      // Already committed this txn.
-      return false
-    }
-    console.log(`Transaction ${txnId}'s decision is`, decision)
-    this.committedTxns[txnId] = decision
+    if (txnId in this.committedTxns) { /* Already committed this txn.*/ return false }
     return true
   }
 
-  async writeCommit(dataMap) {
+  async writeCommit(txnId, decision, dataMap) {
     /* Write 'committedTxns' along with application specific data atomically. */
-    dataMap['committedTxns'] = this.committedTxns
-    await actor.state.setMultiple(this, dataMap)
+    this.committedTxns[txnId] = decision
+    const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
+    await actor.state.setMultiple(this, mapToWrite)
   }
 }
 
