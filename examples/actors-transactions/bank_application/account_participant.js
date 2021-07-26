@@ -50,7 +50,7 @@ class Participant {
       // Already prepared this txn.
       return this.preparedTxns[txnId]
     }
-    const prepared = (this.exactBalance + amt > 0)
+    const prepared = (await this.getAvailableBalance() + amt > 0)
     this.preparedTxns[txnId] = prepared
     if (prepared) { amt < 0? this.debits -= amt : this.credits += amt }
     console.log('Debits: ', this.debits, " Credits: ", this.credits)
