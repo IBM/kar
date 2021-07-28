@@ -42,6 +42,7 @@ import (
 	"github.com/IBM/kar.git/core/internal/store"
 	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
@@ -57,6 +58,9 @@ func server(listener net.Listener) http.Server {
 	base := "/kar/v1"
 	router := httprouter.New()
 	methods := [7]string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+
+	// prometheus metrics endpoint
+	router.GET("/metrics", handler2Handle(promhttp.Handler()))
 
 	// service invocation - handles all common HTTP requests
 	for _, method := range methods {
@@ -110,6 +114,12 @@ func server(listener net.Listener) http.Server {
 	router.PUT(base+"/event/:topic", routeImplCreateTopic)
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
+}
+
+func handler2Handle(h http.Handler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		h.ServeHTTP(w, r)
+	}
 }
 
 // process incoming message asynchronously
