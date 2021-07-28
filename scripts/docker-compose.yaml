@@ -20,14 +20,14 @@ services:
     image: zookeeper:3.5
     hostname: zookeeper
     container_name: kar_zookeeper
-    restart: ${RESTART_POLICY:-no}
+    restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
   kafka:
     image: wurstmeister/kafka:2.13-2.6.0
     hostname: kafka
     container_name: kar_kafka
-    restart: ${RESTART_POLICY:-no}
+    restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
     command: [start-kafka.sh]
@@ -47,7 +47,7 @@ services:
     image: redis:5.0
     hostname: redis
     container_name: kar_redis
-    restart: ${RESTART_POLICY:-no}
+    restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
     command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass passw0rd --port 6379"]
