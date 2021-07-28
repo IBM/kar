@@ -32,12 +32,18 @@ import (
 	"github.com/IBM/kar.git/core/internal/config"
 	"github.com/IBM/kar.git/core/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
+	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/http2"
 )
 
 var (
-	url    = fmt.Sprintf("http://127.0.0.1:%d", config.AppPort)
-	client http.Client
+	url                       = fmt.Sprintf("http://127.0.0.1:%d", config.AppPort)
+	client                    http.Client
+	userCodeDurationHistogram = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "kar_user_code_invocation_durations_histogram_seconds",
+		Help:    "KAR Actor/Service local invocation duration distributions.",
+		Buckets: prometheus.ExponentialBuckets(0.01, 2, 10),
+	}, []string{"path"})
 )
 
 func fakeDialTLS(network, addr string, cfg *tls.Config) (net.Conn, error) {
@@ -57,6 +63,8 @@ func init() {
 	if config.RequestRetryLimit >= 0 {
 		client.Timeout = config.RequestRetryLimit
 	}
+
+	prometheus.MustRegister(userCodeDurationHistogram)
 }
 
 // ReadAll converts the body of a request to a string
@@ -66,7 +74,7 @@ func ReadAll(r *http.Request) string {
 }
 
 // invoke sends an HTTP request to the service and returns the response
-func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, error) {
+func invoke(ctx context.Context, method string, msg map[string]string, metricLabel string) (*Reply, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -106,7 +114,11 @@ func invoke(ctx context.Context, method string, msg map[string]string) (*Reply, 
 		var res *http.Response
 		start := time.Now()
 		res, err = client.Do(req)
-		if elapsed := time.Now().Sub(start); config.ActorBusyTimeout > 0 && elapsed > config.ActorBusyTimeout/2 {
+		elapsed := time.Now().Sub(start)
+		if metricLabel != "" {
+			userCodeDurationHistogram.WithLabelValues(metricLabel).Observe(elapsed.Seconds())
+		}
+		if config.ActorBusyTimeout > 0 && elapsed > config.ActorBusyTimeout/2 {
 			if err != nil {
 				logger.Info("%v with path %v completed with an error in %v seconds", method, msg["path"], elapsed.Seconds())
 			} else {
