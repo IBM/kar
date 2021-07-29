@@ -39,10 +39,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import com.ibm.research.kar.KarConfig;
-import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.runtime.ActorManager;
+import com.ibm.research.runtime.KarConfig;
 
 @Path("actor")
 public class ActorRuntimeResource {

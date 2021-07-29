@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar;
+package com.ibm.research.kar.liberty;
 
 import java.util.concurrent.CompletionStage;
 
@@ -35,6 +35,8 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import com.ibm.research.runtime.KarConfig;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;

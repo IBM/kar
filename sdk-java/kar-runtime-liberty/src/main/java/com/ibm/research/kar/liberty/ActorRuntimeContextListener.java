@@ -23,7 +23,7 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
-import com.ibm.research.kar.KarConfig;
+import com.ibm.research.runtime.KarConfig;
 
 /*
  * Reads configuration information from web.xml

@@ -23,8 +23,6 @@ import java.util.logging.Logger;
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
 
-import com.ibm.research.kar.JSONProvider;
-
 @ApplicationPath("/kar/impl/v1/")
 public class ActorRuntimeApplication extends Application {
 

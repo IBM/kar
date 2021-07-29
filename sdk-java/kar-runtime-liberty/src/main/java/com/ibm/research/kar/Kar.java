@@ -50,6 +50,8 @@ import com.ibm.research.kar.actor.Subscription;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
+import com.ibm.research.kar.liberty.KarRest;
+import com.ibm.research.runtime.KarConfig;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 

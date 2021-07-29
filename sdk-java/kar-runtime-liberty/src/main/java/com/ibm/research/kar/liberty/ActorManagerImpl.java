@@ -32,13 +32,13 @@ import javax.ejb.Singleton;
 import javax.enterprise.context.ApplicationScoped;
 
 import com.ibm.research.kar.actor.ActorInstance;
-import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
 import com.ibm.research.runtime.ActorManager;
 import com.ibm.research.runtime.ActorType;
+import com.ibm.research.runtime.KarConfig;
 
 @Singleton
 @ApplicationScoped

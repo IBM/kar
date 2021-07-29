@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar;
+package com.ibm.research.kar.liberty;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +74,7 @@ public class JSONProvider
   public void writeTo(JsonValue t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
       throws IOException, WebApplicationException {
-	  
+
 	if (this.writerFactory == null) {
 		this.writerFactory = Json.createWriterFactory(null);
 	}
