@@ -8,7 +8,7 @@
 
   <groupId>com.ibm.research.kar</groupId>
   <artifactId>kar-java</artifactId>
-  <version>1.0.6-SNAPSHOT</version>
+  <version>99.99.99-SNAPSHOT</version>
 
   <name>kar-java</name>
   <packaging>pom</packaging>
@@ -39,12 +39,6 @@
     <version.glassfish-json>1.1.4</version.glassfish-json>
     <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
     <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
-    <quarkus-plugin.version>1.8.1.Final</quarkus-plugin.version>
-    <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-    <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
-    <surefire-plugin.version>2.22.1</surefire-plugin.version>
-    <jandex-plugin.version>1.0.8</jandex-plugin.version>
   </properties>
 
   <licenses>

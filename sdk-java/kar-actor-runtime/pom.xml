@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.ibm.research.kar</groupId>
     <artifactId>kar-java</artifactId>
-    <version>1.0.6-SNAPSHOT</version>
+    <version>99.99.99-SNAPSHOT</version>
   </parent>
 
   <artifactId>kar-actor-runtime</artifactId>
@@ -27,155 +27,49 @@
     <profile>
       <id>openliberty</id>
       <activation>
-	<property>
-	  <name>!env.QUARKUS_VERSION</name>
-	</property>
+        <property>
+          <name>!env.QUARKUS_VERSION</name>
+        </property>
       </activation>
       <dependencies>
-	<!-- Provided dependencies -->
-	<dependency>
-	  <groupId>javax</groupId>
-	  <artifactId>javaee-api</artifactId>
-	  <version>8.0</version>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>jakarta.ws.rs</groupId>
-	  <artifactId>jakarta.ws.rs-api</artifactId>
-	  <version>${version.jakarta.ws.rs-api}</version>
-	</dependency>
-	<dependency>
-	  <groupId>org.eclipse.microprofile</groupId>
-	  <artifactId>microprofile</artifactId>
-	  <version>${version.microprofile}</version>
-	  <type>pom</type>
-	  <scope>provided</scope>
-	</dependency>
+        <!-- Provided dependencies -->
+        <dependency>
+          <groupId>javax</groupId>
+          <artifactId>javaee-api</artifactId>
+          <version>8.0</version>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+          <version>${version.jakarta.ws.rs-api}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.microprofile</groupId>
+          <artifactId>microprofile</artifactId>
+          <version>${version.microprofile}</version>
+          <type>pom</type>
+          <scope>provided</scope>
+        </dependency>
       </dependencies>
       <build>
-	<finalName>${project.artifactId}-liberty-${project.version}</finalName>
-	<plugins>
-	  <plugin>
-	    <groupId>org.apache.maven.plugins</groupId>
-	    <artifactId>maven-compiler-plugin</artifactId>
-	    <version>${version.maven-compiler-plugin}</version>
-	    <configuration>
-	      <excludes>
-		<exclude>com/ibm/research/kar/actor/runtime/quarkus/**</exclude>
-	      </excludes>
-	    </configuration>
-	  </plugin>
-	  <plugin>
-	    <artifactId>maven-jar-plugin</artifactId>
-	    <version>${version.maven-jar-plugin}</version>
-	  </plugin>
+        <finalName>${project.artifactId}-liberty-${project.version}</finalName>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${version.maven-compiler-plugin}</version>
+          </plugin>
+          <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>${version.maven-jar-plugin}</version>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${version.maven-javadoc-plugin}</version>
-	    <configuration>
-              <!-- exclude packages that are not included in this profile -->
-	      <excludePackageNames>com.ibm.research.kar.actor.runtime.quarkus</excludePackageNames>
-	    </configuration>
           </plugin>
-	</plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>quarkus</id>
-      <dependencyManagement>
-	<dependencies>
-	  <dependency>
-	    <groupId>${quarkus.platform.group-id}</groupId>
-	    <artifactId>${quarkus.platform.artifact-id}</artifactId>
-	    <version>${quarkus.platform.version}</version>
-	    <type>pom</type>
-	    <scope>import</scope>
-	  </dependency>
-	</dependencies>
-      </dependencyManagement>
-      <dependencies>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-arc</artifactId>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-resteasy</artifactId>
-	</dependency>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-resteasy-jsonb</artifactId>
-	</dependency>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-undertow</artifactId>
-	</dependency>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-rest-client</artifactId>
-	</dependency>
-	<dependency>
-	  <groupId>io.quarkus</groupId>
-	  <artifactId>quarkus-rest-client-jsonb</artifactId>
-	</dependency>
-	<dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>kar-rest-client</artifactId>
-          <version>${project.version}</version>
-	</dependency>
-      </dependencies>
-      <build>
-	<finalName>${project.artifactId}-quarkus-${project.version}</finalName>
-	<plugins>
-	  <plugin>
-	    <groupId>org.jboss.jandex</groupId>
-	    <artifactId>jandex-maven-plugin</artifactId>
-	    <version>${jandex-plugin.version}</version>
-	    <executions>
-	      <execution>
-		<id>make-index</id>
-		<goals>
-		  <goal>jandex</goal>
-		</goals>
-	      </execution>
-	    </executions>
-	  </plugin>
-	  <plugin>
-	    <groupId>io.quarkus</groupId>
-	    <artifactId>quarkus-maven-plugin</artifactId>
-	    <version>${quarkus-plugin.version}</version>
-	    <executions>
-	      <execution>
-		<goals>
-		  <goal>build</goal>
-		  <goal>generate-code</goal>
-		  <goal>generate-code-tests</goal>
-		</goals>
-	      </execution>
-	    </executions>
-	  </plugin>
-	  <plugin>
-	    <artifactId>maven-compiler-plugin</artifactId>
-	    <version>${version.maven-compiler-plugin}</version>
-	    <configuration>
-	      <excludes>
-		<exclude>com/ibm/research/kar/actor/runtime/ActorManagerImpl.java</exclude>
-	      </excludes>
-	    </configuration>
-	  </plugin>
-	  <plugin>
-	    <artifactId>maven-surefire-plugin</artifactId>
-	    <version>${surefire-plugin.version}</version>
-	    <configuration>
-	      <systemPropertyVariables>
-		<java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager>
-		<maven.home>${maven.home}</maven.home>
-	      </systemPropertyVariables>
-	    </configuration>
-	  </plugin>
-	</plugins>
+        </plugins>
       </build>
     </profile>
   </profiles>
