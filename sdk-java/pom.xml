@@ -15,8 +15,8 @@
 
   <modules>
     <module>kar-rest-client</module>
-    <module>kar-actor-runtime</module>
     <module>kar-runtime-core</module>
+    <module>kar-runtime-liberty</module>
   </modules>
 
   <description>KAR Java SDK</description>

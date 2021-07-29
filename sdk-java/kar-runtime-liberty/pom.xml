@@ -9,11 +9,11 @@
     <version>1.0.6-SNAPSHOT</version>
   </parent>
 
-  <artifactId>kar-actor-runtime</artifactId>
+  <artifactId>kar-runtime-liberty</artifactId>
   <packaging>jar</packaging>
 
-  <name>kar-rest-client</name>
-  <description>KAR Java SDK actor runtime</description>
+  <name>kar-runtime-liberty</name>
+  <description>KAR Java SDK runtime for Open Liberty</description>
 
   <dependencies>
     <dependency>
@@ -58,7 +58,6 @@
         </dependency>
       </dependencies>
       <build>
-        <finalName>${project.artifactId}-liberty-${project.version}</finalName>
         <plugins>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
