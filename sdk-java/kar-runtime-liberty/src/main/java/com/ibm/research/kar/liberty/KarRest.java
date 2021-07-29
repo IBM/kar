@@ -36,7 +36,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.runtime.KarConfig;
+import com.ibm.research.kar.runtime.KarConfig;
+import com.ibm.research.kar.runtime.KarSidecar;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
@@ -48,7 +49,7 @@ import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 @Timeout(0)
 @Path("kar/v1")
 @RegisterProvider(JSONProvider.class)
-public interface KarRest extends AutoCloseable {
+public interface KarRest extends KarSidecar {
 
 	public final static String KAR_ACTOR_JSON = "application/kar+json";
 	public final static MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");

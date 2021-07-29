@@ -36,9 +36,9 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
-import com.ibm.research.runtime.ActorManager;
-import com.ibm.research.runtime.ActorType;
-import com.ibm.research.runtime.KarConfig;
+import com.ibm.research.kar.runtime.ActorManager;
+import com.ibm.research.kar.runtime.ActorType;
+import com.ibm.research.kar.runtime.KarConfig;
 
 @Singleton
 @ApplicationScoped

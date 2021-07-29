@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.runtime;
+package com.ibm.research.kar.runtime;
 
 /**
  * Configuration variables, can be overridden
