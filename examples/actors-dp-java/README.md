@@ -43,15 +43,3 @@ In a second window, use the `kar` cli to invite some Philosopers to dinner:
 # Invite 10 Philosophers to a meal of 20 servings each
 kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
 ```
-
-## Quarkus
-We have limited supportfor Quarkus. To run the example locally using Quarkus, first do a `mvn -DskipTests=true -f pom-quarkus.xml clean package`
-
-Then in one window start up the server code:
-```shell
- kar run -app dp -actors Cafe,Fork,Philosopher,Table java -jar target/actor-dp-quarkus-1.0.0-runner.jar
-```
-In a second window, use the `kar` cli to invite some Philosopers to dinner:
-```shell
-# Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20

@@ -55,21 +55,25 @@ run $PID kar run -app java-hello java -jar target/kar-hello-client-jar-with-depe
 
 #################
 
-echo "Building Java Dining Philsopophers against released Java-SDK"
-cd $ROOTDIR/examples/actors-dp-java
-mvn clean package
+## TEMPORARY -- UNTIL WE RELEASE NEW VERSION WITH CHANGED STRUCTURE
 
-echo "Launching Java DP Server"
-kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
-PID=$!
+echo "TODO: Skipping test against released Java-SDK"
 
-# Sleep 10 seconds to given liberty time to come up
-sleep 10
+# echo "Building Java Dining Philsopophers against released Java-SDK"
+# cd $ROOTDIR/examples/actors-dp-java
+# mvn clean package
 
-echo "Building and launching test harness"
-cd $ROOTDIR/examples/actors-dp-js
-npm install --prod
-run $PID kar run -app dp node tester.js
+# echo "Launching Java DP Server"
+# kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
+# PID=$!
+
+# # Sleep 10 seconds to given liberty time to come up
+# sleep 10
+
+# echo "Building and launching test harness"
+# cd $ROOTDIR/examples/actors-dp-js
+# npm install --prod
+# run $PID kar run -app dp node tester.js
 
 #################
 
@@ -84,7 +88,7 @@ cd $ROOTDIR/examples/actors-dp-java
 mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
 
 echo "Launching Java DP Server"
-kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
+kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run -Dversion.kar-java-sdk=99.99.99-SNAPSHOT &
 PID=$!
 
 # Sleep 10 seconds to given liberty time to come up

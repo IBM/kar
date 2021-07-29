@@ -10,7 +10,7 @@
   <packaging>war</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.0.5</version.kar-java-sdk>
+    <version.kar-java-sdk>1.0.6-SNAPSHOT</version.kar-java-sdk> <!-- TODO: drop SNAPSHOT on next release of KAR -->
     <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -37,10 +37,10 @@
       <type>pom</type>
       <scope>provided</scope>
     </dependency>
-    <!-- KAR SDK -->
+    <!-- KAR SDK for Open Liberty -->
     <dependency>
       <groupId>com.ibm.research.kar</groupId>
-      <artifactId>kar-actor-runtime</artifactId>
+      <artifactId>kar-runtime-liberty</artifactId>
       <version>${version.kar-java-sdk}</version>
     </dependency>
   </dependencies>

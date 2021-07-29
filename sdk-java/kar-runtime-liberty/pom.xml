@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                                                                                                                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.ibm.research.kar</groupId>
+    <artifactId>kar-java</artifactId>
+    <version>1.0.6-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>kar-runtime-liberty</artifactId>
+  <packaging>jar</packaging>
+
+  <name>kar-runtime-liberty</name>
+  <description>KAR Java SDK runtime for Open Liberty</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>kar-runtime-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>openliberty</id>
+      <activation>
+        <property>
+          <name>!env.QUARKUS_VERSION</name>
+        </property>
+      </activation>
+      <dependencies>
+        <!-- Provided dependencies -->
+        <dependency>
+          <groupId>javax</groupId>
+          <artifactId>javaee-api</artifactId>
+          <version>8.0</version>
+          <scope>provided</scope>
+        </dependency>
+        <dependency>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+          <version>${version.jakarta.ws.rs-api}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.eclipse.microprofile</groupId>
+          <artifactId>microprofile</artifactId>
+          <version>${version.microprofile}</version>
+          <type>pom</type>
+          <scope>provided</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>${version.maven-compiler-plugin}</version>
+          </plugin>
+          <plugin>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>${version.maven-jar-plugin}</version>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${version.maven-javadoc-plugin}</version>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>

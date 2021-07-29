@@ -74,7 +74,7 @@ public static void main(String[] args) {
 }
 ```
 
-## Invoke a service asynchronously 
+## Invoke a service asynchronously
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -112,7 +112,7 @@ public static void main(String[] args) {
 				.build();
     // call actor asnchronously
     CompletionStage<JsonValue> cf = actorCallAsync("ActorType", "ActorID", "remoteMethodName", params);
-    
+
     JsonValue value = cf
                     .toCompletableFuture()
                     .get();
@@ -124,12 +124,12 @@ The KAR actor runtime in `kar-actor-runtime` allows you to:
 - Create an actor using an annotated POJO class
 - Execute actors as part of your microservice
 
-KAR requires all Actor classes to implement the ActorInstance interface. 
+KAR requires all Actor classes to implement the ActorInstance interface.
 ## Actor Instance
 ```java
 public interface ActorInstance extends ActorRef {
 
-  // Allow KAR to get and set session ids   
+  // Allow KAR to get and set session ids
   public String getSession();
   public void setSession(String session);
 
@@ -162,8 +162,8 @@ public class MyActor implements ActorInstance {
     @Activate // optional actor constructor
     public void init() {
         // init code
-    }	
-    
+    }
+
     // Expose this method to the actor runtime.
     // KAR synchronizes requests to the actor by default
     @Remote
@@ -171,15 +171,15 @@ public class MyActor implements ActorInstance {
         // remote code
     }
 
-    
+
     // Expose this method to the actor runtime.
     // KAR synchronizes requests to the actor by default
-    @Remote 
+    @Remote
     public String readMyState() {
         // read-only code
     }
-	
-    // methods not annotated as @Remote are 
+
+    // methods not annotated as @Remote are
     // not callable by actor runtime
     public void cannotBeInvoked() {
     }
@@ -194,7 +194,7 @@ public class MyActor implements ActorInstance {
 ```
 
 ## Building a microservice with `kar-actor-runtime`
-We have tested the Java actor runtime using openliberty. `kar-actor-runtime` will automatically bundle `kar-rest-client` and is packaged as a jar.  Include this as a dependency when you create your microserivce. Note that `kar-actor-runtime` will not execute on its own.  At a minimum, implement a class that extends `javax.ws.rs.core.Application`. 
+We have tested the Java actor runtime using openliberty. `kar-actor-runtime` will automatically bundle `kar-rest-client` and is packaged as a jar.  Include this as a dependency when you create your microserivce. Note that `kar-actor-runtime` will not execute on its own.  At a minimum, implement a class that extends `javax.ws.rs.core.Application`.
 
  Using Maven, an example `pom.xml` to include `kar-actor-runtime` module into a microservice called `kar-actor-example` is:
  ```xml
@@ -251,15 +251,3 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
     <param-value>Dog, Cat</param-value>
 </context-param>
 ```
-
-# Quarkus Support
-We are experimenting with the KAR Java SDK for Quarkus.  This is an early preview and has the following limitations:
-
-- No support for native compilation.  The Quarkus native-image does not support Java `MethodHandle`, which we use for reflection in the actor runtime.
-- No support for `quarkus:dev`.  We have undiagnosed classpath errors when running under this mode.  To run a quarkus application that uses KAR, directly execute the runnable jar target, e.g. `kar -app myApp java -jar target/my-runnable-jar`
-
-## Building
-If you've previously built the KAR Java SDK for Open Liberty, it is highly recommended that you delete your local maven repository.  Then, to build the KAR SDK using Quarkus extensions, in the `sdk-java` directory execute `mvn -P quarkus install`. 
-
-## Usage
-The Quarkus version of the SDK is the same, except you should not declare an `@ApplicationPath` in your JAX-RS application class since this is already used by the actor runtime.  Quarkus does not allow multiple declarations of `@ApplicationPath` (it also does not require a JAX-RS application class).

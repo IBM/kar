@@ -21,10 +21,6 @@ package com.ibm.research.kar;
  */
 public class KarConfig {
 
-	/*******
-	 * settable variables in web.xml
-	 */
-
 	// comma-delimited list of actor class names
 	public static String ACTOR_CLASS_STR;
 
@@ -39,10 +35,6 @@ public class KarConfig {
 
 	// truncate really long stack traces to avoid exceeding maximum Kafka message size.
 	public static int MAX_STACKTRACE_SIZE = 500 * 1024;
-
-	/********
-	 * TBD settable variables microprofile-config.properties
-	 */
 
 	// maximum retries for REST Calls (only read for CDI)
 	public static final int MAX_RETRY = 10;
