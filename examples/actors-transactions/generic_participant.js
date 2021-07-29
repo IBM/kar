@@ -46,6 +46,7 @@ class GenericParticipant {
     this.preparedTxns[txnId] = prepared
     const mapToWrite = Object.assign({ preparedTxns: this.preparedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
+    console.log(await actor.state.getAll(this))
   }
   
   async getTxnLocalDecision(txnId) {
@@ -77,6 +78,30 @@ class GenericParticipant {
     this.committedTxns[txnId] = decision
     const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
+  }
+
+  async get(key) {
+    return this[key]
+  }
+
+  async getMultiple(keys) {
+    let resp = {}
+    for (let i in keys) {
+      resp[keys[i]] = this[keys[i]]
+    }
+    return resp
+  }
+
+  async put(key, value) {
+    this[key] = value
+    await actor.state.set(this, key, value)
+  }
+
+  async putMultiple(keyValueMap) {
+    for (let key in keyValueMap) {
+      this[key] = keyValueMap[key]
+    }
+    await actor.state.setMultiple(this, keyValueMap)
   }
 }
 

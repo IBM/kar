@@ -83,6 +83,8 @@ class Transaction {
 }
 
 // Server setup: register actors with KAR and start express
-const app = express()
-app.use(sys.actorRuntime({ Transaction }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+// const app = express()
+// app.use(sys.actorRuntime({ Transaction }))
+// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+
+exports.Transaction = Transaction
