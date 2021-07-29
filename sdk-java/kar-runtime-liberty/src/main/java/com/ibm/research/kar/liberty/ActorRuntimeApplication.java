@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import java.util.HashSet;
 import java.util.Set;

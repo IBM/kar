@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import java.lang.invoke.MethodHandle;
 
@@ -42,6 +42,7 @@ import javax.ws.rs.core.Response.Status;
 import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.KarRest;
 import com.ibm.research.kar.actor.ActorInstance;
+import com.ibm.research.runtime.ActorManager;
 
 @Path("actor")
 public class ActorRuntimeResource {
