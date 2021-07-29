@@ -33,8 +33,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-@javax.ws.rs.Consumes(KarRest.KAR_ACTOR_JSON)
-@javax.ws.rs.Produces(KarRest.KAR_ACTOR_JSON)
+import com.ibm.research.kar.Kar;
+
+@javax.ws.rs.Consumes(Kar.KAR_ACTOR_JSON)
+@javax.ws.rs.Produces(Kar.KAR_ACTOR_JSON)
 @javax.ws.rs.ext.Provider
 public class JSONProvider
     implements javax.ws.rs.ext.MessageBodyReader<JsonValue>, javax.ws.rs.ext.MessageBodyWriter<JsonValue> {

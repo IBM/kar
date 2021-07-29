@@ -16,6 +16,8 @@
 
 package com.ibm.research.kar.liberty;
 
+import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
@@ -23,7 +25,10 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
+import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.runtime.KarConfig;
+
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 /*
  * Reads configuration information from web.xml
@@ -71,14 +76,24 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 			}
 		}
 
-		if (System.getenv("KAR_RUNTIME_PORT") == null) {
-			logger.severe("KAR_RUNTIME_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
-			Runtime.getRuntime().halt(1);
-		}
 		if (System.getenv("KAR_APP_PORT") == null) {
 			logger.severe("KAR_APP_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
 			Runtime.getRuntime().halt(1);
 		}
-	}
 
+		String port = System.getenv("KAR_RUNTIME_PORT");
+		if (port == null || port.trim().isEmpty()) {
+			logger.severe("KAR_RUNTIME_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
+			Runtime.getRuntime().halt(1);
+		}
+
+		// Build & Initialize KAR.sidecar
+		String baseURIStr = "http://localhost:" + port + "/";
+		logger.fine("KAR Sidecar base URI is " + baseURIStr);
+		URI sidecarURI = URI.create(baseURIStr);
+		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(sidecarURI);
+		KarRest sidecar = builder.readTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				.connectTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
+		Kar.setSidecarInstance(sidecar);
+	}
 }
