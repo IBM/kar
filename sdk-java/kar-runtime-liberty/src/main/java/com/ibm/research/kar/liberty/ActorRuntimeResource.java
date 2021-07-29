@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import java.lang.invoke.MethodHandle;
 
@@ -39,9 +39,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import com.ibm.research.kar.KarConfig;
-import com.ibm.research.kar.KarRest;
+import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.ActorInstance;
+import com.ibm.research.kar.runtime.ActorManager;
+import com.ibm.research.kar.runtime.KarConfig;
 
 @Path("actor")
 public class ActorRuntimeResource {
@@ -108,8 +109,8 @@ public class ActorRuntimeResource {
 
 	@POST
 	@Path("{type}/{id}/{sessionid}/{path}")
-	@Consumes(KarRest.KAR_ACTOR_JSON)
-	@Produces(KarRest.KAR_ACTOR_JSON)
+	@Consumes(Kar.KAR_ACTOR_JSON)
+	@Produces(Kar.KAR_ACTOR_JSON)
 	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id,
 			@PathParam("sessionid") String sessionid, @PathParam("path") String path, JsonArray args) {
 
@@ -140,7 +141,7 @@ public class ActorRuntimeResource {
 			} else {
 				JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
 				JsonObject ro = Json.createObjectBuilder().add("value", jv).build();
-				return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro).build();
+				return Response.status(Response.Status.OK).type(Kar.KAR_ACTOR_JSON).entity(ro).build();
 			}
 		} catch (Throwable t) {
 			if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
@@ -166,7 +167,7 @@ public class ActorRuntimeResource {
 				backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
 			}
 			ro.add("stack", sw.toString());
-			return Response.status(Response.Status.OK).type(KarRest.KAR_ACTOR_JSON).entity(ro.build()).build();
+			return Response.status(Response.Status.OK).type(Kar.KAR_ACTOR_JSON).entity(ro.build()).build();
 		}
 	}
 }

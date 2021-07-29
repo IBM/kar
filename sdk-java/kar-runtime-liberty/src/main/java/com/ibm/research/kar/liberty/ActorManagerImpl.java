@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -32,11 +32,13 @@ import javax.ejb.Singleton;
 import javax.enterprise.context.ApplicationScoped;
 
 import com.ibm.research.kar.actor.ActorInstance;
-import com.ibm.research.kar.KarConfig;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Deactivate;
 import com.ibm.research.kar.actor.annotations.Remote;
+import com.ibm.research.kar.runtime.ActorManager;
+import com.ibm.research.kar.runtime.ActorType;
+import com.ibm.research.kar.runtime.KarConfig;
 
 @Singleton
 @ApplicationScoped

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.runtime;
 
 import java.lang.invoke.MethodHandle;
 

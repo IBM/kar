@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -22,8 +22,6 @@ import java.util.logging.Logger;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
-
-import com.ibm.research.kar.JSONProvider;
 
 @ApplicationPath("/kar/impl/v1/")
 public class ActorRuntimeApplication extends Application {

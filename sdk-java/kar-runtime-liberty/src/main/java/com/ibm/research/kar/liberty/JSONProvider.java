@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar;
+package com.ibm.research.kar.liberty;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,8 +33,10 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
-@javax.ws.rs.Consumes(KarRest.KAR_ACTOR_JSON)
-@javax.ws.rs.Produces(KarRest.KAR_ACTOR_JSON)
+import com.ibm.research.kar.Kar;
+
+@javax.ws.rs.Consumes(Kar.KAR_ACTOR_JSON)
+@javax.ws.rs.Produces(Kar.KAR_ACTOR_JSON)
 @javax.ws.rs.ext.Provider
 public class JSONProvider
     implements javax.ws.rs.ext.MessageBodyReader<JsonValue>, javax.ws.rs.ext.MessageBodyWriter<JsonValue> {
@@ -74,7 +76,7 @@ public class JSONProvider
   public void writeTo(JsonValue t, Class<?> type, Type genericType, Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, Object> httpHeaders, OutputStream entityStream)
       throws IOException, WebApplicationException {
-	  
+
 	if (this.writerFactory == null) {
 		this.writerFactory = Json.createWriterFactory(null);
 	}

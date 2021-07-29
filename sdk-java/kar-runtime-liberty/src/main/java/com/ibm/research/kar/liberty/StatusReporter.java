@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.actor.runtime;
+package com.ibm.research.kar.liberty;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;

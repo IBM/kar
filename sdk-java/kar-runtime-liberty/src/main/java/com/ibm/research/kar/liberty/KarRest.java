@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar;
+package com.ibm.research.kar.liberty;
 
 import java.util.concurrent.CompletionStage;
 
@@ -36,6 +36,10 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.runtime.KarConfig;
+import com.ibm.research.kar.runtime.KarSidecar;
+
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
 import org.eclipse.microprofile.rest.client.annotation.ClientHeaderParam;
@@ -46,10 +50,7 @@ import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 @Timeout(0)
 @Path("kar/v1")
 @RegisterProvider(JSONProvider.class)
-public interface KarRest extends AutoCloseable {
-
-	public final static String KAR_ACTOR_JSON = "application/kar+json";
-	public final static MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");
+public interface KarRest extends KarSidecar {
 
 	/*
 	 * Services
@@ -171,7 +172,7 @@ public interface KarRest extends AutoCloseable {
 	@Path("actor/{type}/{id}/call/{path}")
 	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Consumes(KAR_ACTOR_JSON)
+	@Consumes(Kar.KAR_ACTOR_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response actorTell(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path,
 			JsonArray args);
@@ -180,8 +181,8 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Consumes(KAR_ACTOR_JSON)
-	@Produces(KAR_ACTOR_JSON)
+	@Consumes(Kar.KAR_ACTOR_JSON)
+	@Produces(Kar.KAR_ACTOR_JSON)
 	public Response actorCall(@PathParam("type") String type, @PathParam("id") String id, @PathParam("path") String path,
 			@QueryParam("session") String session, JsonArray args);
 
@@ -189,8 +190,8 @@ public interface KarRest extends AutoCloseable {
 	@POST
 	@Path("actor/{type}/{id}/call/{path}")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Consumes(KAR_ACTOR_JSON)
-	@Produces(KAR_ACTOR_JSON)
+	@Consumes(Kar.KAR_ACTOR_JSON)
+	@Produces(Kar.KAR_ACTOR_JSON)
 	public CompletionStage<Response> actorCallAsync(@PathParam("type") String type, @PathParam("id") String id,
 			@PathParam("path") String path, @QueryParam("session") String session, JsonArray args);
 
