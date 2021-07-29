@@ -88,7 +88,7 @@ cd $ROOTDIR/examples/actors-dp-java
 mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
 
 echo "Launching Java DP Server"
-kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
+kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run -Dversion.kar-java-sdk=99.99.99-SNAPSHOT &
 PID=$!
 
 # Sleep 10 seconds to given liberty time to come up
