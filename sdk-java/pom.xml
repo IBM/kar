@@ -14,7 +14,6 @@
   <packaging>pom</packaging>
 
   <modules>
-    <module>kar-rest-client</module>
     <module>kar-runtime-core</module>
     <module>kar-runtime-liberty</module>
   </modules>

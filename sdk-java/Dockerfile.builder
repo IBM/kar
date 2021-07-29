@@ -25,7 +25,7 @@ RUN apk add --update maven && apk update && apk upgrade
 WORKDIR /kar/sdk-java
 
 COPY pom.xml pom.xml
-COPY kar-actor-runtime kar-actor-runtime
-COPY kar-rest-client kar-rest-client
+COPY kar-runtime-core kar-runtime-core
+COPY kar-runtime-liberty kar-runtime-liberty
 
 RUN mvn -q install
