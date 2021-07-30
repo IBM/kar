@@ -16,6 +16,7 @@
   <modules>
     <module>kar-runtime-core</module>
     <module>kar-runtime-liberty</module>
+    <module>kar-runtime-quarkus</module>
   </modules>
 
   <description>KAR Java SDK</description>
@@ -39,6 +40,7 @@
     <version.glassfish-json>1.1.4</version.glassfish-json>
     <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
     <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
+    <version.javaee-api>8.0</version.javaee-api>
   </properties>
 
   <licenses>

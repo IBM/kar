@@ -9,13 +9,18 @@
     <version>1.0.6-SNAPSHOT</version>
   </parent>
 
-  <artifactId>kar-runtime-core</artifactId>
+  <artifactId>kar-runtime-quarkus</artifactId>
   <packaging>jar</packaging>
 
-  <name>kar-runtime-core</name>
-  <description>KAR Java core actor runtime</description>
+  <name>kar-runtime-quarkus</name>
+  <description>KAR Java SDK runtime for Quarkus</description>
 
   <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>kar-runtime-core</artifactId>
+      <version>${project.version}</version>
+    </dependency>
     <dependency>
       <groupId>javax</groupId>
       <artifactId>javaee-api</artifactId>
@@ -47,4 +52,5 @@
       </plugin>
     </plugins>
   </build>
+
 </project>
