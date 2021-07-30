@@ -19,6 +19,8 @@ package com.ibm.research.kar.liberty;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
@@ -26,6 +28,7 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.KarConfig;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -47,6 +50,10 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 	@Override
 	public void contextInitialized(final ServletContextEvent servletContextEvent) {
 		ServletContext ctx = servletContextEvent.getServletContext();
+
+		//
+		// 1. Initialize KarConfig from the server's configuration
+		//
 
 		KarConfig.ACTOR_CLASS_STR = ctx.getInitParameter(KAR_ACTOR_CLASSES);
 		KarConfig.ACTOR_TYPE_NAME_STR = ctx.getInitParameter(KAR_ACTOR_TYPES);
@@ -87,7 +94,10 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 			Runtime.getRuntime().halt(1);
 		}
 
-		// Build & Initialize KAR.sidecar
+		//
+		// 2. Instantiate the client that represents the KAR sidecar and initialize KAR with it.
+		//
+
 		String baseURIStr = "http://localhost:" + port + "/";
 		logger.fine("KAR Sidecar base URI is " + baseURIStr);
 		URI sidecarURI = URI.create(baseURIStr);
@@ -95,5 +105,22 @@ public class ActorRuntimeContextListener implements ServletContextListener {
 		KarRest sidecar = builder.readTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
 				.connectTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarRest.class);
 		Kar.setSidecarInstance(sidecar);
+
+		//
+		// 3. If this process is hosting actors, then initialize the ActorManager based on the configuration information
+		//
+		if ((KarConfig.ACTOR_CLASS_STR != null) && (KarConfig.ACTOR_TYPE_NAME_STR != null)) {
+			List<String> classList = Arrays.asList(KarConfig.ACTOR_CLASS_STR.split("\\s*,\\s*"));
+			List<String> nameList = Arrays.asList(KarConfig.ACTOR_TYPE_NAME_STR.split("\\s*,\\s*"));
+
+			if (classList.size() != nameList.size()) {
+				logger.severe("Incompatible actor configuration! " + ActorRuntimeContextListener.KAR_ACTOR_CLASSES + "="
+						+ KarConfig.ACTOR_CLASS_STR + " and " + ActorRuntimeContextListener.KAR_ACTOR_TYPES + "="
+						+ KarConfig.ACTOR_TYPE_NAME_STR);
+			} else {
+				logger.info("Intializing ActorManager");
+				ActorManager.initialize(classList, nameList);
+			}
+		}
 	}
 }
