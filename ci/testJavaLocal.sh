@@ -55,25 +55,21 @@ run $PID kar run -app java-hello java -jar target/kar-hello-client-jar-with-depe
 
 #################
 
-## TEMPORARY -- UNTIL WE RELEASE NEW VERSION WITH CHANGED STRUCTURE
+echo "Building Java Dining Philsopophers against released Java-SDK"
+cd $ROOTDIR/examples/actors-dp-java
+mvn clean package
 
-echo "TODO: Skipping test against released Java-SDK"
+echo "Launching Java DP Server"
+kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
+PID=$!
 
-# echo "Building Java Dining Philsopophers against released Java-SDK"
-# cd $ROOTDIR/examples/actors-dp-java
-# mvn clean package
+# Sleep 10 seconds to given liberty time to come up
+sleep 10
 
-# echo "Launching Java DP Server"
-# kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
-# PID=$!
-
-# # Sleep 10 seconds to given liberty time to come up
-# sleep 10
-
-# echo "Building and launching test harness"
-# cd $ROOTDIR/examples/actors-dp-js
-# npm install --prod
-# run $PID kar run -app dp node tester.js
+echo "Building and launching test harness"
+cd $ROOTDIR/examples/actors-dp-js
+npm install --prod
+run $PID kar run -app dp node tester.js
 
 #################
 

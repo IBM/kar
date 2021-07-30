@@ -16,6 +16,10 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.6 - 2021-07-30
++ Restructure of Java SDK internals and new maven artifact names
++ Add Prometheus metrics endpoint to sidecar
+
 # KAR 1.0.5 - 2021-07-22
 + Use factory to create JsonObjectBuilder and JsonArrayBuilder instances (#126)
 + Update to kind 0.11.1 (#125)
