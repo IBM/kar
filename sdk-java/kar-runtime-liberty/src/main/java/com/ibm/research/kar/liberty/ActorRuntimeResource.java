@@ -47,27 +47,24 @@ import com.ibm.research.kar.runtime.KarConfig;
 @Path("actor")
 public class ActorRuntimeResource {
 
-	@Inject
-	ActorManager actorManager;
-
 	@GET
 	@Path("{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
-		if (actorManager.getActor(type, id) != null) {
+		if (ActorManager.getActor(type, id) != null) {
 			// Already exists; nothing to do.
 			return Response.status(Response.Status.OK).build();
 		}
 
 		// Allocate a new actor instance
-		ActorInstance actorObj = this.actorManager.createActor(type, id);
+		ActorInstance actorObj = ActorManager.createActor(type, id);
 		if (actorObj == null) {
 			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
 		}
 
 		// Call the optional activate method
 		try {
-			MethodHandle activate = this.actorManager.getActorActivateMethod(type);
+			MethodHandle activate = ActorManager.getActorActivateMethod(type);
 			if (activate != null) {
 				activate.invoke(actorObj);
 			}
@@ -80,13 +77,13 @@ public class ActorRuntimeResource {
 	@DELETE
 	@Path("{type}/{id}")
 	public Response deleteActor(@PathParam("type") String type, @PathParam("id") String id) {
-		ActorInstance actorObj = this.actorManager.getActor(type, id);
+		ActorInstance actorObj = ActorManager.getActor(type, id);
 		if (actorObj == null) {
 			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
 		}
 
 		// Call the optional deactivate method
-		MethodHandle deactivate = this.actorManager.getActorDeactivateMethod(type);
+		MethodHandle deactivate = ActorManager.getActorDeactivateMethod(type);
 		if (deactivate != null) {
 			try {
 				deactivate.invoke(actorObj);
@@ -96,14 +93,14 @@ public class ActorRuntimeResource {
 		}
 
 		// Actually remove the instance
-		actorManager.deleteActor(type, id);
+		ActorManager.deleteActor(type, id);
 		return Response.status(Response.Status.OK).build();
 	}
 
 	@HEAD
 	@Path("{type}")
 	public Response checkActorType(@PathParam("type") String type) {
-		Status status = this.actorManager.hasActorType(type) ? Response.Status.OK : Response.Status.NOT_FOUND;
+		Status status = ActorManager.hasActorType(type) ? Response.Status.OK : Response.Status.NOT_FOUND;
 		return Response.status(status).build();
 	}
 
@@ -114,12 +111,12 @@ public class ActorRuntimeResource {
 	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id,
 			@PathParam("sessionid") String sessionid, @PathParam("path") String path, JsonArray args) {
 
-		ActorInstance actorObj = this.actorManager.getActor(type, id);
+		ActorInstance actorObj = ActorManager.getActor(type, id);
 		if (actorObj == null) {
 			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
 		}
 
-		MethodHandle actorMethod = this.actorManager.getActorMethod(type, path, args.size());
+		MethodHandle actorMethod = ActorManager.getActorMethod(type, path, args.size());
 		if (actorMethod == null) {
 			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
 		}

@@ -21,6 +21,10 @@ import java.util.Map;
 
 import com.ibm.research.kar.actor.ActorInstance;
 
+/**
+ * An ActorType instance contains the Class and MethodHandle objects
+ * that are used to create actor instances and invoke actor methods.
+ */
 public final class ActorType {
 
 	// KAR type
