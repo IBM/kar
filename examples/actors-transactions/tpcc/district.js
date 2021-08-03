@@ -25,17 +25,34 @@ class District extends gp.GenericParticipant {
   async activate () {
     const that = await super.activate()
     this.dId = that.dId || this.kar.id
-    console.log(this.dId)
     this.wId = that.wId
     this.name = that.name || 'd-' + this.kar.id
     this.address = that.address || c.DEFAULT_ADDRESS
     this.tax = that.tax || c.DIST_TAX // Sales tax
-    this.ytd = that.ytd || 0 // Year to date balance
-    this.nextOId = that.nextOId || 0
+    this.ytd = that.ytd || { ytd:0, v:0 } // Year to date balance
+    this.nextOId = that.nextOId || { nextOId:0, v:0 }
     this.reservedNextOId = that.reservedNextOId || 0
   }
 
-  async prepare(txnId, currentOId) {
+  async prepare(txnId, update) {
+    let localDecision = await super.prepare(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await super.checkVersionConflict(update)
+    const writeMap = await super.createPrepareWriteMap(localDecision, update)
+    await super.writePrepared(txnId, localDecision, writeMap)
+    return localDecision
+  }
+
+  async commit(txnId, decision, update) {
+    let continueCommit = await super.commit(txnId, decision)
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`Committed transaction ${txnId}.\n`)
+    return
+  }
+
+  async prepare_1(txnId, currentOId) {
     let localDecision = await super.prepare(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     // The read order id, currentOId, must be strictly match the actor's reserved order id
@@ -46,7 +63,7 @@ class District extends gp.GenericParticipant {
     return localDecision
   }
 
-  async commit(txnId, decision, currentOId) {
+  async commit_1(txnId, decision, update) {
     let continueCommit = await super.commit(txnId, decision)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     if (decision) {  this.nextOId +=1  }

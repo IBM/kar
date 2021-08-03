@@ -26,62 +26,69 @@ class NewOrderTxn extends t.Transaction {
     const that = await super.activate()
   }
 
-  async getItemDetails(itemStock) {
-    const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt']
-    return await actor.call(itemStock, 'getMultiple', keys)
+  async getWarehouseDetails(wId) {
+    const warehouse = actor.proxy('Warehouse', wId)
+    return [warehouse, await actor.call(warehouse, 'getMultiple', ['tax'])]
+  }
+
+  async getDistrictDetails(wId, dId) {
+    const district = actor.proxy('District', wId + ':' + dId)
+    return [district, await actor.call(district, 'getMultiple', ['tax', 'nextOId'])]
+  }
+
+  async getCustomerDetails(wId, dId, cId) {
+    const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
+    return [customer, await actor.call(customer, 'getMultiple', ['discount', 'credit'])]
+  }
+
+  async getItemDetails(itemId, supplyWId) {
+    const itemStock = actor.proxy('ItemStock', itemId + ':' + supplyWId)
+    const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt', 'version']
+    return [itemStock, await actor.call(itemStock, 'getMultiple', keys)]
+  }
+
+  async getItemDetailsToWrite(itemDetails, ol) {
+    let itemDetailsToWrite = Object.assign({}, itemDetails)
+    // Update item details based on order
+    const updatedQuantity = (itemDetails.quantity.quantity - ol.quantity) > 0? 
+          (itemDetails.quantity.quantity - ol.quantity) : (itemDetails.quantity.quantity - ol.quantity + 91)
+    itemDetailsToWrite.quantity.quantity = updatedQuantity
+    itemDetailsToWrite.ytd.ytd = itemDetails.ytd.ytd + ol.quantity
+    itemDetailsToWrite.orderCnt.orderCnt = itemDetails.orderCnt.orderCnt + 1
+    return itemDetailsToWrite
   }
 
   async startTxn(txn) {
     let actors = [], operations = [] /* Track all actors and their respective updates;
                                       perform the updates in an atomic txn. */
-    const warehouse = actor.proxy('Warehouse', txn.wId)
-    const wTax = await actor.call(warehouse, 'get', 'tax')
+    const wDetails = await this.getWarehouseDetails(txn.wId)
+    const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
+    const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
+    
+    const incrementedNextOId = {nextOId: {nextOId: dDetails[1].nextOId.nextOId+1,
+                                          v: dDetails[1].nextOId.v}}
+    actors.push(dDetails[0]), operations.push(incrementedNextOId)
 
-    const district = actor.proxy('District', txn.dId + ':' + txn.wId)
-    const distDetails = await actor.call(district, 'getMultiple', ['tax', 'nextOId'])
-    actors.push(district), operations.push(distDetails.nextOId)
-
-    const customer = actor.proxy('Customer', txn.cId + ':' + txn.dId + ':' + txn.wId)
-    const custDetails = await actor.call(customer, 'getMultiple', ['discount', 'credit'])
-
-    const order = actor.proxy('Order', distDetails.nextOId+1)
+    const order = actor.proxy('Order', dDetails[1].nextOId.nextOId+1) // New order
     actors.push(order), operations.push(txn)
 
     let totalAmount = 0
     for (let i in txn.orderLines) {
       let ol = txn.orderLines[i]
-      const itemStock = actor.proxy('ItemStock', ol.itemId + ':' + ol.supplyWId)
-      const itemDetails = await this.getItemDetails(itemStock)
-      let itemDetailsToWrite = Object.assign({}, itemDetails)
-      // Update item details based on order
-      const updatedQuantity = (itemDetails.quantity - ol.quantity) > 0? 
-            (itemDetails.quantity - ol.quantity) : (itemDetails.quantity - ol.quantity + 91)
-      itemDetailsToWrite.quantity = updatedQuantity
-      itemDetailsToWrite.ytd = itemDetails.ytd + ol.quantity
-      itemDetailsToWrite.orderCnt = itemDetails.orderCnt + 1
-      ol.amount = ol.quantity * itemDetails.price
+      const itemDetails = await this.getItemDetails(ol.itemId, ol.supplyWId)
+      const itemDetailsToWrite = await this.getItemDetailsToWrite(itemDetails[1], ol)
+      actors.push(itemDetails[0]), operations.push(itemDetailsToWrite)
+      ol.amount = ol.quantity * itemDetails[1].price
       totalAmount += ol.amount
-      actors.push(itemStock), operations.push(itemDetailsToWrite)
     }
-    totalAmount = totalAmount * (1 - custDetails.discount) * (1 + wTax + distDetails.tax)
+    totalAmount = totalAmount * (1 - cDetails[1].discount) * (1 + wDetails[1].wTax + dDetails[1].tax)
     await super.transact(actors, operations)
   }
 }
 
-async function main() {
-  const txnActor = actor.proxy('NewOrderTxn', uuidv4())
-  var txn = {}
-  txn.wId = 'w1', txn.dId = 'd2', txn.cId = 'c1'
-  txn.olCnt = 1
-  txn.orderLines = {
-    '1': {itemId: 'i2', supplyWId: 'w1', quantity: 10}
-  }
-  await actor.call(txnActor, 'startTxn', txn)
-}
-
 // Server setup: register actors with KAR and start express
-const app = express()
-app.use(sys.actorRuntime({ NewOrderTxn }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+// const app = express()
+// app.use(sys.actorRuntime({ NewOrderTxn }))
+// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
-main()
+exports.NewOrderTxn = NewOrderTxn

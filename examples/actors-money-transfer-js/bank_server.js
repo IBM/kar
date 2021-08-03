@@ -54,7 +54,7 @@ class Transaction {
       try {
         const done1 = await actor.asyncCall(sender, 'commit', this.txnId, decision, amt)
         const done2 = await actor.asyncCall(receiver, 'commit', this.txnId, decision, -amt)
-        await actor.tell(this, 'setTxnCompleteAsync', done1(), done2())
+        await actor.tell(this, 'setTxnCompleteAsync', sender, receiver, amt, done1(), done2())
         await actor.state.set(this, 'commitIssued', true)
       } catch (error) {
         console.log(error.toString())
@@ -65,7 +65,10 @@ class Transaction {
     return decision 
   }
 
-  async setTxnCompleteAsync(done1, done2) {
+  async setTxnCompleteAsync(sender, receiver, amt, done1, done2) {
+    // Discuss: this doesn't work. done1 and done2 are {}. Even if commit call
+    // takes a long time, txnComplete is set immediately.
+    console.log(done1, done2)
     try {
       await done1 && await done2
       await actor.state.set(this, 'txnComplete', true)

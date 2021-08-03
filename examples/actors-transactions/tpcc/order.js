@@ -46,26 +46,27 @@ class Order extends gp.GenericParticipant {
   async prepare(txnId, order) {
     let localDecision = await super.prepare(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    this.cId = order.cId, this.dId = order.dId, this.wId = order.wId
-    this.olCnt = order.olCnt
-    for (let key in order.orderLines) {
-      const ol = order.orderLines[key]
-      let orderLine = new OrderLine(key, ol.itemId, ol.quantity, ol.supplyWId, ol.amount)
-      this.orderLines[key] = orderLine
-    }
-    await super.writePrepared(txnId, true, {cId: this.cId, dId : this.dId, wId : this.wId,
-          olCnt: this.olCnt, orderLines: this.orderLines})
-    return true
+    await super.writePrepared(txnId, true, {})
+    return true // Always return true as the txn always adds a new order entry.
   }
-  
-  async commit(txnId, decision, currentOId) {
+
+  async commit(txnId, decision, order) {
     let continueCommit = await super.commit(txnId, decision)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    if (decision) {  this.nextOId +=1  }
-    if (!decision && await super.getTxnLocalDecision(txnId)) { this.reservedNextOId -=1 }
-    await super.writeCommit(txnId, decision, {nextOId: this.nextOId,
-                            reservedNextOId: this.reservedNextOId} )
-    console.log(`Committed transaction ${txnId}. Next order id is ${this.nextOId}.\n`)
+    let writeMap = {}
+    if (decision) {
+      this.cId = order.cId, this.dId = order.dId, this.wId = order.wId
+      this.olCnt = order.olCnt
+      for (let key in order.orderLines) {
+        const ol = order.orderLines[key]
+        let orderLine = new OrderLine(key, ol.itemId, ol.quantity, ol.supplyWId, ol.amount)
+        this.orderLines[key] = orderLine
+      }
+      writeMap = {cId: this.cId, dId : this.dId, wId : this.wId,
+                  olCnt: this.olCnt, orderLines: this.orderLines}
+    }
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`Committed transaction ${txnId}. Added order ${this.oId}.\n`)
     return
   }
 }

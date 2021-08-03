@@ -150,3 +150,4 @@ app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 // Start testing
 main()
+// To run: kar run -app transaction -actors DummyParticipant,RaiseErrorDummyParticipant  node transaction_unit_test.js

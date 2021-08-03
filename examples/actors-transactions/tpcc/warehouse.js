@@ -25,10 +25,27 @@ class Warehouse extends gp.GenericParticipant {
     const that = await super.activate()
     this.wId = that.wId || this.kar.id
     this.name = that.name || 'w-' + this.kar.id
-    this.address = that.address || '123 Abc Ave, AB 12345'
-    this.tax = that.tax || 0.02 // Sales tax
-    this.ytd = that.ytd || 0 // Year to date balance
-    this.nextOId = that.nextOId || '1' // Next available order number
+    this.address = that.address || c.DEFAULT_ADDRESS
+    this.tax = that.tax || c.WAREHOUSE_TAX // Sales tax
+    this.ytd = that.ytd || { ytd:0, v:0 } // Year to date balance
+  }
+
+  async prepare(txnId, update) {
+    let localDecision = await super.prepare(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await super.checkVersionConflict(update)
+    const writeMap = await super.createPrepareWriteMap(localDecision, update)
+    await super.writePrepared(txnId, localDecision, writeMap)
+    return localDecision
+  }
+
+  async commit(txnId, decision, update) {
+    let continueCommit = await super.commit(txnId, decision)
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`Committed transaction ${txnId}. YTD is ${this.ytd.ytd}.\n`)
+    return
   }
 }
 

@@ -17,6 +17,7 @@
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var gp = require('../generic_participant.js')
+var c = require('./constants.js')
 var w = require('./warehouse.js')
 Warehouse = w.Warehouse 
 var d = require('./district.js')
@@ -29,20 +30,38 @@ class Customer extends gp.GenericParticipant {
     this.cId = that.cId || this.kar.id
     this.dId = that.dId
     this.wId = that.wId
-    this.name = 'c-' + this.cId
+    this.name = that.name || 'c-' + this.cId
     this.address = that.address || c.DEFAULT_ADDRESS
-    this.credit = taht.credit || 'GC' // 'GC'/'BC' = good/bad credit
+    this.credit = that.credit || 'GC' // 'GC' or 'BC' = good or bad credit
     this.creditLimit = that.creditLimit || 100
     this.discount = that.discount || 0
-    this.balance = that.balance || 0
-    this.ytdPayment = that.ytdPayment || 0 // Year to date payment
-    this.paymentCnt = that.paymentCnt || 0
+    this.balance = that.balance || { balance:c.DEFAULT_BALANCE, v:0 }
+    this.ytdPayment = that.ytdPayment || { ytdPayment:0, v:0 } // Year to date payment
+    this.paymentCnt = that.paymentCnt || { paymentCnt:0, v:0 }
     this.deliveryCnt = that.deliveryCnt || 0
   }
 
   async addCustomerToDistrict(dId, wId) {
     this.dId = dId, this.wId = wId
     await actor.state.setMultiple(this, {dId : this.dId, wId : this.wId})
+  }
+
+  async prepare(txnId, update) {
+    let localDecision = await super.prepare(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await super.checkVersionConflict(update)
+    const writeMap = await super.createPrepareWriteMap(localDecision, update)
+    await super.writePrepared(txnId, localDecision, writeMap)
+    return localDecision
+  }
+
+  async commit(txnId, decision, update) {
+    let continueCommit = await super.commit(txnId, decision)
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`Committed transaction ${txnId}. Customer balance is ${this.balance.balance}.\n`)
+    return
   }
 }
 

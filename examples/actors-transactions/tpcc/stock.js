@@ -27,10 +27,10 @@ class ItemStock extends gp.GenericParticipant {
     this.wId = that.wId
     this.name = that.name || c.DEFAULT_ITEM_NAME
     this.price = that.price || c.DEFAULT_ITEM_PRICE
-    this.quantity = that.quantity || 10000
-    this.ytd = that.ytd || 0
-    this.orderCnt = that.orderCnt || 0
-    this.remoteCnt = that.remoteCnt || 0
+    this.quantity = that.quantity || { quantity:c.DEFAULT_QUANTITY, v:0 }
+    this.ytd = that.ytd || { ytd:0, v:0 }
+    this.orderCnt = that.orderCnt || { orderCnt:0, v:0 }
+    this.remoteCnt = that.remoteCnt || { remoteCnt:0, v:0 }
     this.data = that.data
   }
 
@@ -44,12 +44,19 @@ class ItemStock extends gp.GenericParticipant {
   async prepare(txnId, update) {
     let localDecision = await super.prepare(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    this.quantity = update.quantity
-    this.ytd = update.ytd
-    this.orderCnt = update.orderCnt
-    await super.writePrepared(txnId, true, {quantity: this.quantity, ytd : this.ytd,
-          orderCnt: this.orderCnt})
-    return true
+    localDecision = await super.checkVersionConflict(update)
+    const writeMap = await super.createPrepareWriteMap(localDecision, update)
+    await super.writePrepared(txnId, localDecision, writeMap)
+    return localDecision
+  }
+
+  async commit(txnId, decision, update) {
+    let continueCommit = await super.commit(txnId, decision)
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`Committed transaction ${txnId}. Exact quantity left is ${this.quantity.quantity}.\n`)
+    return
   }
 }
 

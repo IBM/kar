@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-module.exports = {
-  DEFAULT_ADDRESS : '123 Abc Ave, AB 12345',
-  NUM_CUSTOMERS_PER_DIST : 3,
-  DIST_TAX : 0,
-  WAREHOUSE_TAX: 0.02,
-  DEFAULT_ITEM_NAME: 'yyy',
-  DEFAULT_ITEM_PRICE: 10,
-  DEFAULT_QUANTITY : 10000,
-  DEFAULT_BALANCE: 10000,
-  NUM_WAREHOUSES: 1
-}
+const express = require('express')
+const { actor, sys } = require('kar-sdk')
+var not = require('./new_order_transaction.js')
+NewOrderTxn = not.NewOrderTxn 
+var pt = require('./payment_transaction.js')
+PaymentTxn = pt.PaymentTxn
+
+// Server setup: register actors with KAR and start express
+const app = express()
+app.use(sys.actorRuntime({ NewOrderTxn, PaymentTxn }))
+app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

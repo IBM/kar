@@ -33,7 +33,7 @@ class GenericParticipant {
   async prepare(txnId) {
     /* Check if this txn is already prepared. Prepare value can be
     either true or false. If not prepared, return null. */
-    console.log(`Received prepare for txn ${txnId}`)
+    console.log(`${this.kar.id} received prepare for txn ${txnId}`)
     this.preparedTxns = await actor.state.get(this, 'preparedTxns') || {}
     if (txnId in this.preparedTxns) {
       return this.preparedTxns[txnId]
@@ -41,12 +41,31 @@ class GenericParticipant {
     return null
   }
 
+  async checkVersionConflict(update) {
+    let localDecision = true
+    for ( let key in update) {
+      if (update[key].constructor == Object) {
+        if (this[key].v != update[key].v) { localDecision = false} }
+    }
+    return localDecision
+  }
+
+  async createPrepareWriteMap(localDecision, update) {
+    let writeMap = {}
+    if (localDecision) { 
+      for ( let key in update) {
+        if (update[key].constructor == Object) {
+          this[key].v += 1
+          writeMap[key] = this[key] } }
+    }
+    return writeMap
+  }
+
   async writePrepared(txnId, prepared, dataMap) {
     /* Write 'preparedTxns' along with application specific data atomically. */
     this.preparedTxns[txnId] = prepared
     const mapToWrite = Object.assign({ preparedTxns: this.preparedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
-    console.log(await actor.state.getAll(this))
   }
   
   async getTxnLocalDecision(txnId) {
@@ -59,7 +78,7 @@ class GenericParticipant {
     /* Check if txn is already committed or not. Return true only if this particular
     call to commit succeeds; retrun false if txn is already committed or txn is not 
     prepared, indicating this call to commit failed. */
-    console.log(`Received commit for txn ${txnId} with decision `, decision)
+    console.log(`${this.kar.id} received commit for txn ${txnId} with decision `, decision)
     this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
     if (!(txnId in this.preparedTxns)) {
       this.preparedTxns[txnId] = false
@@ -71,6 +90,25 @@ class GenericParticipant {
     }
     if (txnId in this.committedTxns) { /* Already committed this txn.*/ return false }
     return true
+  }
+
+  async createCommitWriteMap(txnId, decision, update) {
+    let writeMap = {}
+    if (decision) {
+      for (let key in update) {
+        if (update[key].constructor == Object) {
+          this[key][key] =  update[key][key]
+          writeMap[key] = this[key] } }
+    }
+    if (!decision && await this.getTxnLocalDecision(txnId)) {
+      // If decision is false but prepared is true, revert the effect of prepare.
+      for (let key in update) {
+        if (update[key].constructor == Object) {
+          this[key].v -= 1
+          writeMap[key] = this[key] }
+      }
+    }
+    return writeMap
   }
 
   async writeCommit(txnId, decision, dataMap) {
