@@ -17,8 +17,8 @@
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
-var gp = require('../generic_participant.js')
-var c = require('./constants.js')
+var gp = require('../../generic_participant.js')
+var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
 class District extends gp.GenericParticipant {

@@ -16,9 +16,8 @@
 
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
-const { v4: uuidv4 } = require('uuid')
-var t = require('../transaction.js')
-var c = require('./constants.js')
+var t = require('../../transaction.js')
+var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
 class PaymentTxn extends t.Transaction {
@@ -74,6 +73,5 @@ class PaymentTxn extends t.Transaction {
 // const app = express()
 // app.use(sys.actorRuntime({ PaymentTxn }))
 // app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
-
 
 exports.PaymentTxn = PaymentTxn

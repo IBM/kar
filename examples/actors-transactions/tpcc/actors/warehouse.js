@@ -16,34 +16,18 @@
 
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
-var gp = require('../generic_participant.js')
-var c = require('./constants.js')
-var w = require('./warehouse.js')
-Warehouse = w.Warehouse 
-var d = require('./district.js')
-District = d.District
+var gp = require('../../generic_participant.js')
+var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
-class Customer extends gp.GenericParticipant {
-  async activate() {
+class Warehouse extends gp.GenericParticipant {
+  async activate () {
     const that = await super.activate()
-    this.cId = that.cId || this.kar.id
-    this.dId = that.dId
-    this.wId = that.wId
-    this.name = that.name || 'c-' + this.cId
+    this.wId = that.wId || this.kar.id
+    this.name = that.name || 'w-' + this.kar.id
     this.address = that.address || c.DEFAULT_ADDRESS
-    this.credit = that.credit || 'GC' // 'GC' or 'BC' = good or bad credit
-    this.creditLimit = that.creditLimit || 100
-    this.discount = that.discount || 0
-    this.balance = that.balance || { balance:c.DEFAULT_BALANCE, v:0 }
-    this.ytdPayment = that.ytdPayment || { ytdPayment:0, v:0 } // Year to date payment
-    this.paymentCnt = that.paymentCnt || { paymentCnt:0, v:0 }
-    this.deliveryCnt = that.deliveryCnt || 0
-  }
-
-  async addCustomerToDistrict(dId, wId) {
-    this.dId = dId, this.wId = wId
-    await actor.state.setMultiple(this, {dId : this.dId, wId : this.wId})
+    this.tax = that.tax || c.WAREHOUSE_TAX // Sales tax
+    this.ytd = that.ytd || { ytd:0, v:0 } // Year to date balance
   }
 
   async prepare(txnId, update) {
@@ -60,12 +44,14 @@ class Customer extends gp.GenericParticipant {
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     const writeMap = await super.createCommitWriteMap(txnId, decision, update)
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`Committed transaction ${txnId}. Customer balance is ${this.balance.balance}.\n`)
+    console.log(`Committed transaction ${txnId}. YTD is ${this.ytd.ytd}.\n`)
     return
   }
 }
 
 // Server setup: register actors with KAR and start express
-const app = express()
-app.use(sys.actorRuntime({ Warehouse, District, Customer }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+// const app = express()
+// app.use(sys.actorRuntime({ Warehouse }))
+// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+
+exports.Warehouse = Warehouse

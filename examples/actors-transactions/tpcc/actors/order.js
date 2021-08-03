@@ -16,7 +16,7 @@
 
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
-var gp = require('../generic_participant.js')
+var gp = require('../../generic_participant.js')
 const verbose = process.env.VERBOSE
 
 class OrderLine {
@@ -26,7 +26,6 @@ class OrderLine {
     this.quantity = quantity
     this.supplyWId = supplyWId
     this.amount = amount
-    
   }
 }
 
