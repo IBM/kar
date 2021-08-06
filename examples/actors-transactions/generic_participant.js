@@ -98,7 +98,11 @@ class GenericParticipant {
       for (let key in update) {
         if (update[key].constructor == Object) {
           this[key][key] =  update[key][key]
-          writeMap[key] = this[key] } }
+          writeMap[key] = this[key] } 
+        else {
+          this[key] =  update[key]
+          writeMap[key] = this[key]
+        } }
     }
     if (!decision && await this.getTxnLocalDecision(txnId)) {
       // If decision is false but prepared is true, revert the effect of prepare.

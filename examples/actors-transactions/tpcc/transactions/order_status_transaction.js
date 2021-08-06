@@ -20,58 +20,28 @@ var t = require('../../transaction.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
-class PaymentTxn extends t.Transaction {
+class OrderStatusTxn extends t.Transaction {
   async activate () {
     const that = await super.activate()
   }
 
-  async getWarehouseDetails(wId) {
-    const warehouse = actor.proxy('Warehouse', wId)
-    return [warehouse, await actor.call(warehouse, 'getMultiple', ['ytd'])]
-  }
-
-  async getDistrictDetails(wId, dId) {
-    const district = actor.proxy('District', wId + ':' + dId)
-    return [district, await actor.call(district, 'getMultiple', ['ytd'])]
-  }
-
   async getCustomerDetails(wId, dId, cId) {
     const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-    await actor.call(customer, 'addCustomerToDistrict', dId, wId)
-    const keys = ['balance', 'ytdPayment', 'paymentCnt']
+    const keys = ['balance', 'name', 'lastOId']
     return [customer, await actor.call(customer, 'getMultiple', keys)]
   }
 
-  async updateCustomerDetails(cDetails, amount) {
-    let updatedCDetails = Object.assign({}, cDetails)
-    // Update customer details based on txn payment.
-    updatedCDetails.balance.balance = cDetails.balance.balance - amount
-    updatedCDetails.ytdPayment.ytdPayment = cDetails.ytdPayment.ytdPayment + amount
-    updatedCDetails.paymentCnt.paymentCnt = cDetails.paymentCnt.paymentCnt + 1
-    return updatedCDetails
+  async getOrderDetails(oId) {
+    const order = actor.proxy('Order', oId)
+    const keys = ['entryDate', 'carrierId', 'orderLines']
+    return [order, await actor.call(order, 'getMultiple', keys)]
   }
 
   async startTxn(txn) {
-    let actors = [], operations = [] /* Track all actors and their respective updates;
-                                      perform the updates in an atomic txn. */
-    const wDetails = await this.getWarehouseDetails(txn.wId)
-    const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
     const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-
-    actors.push(wDetails[0]), operations.push({ytd : {ytd: wDetails[1].ytd.ytd + txn.amount,
-                                              v : wDetails[1].ytd.v }})
-    actors.push(dDetails[0]), operations.push({ytd : {ytd: dDetails[1].ytd.ytd + txn.amount,
-                                                v : dDetails[1].ytd.v }})
-    const updatedCDetails = await this.updateCustomerDetails(cDetails[1], txn.amount)
-    actors.push(cDetails[0]), operations.push(updatedCDetails)
-
-    await super.transact(actors, operations)
+    const oDetails = await this.getOrderDetails(cDetails[1].lastOId.lastOId)
+    return oDetails[1]
   }
 }
 
-// Server setup: register actors with KAR and start express
-// const app = express()
-// app.use(sys.actorRuntime({ PaymentTxn }))
-// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
-
-exports.PaymentTxn = PaymentTxn
+exports.OrderStatusTxn = OrderStatusTxn

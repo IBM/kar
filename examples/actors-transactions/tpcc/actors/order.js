@@ -19,27 +19,15 @@ const { actor, sys } = require('kar-sdk')
 var gp = require('../../generic_participant.js')
 const verbose = process.env.VERBOSE
 
-class OrderLine {
-  constructor (olNum, itemId, quantity, supplyWId, amount) {
-    this.olNumber = olNum
-    this.itemId = itemId
-    this.quantity = quantity
-    this.supplyWId = supplyWId
-    this.amount = amount
-  }
-}
-
-class Order extends gp.GenericParticipant {
+class NewOrder extends gp.GenericParticipant {
   async activate() {
     const that = await super.activate()
-    this.oId = that.oId || this.kar.id
-    this.cId = that.cId
-    this.dId = that.dId
-    this.wId = that.wId
-    this.entryDate = that.entryDate || new Date()
-    this.olCnt = that.olCnt || 0
-    this.orderLines = that.orderLines || {}
-    this.allLocal = true
+    this.noId = that.noId || this.kar.id
+  }
+
+  async deactivate () {
+    console.log('actor', this.noId, 'deactivate')
+    await actor.state.removeAll(this)
   }
 
   async prepare(txnId, order) {
@@ -53,24 +41,63 @@ class Order extends gp.GenericParticipant {
     let continueCommit = await super.commit(txnId, decision)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     let writeMap = {}
-    if (decision) {
-      this.cId = order.cId, this.dId = order.dId, this.wId = order.wId
-      this.olCnt = order.olCnt
-      for (let key in order.orderLines) {
-        const ol = order.orderLines[key]
-        let orderLine = new OrderLine(key, ol.itemId, ol.quantity, ol.supplyWId, ol.amount)
-        this.orderLines[key] = orderLine
-      }
-      writeMap = {cId: this.cId, dId : this.dId, wId : this.wId,
-                  olCnt: this.olCnt, orderLines: this.orderLines}
-    }
+    if (decision) { writeMap.noId = this.noId }
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`Committed transaction ${txnId}. Added order ${this.oId}.\n`)
+    console.log(`Committed transaction ${txnId}. Added new order ${this.noId}.\n`)
+    return
+  }
+}
+
+
+class OrderLine {
+  constructor (olNum, itemId, quantity, supplyWId, amount) {
+    this.olNumber = olNum
+    this.itemId = itemId
+    this.quantity = quantity
+    this.supplyWId = supplyWId
+    this.amount = amount
+    this.deliveryDate = null
+  }
+}
+
+class Order extends gp.GenericParticipant {
+  async activate() {
+    const that = await super.activate()
+    this.oId = that.oId || this.kar.id
+    this.cId = that.cId
+    this.dId = that.dId
+    this.wId = that.wId
+    this.entryDate = that.entryDate || new Date()
+    this.olCnt = that.olCnt || 0
+    this.orderLines = that.orderLines || { orderLines:{}, v:0 }
+    this.allLocal = true
+    this.carrierId = that.carrierId || { carrierId:null, v:0 }
+  }
+
+  async getOrder() {
+    return await actor.state.getAll(this)
+  }
+
+  async prepare(txnId, update) {
+    let localDecision = await super.prepare(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await super.checkVersionConflict(update)
+    const writeMap = await super.createPrepareWriteMap(localDecision, update)
+    await super.writePrepared(txnId, localDecision, writeMap)
+    return localDecision
+  }
+
+  async commit(txnId, decision, update) {
+    let continueCommit = await super.commit(txnId, decision)
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
+    await super.writeCommit(txnId, decision, writeMap)
+    console.log(`${this.kar.id} committed transaction ${txnId}.\n`)
     return
   }
 }
 
 // Server setup: register actors with KAR and start express
 const app = express()
-app.use(sys.actorRuntime({ Order }))
+app.use(sys.actorRuntime({ Order, NewOrder }))
 app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

@@ -38,7 +38,8 @@ class Customer extends gp.GenericParticipant {
     this.balance = that.balance || { balance:c.DEFAULT_BALANCE, v:0 }
     this.ytdPayment = that.ytdPayment || { ytdPayment:0, v:0 } // Year to date payment
     this.paymentCnt = that.paymentCnt || { paymentCnt:0, v:0 }
-    this.deliveryCnt = that.deliveryCnt || 0
+    this.deliveryCnt = that.deliveryCnt || { deliveryCnt:0, v:0 }
+    this.lastOId = that.lastOId || { lastOId: 0, v:0 }
   }
 
   async addCustomerToDistrict(dId, wId) {
@@ -60,7 +61,7 @@ class Customer extends gp.GenericParticipant {
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     const writeMap = await super.createCommitWriteMap(txnId, decision, update)
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`Committed transaction ${txnId}. Customer balance is ${this.balance.balance}.\n`)
+    console.log(`${this.kar.id} committed transaction ${txnId}.\n`)
     return
   }
 }

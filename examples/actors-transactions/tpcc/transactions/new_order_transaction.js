@@ -38,7 +38,7 @@ class NewOrderTxn extends t.Transaction {
 
   async getCustomerDetails(wId, dId, cId) {
     const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-    return [customer, await actor.call(customer, 'getMultiple', ['discount', 'credit'])]
+    return [customer, await actor.call(customer, 'getMultiple', ['discount', 'credit', 'lastOId'])]
   }
 
   async getItemDetails(itemId, supplyWId) {
@@ -65,16 +65,22 @@ class NewOrderTxn extends t.Transaction {
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
     const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
     
-    const incrementedNextOId = {nextOId: {nextOId: dDetails[1].nextOId.nextOId+1,
-                                          v: dDetails[1].nextOId.v}}
-    actors.push(dDetails[0]), operations.push(incrementedNextOId)
+    const orderId = txn.wId + ':' + txn.dId + ':' + 'o' + dDetails[1].nextOId.nextOId
+    const dUpdate = {nextOId: {nextOId: dDetails[1].nextOId.nextOId+1, v: dDetails[1].nextOId.v}}
+    actors.push(dDetails[0]), operations.push(dUpdate)
 
-    const order = actor.proxy('Order', dDetails[1].nextOId.nextOId+1) // New order
+    const cUpdate = {lastOId: {lastOId: orderId, v: cDetails[1].lastOId.v}}
+    actors.push(cDetails[0]), operations.push(cUpdate)
+
+    const order = actor.proxy('Order', orderId) // Create an order
     actors.push(order), operations.push(txn)
 
+    const newOrder = actor.proxy('NewOrder', orderId) // Create a new order entry
+    actors.push(newOrder), operations.push({})
+
     let totalAmount = 0
-    for (let i in txn.orderLines) {
-      let ol = txn.orderLines[i]
+    for (let i in txn.orderLines.orderLines) {
+      let ol = txn.orderLines.orderLines[i]
       const itemDetails = await this.getItemDetails(ol.itemId, ol.supplyWId)
       const itemDetailsToWrite = await this.getItemDetailsToWrite(itemDetails[1], ol)
       actors.push(itemDetails[0]), operations.push(itemDetailsToWrite)
@@ -85,10 +91,5 @@ class NewOrderTxn extends t.Transaction {
     await super.transact(actors, operations)
   }
 }
-
-// Server setup: register actors with KAR and start express
-// const app = express()
-// app.use(sys.actorRuntime({ NewOrderTxn }))
-// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 exports.NewOrderTxn = NewOrderTxn

@@ -30,8 +30,8 @@ class District extends gp.GenericParticipant {
     this.address = that.address || c.DEFAULT_ADDRESS
     this.tax = that.tax || c.DIST_TAX // Sales tax
     this.ytd = that.ytd || { ytd:0, v:0 } // Year to date balance
-    this.nextOId = that.nextOId || { nextOId:0, v:0 }
-    this.reservedNextOId = that.reservedNextOId || 0
+    this.nextOId = that.nextOId || { nextOId:1, v:0 }
+    this.lastDlvrOrd = that.lastDlvrOrd || { lastDlvrOrd:0, v:0 }
   }
 
   async prepare(txnId, update) {
