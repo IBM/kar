@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- package com.ibm.kar.quarkus;
+ package com.ibm.research.kar.quarkus;
 
  /**
   * A stub class just so we have something to put in the jar file...
