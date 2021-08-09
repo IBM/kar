@@ -16,6 +16,7 @@
 
 package com.ibm.research.kar;
 
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.json.Json;
@@ -48,7 +50,10 @@ import com.ibm.research.kar.actor.Subscription;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
-import com.ibm.research.kar.runtime.KarSidecar;
+import com.ibm.research.kar.liberty.KarSidecar;
+import com.ibm.research.kar.runtime.KarConfig;
+
+import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 public class Kar {
 	public final static String KAR_ACTOR_JSON = "application/kar+json";
@@ -56,19 +61,29 @@ public class Kar {
 
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
-	private static KarSidecar sidecar;
+	private static KarSidecar sidecar = instantiateSidecar();
 
 	private static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 
 	private Kar() {
 	}
 
-	/*
-	 * Set sidecar to the middleware provided instance.
-	 * Must be called before any other methods of this class are invoked.
-	 */
-	public static void setSidecarInstance(KarSidecar sidecarInstance) {
-		Kar.sidecar = sidecarInstance;
+	private static KarSidecar instantiateSidecar() {
+
+		String port = System.getenv("KAR_RUNTIME_PORT");
+		if (port == null || port.trim().isEmpty()) {
+			logger.severe("KAR_RUNTIME_PORT is not set. Fatal misconfiguration. Forcing immediate hard exit of JVM.");
+			Runtime.getRuntime().halt(1);
+		}
+
+		String baseURIStr = "http://localhost:" + port + "/";
+		logger.fine("KAR Sidecar base URI is " + baseURIStr);
+		URI sidecarURI = URI.create(baseURIStr);
+		RestClientBuilder builder = RestClientBuilder.newBuilder().baseUri(sidecarURI);
+		KarSidecar sidecar = builder.readTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
+				.connectTimeout(KarConfig.SIDECAR_CONNECTION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS).build(KarSidecar.class);
+
+		return sidecar;
 	}
 
 	private static JsonArray packArgs(JsonValue[] args) {
