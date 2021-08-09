@@ -16,6 +16,9 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.7 - 2021-08-09
++ Simplify Java SDK initialization (#139)
+
 # KAR 1.0.6 - 2021-07-30
 + Restructure of Java SDK internals and new maven artifact names
 + Add Prometheus metrics endpoint to sidecar
