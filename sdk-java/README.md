@@ -77,8 +77,7 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service
-    JsonValue value = call("MyService", "increment", params);
+    JsonValue value = Services.call("MyService", "increment", params);
 }
 ```
 
@@ -96,8 +95,8 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service
-    JsonValue value = actorCall("ActorType", "ActorID", "remoteMethodName", params);
+    ActorInstance actor = Actors.ref("ActorType", "ActorID");
+    JsonValue value = Actors.call(actor, "remoteMethodName", params);
 }
 ```
 
@@ -115,8 +114,7 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service asynchronously
-   CompletionStage<JsonValue> cf = callAsync("MyService", "increment", params);
+   CompletionStage<JsonValue> cf = Services.callAsync("MyService", "increment", params);
 
    JsonValue value = cf
                     .toCompletableFuture()
@@ -137,8 +135,9 @@ public static void main(String[] args) {
     JsonObject params = Json.createObjectBuilder()
 				.add("number",42)
 				.build();
-    // call actor asnchronously
-    CompletionStage<JsonValue> cf = actorCallAsync("ActorType", "ActorID", "remoteMethodName", params);
+
+    ActorInstance actor = Actors.ref("ActorType", "ActorID");
+    CompletionStage<JsonValue> cf = Actors.callAsync(actor, "remoteMethodName", params);
 
     JsonValue value = cf
                     .toCompletableFuture()
@@ -231,8 +230,8 @@ using the KAR SDK, you will need to write some additional bits of
 boilerplate to enable Open Liberty to execute your component.
 
 1. You will need to add a stanza to your `pom.xml` to declare a
-   dependency on `kar-runtime-liberty` and on some Open Liberty
-   dependencies used within KAR.
+   dependency on `kar-runtime-core`, `kar-runtime-liberty` and on
+   some Open Liberty dependencies used within KAR.
 2. You will need to provide a class that extends
    `javax.ws.rs.core.Application`.
 3. If your application component contains any KAR Actor types, you
@@ -259,9 +258,14 @@ Using Maven, an example `pom.xml` to include `kar-runtime-liberty` module into a
     </modules>
 </project>
 ```
-The corresponding`pom.xml` in `kar-actor-example` should include the following dependency:
+The corresponding`pom.xml` in `kar-actor-example` should include the following dependencies:
 ```xml
 <!-- KAR SDK -->
+<dependency>
+	<groupId>com.ibm.research.kar</groupId>
+	<artifactId>kar-runtime-core</artifactId>
+	<version>X.Y.Z</version>
+</dependency>
 <dependency>
 	<groupId>com.ibm.research.kar</groupId>
 	<artifactId>kar-runtime-liberty</artifactId>
