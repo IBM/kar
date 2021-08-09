@@ -49,8 +49,8 @@ class DeliveryTxn extends t.Transaction {
 
   async getTotalOrderAmount(oDetails) {
     let totalAmt = 0
-    for (let i in oDetails.orderLines) {
-      totalAmt += oDetails.orderLines[i].amount
+    for (let i in oDetails.orderLines.orderLines) {
+      totalAmt += oDetails.orderLines.orderLines[i].amount
     }
     return totalAmt
   }
@@ -87,7 +87,7 @@ class DeliveryTxn extends t.Transaction {
       const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd.lastDlvrOrd+1)
       await actor.remove(actor.proxy('NewOrder', orderId))
 
-      const dUpdate = {lastDlvrOrd: dDetails[1].lastDlvrOrd.lastDlvrOrd+1, v: dDetails[1].lastDlvrOrd.v}
+      const dUpdate = {lastDlvrOrd: {lastDlvrOrd: dDetails[1].lastDlvrOrd.lastDlvrOrd+1, v: dDetails[1].lastDlvrOrd.v}}
       actors.push(dDetails[0]), operations.push(dUpdate)
 
       const oDetails = await this.getOrderDetails(orderId)
@@ -99,7 +99,6 @@ class DeliveryTxn extends t.Transaction {
       const updatedCDetails = await this.updateCustomerDetails(cDetails[1], totalOrderAmt)
       actors.push(cDetails[0]), operations.push(updatedCDetails)
     }
-    // console.log(operations)
     await super.transact(actors, operations)
   }
 }

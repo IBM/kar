@@ -24,8 +24,10 @@ var ost = require('./order_status_transaction.js')
 OrderStatusTxn = ost.OrderStatusTxn
 var dt = require('./delivery_transaction.js')
 DeliveryTxn = dt.DeliveryTxn
+var slt = require('./stock_level_transaction.js')
+StockLevelTxn = slt.StockLevelTxn
 
 // Server setup: register actors with KAR and start express
 const app = express()
-app.use(sys.actorRuntime({ NewOrderTxn, PaymentTxn, OrderStatusTxn, DeliveryTxn }))
+app.use(sys.actorRuntime({ NewOrderTxn, PaymentTxn, OrderStatusTxn, DeliveryTxn, StockLevelTxn }))
 app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

@@ -89,11 +89,25 @@ async function deliveryTxn() {
   console.log("Delivery txn complete")
 }
 
+async function stockLevelTxn() {
+  const wId = 'w' + await getRandomInt(1, c.NUM_WAREHOUSES)
+  const dId = 'd' + await getRandomInt(1, c.NUM_DISTRICTS)
+  const threshold = await getRandomInt(10, 20)
+
+  const txnActor = actor.proxy('StockLevelTxn', uuidv4())
+  var txn = {}
+  txn.wId = wId, txn.dId = dId, txn.threshold = threshold
+  const lowStockCnt = await actor.call(txnActor, 'startTxn', txn)
+  console.log(lowStockCnt)
+  console.log("Stock level txn complete")
+}
+
 async function main () {
   await newOrderTxn()
   await paymentTxn()
   await orderStatusTxn()
   await deliveryTxn()
+  await stockLevelTxn()
   console.log('Terminating sidecar')
   await sys.shutdown()
 }
