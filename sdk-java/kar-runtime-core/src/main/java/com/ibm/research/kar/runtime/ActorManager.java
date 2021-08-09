@@ -36,7 +36,6 @@ import javax.json.JsonValue;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -52,6 +51,7 @@ public class ActorManager {
 	private final static String LOG_PREFIX = "ActorManager.";
 	private final static Logger logger = Logger.getLogger(ActorManager.class.getName());
 	private final static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+	private final static String KAR_ACTOR_JSON = "application/kar+json";
 
 	// This map is read only once it is initialized.
 	private static final HashMap<String, ActorType> actorTypes = new HashMap<>();
@@ -269,7 +269,7 @@ public class ActorManager {
 			} else {
 				JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
 				JsonObject ro = factory.createObjectBuilder().add("value", jv).build();
-				return Response.status(Response.Status.OK).type(Kar.KAR_ACTOR_JSON).entity(ro).build();
+				return Response.status(Response.Status.OK).type(KAR_ACTOR_JSON).entity(ro).build();
 			}
 		} catch (Throwable t) {
 			if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
@@ -295,7 +295,7 @@ public class ActorManager {
 				backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
 			}
 			ro.add("stack", sw.toString());
-			return Response.status(Response.Status.OK).type(Kar.KAR_ACTOR_JSON).entity(ro.build()).build();
+			return Response.status(Response.Status.OK).type(KAR_ACTOR_JSON).entity(ro.build()).build();
 		}
 	}
 

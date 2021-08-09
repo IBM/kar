@@ -38,7 +38,6 @@ import javax.ws.rs.core.Response;
 
 import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.runtime.KarConfig;
-import com.ibm.research.kar.runtime.KarSidecar;
 
 import org.eclipse.microprofile.faulttolerance.Retry;
 import org.eclipse.microprofile.faulttolerance.Timeout;
@@ -50,7 +49,7 @@ import org.eclipse.microprofile.rest.client.annotation.RegisterProvider;
 @Timeout(0)
 @Path("kar/v1")
 @RegisterProvider(JSONProvider.class)
-public interface KarRest extends KarSidecar {
+public interface KarSidecar {
 
 	/*
 	 * Services
