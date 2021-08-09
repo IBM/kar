@@ -56,14 +56,14 @@ import com.ibm.research.kar.runtime.KarConfig;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 public class Kar {
-	public final static String KAR_ACTOR_JSON = "application/kar+json";
-  public final static MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");
+	public static final String KAR_ACTOR_JSON = "application/kar+json";
+	public static final MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");
 
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
-	private static KarSidecar sidecar = instantiateSidecar();
+	private static final KarSidecar sidecar = instantiateSidecar();
 
-	private static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+	private static final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 
 	private Kar() {
 	}
@@ -502,7 +502,8 @@ public class Kar {
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 					String msg = responseToString(e.getResponse());
-					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
@@ -530,7 +531,8 @@ public class Kar {
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 					String msg = responseToString(e.getResponse());
-					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
@@ -557,7 +559,8 @@ public class Kar {
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
 					String msg = responseToString(e.getResponse());
-					throw new ActorMethodNotFoundException(msg != null ? msg : "Not found: " + actor.getType() + "[" +actor.getId() + "]." + path, e);
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
 				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
 					throw new ActorMethodTimeoutException(
 							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
@@ -578,8 +581,7 @@ public class Kar {
 		 *         method invocation.
 		 */
 		public static CompletionStage<JsonValue> callAsync(ActorRef actor, String path, JsonValue... args) {
-			CompletionStage<Response> cr = sidecar.actorCallAsync(actor.getType(), actor.getId(), path, null,
-					packArgs(args));
+			CompletionStage<Response> cr = sidecar.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
 			return cr.thenApply(r -> callProcessResponse(r));
 		}
 
@@ -715,6 +717,7 @@ public class Kar {
 			public static class ActorUpdateResult {
 				public final int added;
 				public final int removed;
+
 				ActorUpdateResult(int added, int removed) {
 					this.added = added;
 					this.removed = removed;
@@ -795,7 +798,8 @@ public class Kar {
 			public static int set(ActorRef actor, Map<String, JsonValue> updates) {
 				if (updates.isEmpty())
 					return 0;
-				ActorUpdateResult result = update(actor, Collections.emptyList(), Collections.emptyMap(), updates, Collections.emptyMap());
+				ActorUpdateResult result = update(actor, Collections.emptyList(), Collections.emptyMap(), updates,
+						Collections.emptyMap());
 				return result.removed;
 			}
 
@@ -822,7 +826,8 @@ public class Kar {
 			public static int removeAll(ActorRef actor, List<String> keys) {
 				if (keys.isEmpty())
 					return 0;
-				ActorUpdateResult res = update(actor, keys, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap());
+				ActorUpdateResult res = update(actor, keys, Collections.emptyMap(), Collections.emptyMap(),
+						Collections.emptyMap());
 				return res.removed;
 			}
 
@@ -843,14 +848,20 @@ public class Kar {
 			 * Perform a multi-element update operation on a Actor's state. This method is
 			 * the most general form of Actor state update and enables both top-level keys
 			 * and submap keys to be removed and updated in a single KAR operation.
-			 * @param actor The Actor instance.
-			 * @param removals The keys to remove from the actor state
-			 * @param submapRemovals A mapping from submap names to the keys to remove from each submap
-			 * @param updates The updates to perform to the actors state
-			 * @param submapUpdates A mapping from submap names to the updates to perform on each submap
-			 * @return An object containing the number of state entries removed and added by the update.
+			 *
+			 * @param actor          The Actor instance.
+			 * @param removals       The keys to remove from the actor state
+			 * @param submapRemovals A mapping from submap names to the keys to remove from
+			 *                       each submap
+			 * @param updates        The updates to perform to the actors state
+			 * @param submapUpdates  A mapping from submap names to the updates to perform
+			 *                       on each submap
+			 * @return An object containing the number of state entries removed and added by
+			 *         the update.
 			 */
-			public static ActorUpdateResult update(ActorRef actor, List<String> removals, Map<String, List<String>> submapRemovals, Map<String, JsonValue> updates, Map<String, Map<String, JsonValue>> submapUpdates) {
+			public static ActorUpdateResult update(ActorRef actor, List<String> removals,
+					Map<String, List<String>> submapRemovals, Map<String, JsonValue> updates,
+					Map<String, Map<String, JsonValue>> submapUpdates) {
 				JsonObjectBuilder requestBuilder = factory.createObjectBuilder();
 
 				if (!removals.isEmpty()) {
@@ -895,7 +906,7 @@ public class Kar {
 
 				JsonObject params = requestBuilder.build();
 				Response response = sidecar.actorUpdate(actor.getType(), actor.getId(), params);
-				JsonObject responseObject = ((JsonValue)toValue(response)).asJsonObject();
+				JsonObject responseObject = ((JsonValue) toValue(response)).asJsonObject();
 				int added = responseObject.getInt("added");
 				int removed = responseObject.getInt("removed");
 
@@ -903,8 +914,8 @@ public class Kar {
 			}
 
 			/**
-			 * KAR API methods for optimized operations for storing a map as a nested element
-			 * of an Actor's state.
+			 * KAR API methods for optimized operations for storing a map as a nested
+			 * element of an Actor's state.
 			 */
 			public static class Submap {
 				/**
@@ -992,7 +1003,8 @@ public class Kar {
 						return 0;
 					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
 					tmp.put(submap, updates);
-					ActorUpdateResult res = update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), tmp);
+					ActorUpdateResult res = update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(),
+							tmp);
 					return res.added;
 				}
 
@@ -1024,7 +1036,8 @@ public class Kar {
 
 					Map<String, List<String>> tmp = new HashMap<String, List<String>>();
 					tmp.put(submap, keys);
-					ActorUpdateResult res = update(actor, Collections.emptyList(), tmp, Collections.emptyMap(), Collections.emptyMap());
+					ActorUpdateResult res = update(actor, Collections.emptyList(), tmp, Collections.emptyMap(),
+							Collections.emptyMap());
 					return res.removed;
 				}
 
@@ -1202,6 +1215,7 @@ public class Kar {
 
 		/**
 		 * Get information about a system component.
+		 *
 		 * @param component The component whose information is being requested
 		 * @return information about the given component
 		 */
