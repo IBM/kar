@@ -27,6 +27,8 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.ws.rs.core.Response;
 
+import com.ibm.research.kar.quarkus.KarSidecar;
+
 @QuarkusMain
 public class Main {
     public static void main(String... args) {
@@ -36,7 +38,7 @@ public class Main {
 
     public static class MyApp implements QuarkusApplication {
 
-        KarRest client = new KarRest();
+        KarSidecar client = new KarSidecar();
 
         @Override
         public int run(String... args) throws Exception {
