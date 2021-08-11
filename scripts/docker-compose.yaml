@@ -44,13 +44,13 @@ services:
     depends_on:
       - "zookeeper"
   redis:
-    image: redis:5.0
+    image: redis:6.2
     hostname: redis
     container_name: kar_redis
     restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
-    command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass passw0rd --port 6379"]
+    command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user karmesh allcommands allkeys on \\>act0rstate --port 6379"]
     ports:
       - "31379:6379"
 

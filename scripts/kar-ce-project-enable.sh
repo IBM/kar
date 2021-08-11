@@ -49,6 +49,7 @@ ibmcloud code-engine secret create --name kar.ibm.com.runtime-config \
      --from-literal REDIS_HOST=$REDIS_HOST \
      --from-literal REDIS_PORT=$REDIS_PORT \
      --from-literal REDIS_PASSWORD=$REDIS_PASSWORD \
+     --from-literal REDIS_USER=$REDIS_USER \
      --from-literal KAFKA_VERSION=$KAFKA_VERSION \
      --from-literal KAFKA_ENABLE_TLS=$KAFKA_ENABLE_TLS \
      --from-literal KAFKA_BROKERS=$KAFKA_BROKERS \

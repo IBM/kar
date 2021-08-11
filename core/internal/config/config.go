@@ -122,8 +122,11 @@ var (
 	// RedisTLSSkipVerify is set to skip server name verification for Redis when connecting over TLS
 	RedisTLSSkipVerify bool
 
-	// RedisPassword the the password of the Redis instance (optional)
+	// RedisPassword the password to use to connect to the Redis instance (required)
 	RedisPassword string
+
+	// RedisUser the user to use to connect to the Redis instance (required)
+	RedisUser string
 
 	// Redis certificate
 	RedisCA *x509.Certificate
@@ -184,7 +187,8 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&RedisHost, "redis_host", "", "The Redis host")
 	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
 	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
-	f.StringVar(&RedisPassword, "redis_password", "", "The password of the Redis server if any")
+	f.StringVar(&RedisPassword, "redis_password", "", "The password to use to connect to the Redis server")
+	f.StringVar(&RedisUser, "redis_user", "", "The user to use to connect to the Redis server")
 	f.BoolVar(&RedisTLSSkipVerify, "redis_tls_skip_verify", false, "Skip server name verification for Redis when connecting over TLS")
 	f.StringVar(&redisCABase64, "redis_ca_cert", "", "The base64-encoded Redis CA certificate if any")
 
@@ -477,6 +481,12 @@ Available commands:
 	if RedisPassword == "" {
 		if RedisPassword = os.Getenv("REDIS_PASSWORD"); RedisPassword == "" {
 			RedisPassword = loadStringFromConfig(configDir, "redis_password")
+		}
+	}
+
+	if RedisUser == "" {
+		if RedisUser = os.Getenv("REDIS_USER"); RedisUser == "" {
+			RedisUser = loadStringFromConfig(configDir, "redis_user")
 		}
 	}
 

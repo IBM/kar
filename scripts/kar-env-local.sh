@@ -27,6 +27,7 @@ unset REDIS_ENABLE_TLS
 unset REDIS_HOST
 unset REDIS_PORT
 unset REDIS_PASSWORD
+unset REDIS_USER
 unset KAFKA_VERSION
 unset KAFKA_ENABLE_TLS
 unset KAFKA_BROKERS
@@ -36,4 +37,5 @@ export KAFKA_BROKERS=${KAFKA_DEPLOY_HOST:-localhost}:31093
 export KAFKA_VERSION=2.6.0
 export REDIS_HOST=localhost
 export REDIS_PORT=31379
-export REDIS_PASSWORD=passw0rd
+export REDIS_PASSWORD=act0rstate
+export REDIS_USER=karmesh

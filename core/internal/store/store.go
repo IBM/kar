@@ -293,6 +293,9 @@ func Dial() error {
 			redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true))
 		}
 	}
+	if config.RedisUser != "" {
+		redisOptions = append(redisOptions, redis.DialUsername(config.RedisUser))
+	}
 	if config.RedisPassword != "" {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
 	}
