@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var t = require('../../transaction.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
 
 class StockLevelTxn extends t.Transaction {
   async activate () {
-    const that = await super.activate()
+    await super.activate()
   }
 
   async getDistrictDetails(wId, dId) {
@@ -43,15 +40,15 @@ class StockLevelTxn extends t.Transaction {
   async startTxn(txn) {
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
     let lowStockCnt = 0
-    const index = dDetails[1].nextOId.nextOId - 1
+    const index = dDetails[1].nextOId.val - 1
     for (let i = index; i > index - 20 && i > 0; i-- ) {
       const oDetails = await this.getOrderDetails(txn.wId, txn.dId, 'o' + Number(i))
-      const olines = oDetails[1].orderLines.orderLines
+      const olines = oDetails[1].orderLines.val
       for (let key in olines) {
         const itemId = olines[key].itemId
         const supplyWId = olines[key].supplyWId
         const itemDetails = await this.getItemDetails(itemId, supplyWId)
-        if (itemDetails[1].quantity.quantity < txn.threshold) { lowStockCnt ++ }
+        if (itemDetails[1].quantity.val < txn.threshold) { lowStockCnt ++ }
       }
     }
     return lowStockCnt

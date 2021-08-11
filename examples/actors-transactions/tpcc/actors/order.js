@@ -26,7 +26,7 @@ class NewOrder extends gp.GenericParticipant {
   }
 
   async deactivate () {
-    console.log('actor', this.noId, 'deactivate')
+    if (verbose) { console.log('actor', this.noId, 'deactivate') }
     await actor.state.removeAll(this)
   }
 
@@ -43,20 +43,8 @@ class NewOrder extends gp.GenericParticipant {
     let writeMap = {}
     if (decision) { writeMap.noId = this.noId }
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`Committed transaction ${txnId}. Added new order ${this.noId}.\n`)
+    if (verbose) { console.log(`Committed transaction ${txnId}. Added new order ${this.noId}.\n`) }
     return
-  }
-}
-
-
-class OrderLine {
-  constructor (olNum, itemId, quantity, supplyWId, amount) {
-    this.olNumber = olNum
-    this.itemId = itemId
-    this.quantity = quantity
-    this.supplyWId = supplyWId
-    this.amount = amount
-    this.deliveryDate = null
   }
 }
 
@@ -69,9 +57,9 @@ class Order extends gp.GenericParticipant {
     this.wId = that.wId
     this.entryDate = that.entryDate || new Date()
     this.olCnt = that.olCnt || 0
-    this.orderLines = that.orderLines || { orderLines:{}, v:0 }
+    this.orderLines = that.orderLines || await super.createVal({})
     this.allLocal = true
-    this.carrierId = that.carrierId || { carrierId:null, v:0 }
+    this.carrierId = that.carrierId || await super.createVal(null)
   }
 
   async getOrder() {
@@ -92,7 +80,7 @@ class Order extends gp.GenericParticipant {
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     const writeMap = await super.createCommitWriteMap(txnId, decision, update)
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`${this.kar.id} committed transaction ${txnId}.\n`)
+    if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
     return
   }
 }

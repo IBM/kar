@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
-const { v4: uuidv4 } = require('uuid')
 var t = require('../../transaction.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
 
 class NewOrderTxn extends t.Transaction {
   async activate () {
-    const that = await super.activate()
+    await super.activate()
   }
 
   async getWarehouseDetails(wId) {
@@ -50,11 +46,11 @@ class NewOrderTxn extends t.Transaction {
   async getItemDetailsToWrite(itemDetails, ol) {
     let itemDetailsToWrite = Object.assign({}, itemDetails)
     // Update item details based on order
-    const updatedQuantity = (itemDetails.quantity.quantity - ol.quantity) > 0? 
-          (itemDetails.quantity.quantity - ol.quantity) : (itemDetails.quantity.quantity - ol.quantity + 91)
-    itemDetailsToWrite.quantity.quantity = updatedQuantity
-    itemDetailsToWrite.ytd.ytd = itemDetails.ytd.ytd + ol.quantity
-    itemDetailsToWrite.orderCnt.orderCnt = itemDetails.orderCnt.orderCnt + 1
+    const updatedQuantity = (itemDetails.quantity.val - ol.quantity) > 0? 
+          (itemDetails.quantity.val - ol.quantity) : (itemDetails.quantity.val - ol.quantity + 91)
+    itemDetailsToWrite.quantity.val = updatedQuantity
+    itemDetailsToWrite.ytd.val = itemDetails.ytd.val + ol.quantity
+    itemDetailsToWrite.orderCnt.val = itemDetails.orderCnt.val + 1
     return itemDetailsToWrite
   }
 
@@ -64,14 +60,16 @@ class NewOrderTxn extends t.Transaction {
     const wDetails = await this.getWarehouseDetails(txn.wId)
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
     const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-    
-    const orderId = txn.wId + ':' + txn.dId + ':' + 'o' + dDetails[1].nextOId.nextOId
-    const dUpdate = {nextOId: {nextOId: dDetails[1].nextOId.nextOId+1, v: dDetails[1].nextOId.v}}
+
+    let dUpdate = {nextOId: dDetails[1].nextOId}
+    dUpdate.nextOId.val += 1
     actors.push(dDetails[0]), operations.push(dUpdate)
 
-    const cUpdate = {lastOId: {lastOId: orderId, v: cDetails[1].lastOId.v}}
+    const orderId = txn.wId + ':' + txn.dId + ':' + 'o' + dDetails[1].nextOId.val
+    let cUpdate = {lastOId: cDetails[1].lastOId} 
+    cUpdate.lastOId.val = orderId
     actors.push(cDetails[0]), operations.push(cUpdate)
-
+    
     const order = actor.proxy('Order', orderId) // Create an order
     actors.push(order), operations.push(txn)
 
@@ -79,8 +77,8 @@ class NewOrderTxn extends t.Transaction {
     actors.push(newOrder), operations.push({})
 
     let totalAmount = 0
-    for (let i in txn.orderLines.orderLines) {
-      let ol = txn.orderLines.orderLines[i]
+    for (let i in txn.orderLines.val) {
+      let ol = txn.orderLines.val[i]
       const itemDetails = await this.getItemDetails(ol.itemId, ol.supplyWId)
       const itemDetailsToWrite = await this.getItemDetailsToWrite(itemDetails[1], ol)
       actors.push(itemDetails[0]), operations.push(itemDetailsToWrite)

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 
@@ -35,7 +34,7 @@ class Transaction {
       throw new Error('Length of participants and of operations do not match.'+
       'Please ensure they have a 1:1 mapping')
     }
-    console.log(`Begin transaction ${this.txnId}.`)
+    if (verbose) { console.log(`Begin transaction ${this.txnId}.`) }
     const that = await actor.state.getAll(this)
     if (that.commitComplete) {
       return that.decision
@@ -61,7 +60,7 @@ class Transaction {
     if (that.commitComplete == null) {
       await actor.tell(this, 'sendCommitAsync', prtpnts, operations, decision)
     }
-    console.log(`End transaction ${this.txnId}.\n`)
+    if (verbose) { console.log(`End transaction ${this.txnId}.\n`) }
     return decision 
     
   }
@@ -81,10 +80,5 @@ class Transaction {
     }
   }
 }
-
-// Server setup: register actors with KAR and start express
-// const app = express()
-// app.use(sys.actorRuntime({ Transaction }))
-// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 exports.Transaction = Transaction

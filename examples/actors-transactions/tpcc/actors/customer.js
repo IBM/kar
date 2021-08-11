@@ -35,11 +35,11 @@ class Customer extends gp.GenericParticipant {
     this.credit = that.credit || 'GC' // 'GC' or 'BC' = good or bad credit
     this.creditLimit = that.creditLimit || 100
     this.discount = that.discount || 0
-    this.balance = that.balance || { balance:c.DEFAULT_BALANCE, v:0 }
-    this.ytdPayment = that.ytdPayment || { ytdPayment:0, v:0 } // Year to date payment
-    this.paymentCnt = that.paymentCnt || { paymentCnt:0, v:0 }
-    this.deliveryCnt = that.deliveryCnt || { deliveryCnt:0, v:0 }
-    this.lastOId = that.lastOId || { lastOId: 0, v:0 }
+    this.balance = that.balance || await super.createVal(c.DEFAULT_BALANCE)
+    this.ytdPayment = that.ytdPayment || await super.createVal(0) // Year to date payment
+    this.paymentCnt = that.paymentCnt || await super.createVal(0)
+    this.deliveryCnt = that.deliveryCnt || await super.createVal(0)
+    this.lastOId = that.lastOId || await super.createVal(0)
   }
 
   async addCustomerToDistrict(dId, wId) {
@@ -61,7 +61,7 @@ class Customer extends gp.GenericParticipant {
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     const writeMap = await super.createCommitWriteMap(txnId, decision, update)
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`${this.kar.id} committed transaction ${txnId}.\n`)
+    if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
     return
   }
 }

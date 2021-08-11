@@ -27,10 +27,10 @@ class ItemStock extends gp.GenericParticipant {
     this.wId = that.wId
     this.name = that.name || c.DEFAULT_ITEM_NAME
     this.price = that.price || c.DEFAULT_ITEM_PRICE
-    this.quantity = that.quantity || { quantity:c.DEFAULT_QUANTITY, v:0 }
-    this.ytd = that.ytd || { ytd:0, v:0 }
-    this.orderCnt = that.orderCnt || { orderCnt:0, v:0 }
-    this.remoteCnt = that.remoteCnt || { remoteCnt:0, v:0 }
+    this.quantity = that.quantity || { val:c.DEFAULT_QUANTITY, ts:0 }
+    this.ytd = that.ytd || await super.createVal(0)
+    this.orderCnt = that.orderCnt || await super.createVal(0)
+    this.remoteCnt = that.remoteCnt || await super.createVal(0)
     this.data = that.data
   }
 
@@ -55,7 +55,7 @@ class ItemStock extends gp.GenericParticipant {
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     const writeMap = await super.createCommitWriteMap(txnId, decision, update)
     await super.writeCommit(txnId, decision, writeMap)
-    console.log(`Committed transaction ${txnId}. Exact quantity left is ${this.quantity.quantity}.\n`)
+    if (verbose) { console.log(`Committed transaction ${txnId}. Exact quantity left is ${this.quantity.quantity}.\n`) }
     return
   }
 }

@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var t = require('../../transaction.js')
 var c = require('../constants.js')
-const verbose = process.env.VERBOSE
 
 class DeliveryTxn extends t.Transaction {
   async activate () {
-    const that = await super.activate()
+    await super.activate()
   }
 
   async getWarehouseDetails(wId) {
@@ -49,25 +47,25 @@ class DeliveryTxn extends t.Transaction {
 
   async getTotalOrderAmount(oDetails) {
     let totalAmt = 0
-    for (let i in oDetails.orderLines.orderLines) {
-      totalAmt += oDetails.orderLines.orderLines[i].amount
+    for (let i in oDetails.orderLines.val) {
+      totalAmt += oDetails.orderLines.val[i].amount
     }
     return totalAmt
   }
 
   async updateOrderDetails(oDetails, carrierId, deliveryDate) {
     let updatedODetails = Object.assign({}, oDetails)
-    updatedODetails.carrierId.carrierId = carrierId
-    for (let i in oDetails.orderLines.orderLines) {
-      updatedODetails.orderLines.orderLines[i].deliveryDate = deliveryDate
+    updatedODetails.carrierId.val = carrierId
+    for (let i in oDetails.orderLines.val) {
+      updatedODetails.orderLines.val[i].deliveryDate = deliveryDate
     }
     return updatedODetails
   }
 
   async updateCustomerDetails(cDetails, totalAmount) {
     let updatedCDetails = Object.assign({}, cDetails)
-    updatedCDetails.balance.balance += totalAmount
-    updatedCDetails.deliveryCnt.deliveryCnt += 1
+    updatedCDetails.balance.val += totalAmount
+    updatedCDetails.deliveryCnt.val += 1
     return updatedCDetails
   }
 
@@ -78,16 +76,17 @@ class DeliveryTxn extends t.Transaction {
     for (let i = 1; i <= c.NUM_DISTRICTS; i++) {
       let dId = 'd' + i
       const dDetails = await this.getDistrictDetails(txn.wId, dId)
-      if (dDetails[1].nextOId.nextOId == 1 || 
-        dDetails[1].lastDlvrOrd.lastDlvrOrd == dDetails[1].nextOId.nextOId - 1) {
+      if (dDetails[1].nextOId.val == 1 || 
+        dDetails[1].lastDlvrOrd.val == dDetails[1].nextOId.val - 1) {
         // This implies either no order was placed in this district
         // or all orders in the district are delivered; skip district
         continue
       }
-      const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd.lastDlvrOrd+1)
+      const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd.val+1)
       await actor.remove(actor.proxy('NewOrder', orderId))
 
-      const dUpdate = {lastDlvrOrd: {lastDlvrOrd: dDetails[1].lastDlvrOrd.lastDlvrOrd+1, v: dDetails[1].lastDlvrOrd.v}}
+      let dUpdate = {lastDlvrOrd: dDetails[1].lastDlvrOrd}
+      dUpdate.lastDlvrOrd.val += 1
       actors.push(dDetails[0]), operations.push(dUpdate)
 
       const oDetails = await this.getOrderDetails(orderId)

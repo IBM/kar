@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 
 const verbose = process.env.VERBOSE
@@ -33,7 +32,7 @@ class GenericParticipant {
   async prepare(txnId) {
     /* Check if this txn is already prepared. Prepare value can be
     either true or false. If not prepared, return null. */
-    console.log(`${this.kar.id} received prepare for txn ${txnId}`)
+    if (verbose) { console.log(`${this.kar.id} received prepare for txn ${txnId}`) }
     this.preparedTxns = await actor.state.get(this, 'preparedTxns') || {}
     if (txnId in this.preparedTxns) {
       return this.preparedTxns[txnId]
@@ -45,7 +44,7 @@ class GenericParticipant {
     let localDecision = true
     for ( let key in update) {
       if (update[key].constructor == Object) {
-        if (this[key].v != update[key].v) { localDecision = false} }
+        if (this[key].ts != update[key].ts) { localDecision = false} }
     }
     return localDecision
   }
@@ -55,7 +54,7 @@ class GenericParticipant {
     if (localDecision) { 
       for ( let key in update) {
         if (update[key].constructor == Object) {
-          this[key].v += 1
+          this[key].ts += 1
           writeMap[key] = this[key] } }
     }
     return writeMap
@@ -78,7 +77,7 @@ class GenericParticipant {
     /* Check if txn is already committed or not. Return true only if this particular
     call to commit succeeds; retrun false if txn is already committed or txn is not 
     prepared, indicating this call to commit failed. */
-    console.log(`${this.kar.id} received commit for txn ${txnId} with decision `, decision)
+    if (verbose) { console.log(`${this.kar.id} received commit for txn ${txnId} with decision `, decision) }
     this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
     if (!(txnId in this.preparedTxns)) {
       this.preparedTxns[txnId] = false
@@ -97,20 +96,13 @@ class GenericParticipant {
     if (decision) {
       for (let key in update) {
         if (update[key].constructor == Object) {
-          this[key][key] =  update[key][key]
+          this[key].val =  update[key].val
+          this[key].ts +=  1
           writeMap[key] = this[key] } 
         else {
           this[key] =  update[key]
           writeMap[key] = this[key]
         } }
-    }
-    if (!decision && await this.getTxnLocalDecision(txnId)) {
-      // If decision is false but prepared is true, revert the effect of prepare.
-      for (let key in update) {
-        if (update[key].constructor == Object) {
-          this[key].v -= 1
-          writeMap[key] = this[key] }
-      }
     }
     return writeMap
   }
@@ -120,6 +112,10 @@ class GenericParticipant {
     this.committedTxns[txnId] = decision
     const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
+  }
+
+  async createVal(val) {
+    return { val: val, ts:0 }
   }
 
   async get(key) {

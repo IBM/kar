@@ -17,12 +17,12 @@
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
+const verbose = process.env.VERBOSE
 const cIdRange = [1, 1]
+const NUM_TXNS =  100
 
 async function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max)+1;
-  return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
+  return Math.floor(Math.random() * (max + 1 - min) + min);
 }
 
 async function newOrderTxn() {
@@ -42,14 +42,11 @@ async function newOrderTxn() {
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.olCnt = numItems
-  txn.orderLines = {orderLines: orderLines, v:0}
+  txn.orderLines = {val: orderLines, ts:0}
 
-  const txnActor = actor.proxy('NewOrderTxn', uuidv4())
+  let txnActor = actor.proxy('NewOrderTxn', uuidv4())
   await actor.call(txnActor, 'startTxn', txn)
-  // const actor1 = actor.proxy('Order', 'w1:d1:o1')
-  // const cat = await actor.call(actor1, 'getOrder')
-  // console.log(cat.orderLines.orderLines['1'])
-  console.log("New order txn complete")
+  if (verbose) { console.log("New order txn complete") }  
 }
 
 async function paymentTxn() {
@@ -63,7 +60,7 @@ async function paymentTxn() {
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.amount = amount
   await actor.call(txnActor, 'startTxn', txn)
-  console.log("Payment complete")
+  if (verbose) { console.log("Payment complete") }
 }
 
 async function orderStatusTxn() {
@@ -74,8 +71,8 @@ async function orderStatusTxn() {
   const txnActor = actor.proxy('OrderStatusTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
-  await actor.call(txnActor, 'startTxn', txn)
-  console.log("Order status txn complete")
+  await actor.tell(txnActor, 'startTxn', txn)
+  if (verbose) { console.log("Order status txn complete") }
 }
 
 async function deliveryTxn() {
@@ -85,8 +82,8 @@ async function deliveryTxn() {
   const txnActor = actor.proxy('DeliveryTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.carrierId = carrierId, txn.deliveryDate = deliveryDate
-  await actor.call(txnActor, 'startTxn', txn)
-  console.log("Delivery txn complete")
+  await actor.tell(txnActor, 'startTxn', txn)
+  if (verbose) { console.log("Delivery txn complete") }
 }
 
 async function stockLevelTxn() {
@@ -97,17 +94,22 @@ async function stockLevelTxn() {
   const txnActor = actor.proxy('StockLevelTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.threshold = threshold
-  const lowStockCnt = await actor.call(txnActor, 'startTxn', txn)
-  console.log(lowStockCnt)
-  console.log("Stock level txn complete")
+  await actor.tell(txnActor, 'startTxn', txn)
+  if (verbose) { console.log("Stock level txn complete") }
 }
 
 async function main () {
-  await newOrderTxn()
-  await paymentTxn()
-  await orderStatusTxn()
-  await deliveryTxn()
-  await stockLevelTxn()
+  let txnsCnt = [0, 0, 0, 0, 0]
+  for (let i = 0; i < NUM_TXNS; i++) {
+    const r = await getRandomInt(1, 100)
+    if (r < 46) { await newOrderTxn(); txnsCnt[0]++ }
+    else if (r < 88) { await paymentTxn(); txnsCnt[1]++ }
+    else if (r < 92) { await orderStatusTxn(); txnsCnt[2]++ }
+    else if (r < 96) { await deliveryTxn(); txnsCnt[3]++ }
+    else { await stockLevelTxn(); txnsCnt[4]++ }
+  }
+  
+  console.log(txnsCnt)  
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

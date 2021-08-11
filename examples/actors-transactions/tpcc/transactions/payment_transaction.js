@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var t = require('../../transaction.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
 
 class PaymentTxn extends t.Transaction {
   async activate () {
-    const that = await super.activate()
+    await super.activate()
   }
 
   async getWarehouseDetails(wId) {
@@ -45,9 +42,9 @@ class PaymentTxn extends t.Transaction {
   async updateCustomerDetails(cDetails, amount) {
     let updatedCDetails = Object.assign({}, cDetails)
     // Update customer details based on txn payment.
-    updatedCDetails.balance.balance = cDetails.balance.balance - amount
-    updatedCDetails.ytdPayment.ytdPayment = cDetails.ytdPayment.ytdPayment + amount
-    updatedCDetails.paymentCnt.paymentCnt = cDetails.paymentCnt.paymentCnt + 1
+    updatedCDetails.balance.val = cDetails.balance.val - amount
+    updatedCDetails.ytdPayment.val = cDetails.ytdPayment.val + amount
+    updatedCDetails.paymentCnt.val = cDetails.paymentCnt.val + 1
     return updatedCDetails
   }
 
@@ -58,20 +55,19 @@ class PaymentTxn extends t.Transaction {
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
     const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
 
-    actors.push(wDetails[0]), operations.push({ytd : {ytd: wDetails[1].ytd.ytd + txn.amount,
-                                              v : wDetails[1].ytd.v }})
-    actors.push(dDetails[0]), operations.push({ytd : {ytd: dDetails[1].ytd.ytd + txn.amount,
-                                                v : dDetails[1].ytd.v }})
+    let wUpdate = {ytd : wDetails[1].ytd}
+    wUpdate.ytd.val += txn.amount
+    actors.push(wDetails[0]), operations.push(wUpdate)
+
+    let dUpdate = {ytd: dDetails[1].ytd}
+    dUpdate.ytd.val += txn.amount
+    actors.push(dDetails[0]), operations.push(dUpdate)
+
     const updatedCDetails = await this.updateCustomerDetails(cDetails[1], txn.amount)
     actors.push(cDetails[0]), operations.push(updatedCDetails)
 
     await super.transact(actors, operations)
   }
 }
-
-// Server setup: register actors with KAR and start express
-// const app = express()
-// app.use(sys.actorRuntime({ PaymentTxn }))
-// app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 exports.PaymentTxn = PaymentTxn

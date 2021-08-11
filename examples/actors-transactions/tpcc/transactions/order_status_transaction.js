@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var t = require('../../transaction.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
 
 class OrderStatusTxn extends t.Transaction {
   async activate () {
-    const that = await super.activate()
+    await super.activate()
   }
 
   async getCustomerDetails(wId, dId, cId) {
@@ -39,7 +36,7 @@ class OrderStatusTxn extends t.Transaction {
 
   async startTxn(txn) {
     const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-    const oDetails = await this.getOrderDetails(cDetails[1].lastOId.lastOId)
+    const oDetails = await this.getOrderDetails(cDetails[1].lastOId.val)
     return oDetails[1]
   }
 }
