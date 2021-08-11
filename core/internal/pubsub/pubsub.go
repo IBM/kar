@@ -274,3 +274,9 @@ func Purge() error {
 	}
 	return nil
 }
+
+// IsLiveSidecar return true if the argument sidecar is currently part of the application mesh
+func IsLiveSidecar(sidecar string) bool {
+	_, ok := addresses[sidecar]
+	return ok
+}

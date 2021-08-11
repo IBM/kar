@@ -228,6 +228,11 @@ func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
 }
 
 func call(ctx context.Context, msg map[string]string) error {
+	if !pubsub.IsLiveSidecar(msg["from"]) {
+		logger.Info("Cancelling %s from dead sidecar %s", msg["method"], msg["from"])
+		return nil
+	}
+
 	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
