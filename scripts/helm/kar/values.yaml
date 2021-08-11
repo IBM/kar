@@ -30,6 +30,7 @@ redis:
     host: 'mustOverrideIfInternalIsFalse'
     port: 'mustOverrideIfInternalIsFalse'
     password: 'mustOverrideIfInternalIsFalse'
+    user: 'mustOverrideIfInternalIsFalse'
 
 kar:
   version: 1.0.7
