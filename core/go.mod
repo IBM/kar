@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/Shopify/sarama v1.26.4
 	github.com/cenkalti/backoff/v4 v4.1.1
-	github.com/gomodule/redigo v1.8.2
+	github.com/gomodule/redigo v1.8.5
 	github.com/google/uuid v1.1.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/prometheus/client_golang v1.11.0
