@@ -23,6 +23,8 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 import javax.ws.rs.core.Response;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Map;
 import io.smallrye.mutiny.Uni;
 import io.vertx.core.http.HttpVersion;
@@ -476,6 +478,12 @@ public class KarSidecar {
     }
 
     private static String getActorPath(String type, String id, String path, int callType) {
+
+        try {
+            id = URLEncoder.encode(id, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            ex.printStackTrace();
+        }
 
         switch (callType) {
             case KAR_ACTOR_CALL:
