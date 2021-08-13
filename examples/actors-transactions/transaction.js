@@ -61,8 +61,7 @@ class Transaction {
       await actor.tell(this, 'sendCommitAsync', prtpnts, operations, decision)
     }
     if (verbose) { console.log(`End transaction ${this.txnId}.\n`) }
-    return decision 
-    
+    return decision
   }
 
   async sendCommitAsync(prtpnts, operations, decision) {

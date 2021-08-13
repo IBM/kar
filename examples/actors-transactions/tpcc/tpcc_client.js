@@ -20,6 +20,7 @@ var c = require('./constants.js')
 const verbose = process.env.VERBOSE
 const cIdRange = [1, 1]
 const NUM_TXNS =  100
+var successCnt = 0
 
 async function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max + 1 - min) + min);
@@ -35,7 +36,7 @@ async function newOrderTxn() {
   for (let i = 0; i < numItems; i++) {
     const itemId = 'i' + await getRandomInt(8191, 100000)
     const supplyWId = await getRandomInt(1, 100) <= 99? wId : 'w' + await getRandomInt(1, c.NUM_WAREHOUSES)
-    const quantity = await getRandomInt(1, c.NUM_DISTRICTS)
+    const quantity = await getRandomInt(1, 10)
     orderLines[i+1] = { itemId: itemId, supplyWId: supplyWId, quantity:quantity }
   }
 
@@ -45,8 +46,9 @@ async function newOrderTxn() {
   txn.orderLines = {val: orderLines, ts:0}
 
   let txnActor = actor.proxy('NewOrderTxn', uuidv4())
-  await actor.call(txnActor, 'startTxn', txn)
-  if (verbose) { console.log("New order txn complete") }  
+  const success = await actor.call(txnActor, 'startTxn', txn)
+  if (success) { successCnt++ }
+  if (verbose) { console.log("New order txn complete") }
 }
 
 async function paymentTxn() {
@@ -59,7 +61,8 @@ async function paymentTxn() {
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.amount = amount
-  await actor.call(txnActor, 'startTxn', txn)
+  const success = await actor.call(txnActor, 'startTxn', txn)
+  if (success) { successCnt++ }
   if (verbose) { console.log("Payment complete") }
 }
 
@@ -102,14 +105,14 @@ async function main () {
   let txnsCnt = [0, 0, 0, 0, 0]
   for (let i = 0; i < NUM_TXNS; i++) {
     const r = await getRandomInt(1, 100)
-    if (r < 46) { await newOrderTxn(); txnsCnt[0]++ }
+    if (r < 44) { await newOrderTxn(); txnsCnt[0]++ }
     else if (r < 88) { await paymentTxn(); txnsCnt[1]++ }
     else if (r < 92) { await orderStatusTxn(); txnsCnt[2]++ }
     else if (r < 96) { await deliveryTxn(); txnsCnt[3]++ }
     else { await stockLevelTxn(); txnsCnt[4]++ }
   }
-  
-  console.log(txnsCnt)  
+  console.log(txnsCnt)
+  console.log(successCnt, 'out of ', (txnsCnt[0]+txnsCnt[1]), 'successful txns.')
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

@@ -98,7 +98,7 @@ class DeliveryTxn extends t.Transaction {
       const updatedCDetails = await this.updateCustomerDetails(cDetails[1], totalOrderAmt)
       actors.push(cDetails[0]), operations.push(updatedCDetails)
     }
-    await super.transact(actors, operations)
+    return await super.transact(actors, operations)
   }
 }
 

@@ -27,7 +27,7 @@ class ItemStock extends gp.GenericParticipant {
     this.wId = that.wId
     this.name = that.name || c.DEFAULT_ITEM_NAME
     this.price = that.price || c.DEFAULT_ITEM_PRICE
-    this.quantity = that.quantity || { val:c.DEFAULT_QUANTITY, ts:0 }
+    this.quantity = that.quantity || await super.createVal(c.DEFAULT_QUANTITY)
     this.ytd = that.ytd || await super.createVal(0)
     this.orderCnt = that.orderCnt || await super.createVal(0)
     this.remoteCnt = that.remoteCnt || await super.createVal(0)

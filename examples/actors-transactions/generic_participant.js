@@ -29,6 +29,34 @@ class GenericParticipant {
     return that
   }
 
+  async createVal(val) {
+    return { val: val, ts:0, prepared:false }
+  }
+
+  async get(key) {
+    return this[key]
+  }
+
+  async getMultiple(keys) {
+    let resp = {}
+    for (let i in keys) {
+      resp[keys[i]] = this[keys[i]]
+    }
+    return resp
+  }
+
+  async put(key, value) {
+    this[key] = value
+    await actor.state.set(this, key, value)
+  }
+
+  async putMultiple(keyValueMap) {
+    for (let key in keyValueMap) {
+      this[key] = keyValueMap[key]
+    }
+    await actor.state.setMultiple(this, keyValueMap)
+  }
+
   async prepare(txnId) {
     /* Check if this txn is already prepared. Prepare value can be
     either true or false. If not prepared, return null. */
@@ -44,7 +72,7 @@ class GenericParticipant {
     let localDecision = true
     for ( let key in update) {
       if (update[key].constructor == Object) {
-        if (this[key].ts != update[key].ts) { localDecision = false} }
+        if (this[key].ts != update[key].ts || this[key].prepared) { localDecision = false} }
     }
     return localDecision
   }
@@ -55,6 +83,7 @@ class GenericParticipant {
       for ( let key in update) {
         if (update[key].constructor == Object) {
           this[key].ts += 1
+          this[key].prepared = true
           writeMap[key] = this[key] } }
     }
     return writeMap
@@ -104,6 +133,12 @@ class GenericParticipant {
           writeMap[key] = this[key]
         } }
     }
+    if (this.getTxnLocalDecision(txnId)) {
+      for (let key in update) {
+        if (update[key].constructor == Object) {
+          this[key].prepared =  false }
+      }
+    }
     return writeMap
   }
 
@@ -112,34 +147,6 @@ class GenericParticipant {
     this.committedTxns[txnId] = decision
     const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
-  }
-
-  async createVal(val) {
-    return { val: val, ts:0 }
-  }
-
-  async get(key) {
-    return this[key]
-  }
-
-  async getMultiple(keys) {
-    let resp = {}
-    for (let i in keys) {
-      resp[keys[i]] = this[keys[i]]
-    }
-    return resp
-  }
-
-  async put(key, value) {
-    this[key] = value
-    await actor.state.set(this, key, value)
-  }
-
-  async putMultiple(keyValueMap) {
-    for (let key in keyValueMap) {
-      this[key] = keyValueMap[key]
-    }
-    await actor.state.setMultiple(this, keyValueMap)
   }
 }
 

@@ -39,7 +39,7 @@ class NewOrderTxn extends t.Transaction {
 
   async getItemDetails(itemId, supplyWId) {
     const itemStock = actor.proxy('ItemStock', itemId + ':' + supplyWId)
-    const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt', 'version']
+    const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt']
     return [itemStock, await actor.call(itemStock, 'getMultiple', keys)]
   }
 
@@ -86,7 +86,7 @@ class NewOrderTxn extends t.Transaction {
       totalAmount += ol.amount
     }
     totalAmount = totalAmount * (1 - cDetails[1].discount) * (1 + wDetails[1].wTax + dDetails[1].tax)
-    await super.transact(actors, operations)
+    return await super.transact(actors, operations)
   }
 }
 

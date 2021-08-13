@@ -34,7 +34,6 @@ class PaymentTxn extends t.Transaction {
 
   async getCustomerDetails(wId, dId, cId) {
     const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-    await actor.call(customer, 'addCustomerToDistrict', dId, wId)
     const keys = ['balance', 'ytdPayment', 'paymentCnt']
     return [customer, await actor.call(customer, 'getMultiple', keys)]
   }
@@ -66,7 +65,7 @@ class PaymentTxn extends t.Transaction {
     const updatedCDetails = await this.updateCustomerDetails(cDetails[1], txn.amount)
     actors.push(cDetails[0]), operations.push(updatedCDetails)
 
-    await super.transact(actors, operations)
+    return await super.transact(actors, operations)
   }
 }
 
