@@ -16,6 +16,11 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.8 - 2021-08-13
++ Upgrade to zookeeper 3.6 and kafka 2.7 (#146)
++ Upgrade to use Redis 6 (#145)
++ Implement cancellation of actor calls from dead sidecars (#144)
+
 # KAR 1.0.7 - 2021-08-09
 + Simplify Java SDK initialization (#139)
 

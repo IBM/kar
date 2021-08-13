@@ -9,18 +9,11 @@
   <version>1.0.0</version>
   <packaging>war</packaging>
 
-  <properties>
-    <version.kar-java-sdk>1.0.7</version.kar-java-sdk>
-    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
-    <version.java-compiler>11</version.java-compiler>
-    <failOnMissingWebXml>false</failOnMissingWebXml>
-    <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
-    <version.microprofile>3.3</version.microprofile>
-    <liberty.var.app.context.root>/</liberty.var.app.context.root>
-  </properties>
+  <parent>
+    <groupId>com.ibm.research.kar.example</groupId>
+    <artifactId>kar-service-timeout</artifactId>
+    <version>1.0.0</version>
+  </parent>
 
   <dependencies>
     <!-- OpenLiberty dependencies -->
