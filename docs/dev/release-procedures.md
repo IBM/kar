@@ -88,6 +88,7 @@ npm notice total files:   5
 ### Tag repository
 
 1. `git tag -s vx.y.z`
+   `git tag -s core/vx.y.z`
 2. `git push --tags upstream`
 3. Tags starting with `v` trigger build processes that:
     * push tagged images to quay.io (via travis-ci)
