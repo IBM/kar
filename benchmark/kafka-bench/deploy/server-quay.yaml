@@ -23,7 +23,8 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: consumer
-    image: quay.io/ibm/kar-kafka-bench-consumer
+    image: quay.io/ibm/kar-kafka-bench
+    command: ["/kar/bin/consumer"]
     env:
     - name: KAFKA_BROKERS
       valueFrom:

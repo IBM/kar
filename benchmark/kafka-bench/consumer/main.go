@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
-	"github.com/prometheus/common/log"
 )
 
 var (
@@ -123,7 +123,7 @@ func newHandler(conf *sarama.Config, topic string, producer sarama.SyncProducer)
 
 // Setup consumer group session
 func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
-	log.Info("Inside Setup!")
+	logger.Info("Inside Setup!")
 	close(h.ready)
 	// h.ready = make(chan struct{})
 	return nil
@@ -131,7 +131,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 
 // Cleanup consumer group session
 func (h *handler) Cleanup(session sarama.ConsumerGroupSession) error {
-	log.Info("Inside Cleanup!")
+	logger.Info("Inside Cleanup!")
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		// Process request time.
 		startTime, err := time.Parse(time.RFC3339Nano, string(message.Value))
 		if err != nil {
-			log.Info("Time parse error!")
+			logger.Info("Time parse error!")
 		}
 		// Post-process.
 		count++
@@ -168,7 +168,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		if count >= warmUpReps {
 			accDuration += float64(duration) / 1000.0
 			if count == warmUpReps+timedReps {
-				log.Infof("Average Kafka request time: %v ms", (accDuration / float64(timedReps)))
+				logger.Info("Average Kafka request time: %v ms", (accDuration / float64(timedReps)))
 				count = 0
 				accDuration = 0
 			}
@@ -197,7 +197,7 @@ func subscribe(ctx context.Context, topic, group string, producer sarama.SyncPro
 	handler := newHandler(conf, topic, producer)
 	handler.client, err = sarama.NewClient(kafkaBrokers, conf)
 	if err != nil {
-		log.Error("failed to instantiate Kafka client: %v", err)
+		logger.Error("failed to instantiate Kafka client: %v", err)
 		return nil, http.StatusInternalServerError, err
 	}
 
@@ -208,7 +208,7 @@ func subscribe(ctx context.Context, topic, group string, producer sarama.SyncPro
 
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
-		log.Error("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
+		logger.Error("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
 		handler.client.Close()
 		return nil, http.StatusInternalServerError, err
 	}
@@ -222,7 +222,7 @@ func subscribe(ctx context.Context, topic, group string, producer sarama.SyncPro
 		defer wg.Done()
 		for {
 			if err := consumer.Consume(ctx, []string{topic}, handler); err != nil { // abnormal termination
-				log.Error("failed Kafka consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
+				logger.Error("failed Kafka consumer for topic %s, group %s: %T, %#v", topic, group, err, err)
 				break
 			}
 			if ctx.Err() != nil { // normal termination
@@ -232,21 +232,21 @@ func subscribe(ctx context.Context, topic, group string, producer sarama.SyncPro
 	}()
 
 	<-handler.ready // Await till the consumer has been set up
-	log.Info("Sarama consumer up and running!...")
+	logger.Info("Sarama consumer up and running!...")
 
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case <-ctx.Done():
-		log.Info("terminating: context cancelled")
+		logger.Info("terminating: context cancelled")
 	case <-sigterm:
-		log.Info("terminating: via signal")
+		logger.Info("terminating: via signal")
 	}
 	cancel()
 	wg.Wait()
-	log.Info("terminating: closing handler")
+	logger.Info("terminating: closing handler")
 	if err = handler.client.Close(); err != nil {
-		log.Info("Error closing handler: %v", err)
+		logger.Info("Error closing handler: %v", err)
 	}
 
 	select {
@@ -260,7 +260,7 @@ func subscribe(ctx context.Context, topic, group string, producer sarama.SyncPro
 func createProducer() sarama.SyncProducer {
 	config, err := newConfig()
 	if err != nil {
-		log.Errorf("Error during configuration: %v", err)
+		logger.Error("Error during configuration: %v", err)
 	}
 
 	config.Producer.RequiredAcks = sarama.WaitForAll
@@ -277,8 +277,9 @@ func createProducer() sarama.SyncProducer {
 }
 
 func main() {
-	log.Info("Starting consumer...")
-	log.Infof("Kafka brokers is %v", kafkaBrokers)
+	logger.SetVerbosity("Info")
+	logger.Info("Starting consumer...")
+	logger.Info("Kafka brokers is %v", kafkaBrokers)
 	// Create the event producer.
 	// Set producer to nil if return message is not desired.
 	producer := createProducer()
@@ -286,6 +287,6 @@ func main() {
 	// Create and subscribe consumer group.
 	_, _, err := subscribe(ctx, topic, group, producer)
 	if err != nil {
-		log.Error("subscribe failed.")
+		logger.Error("subscribe failed.")
 	}
 }
