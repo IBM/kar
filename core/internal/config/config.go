@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
 )
 

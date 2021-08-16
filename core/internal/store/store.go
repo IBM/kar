@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/gomodule/redigo/redis"
 )
 

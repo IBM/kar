@@ -27,8 +27,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/internal/store"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/store"
 	"github.com/julienschmidt/httprouter"
 )
 
