@@ -1,4 +1,4 @@
-module github.com/IBM/kar.git/core
+module github.com/IBM/kar/core
 
 go 1.15
 

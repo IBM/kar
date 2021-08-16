@@ -20,7 +20,7 @@ import (
 	"net/http"
 
 	"github.com/Shopify/sarama"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/logger"
 )
 
 // Publish publishes a message on a topic

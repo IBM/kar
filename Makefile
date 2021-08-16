@@ -42,7 +42,7 @@ KAR_HTTP_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-http-bench-js-image:$(DOCKER_I
 install: cli
 
 cli:
-	cd core && go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$(KAR_VERSION)" ./...
+	cd core && go install -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$(KAR_VERSION)" ./...
 
 dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
