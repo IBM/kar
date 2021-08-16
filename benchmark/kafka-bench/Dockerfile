@@ -15,16 +15,19 @@
 #
 
 # Resolve dependencies
-FROM golang:1.15.11-alpine AS build
-RUN apk add git
-RUN go get -v "github.com/Shopify/sarama"
-RUN go get -v "github.com/prometheus/common/log"
+FROM golang:1.16 AS builder
 
-# Build executable
-FROM golang:1.15.11-alpine AS builder
-COPY --from=build /go /go
-ENV CGO_ENABLED=0
-WORKDIR /src
-COPY main.go .
-RUN go build -o consumer .
-CMD ["/src/consumer"]
+WORKDIR /kar/benchmark/kafka-bench
+COPY go.mod go.mod
+COPY go.sum go.sum
+RUN go mod download
+
+COPY producer producer
+COPY consumer consumer
+
+# Build executables
+RUN CGO_ENABLED=0 go install  ./...
+
+FROM alpine:3.11
+COPY --from=builder /go/bin/consumer /kar/bin/consumer
+COPY --from=builder /go/bin/producer /kar/bin/producer
