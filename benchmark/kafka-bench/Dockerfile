@@ -28,6 +28,6 @@ COPY consumer consumer
 # Build executables
 RUN CGO_ENABLED=0 go install  ./...
 
-FROM alpine:3.11
+FROM alpine:3.14
 COPY --from=builder /go/bin/consumer /kar/bin/consumer
 COPY --from=builder /go/bin/producer /kar/bin/producer
