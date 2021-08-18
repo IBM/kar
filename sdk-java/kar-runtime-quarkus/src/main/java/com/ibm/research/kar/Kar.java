@@ -18,12 +18,28 @@ package com.ibm.research.kar;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonBuilderFactory;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonNumber;
 import javax.json.JsonValue;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
@@ -32,13 +48,120 @@ import com.ibm.research.kar.actor.Subscription;
 import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
+import com.ibm.research.kar.quarkus.KarSidecar;
 
 public class Kar {
 	public final static String KAR_ACTOR_JSON = "application/kar+json";
+	public static final MediaType KAR_ACTOR_JSON_TYPE = new MediaType("application", "kar+json");
 
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
-	private Kar() {
+	private static KarSidecar sidecar = instantiateSidecar();
+	private static final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+
+
+	private static KarSidecar instantiateSidecar() {
+		return new KarSidecar();
+	}
+
+	private static JsonArray packArgs(JsonValue[] args) {
+		JsonArrayBuilder ja = factory.createArrayBuilder();
+		for (JsonValue a : args) {
+			ja.add(a);
+		}
+		return ja.build();
+	}
+
+	private static Object toValue(Response response) {
+		if (response.hasEntity()) {
+			MediaType type = response.getMediaType();
+			MediaType basicType = new MediaType(type.getType(), type.getSubtype());
+			if (basicType.equals(MediaType.APPLICATION_JSON_TYPE) || basicType.equals(KAR_ACTOR_JSON_TYPE)) {
+				return response.readEntity(JsonValue.class);
+			} else if (basicType.equals(MediaType.TEXT_PLAIN_TYPE)) {
+				return response.readEntity(String.class);
+			} else {
+				return JsonValue.NULL;
+			}
+		} else {
+			return JsonValue.NULL;
+		}
+	}
+
+	private static int toInt(Response response) {
+		if (response.hasEntity()) {
+			return response.readEntity(java.lang.Integer.TYPE);
+		} else {
+			return 0;
+		}
+	}
+
+	private static String responseToString(Response response) {
+		if (response.hasEntity()) {
+			MediaType type = response.getMediaType();
+			MediaType basicType = new MediaType(type.getType(), type.getSubtype());
+			if (basicType.equals(MediaType.APPLICATION_JSON_TYPE) || basicType.equals(KAR_ACTOR_JSON_TYPE)) {
+				return response.readEntity(JsonValue.class).toString();
+			} else if (basicType.equals(MediaType.TEXT_PLAIN_TYPE)) {
+				return response.readEntity(String.class);
+			}
+		}
+		return null;
+	}
+
+	private static Reminder[] toReminderArray(Response response) {
+		try {
+			ArrayList<Reminder> res = new ArrayList<Reminder>();
+			JsonArray ja = ((JsonValue) toValue(response)).asJsonArray();
+			for (JsonValue jv : ja) {
+				try {
+					JsonObject jo = jv.asJsonObject();
+					String actorType = jo.getJsonObject("Actor").getString("Type");
+					String actorId = jo.getJsonObject("Actor").getString("ID");
+					String id = jo.getString("id");
+					String path = jo.getString("path");
+					String targetTimeString = jo.getString("targetTime");
+					Instant targetTime = Instant.parse(targetTimeString);
+					Duration period = null;
+					if (jo.get("period") != null) {
+						long nanos = ((JsonNumber) jo.get("period")).longValueExact();
+						period = Duration.ofNanos(nanos);
+					}
+					String encodedData = jo.getString("encodedData");
+					Reminder r = new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, encodedData);
+					res.add(r);
+				} catch (ClassCastException e) {
+					logger.warning("toReminderArray: Dropping unexpected element " + jv);
+				}
+			}
+			return res.toArray(new Reminder[res.size()]);
+		} catch (ClassCastException e) {
+			return new Reminder[0];
+		}
+	}
+
+	private static Subscription[] toSubscriptionArray(Response response) {
+		try {
+			ArrayList<Subscription> res = new ArrayList<Subscription>();
+			JsonArray ja = ((JsonValue) toValue(response)).asJsonArray();
+			for (JsonValue jv : ja) {
+				try {
+					JsonObject jo = jv.asJsonObject();
+					String actorType = jo.getJsonObject("Actor").getString("Type");
+					String actorId = jo.getJsonObject("Actor").getString("ID");
+					String id = jo.getString("id");
+					String path = jo.getString("path");
+					String topic = jo.getString("topic");
+					Subscription s = new Subscription(Actors.ref(actorType, actorId), id, path, topic);
+					res.add(s);
+				} catch (ClassCastException e) {
+					logger.warning("toReminderArray: Dropping unexpected element " + jv);
+				}
+			}
+			return res.toArray(new Subscription[res.size()]);
+		} catch (ClassCastException e) {
+			return new Subscription[0];
+		}
 	}
 
 	private static final class ActorRefImpl implements ActorRef {
@@ -69,19 +192,183 @@ public class Kar {
 	 * KAR API methods for Services
 	 */
 	public static class Services {
-		/*
-		 * Lower-level REST operations on a KAR Service
-		 */
 
-		/*
-		 * Eliding for now, as these are likely to be Quarkus Specific. Eventually, a
-		 * sync and async version of each REST verb (get, put, delete, etc)
+		/**
+		 * Synchronous REST DELETE
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
 		 */
+		public static Response delete(String service, String path) {
+			return sidecar.callDelete(service, path);
+		}
+
+		/**
+		 * Asynchronous REST DELETE
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> deleteAsync(String service, String path) {
+			return sidecar.callAsyncDelete(service, path);
+		}
+
+		/**
+		 * Synchronous REST GET
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static Response get(String service, String path) {
+			return sidecar.callGet(service, path);
+		}
+
+		/**
+		 * Asynchronous REST GET
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> getAsync(String service, String path) {
+			return sidecar.callAsyncGet(service, path);
+		}
+
+		/**
+		 * Synchronous REST HEAD
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static Response head(String service, String path) {
+			return sidecar.callHead(service, path);
+		}
+
+		/**
+		 * Asynchronous REST HEAD
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> headAsync(String service, String path) {
+			return sidecar.callAsyncHead(service, path);
+		}
+
+				/**
+		 * Synchronous REST OPTIONS
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static Response options(String service, String path) {
+			return sidecar.callOptions(service, path, JsonValue.NULL);
+		}
+
+		/**
+		 * Synchronous REST OPTIONS
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static Response options(String service, String path, JsonValue body) {
+			return sidecar.callOptions(service, path, body);
+		}
+
+		/**
+		 * Asynchronous REST OPTIONS
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> optionsAsync(String service, String path) {
+			return sidecar.callAsyncOptions(service, path, JsonValue.NULL);
+		}
+
+		/**
+		 * Synchronous REST PATCH
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static Response patch(String service, String path, JsonValue body) {
+			return sidecar.callPatch(service, path, body);
+		}
+
+		/**
+		 * Asynchronous REST PATCH
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> patchAsync(String service, String path, JsonValue body) {
+			return sidecar.callAsyncPatch(service, path, body);
+		}	
+		
+		/**
+		 * Synchronous REST POST
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static Response post(String service, String path, JsonValue body) {
+			return sidecar.callPost(service, path, body);
+		}
+
+		/**
+		 * Asynchronous REST POST
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> postAsync(String service, String path, JsonValue body) {
+			return sidecar.callAsyncPost(service, path, body);
+		}
+
+		/**
+		 * Synchronous REST PUT
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static Response put(String service, String path, JsonValue body) {
+			return sidecar.callPut(service, path, body);
+		}
+
+		/**
+		 * Asynchronous REST PUT
+		 *
+		 * @param service The name of the service.
+		 * @param path    The service endpoint.
+		 * @param body    The request body.
+		 * @return The response returned by the target service.
+		 */
+		public static CompletionStage<Response> putAsync(String service, String path, JsonValue body) {
+			return sidecar.callAsyncPut(service, path, body);
+		}
 
 		/*
 		 * Higher-level Service call/tell operations that hide the REST layer
 		 */
-
+		
 		/**
 		 * Asynchronous service invocation; returns as soon as the invocation has been
 		 * initiated.
@@ -91,7 +378,7 @@ public class Kar {
 		 * @param body    The request body with which to invoke the service endpoint.
 		 */
 		public static void tell(String service, String path, JsonValue body) {
-			throw new UnsupportedOperationException();
+			sidecar.tellPost(service, path, body);
 		}
 
 		/**
@@ -103,7 +390,8 @@ public class Kar {
 		 * @return The result returned by the target service.
 		 */
 		public static Object call(String service, String path, JsonValue body) {
-			throw new UnsupportedOperationException();
+			Response resp = sidecar.callPost(service, path, body);
+			return toValue(resp);
 		}
 
 		/**
@@ -117,7 +405,7 @@ public class Kar {
 		 *         service.
 		 */
 		public static CompletionStage<Object> callAsync(String service, String path, JsonValue body) {
-			throw new UnsupportedOperationException();
+			return sidecar.callAsyncPut(service, path, body).thenApply(response -> toValue(response));
 		}
 	}
 
@@ -143,7 +431,7 @@ public class Kar {
 		 * @param actor The Actor instance.
 		 */
 		public static void remove(ActorRef actor) {
-			throw new UnsupportedOperationException();
+			sidecar.actorDelete(actor.getType(), actor.getId());
 		}
 
 		/**
@@ -155,7 +443,7 @@ public class Kar {
 		 * @param args  The arguments with which to invoke the actor method.
 		 */
 		public static void tell(ActorRef actor, String path, JsonValue... args) {
-			throw new UnsupportedOperationException();
+			sidecar.actorTell(actor.getType(), actor.getId(), path, packArgs(args));
 		}
 
 		/**
@@ -170,7 +458,22 @@ public class Kar {
 		 */
 		public static JsonValue call(ActorInstance caller, ActorRef actor, String path, JsonValue... args)
 				throws ActorMethodNotFoundException, ActorMethodInvocationException {
-			throw new UnsupportedOperationException();
+			try {
+				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, caller.getSession(),
+						packArgs(args));
+				return callProcessResponse(response);
+			} catch (WebApplicationException e) {
+				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
+				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+					throw new ActorMethodTimeoutException(
+							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
+				} else {
+					throw e;
+				}
+			}
 		}
 
 		/**
@@ -185,7 +488,21 @@ public class Kar {
 		 */
 		public static JsonValue call(String session, ActorRef actor, String path, JsonValue... args)
 				throws ActorMethodNotFoundException, ActorMethodInvocationException, ActorMethodTimeoutException {
-			throw new UnsupportedOperationException();
+			try {
+				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
+				return callProcessResponse(response);
+			} catch (WebApplicationException e) {
+				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
+				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+					throw new ActorMethodTimeoutException(
+							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
+				} else {
+					throw e;
+				}
+			}
 		}
 
 		/**
@@ -199,7 +516,21 @@ public class Kar {
 		 */
 		public static JsonValue call(ActorRef actor, String path, JsonValue... args)
 				throws ActorMethodNotFoundException, ActorMethodInvocationException {
-			throw new UnsupportedOperationException();
+			try {
+				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
+				return callProcessResponse(response);
+			} catch (WebApplicationException e) {
+				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
+					String msg = responseToString(e.getResponse());
+					throw new ActorMethodNotFoundException(
+							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
+				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
+					throw new ActorMethodTimeoutException(
+							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
+				} else {
+					throw e;
+				}
+			}
 		}
 
 		/**
@@ -213,7 +544,36 @@ public class Kar {
 		 *         method invocation.
 		 */
 		public static CompletionStage<JsonValue> callAsync(ActorRef actor, String path, JsonValue... args) {
-			throw new UnsupportedOperationException();
+			CompletionStage<Response> cr = sidecar.actorCallAsync(actor.getType(), actor.getId(), path, null, packArgs(args));
+			return cr.thenApply(r -> callProcessResponse(r));
+		}
+
+		// Internal helper to go from a Response to the JsonValue representing the
+		// result of the method (or an exception)
+		private static JsonValue callProcessResponse(Response response)
+				throws ActorMethodNotFoundException, ActorMethodInvocationException {
+			if (response.getStatus() == Status.OK.getStatusCode()) {
+				JsonObject o = ((JsonValue) toValue(response)).asJsonObject();
+				if (o.containsKey("error")) {
+					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
+					Throwable cause = o.containsKey("stack") ? new Throwable(o.getString("stack")) : null;
+					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this
+																													// dummy exception...the real stack is in the msg.
+					throw new ActorMethodInvocationException(message, cause);
+				} else {
+					return o.containsKey("value") ? o.get("value") : JsonValue.NULL;
+				}
+			} else if (response.getStatus() == Status.NOT_FOUND.getStatusCode()) {
+				if (response.hasEntity()) {
+					throw new ActorMethodNotFoundException(toValue(response).toString());
+				} else {
+					throw new ActorMethodNotFoundException();
+				}
+			} else if (response.getStatus() == Status.NO_CONTENT.getStatusCode()) {
+				return null;
+			} else {
+				throw new ProcessingException(response.getStatus() + ": " + toValue(response));
+			}
 		}
 
 		/**
@@ -228,7 +588,8 @@ public class Kar {
 			 * @return The number of reminders that were cancelled.
 			 */
 			public static int cancelAll(ActorRef actor) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorCancelReminders(actor.getType(), actor.getId());
+				return toInt(response);
 			}
 
 			/**
@@ -239,7 +600,8 @@ public class Kar {
 			 * @return The number of reminders that were cancelled.
 			 */
 			public static int cancel(ActorRef actor, String reminderId) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorCancelReminder(actor.getType(), actor.getId(), reminderId, true);
+				return toInt(response);
 			}
 
 			/**
@@ -249,7 +611,8 @@ public class Kar {
 			 * @return An array of matching reminders
 			 */
 			public static Reminder[] getAll(ActorRef actor) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorGetReminders(actor.getType(), actor.getId());
+				return toReminderArray(response);
 			}
 
 			/**
@@ -260,7 +623,8 @@ public class Kar {
 			 * @return An array of matching reminders
 			 */
 			public static Reminder[] get(ActorRef actor, String reminderId) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorGetReminder(actor.getType(), actor.getId(), reminderId, true);
+				return toReminderArray(response);
 			}
 
 			/**
@@ -276,7 +640,36 @@ public class Kar {
 			 */
 			public static void schedule(ActorRef actor, String path, String reminderId, Instant targetTime, Duration period,
 					JsonValue... args) {
-				throw new UnsupportedOperationException();
+				JsonObjectBuilder builder = factory.createObjectBuilder();
+				builder.add("path", "/" + path);
+				builder.add("targetTime", targetTime.toString());
+
+				if (period != null) {
+					// Sigh. Encode in a way that GoLang will understand since it sadly doesn't
+					// actually implement ISO-8601
+					String goPeriod = "";
+					if (period.toHours() > 0) {
+						goPeriod += period.toHours() + "h";
+						period.minusHours(period.toHours());
+					}
+					if (period.toMinutes() > 0) {
+						goPeriod += period.toMinutes() + "m";
+						period.minusMinutes(period.toMinutes());
+					}
+					if (period.toSeconds() > 0) {
+						goPeriod += period.toSeconds() + "s";
+						period.minusSeconds(period.toSeconds());
+					}
+					if (period.toMillis() > 0) {
+						goPeriod += period.toMillis() + "ms";
+						period.minusMillis(period.toMillis());
+					}
+					builder.add("period", goPeriod);
+				}
+				builder.add("data", packArgs(args));
+				JsonObject requestBody = builder.build();
+
+				sidecar.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody);
 			}
 		}
 
@@ -292,7 +685,7 @@ public class Kar {
 					this.added = added;
 					this.removed = removed;
 				}
-			}
+			};
 
 			/**
 			 * Get one value from an Actor's state
@@ -302,7 +695,14 @@ public class Kar {
 			 * @return The value associated with `key`
 			 */
 			public static JsonValue get(ActorRef actor, String key) {
-				throw new UnsupportedOperationException();
+				JsonValue value;
+				try {
+					Response resp = sidecar.actorGetState(actor.getType(), actor.getId(), key, true);
+					return (JsonValue) toValue(resp);
+				} catch (WebApplicationException e) {
+					value = JsonValue.NULL;
+				}
+				return value;
 			}
 
 			/**
@@ -312,7 +712,12 @@ public class Kar {
 			 * @return A map representing the Actor's state
 			 */
 			public static Map<String, JsonValue> getAll(ActorRef actor) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorGetAllState(actor.getType(), actor.getId());
+				try {
+					return ((JsonValue) toValue(response)).asJsonObject();
+				} catch (ClassCastException e) {
+					return Collections.emptyMap();
+				}
 			}
 
 			/**
@@ -324,7 +729,13 @@ public class Kar {
 			 *         otherwise.
 			 */
 			public static boolean contains(ActorRef actor, String key) {
-				throw new UnsupportedOperationException();
+				Response resp;
+				try {
+					resp = sidecar.actorHeadState(actor.getType(), actor.getId(), key);
+				} catch (WebApplicationException e) {
+					resp = e.getResponse();
+				}
+				return resp != null && resp.getStatus() == Status.OK.getStatusCode();
 			}
 
 			/**
@@ -336,7 +747,8 @@ public class Kar {
 			 * @return The number of new state entries created by this store (0 or 1)
 			 */
 			public static int set(ActorRef actor, String key, JsonValue value) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorSetState(actor.getType(), actor.getId(), key, value);
+				return response.getStatus() == Status.CREATED.getStatusCode() ? 1 : 0;
 			}
 
 			/**
@@ -347,7 +759,11 @@ public class Kar {
 			 * @return The number of new state entries created by this operation
 			 */
 			public static int set(ActorRef actor, Map<String, JsonValue> updates) {
-				throw new UnsupportedOperationException();
+				if (updates.isEmpty())
+					return 0;
+				ActorUpdateResult result = update(actor, Collections.emptyList(), Collections.emptyMap(), updates,
+						Collections.emptyMap());
+				return result.removed;
 			}
 
 			/**
@@ -359,7 +775,8 @@ public class Kar {
 			 *         for `key`.
 			 */
 			public static int remove(ActorRef actor, String key) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorDeleteState(actor.getType(), actor.getId(), key, true);
+				return toInt(response);
 			}
 
 			/**
@@ -370,7 +787,11 @@ public class Kar {
 			 * @return the number of entries actually removed
 			 */
 			public static int removeAll(ActorRef actor, List<String> keys) {
-				throw new UnsupportedOperationException();
+				if (keys.isEmpty())
+					return 0;
+				ActorUpdateResult res = update(actor, keys, Collections.emptyMap(), Collections.emptyMap(),
+						Collections.emptyMap());
+				return res.removed;
 			}
 
 			/**
@@ -382,7 +803,8 @@ public class Kar {
 			 * @return The number of removed key/value pairs
 			 */
 			public static int removeAll(ActorRef actor) {
-				throw new UnsupportedOperationException();
+				Response response = sidecar.actorDeleteAllState(actor.getType(), actor.getId());
+				return toInt(response);
 			}
 
 			/**
@@ -403,7 +825,55 @@ public class Kar {
 			public static ActorUpdateResult update(ActorRef actor, List<String> removals,
 					Map<String, List<String>> submapRemovals, Map<String, JsonValue> updates,
 					Map<String, Map<String, JsonValue>> submapUpdates) {
-				throw new UnsupportedOperationException();
+				JsonObjectBuilder requestBuilder = factory.createObjectBuilder();
+
+				if (!removals.isEmpty()) {
+					JsonArrayBuilder jb = factory.createArrayBuilder();
+					for (String k : removals) {
+						jb.add(k);
+					}
+					requestBuilder.add("removals", jb.build());
+				}
+
+				if (!submapRemovals.isEmpty()) {
+					JsonObjectBuilder smr = factory.createObjectBuilder();
+					for (Entry<String, List<String>> e : submapRemovals.entrySet()) {
+						JsonArrayBuilder jb = factory.createArrayBuilder();
+						for (String k : e.getValue()) {
+							jb.add(k);
+						}
+						smr.add(e.getKey(), jb.build());
+					}
+					requestBuilder.add("submapremovals", smr.build());
+				}
+
+				if (!updates.isEmpty()) {
+					JsonObjectBuilder u = factory.createObjectBuilder();
+					for (Entry<String, JsonValue> e : updates.entrySet()) {
+						u.add(e.getKey(), e.getValue());
+					}
+					requestBuilder.add("updates", u.build());
+				}
+
+				if (!submapUpdates.isEmpty()) {
+					JsonObjectBuilder smu = factory.createObjectBuilder();
+					for (Entry<String, Map<String, JsonValue>> e : submapUpdates.entrySet()) {
+						JsonObjectBuilder u = factory.createObjectBuilder();
+						for (Entry<String, JsonValue> e2 : e.getValue().entrySet()) {
+							u.add(e2.getKey(), e2.getValue());
+						}
+						smu.add(e.getKey(), u.build());
+					}
+					requestBuilder.add("submapupdates", smu.build());
+				}
+
+				JsonObject params = requestBuilder.build();
+				Response response = sidecar.actorUpdate(actor.getType(), actor.getId(), params);
+				JsonObject responseObject = ((JsonValue) toValue(response)).asJsonObject();
+				int added = responseObject.getInt("added");
+				int removed = responseObject.getInt("removed");
+
+				return new ActorUpdateResult(added, removed);
 			}
 
 			/**
@@ -420,7 +890,14 @@ public class Kar {
 				 * @return The value associated with `key/subkey`
 				 */
 				public static JsonValue get(ActorRef actor, String submap, String key) {
-					throw new UnsupportedOperationException();
+					JsonValue value;
+					try {
+						Response resp = sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key, true);
+						return (JsonValue) toValue(resp);
+					} catch (WebApplicationException e) {
+						value = JsonValue.NULL;
+					}
+					return value;
 				}
 
 				/**
@@ -431,7 +908,15 @@ public class Kar {
 				 * @return An array containing the currently defined subkeys
 				 */
 				public static Map<String, JsonValue> getAll(ActorRef actor, String submap) {
-					throw new UnsupportedOperationException();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
+					jb.add("op", Json.createValue("get"));
+					JsonObject params = jb.build();
+					Response response = sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					try {
+						return ((JsonValue) toValue(response)).asJsonObject();
+					} catch (ClassCastException e) {
+						return Collections.emptyMap();
+					}
 				}
 
 				/**
@@ -444,7 +929,13 @@ public class Kar {
 				 *         `false` otherwise.
 				 */
 				public static boolean contains(ActorRef actor, String submap, String key) {
-					throw new UnsupportedOperationException();
+					Response resp;
+					try {
+						resp = sidecar.actorHeadWithSubkeyState(actor.getType(), actor.getId(), submap, key);
+					} catch (WebApplicationException e) {
+						resp = e.getResponse();
+					}
+					return resp != null && resp.getStatus() == Status.OK.getStatusCode();
 				}
 
 				/**
@@ -457,7 +948,8 @@ public class Kar {
 				 * @return The number of new state entries created by this store (0 or 1)
 				 */
 				public static int set(ActorRef actor, String submap, String key, JsonValue value) {
-					throw new UnsupportedOperationException();
+					Response response = sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value);
+					return response.getStatus() == Status.CREATED.getStatusCode() ? 1 : 0;
 				}
 
 				/**
@@ -470,7 +962,13 @@ public class Kar {
 				 * @return The number of new map entries created by this operation
 				 */
 				public static int set(ActorRef actor, String submap, Map<String, JsonValue> updates) {
-					throw new UnsupportedOperationException();
+					if (updates.isEmpty())
+						return 0;
+					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
+					tmp.put(submap, updates);
+					ActorUpdateResult res = update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(),
+							tmp);
+					return res.added;
 				}
 
 				/**
@@ -483,7 +981,8 @@ public class Kar {
 				 *         for `key`.
 				 */
 				public static int remove(ActorRef actor, String submap, String key) {
-					throw new UnsupportedOperationException();
+					Response response = sidecar.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), submap, key, true);
+					return toInt(response);
 				}
 
 				/**
@@ -495,7 +994,14 @@ public class Kar {
 				 * @return the number of entries actually removed
 				 */
 				public static int removeAll(ActorRef actor, String submap, List<String> keys) {
-					throw new UnsupportedOperationException();
+					if (keys.isEmpty())
+						return 0;
+
+					Map<String, List<String>> tmp = new HashMap<String, List<String>>();
+					tmp.put(submap, keys);
+					ActorUpdateResult res = update(actor, Collections.emptyList(), tmp, Collections.emptyMap(),
+							Collections.emptyMap());
+					return res.removed;
 				}
 
 				/**
@@ -506,7 +1012,11 @@ public class Kar {
 				 * @return The number of removed subkey entrys
 				 */
 				public static int removeAll(ActorRef actor, String submap) {
-					throw new UnsupportedOperationException();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
+					jb.add("op", Json.createValue("clear"));
+					JsonObject params = jb.build();
+					Response response = sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					return toInt(response);
 				}
 
 				/**
@@ -517,7 +1027,16 @@ public class Kar {
 				 * @return An array containing the currently defined subkeys
 				 */
 				public static String[] keys(ActorRef actor, String submap) {
-					throw new UnsupportedOperationException();
+					JsonObjectBuilder jb = factory.createObjectBuilder();
+					jb.add("op", Json.createValue("keys"));
+					JsonObject params = jb.build();
+					Response response = sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					Object[] jstrings = ((JsonValue) toValue(response)).asJsonArray().toArray();
+					String[] ans = new String[jstrings.length];
+					for (int i = 0; i < jstrings.length; i++) {
+						ans[i] = ((JsonValue) jstrings[i]).toString();
+					}
+					return ans;
 				}
 
 				/**
@@ -528,11 +1047,16 @@ public class Kar {
 				 * @return The number of currently define keys in the submap
 				 */
 				public static int size(ActorRef actor, String submap) {
-					throw new UnsupportedOperationException();
+					JsonObjectBuilder jb = Json.createObjectBuilder();
+					jb.add("op", Json.createValue("size"));
+					JsonObject params = jb.build();
+					Response response = sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params);
+					return toInt(response);
 				}
 			}
 		}
 	}
+
 
 	/**
 	 * KAR API methods for Eventing.
