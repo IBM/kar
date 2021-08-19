@@ -43,7 +43,7 @@ async function newOrderTxn() {
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.olCnt = numItems
-  txn.orderLines = {val: orderLines, ts:0}
+  txn.orderLines = orderLines
 
   let txnActor = actor.proxy('NewOrderTxn', uuidv4())
   const success = await actor.call(txnActor, 'startTxn', txn)

@@ -24,7 +24,7 @@ class ItemStock extends gp.GenericParticipant {
   async activate() {
     const that = await super.activate()
     this.itemId = that.itemId || this.kar.id
-    this.wId = that.wId
+    this.wId = that.wId || this.kar.id.split(':')[1]
     this.name = that.name || c.DEFAULT_ITEM_NAME
     this.price = that.price || c.DEFAULT_ITEM_PRICE
     this.quantity = that.quantity || await super.createVal(c.DEFAULT_QUANTITY)
@@ -41,22 +41,13 @@ class ItemStock extends gp.GenericParticipant {
     await actor.state.setMultiple(this, {wId : this.wId, name: this.name, price: this.price})
   }
 
-  async prepare(txnId, update) {
-    let localDecision = await super.prepare(txnId)
-    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await super.checkVersionConflict(update)
-    const writeMap = await super.createPrepareWriteMap(localDecision, update)
-    await super.writePrepared(txnId, localDecision, writeMap)
-    return localDecision
+  async prepareNewOrder(txnId) {
+    const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt']
+    return await this.prepare(txnId, keys)
   }
 
-  async commit(txnId, decision, update) {
-    let continueCommit = await super.commit(txnId, decision)
-    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
-    await super.writeCommit(txnId, decision, writeMap)
-    if (verbose) { console.log(`Committed transaction ${txnId}. Exact quantity left is ${this.quantity.quantity}.\n`) }
-    return
+  async commitNewOrder(txnId, decision, update) {
+    return await this.commit(txnId, decision, update)
   }
 }
 

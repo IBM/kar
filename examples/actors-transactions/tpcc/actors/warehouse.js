@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+const { actor } = require('kar-sdk')
 var gp = require('../../generic_participant.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
@@ -27,21 +28,18 @@ class Warehouse extends gp.GenericParticipant {
     this.ytd = that.ytd || await super.createVal(0) // Year to date balance
   }
 
-  async prepare(txnId, update) {
-    let localDecision = await super.prepare(txnId)
-    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await super.checkVersionConflict(update)
-    const writeMap = await super.createPrepareWriteMap(localDecision, update)
-    await super.writePrepared(txnId, localDecision, writeMap)
-    return localDecision
+  async preparePayment(txnId) {
+    const keys = ['ytd']
+    return await this.prepare(txnId, keys)
   }
 
-  async commit(txnId, decision, update) {
-    let continueCommit = await super.commit(txnId, decision)
-    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
-    await super.writeCommit(txnId, decision, writeMap)
-    if (verbose) { console.log(`Committed transaction ${txnId}. YTD is ${this.ytd.ytd}.\n`) }
+  async prepareNewOrder(txnId) {
+    // Accessing only a read-only field, 'tax'
+    return {vote: true, tax: this.tax}
+  }
+
+  async commitNewOrder(txnId, decision, update) {
+    // No-op
     return
   }
 }

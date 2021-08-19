@@ -30,19 +30,30 @@ class NewOrder extends gp.GenericParticipant {
     await actor.state.removeAll(this)
   }
 
-  async prepare(txnId, order) {
-    let localDecision = await super.prepare(txnId)
+  async prepareNewOrder(txnId) {
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     await super.writePrepared(txnId, true, {})
-    return true // Always return true as the txn always adds a new order entry.
+    return { vote:true } // Always return true as the txn always adds a new order entry.
+  }
+
+  async commitNewOrder(txnId, decision, update) {
+    return await this.commit(txnId, decision, update)
+  }
+
+  async prepare(txnId) {
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    await super.writePrepared(txnId, true, {})
+    return { vote:true } // Always return true as the txn always adds a new order entry.
   }
 
   async commit(txnId, decision, order) {
-    let continueCommit = await super.commit(txnId, decision)
+    let continueCommit = await this.isTxnAlreadyCommitted(txnId)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
     let writeMap = {}
     if (decision) { writeMap.noId = this.noId }
-    await super.writeCommit(txnId, decision, writeMap)
+    await this.writeCommit(txnId, decision, writeMap)
     if (verbose) { console.log(`Committed transaction ${txnId}. Added new order ${this.noId}.\n`) }
     return
   }
@@ -59,29 +70,37 @@ class Order extends gp.GenericParticipant {
     this.olCnt = that.olCnt || 0
     this.orderLines = that.orderLines || await super.createVal({})
     this.allLocal = true
-    this.carrierId = that.carrierId || await super.createVal(null)
+    this.carrierId = that.carrierId || await super.createVal(0)
   }
 
   async getOrder() {
     return await actor.state.getAll(this)
   }
 
-  async prepare(txnId, update) {
-    let localDecision = await super.prepare(txnId)
+  async prepareNewOrder(txnId) {
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await super.checkVersionConflict(update)
-    const writeMap = await super.createPrepareWriteMap(localDecision, update)
-    await super.writePrepared(txnId, localDecision, writeMap)
-    return localDecision
+    await super.writePrepared(txnId, true, {})
+    return { vote:true } // Always return true as the txn always adds a new order entry.
   }
 
-  async commit(txnId, decision, update) {
-    let continueCommit = await super.commit(txnId, decision)
-    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
-    await super.writeCommit(txnId, decision, writeMap)
-    if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
-    return
+  async commitNewOrder(txnId, decision, update) {
+    return await this.commit(txnId, decision, update)
+  }
+
+  async prepareDelivery(txnId) {
+    const keys = ['cId', 'orderLines', 'carrierId']
+    return await this.prepare(txnId, keys)
+  }
+
+  async prepareOrderStatus(txnId) {
+    const keys = ['entryDate', 'carrierId', 'orderLines']
+    let localDecision = await super.isTxnAlreadyPrepared(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await this.checkForConflictRO(txnId, keys)
+    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    await this.writePrepared(txnId, localDecision, maps.writeMap)
+    return maps.values
   }
 }
 

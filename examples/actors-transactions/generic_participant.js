@@ -30,7 +30,7 @@ class GenericParticipant {
   }
 
   async createVal(val) {
-    return { val: val, ts:0, prepared:false }
+    return { val: val, rw:null, ro:[] }
   }
 
   async get(key) {
@@ -57,7 +57,16 @@ class GenericParticipant {
     await actor.state.setMultiple(this, keyValueMap)
   }
 
-  async prepare(txnId) {
+  async prepare(txnId, keys) {
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await this.checkForConflictRW(txnId, keys)
+    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    await this.writePrepared(txnId, localDecision, maps.writeMap)
+    return maps.values
+  }
+
+  async isTxnAlreadyPrepared(txnId) {
     /* Check if this txn is already prepared. Prepare value can be
     either true or false. If not prepared, return null. */
     if (verbose) { console.log(`${this.kar.id} received prepare for txn ${txnId}`) }
@@ -68,25 +77,56 @@ class GenericParticipant {
     return null
   }
 
-  async checkVersionConflict(update) {
+  async checkForConflictRW(txnId, keys) {
     let localDecision = true
-    for ( let key in update) {
-      if (update[key].constructor == Object) {
-        if (this[key].ts != update[key].ts || this[key].prepared) { localDecision = false} }
+    for (const i in keys) {
+      const key = keys[i]
+      if (this[key].constructor == Object) {
+        if(! (this[key].rw == null && this[key].ro.length == 0)) {
+          localDecision = false }
+      }
+    }
+    if (localDecision) {
+      for (const i in keys) {
+        const key = keys[i]
+        if (this[key].constructor == Object) {
+          this[key].rw = txnId }
+      }
     }
     return localDecision
   }
 
-  async createPrepareWriteMap(localDecision, update) {
-    let writeMap = {}
-    if (localDecision) { 
-      for ( let key in update) {
-        if (update[key].constructor == Object) {
-          this[key].ts += 1
-          this[key].prepared = true
-          writeMap[key] = this[key] } }
+  async checkForConflictRO(txnId, keys) {
+    let localDecision = true
+    for (const i in keys) {
+      const key = keys[i]
+      if (this[key].constructor == Object) {
+        if (! (this[key].rw == null)) { // Some other txn is writing this field
+          localDecision = false }
+      } 
     }
-    return writeMap
+    if (localDecision) {
+      for (const i in keys) {
+        const key = keys[i]
+        if (this[key].constructor == Object) {
+            this[key].ro.push(txnId) }
+      }
+    }
+    return localDecision
+  }
+
+  async createPrepareValueAndWriteMap(localDecision, keys) {
+    let values = {}, writeMap = {}
+    if (!localDecision) { return {values, writeMap} }
+    for (const i in keys) {
+      const key = keys[i]
+      if (this[key].constructor == Object) {
+        writeMap[key] = this[key]
+        values[key] = this[key].val }
+      else { values[key] = this[key] }
+    }
+    values.vote = localDecision
+    return {values, writeMap}
   }
 
   async writePrepared(txnId, prepared, dataMap) {
@@ -102,11 +142,18 @@ class GenericParticipant {
     return this.preparedTxns[txnId]
   }
 
-  async commit(txnId, decision) {
-    /* Check if txn is already committed or not. Return true only if this particular
-    call to commit succeeds; retrun false if txn is already committed or txn is not 
+  async commit(txnId, decision, update) {
+    let continueCommit = await this.isTxnAlreadyCommitted(txnId, decision) // TODO: take decision off
+    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
+    const writeMap = await this.createCommitWriteMap(txnId, decision, update)
+    await this.writeCommit(txnId, decision, writeMap)
+    if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
+    return
+  }
+
+  async isTxnAlreadyCommitted(txnId) {
+    /* Check if txn is already committed or not. Retrun false if txn is already committed or txn is not 
     prepared, indicating this call to commit failed. */
-    if (verbose) { console.log(`${this.kar.id} received commit for txn ${txnId} with decision `, decision) }
     this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
     if (!(txnId in this.preparedTxns)) {
       this.preparedTxns[txnId] = false
@@ -124,19 +171,24 @@ class GenericParticipant {
     let writeMap = {}
     if (decision) {
       for (let key in update) {
-        if (update[key].constructor == Object) {
-          this[key].val =  update[key].val
-          this[key].ts +=  1
-          writeMap[key] = this[key] } 
-        else {
-          this[key] =  update[key]
-          writeMap[key] = this[key]
-        } }
+        if (this[key] != null && this[key].constructor == Object ) {
+          this[key].val =  update[key] }
+        else { 
+          this[key] =  update[key] }
+        writeMap[key] = this[key]
+      }
     }
-    if (this.getTxnLocalDecision(txnId)) {
-      for (let key in update) {
-        if (update[key].constructor == Object) {
-          this[key].prepared =  false }
+    if (await this.getTxnLocalDecision(txnId)) {
+      for (let i in Object.keys(this)) {
+        const key = Object.keys(this)[i]
+        if (this[key] != null && this[key].constructor == Object && key != 'kar') {
+          if (this[key].rw == txnId) {
+            this[key].rw =  null }
+          if (this[key].ro != null && this[key].ro.includes(txnId)) {
+            this[key].ro = this[key].ro.filter(item => item !== txnId)
+          }
+          writeMap[key] = this[key]
+        }
       }
     }
     return writeMap
@@ -147,6 +199,12 @@ class GenericParticipant {
     this.committedTxns[txnId] = decision
     const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
+  }
+
+  async purgeTxnRecord(txnId) {
+    delete this.preparedTxns[txnId]
+    delete this.committedTxns[txnId]
+    await actor.state.setMultiple(this, { preparedTxns: this.preparedTxns, committedTxns: this.committedTxns })
   }
 }
 

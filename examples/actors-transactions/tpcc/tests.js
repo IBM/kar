@@ -32,11 +32,10 @@ async function newOrderTxn(wId, dId, cId, itemIds, quantity) {
     const itemId = itemIds[i]
     orderLines[i+1] = { itemId: itemId, supplyWId: wId, quantity:quantity }
   }
-
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.olCnt = itemIds.length
-  txn.orderLines = {val: orderLines, ts:0}
+  txn.orderLines = orderLines
 
   let txnActor = actor.proxy('NewOrderTxn', uuidv4())
   const success = await actor.call(txnActor, 'startTxn', txn)
@@ -58,16 +57,15 @@ async function paymentTxn(wId, dId, cId) {
   return amount
 }
 
-async function orderStatusTxn() {
-  const wId = 'w' + await getRandomInt(1, c.NUM_WAREHOUSES)
-  const dId = 'd' + await getRandomInt(1, c.NUM_DISTRICTS)
-  const cId = 'c' + await getRandomInt(cIdRange[0], cIdRange[1])
-
+async function orderStatusTxn(wId, dId, cId) {
   const txnActor = actor.proxy('OrderStatusTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
-  await actor.tell(txnActor, 'startTxn', txn)
+  const txnDetails = await actor.call(txnActor, 'startTxn', txn)
+  console.log('Transaction success status: ', txnDetails.decision)
+  console.log('Transaction completion status: ', await actor.call(txnActor, 'txnComplete'), '\n')
   if (verbose) { console.log("Order status txn complete") }
+  return txnDetails.orderDetails
 }
 
 async function deliveryTxn(wId, carrierId, deliveryDate) {
@@ -97,7 +95,7 @@ async function newOrderConsistencyCheck() {
   const dNextOIdOld = await actor.call(district, 'get', 'nextOId')
 
   const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-  const cLastOIdOld = wId + ':' + dId + ':' + 'o' + (dNextOIdOld.val + 1)
+  const cLastOIdOld = wId + ':' + dId + ':' + 'o' + (dNextOIdOld.val)
 
   const itemIds = ['i1', 'i2'], quantity = 10
   const itemKeys = ['quantity', 'ytd', 'orderCnt']
@@ -180,7 +178,7 @@ async function deliveryConsistencyCheck() {
   const oCId = await actor.call(order, 'get', 'cId')
 
   const customer = actor.proxy('Customer', wId + ':' + dId + ':' + oCId)
-  const cDetailsOld = await actor.call(customer, 'getMultiple', ['balance', 'deliveryCnt'])  
+  const cDetailsOld = await actor.call(customer, 'getMultiple', ['balance', 'deliveryCnt'])
   const carrierId = 5, date = new Date()
   await deliveryTxn(wId, carrierId, date)
 
@@ -204,11 +202,29 @@ async function deliveryConsistencyCheck() {
       "Customer delivery count did not increase by 1.")
 }
 
+async function orderStatusConsistencyCheck() {
+  const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
+  const lastOId = await actor.call(customer, 'get', 'lastOId')
+  const order = actor.proxy('Order', lastOId.val)
+  const oDetails = await actor.call(order, 'getOrder')
+
+  const oDetailsTxn = await orderStatusTxn(wId, dId, cId)
+  console.assert(oDetails.carrierId.val == oDetailsTxn.carrierId, 
+    "The carrier ids of the order txn and read order do not match.")
+  for (const i in oDetails.orderLines.val) {
+    const ol1 = oDetails.orderLines.val[i], ol2 = oDetailsTxn.orderLines[i]
+    console.assert(ol1.quantity == ol2.quantity, 
+      "The quantities of the orderlines do not match.")
+    console.assert(ol1.amount == ol2.amount, 
+      "The amounts of the orderlines do not match.")
+  }
+}
 
 async function main () {
   await newOrderConsistencyCheck()
   await paymentConsistencyCheck()
   await deliveryConsistencyCheck()
+  await orderStatusConsistencyCheck()
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

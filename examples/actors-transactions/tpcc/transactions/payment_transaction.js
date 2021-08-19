@@ -16,15 +16,17 @@
 
 const { actor, sys } = require('kar-sdk')
 var t = require('../../transaction.js')
+const verbose = process.env.VERBOSE
 
 class PaymentTxn extends t.Transaction {
   async activate () {
     await super.activate()
   }
 
-  async getWarehouseDetails(wId) {
+  async prepareWarehouse(wId, txnId) {
     const warehouse = actor.proxy('Warehouse', wId)
-    return [warehouse, await actor.call(warehouse, 'getMultiple', ['ytd'])]
+    const wKeys = { rw:['ytd'] }
+    return [warehouse, await actor.call(warehouse, 'prepare', txnId, wKeys)]
   }
 
   async getDistrictDetails(wId, dId) {
@@ -39,15 +41,63 @@ class PaymentTxn extends t.Transaction {
   }
 
   async updateCustomerDetails(cDetails, amount) {
-    let updatedCDetails = Object.assign({}, cDetails)
+    let updatedCDetails = {}
     // Update customer details based on txn payment.
-    updatedCDetails.balance.val = cDetails.balance.val - amount
-    updatedCDetails.ytdPayment.val = cDetails.ytdPayment.val + amount
-    updatedCDetails.paymentCnt.val = cDetails.paymentCnt.val + 1
+    updatedCDetails.balance = cDetails.balance - amount
+    updatedCDetails.ytdPayment = cDetails.ytdPayment + amount
+    updatedCDetails.paymentCnt = cDetails.paymentCnt + 1
     return updatedCDetails
   }
 
+  async prepareTxn(txn) {
+    let actorUpdates = {}, decision
+    /* actorUpdates = {
+      'warehouse': { 'actr': actorInst, 'update': { key: val },
+      'district': { 'actr': actorInst, 'update': { key: val },
+      'customer': { 'actr': actorInst, 'update': { key: val }
+    } */
+    const warehouse = actor.proxy('Warehouse', txn.wId)
+    actorUpdates.warehouse = { actr: warehouse }
+
+    const district = actor.proxy('District', txn.wId + ':' + txn.dId)
+    actorUpdates.district = { actr: district }
+
+    const customer = actor.proxy('Customer', txn.wId + ':' + txn.dId + ':' + txn.cId)
+    actorUpdates.customer = { actr: customer }
+
+    const prepared = await super.prepareTxn(actorUpdates, 'preparePayment')
+    decision = prepared.decision, actorUpdates = prepared.actorUpdates
+
+    if (decision) {
+      const wDetails = actorUpdates.warehouse.values
+      actorUpdates.warehouse.update = { ytd : wDetails.ytd + txn.amount }
+      const dDetails = actorUpdates.district.values
+      actorUpdates.district.update =  { ytd: dDetails.ytd + txn.amount }
+      actorUpdates.customer.update = await this.updateCustomerDetails(actorUpdates.customer.values, txn.amount)
+    }
+    await actor.state.setMultiple(this, {decision: decision, actorUpdates: actorUpdates} )
+    return decision
+  }
+
   async startTxn(txn) {
+    if (verbose) { console.log(`Begin transaction ${this.txnId}.`) }
+    const that = await actor.state.getAll(this)
+    if (that.commitComplete) { return that.decision }
+    let decision = that.decision
+    if (that.decision == null) {
+      try {
+        decision = await this.prepareTxn(txn)
+      } catch (error) {
+        console.log(error.toString())
+        // If decision is not already set, abort this txn as something went wrong.
+        if (await actor.state.get(this, 'decision') == null) { decision = false }
+      }
+    }
+    await actor.tell(this, 'sendCommitAsync', decision)
+    return decision
+  }
+
+  async startTxnOld(txn) {
     let actors = [], operations = [] /* Track all actors and their respective updates;
                                       perform the updates in an atomic txn. */
     const wDetails = await this.getWarehouseDetails(txn.wId)

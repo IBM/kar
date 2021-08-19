@@ -28,8 +28,8 @@ class Customer extends gp.GenericParticipant {
   async activate() {
     const that = await super.activate()
     this.cId = that.cId || this.kar.id
-    this.dId = that.dId
-    this.wId = that.wId
+    this.dId = that.dId || this.kar.id.split(':')[1]
+    this.wId = that.wId || this.kar.id.split(':')[0]
     this.name = that.name || 'c-' + this.cId
     this.address = that.address || c.DEFAULT_ADDRESS
     this.credit = that.credit || 'GC' // 'GC' or 'BC' = good or bad credit
@@ -47,22 +47,33 @@ class Customer extends gp.GenericParticipant {
     await actor.state.setMultiple(this, {dId : this.dId, wId : this.wId})
   }
 
-  async prepare(txnId, update) {
-    let localDecision = await super.prepare(txnId)
-    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await super.checkVersionConflict(update)
-    const writeMap = await super.createPrepareWriteMap(localDecision, update)
-    await super.writePrepared(txnId, localDecision, writeMap)
-    return localDecision
+  async preparePayment(txnId) {
+    const keys = ['balance', 'ytdPayment', 'paymentCnt']
+    return await this.prepare(txnId, keys)
   }
 
-  async commit(txnId, decision, update) {
-    let continueCommit = await super.commit(txnId, decision)
-    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
-    await super.writeCommit(txnId, decision, writeMap)
-    if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
-    return
+  async prepareNewOrder(txnId) {
+    const keys = ['discount', 'credit', 'lastOId']
+    return await this.prepare(txnId, keys)
+  }
+
+  async commitNewOrder(txnId, decision, update) {
+    return await this.commit(txnId, decision, update)
+  }
+
+  async prepareDelivery(txnId) {
+    const keys = ['balance', 'deliveryCnt']
+    return await this.prepare(txnId, keys)
+  }
+
+  async prepareOrderStatus(txnId) {
+    const keys = ['balance', 'name', 'lastOId']
+    let localDecision = await super.isTxnAlreadyPrepared(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = await this.checkForConflictRO(txnId, keys)
+    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    await this.writePrepared(txnId, localDecision, maps.writeMap)
+    return maps.values
   }
 }
 

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+const { actor, sys } = require('kar-sdk')
 var gp = require('../../generic_participant.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
@@ -22,7 +23,7 @@ class District extends gp.GenericParticipant {
   async activate () {
     const that = await super.activate()
     this.dId = that.dId || this.kar.id
-    this.wId = that.wId
+    this.wId = that.wId || this.kar.id.split(':')[0]
     this.name = that.name || 'd-' + this.kar.id
     this.address = that.address || c.DEFAULT_ADDRESS
     this.tax = that.tax || c.DIST_TAX // Sales tax
@@ -31,22 +32,40 @@ class District extends gp.GenericParticipant {
     this.lastDlvrOrd = that.lastDlvrOrd || await super.createVal(0)
   }
 
-  async prepare(txnId, update) {
-    let localDecision = await super.prepare(txnId)
+  async preparePayment(txnId) {
+    // return {vote: false}
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await super.checkVersionConflict(update)
-    const writeMap = await super.createPrepareWriteMap(localDecision, update)
-    await super.writePrepared(txnId, localDecision, writeMap)
-    return localDecision
+    localDecision = false
+    if (this.ytd.rw == null && this.ytd.ro.length == 0) {
+      this.ytd.rw = txnId
+      localDecision = true
+    }
+    await super.writePrepared(txnId, localDecision, { ytd: this.ytd })
+    return {vote:localDecision, ytd: this.ytd.val }
   }
 
-  async commit(txnId, decision, update) {
-    let continueCommit = await super.commit(txnId, decision)
-    if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await super.createCommitWriteMap(txnId, decision, update)
-    await super.writeCommit(txnId, decision, writeMap)
-    if (verbose) { console.log(`Committed transaction ${txnId}.\n`) }
-    return
+  async prepareNewOrder(txnId) {
+    const keys = ['nextOId', 'tax']
+    return await this.prepare(txnId, keys)
+  }
+
+  async commitNewOrder(txnId, decision, update) {
+    return await this.commit(txnId, decision, update)
+  }
+
+  async prepareDelivery(txnId) {
+    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+    if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
+    localDecision = false
+    if (this.nextOId.rw == null && this.nextOId.ro.length == 0 
+      && this.lastDlvrOrd.rw == null && this.lastDlvrOrd.ro.length == 0) {
+      this.nextOId.ro.push(txnId)
+      this.lastDlvrOrd.rw = txnId
+      localDecision = true
+    }
+    await super.writePrepared(txnId, localDecision, { nextOId: this.nextOId, lastDlvrOrd: this.lastDlvrOrd })
+    return {vote:localDecision, nextOId: this.nextOId.val, lastDlvrOrd: this.lastDlvrOrd.val }
   }
 }
 
