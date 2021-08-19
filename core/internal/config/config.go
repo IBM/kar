@@ -355,6 +355,22 @@ Available commands:
 		ActorTypes = strings.Split(actorTypes, ",")
 	}
 
+	if RuntimePort == 0 {
+		if ptmp := os.Getenv("KAR_RUNTIME_PORT"); ptmp != "" {
+			if RuntimePort, err = strconv.Atoi(ptmp); err != nil {
+				logger.Fatal("error parsing KAR_RUNTIME_PORT as an integer")
+			}
+		}
+	}
+
+	if AppPort == 8080 {
+		if ptmp := os.Getenv("KAR_APP_PORT"); ptmp != "" {
+			if AppPort, err = strconv.Atoi(ptmp); err != nil {
+				logger.Fatal("error parsing KAR_APP_PORT as an integer")
+			}
+		}
+	}
+
 	if !KafkaEnableTLS {
 		ktmp := os.Getenv("KAFKA_ENABLE_TLS")
 		if ktmp == "" {
