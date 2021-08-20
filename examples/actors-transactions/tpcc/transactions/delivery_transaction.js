@@ -32,7 +32,7 @@ class DeliveryTxn extends t.Transaction {
 
   async prepareDistrict(wId, dId) {
     const district = actor.proxy('District', wId + ':' + dId)
-    this.actorUpdates.district = { actr: district }
+    this.actorUpdates[dId] = { actr: district }
     await actor.state.set(this, 'actorUpdates', this.actorUpdates)
     return [district, await actor.call(district, 'prepareDelivery', this.txnId)]
   }
@@ -79,14 +79,14 @@ class DeliveryTxn extends t.Transaction {
     for (let i = 1; i <= c.NUM_DISTRICTS; i++) {
       let dId = 'd' + i
       const dDetails = await this.prepareDistrict(txn.wId, dId)
+      this.actorUpdates[dId] = { actr: dDetails[0], values: dDetails[1] }
       if (dDetails[1].nextOId == 1 || 
         dDetails[1].lastDlvrOrd == dDetails[1].nextOId - 1) {
         // This implies either no order was placed in this district
         // or all orders in the district are delivered; skip district
         continue
       }
-      this.actorUpdates.district = { actr: dDetails[0], values: dDetails[1] }
-      this.actorUpdates.district.update =  { lastDlvrOrd: dDetails[1].lastDlvrOrd + 1}
+      this.actorUpdates[dId].update =  { lastDlvrOrd: dDetails[1].lastDlvrOrd + 1}
 
       const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd+1)
       await actor.remove(actor.proxy('NewOrder', orderId))
@@ -120,40 +120,8 @@ class DeliveryTxn extends t.Transaction {
         if (await actor.state.get(this, 'decision') == null) { decision = false }
       }
     }
-    await actor.tell(this, 'sendCommitAsync', decision, 'commitNewOrder')
+    await actor.tell(this, 'sendCommitAsync', decision)
     return decision
-  }
-
-  async startTxnOld(txn) {
-    let actors = [], operations = [] /* Track all actors and their respective updates;
-                                      perform the updates in an atomic txn. */
-    const wDetails = await this.getWarehouseDetails(txn.wId)
-    for (let i = 1; i <= c.NUM_DISTRICTS; i++) {
-      let dId = 'd' + i
-      const dDetails = await this.getDistrictDetails(txn.wId, dId)
-      if (dDetails[1].nextOId.val == 1 || 
-        dDetails[1].lastDlvrOrd.val == dDetails[1].nextOId.val - 1) {
-        // This implies either no order was placed in this district
-        // or all orders in the district are delivered; skip district
-        continue
-      }
-      const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd.val+1)
-      await actor.remove(actor.proxy('NewOrder', orderId))
-
-      let dUpdate = {lastDlvrOrd: dDetails[1].lastDlvrOrd}
-      dUpdate.lastDlvrOrd.val += 1
-      actors.push(dDetails[0]), operations.push(dUpdate)
-
-      const oDetails = await this.getOrderDetails(orderId)
-      const updatedODetails = await this.updateOrderDetails(oDetails[1], txn.carrierId, txn.deliveryDate)
-      actors.push(oDetails[0]), operations.push(updatedODetails)
-      const totalOrderAmt = await this.getTotalOrderAmount(oDetails[1])
-
-      const cDetails = await this.getCustomerDetails(txn.wId, dId, oDetails[1].cId)
-      const updatedCDetails = await this.updateCustomerDetails(cDetails[1], totalOrderAmt)
-      actors.push(cDetails[0]), operations.push(updatedCDetails)
-    }
-    return await super.transact(actors, operations)
   }
 }
 

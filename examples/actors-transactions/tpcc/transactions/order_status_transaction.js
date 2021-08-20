@@ -68,12 +68,6 @@ class OrderStatusTxn extends t.Transaction {
     const actorUpdates = await actor.state.get(this, 'actorUpdates')
     return { decision, orderDetails: actorUpdates.order.values }
   }
-
-  async startTxnOld(txn) {
-    const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-    const oDetails = await this.getOrderDetails(cDetails[1].lastOId.val)
-    return oDetails[1]
-  }
 }
 
 exports.OrderStatusTxn = OrderStatusTxn

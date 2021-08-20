@@ -96,27 +96,6 @@ class PaymentTxn extends t.Transaction {
     await actor.tell(this, 'sendCommitAsync', decision)
     return decision
   }
-
-  async startTxnOld(txn) {
-    let actors = [], operations = [] /* Track all actors and their respective updates;
-                                      perform the updates in an atomic txn. */
-    const wDetails = await this.getWarehouseDetails(txn.wId)
-    const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
-    const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-
-    let wUpdate = {ytd : wDetails[1].ytd}
-    wUpdate.ytd.val += txn.amount
-    actors.push(wDetails[0]), operations.push(wUpdate)
-
-    let dUpdate = {ytd: dDetails[1].ytd}
-    dUpdate.ytd.val += txn.amount
-    actors.push(dDetails[0]), operations.push(dUpdate)
-
-    const updatedCDetails = await this.updateCustomerDetails(cDetails[1], txn.amount)
-    actors.push(cDetails[0]), operations.push(updatedCDetails)
-
-    return await super.transact(actors, operations)
-  }
 }
 
 exports.PaymentTxn = PaymentTxn

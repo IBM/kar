@@ -45,6 +45,10 @@ class GenericParticipant {
     return resp
   }
 
+  async getAll() {
+    return await actor.state.getAll(this)
+  }
+
   async put(key, value) {
     this[key] = value
     await actor.state.set(this, key, value)

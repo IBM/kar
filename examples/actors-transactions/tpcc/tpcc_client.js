@@ -18,9 +18,9 @@ const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
 const verbose = process.env.VERBOSE
-const cIdRange = [1, 1]
+const cIdRange = [2010, 3000]
 const NUM_TXNS =  100
-var successCnt = 0
+var successCntPayment = 0, successCntNewOrd = 0
 
 async function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max + 1 - min) + min);
@@ -47,7 +47,7 @@ async function newOrderTxn() {
 
   let txnActor = actor.proxy('NewOrderTxn', uuidv4())
   const success = await actor.call(txnActor, 'startTxn', txn)
-  if (success) { successCnt++ }
+  if (success) { successCntNewOrd++ }
   if (verbose) { console.log("New order txn complete") }
 }
 
@@ -62,7 +62,7 @@ async function paymentTxn() {
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.amount = amount
   const success = await actor.call(txnActor, 'startTxn', txn)
-  if (success) { successCnt++ }
+  if (success) { successCntPayment++ }
   if (verbose) { console.log("Payment complete") }
 }
 
@@ -112,7 +112,9 @@ async function main () {
     else { await stockLevelTxn(); txnsCnt[4]++ }
   }
   console.log(txnsCnt)
-  console.log(successCnt, 'out of ', (txnsCnt[0]+txnsCnt[1]), 'successful txns.')
+  console.log(successCntPayment + successCntNewOrd, 'out of ', (txnsCnt[0]+txnsCnt[1]), 'successful txns.')
+  console.log(successCntPayment, 'out of ', (txnsCnt[1]), 'successful Payment txns.')
+  console.log(successCntNewOrd, 'out of ', (txnsCnt[0]), 'successful NewOrder txns.')
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

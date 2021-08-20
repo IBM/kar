@@ -116,41 +116,6 @@ class NewOrderTxn extends t.Transaction {
     await actor.tell(this, 'sendCommitAsync', decision, 'commitNewOrder')
     return decision
   }
-
-  async startTxnOld(txn) {
-    let actors = [], operations = [] /* Track all actors and their respective updates;
-                                      perform the updates in an atomic txn. */
-    const wDetails = await this.getWarehouseDetails(txn.wId)
-    const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
-    const cDetails = await this.getCustomerDetails(txn.wId, txn.dId, txn.cId)
-
-    let dUpdate = {nextOId: dDetails[1].nextOId}
-    dUpdate.nextOId.val += 1
-    actors.push(dDetails[0]), operations.push(dUpdate)
-
-    const orderId = txn.wId + ':' + txn.dId + ':' + 'o' + dDetails[1].nextOId.val
-    let cUpdate = {lastOId: cDetails[1].lastOId} 
-    cUpdate.lastOId.val = orderId
-    actors.push(cDetails[0]), operations.push(cUpdate)
-    
-    const order = actor.proxy('Order', orderId) // Create an order
-    actors.push(order), operations.push(txn)
-
-    const newOrder = actor.proxy('NewOrder', orderId) // Create a new order entry
-    actors.push(newOrder), operations.push({})
-
-    let totalAmount = 0
-    for (let i in txn.orderLines.val) {
-      let ol = txn.orderLines.val[i]
-      const itemDetails = await this.getItemDetails(ol.itemId, ol.supplyWId)
-      const itemDetailsToWrite = await this.getItemDetailsToWrite(itemDetails[1], ol)
-      actors.push(itemDetails[0]), operations.push(itemDetailsToWrite)
-      ol.amount = ol.quantity * itemDetails[1].price
-      totalAmount += ol.amount
-    }
-    totalAmount = totalAmount * (1 - cDetails[1].discount) * (1 + wDetails[1].wTax + dDetails[1].tax)
-    return await super.transact(actors, operations)
-  }
 }
 
 exports.NewOrderTxn = NewOrderTxn
