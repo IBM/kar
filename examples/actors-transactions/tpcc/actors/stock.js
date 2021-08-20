@@ -31,7 +31,6 @@ class ItemStock extends gp.GenericParticipant {
     this.ytd = that.ytd || await super.createVal(0)
     this.orderCnt = that.orderCnt || await super.createVal(0)
     this.remoteCnt = that.remoteCnt || await super.createVal(0)
-    this.data = that.data
   }
 
   async addNewItem(item) {

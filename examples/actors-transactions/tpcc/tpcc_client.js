@@ -14,16 +14,28 @@
  * limitations under the License.
  */
 
+const e = require('express')
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
 const verbose = process.env.VERBOSE
 const cIdRange = [2010, 3000]
 const NUM_TXNS =  100
-var successCntPayment = 0, successCntNewOrd = 0
-
+var txns = {id: { startTimer: null, endTimer: null} }
+var txnMetadata = {
+  'newOrder': {cnt: 0, success: 0, txns: {}},
+  'payment': {cnt: 0, success: 0, txns: {}},
+  'delivery': {cnt: 0, success: 0},
+  'orderStatus': {cnt: 0, success: 0},
+  'stockLevel': {cnt: 0, success: 0}
+}
 async function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max + 1 - min) + min);
+}
+
+async function getTimeNanoSec() {
+  var hrTime = process.hrtime()
+  return (hrTime[0] * 1000000000 + hrTime[1])
 }
 
 async function newOrderTxn() {
@@ -45,9 +57,13 @@ async function newOrderTxn() {
   txn.olCnt = numItems
   txn.orderLines = orderLines
 
-  let txnActor = actor.proxy('NewOrderTxn', uuidv4())
+  var txnId = uuidv4()
+  let txnActor = actor.proxy('NewOrderTxn', txnId)
+  txnMetadata.newOrder.txns[txnId] = {}
+  txnMetadata.newOrder.txns[txnId].startTimer = await getTimeNanoSec()
   const success = await actor.call(txnActor, 'startTxn', txn)
-  if (success) { successCntNewOrd++ }
+  txnMetadata.newOrder.txns[txnId].endTimer = await getTimeNanoSec()
+  if (success) { txnMetadata.newOrder.success++ }
   if (verbose) { console.log("New order txn complete") }
 }
 
@@ -57,12 +73,16 @@ async function paymentTxn() {
   const cId = 'c' + await getRandomInt(cIdRange[0], cIdRange[1])
 
   const amount = await getRandomInt(1, 5000)
-  const txnActor = actor.proxy('PaymentTxn', uuidv4())
+  const txnId = uuidv4()
+  const txnActor = actor.proxy('PaymentTxn', txnId)
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.amount = amount
+  txnMetadata.payment.txns[txnId] = {}
+  txnMetadata.payment.txns[txnId].startTimer = await getTimeNanoSec()
   const success = await actor.call(txnActor, 'startTxn', txn)
-  if (success) { successCntPayment++ }
+  txnMetadata.payment.txns[txnId].endTimer = await getTimeNanoSec()
+  if (success) { txnMetadata.payment.success++ }
   if (verbose) { console.log("Payment complete") }
 }
 
@@ -101,20 +121,37 @@ async function stockLevelTxn() {
   if (verbose) { console.log("Stock level txn complete") }
 }
 
+async function getLatency() {
+  var newOrderLatency = 0, paymentLatency = 0
+  for(const i in txnMetadata.newOrder.txns) {
+    const txn = txnMetadata.newOrder.txns[i]
+    newOrderLatency += (txn.endTimer - txn.startTimer)
+  }
+  for(const i in txnMetadata.payment.txns) {
+    const txn = txnMetadata.payment.txns[i]
+    paymentLatency += (txn.endTimer - txn.startTimer)
+  }
+  console.log('New Order Latency in ms: ', newOrderLatency/1000000/txnMetadata.newOrder.cnt)
+  console.log('Payment Latency in ms: ', paymentLatency/1000000/txnMetadata.payment.cnt)
+}
 async function main () {
-  let txnsCnt = [0, 0, 0, 0, 0]
   for (let i = 0; i < NUM_TXNS; i++) {
     const r = await getRandomInt(1, 100)
-    if (r < 44) { await newOrderTxn(); txnsCnt[0]++ }
-    else if (r < 88) { await paymentTxn(); txnsCnt[1]++ }
-    else if (r < 92) { await orderStatusTxn(); txnsCnt[2]++ }
-    else if (r < 96) { await deliveryTxn(); txnsCnt[3]++ }
-    else { await stockLevelTxn(); txnsCnt[4]++ }
+    if (r < 44) { await newOrderTxn(); txnMetadata.newOrder.cnt++ }
+    else if (r < 88) { await paymentTxn(); txnMetadata.payment.cnt++ }
+    else if (r < 92) { await orderStatusTxn(); txnMetadata.orderStatus.cnt++ }
+    else if (r < 96) { await deliveryTxn(); txnMetadata.delivery.cnt++ }
+    else { await stockLevelTxn(); txnMetadata.stockLevel.cnt++ }
   }
-  console.log(txnsCnt)
-  console.log(successCntPayment + successCntNewOrd, 'out of ', (txnsCnt[0]+txnsCnt[1]), 'successful txns.')
-  console.log(successCntPayment, 'out of ', (txnsCnt[1]), 'successful Payment txns.')
-  console.log(successCntNewOrd, 'out of ', (txnsCnt[0]), 'successful NewOrder txns.')
+
+  for ( const i in txnMetadata) {
+    console.log('Txn cnt of ', i , 'is', txnMetadata[i].cnt)
+  }
+  console.log(txnMetadata.payment.success + txnMetadata.newOrder.success, 'out of ',
+             (txnMetadata.newOrder.cnt + txnMetadata.payment.cnt), 'successful txns.')
+  console.log(txnMetadata.payment.success, 'out of ', (txnMetadata.payment.cnt), 'successful Payment txns.')
+  console.log(txnMetadata.newOrder.success, 'out of ', (txnMetadata.newOrder.cnt), 'successful NewOrder txns.')
+  await getLatency()
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

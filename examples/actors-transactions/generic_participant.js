@@ -61,6 +61,10 @@ class GenericParticipant {
     await actor.state.setMultiple(this, keyValueMap)
   }
 
+  async isRWField(key) {
+    return (this[key].constructor == Object && 'val' in this[key])
+  }
+
   async prepare(txnId, keys) {
     let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
@@ -85,7 +89,7 @@ class GenericParticipant {
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
-      if (this[key].constructor == Object) {
+      if (await this.isRWField(key)) {
         if(! (this[key].rw == null && this[key].ro.length == 0)) {
           localDecision = false }
       }
@@ -93,7 +97,7 @@ class GenericParticipant {
     if (localDecision) {
       for (const i in keys) {
         const key = keys[i]
-        if (this[key].constructor == Object) {
+        if (await this.isRWField(key)) {
           this[key].rw = txnId }
       }
     }
@@ -104,7 +108,7 @@ class GenericParticipant {
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
-      if (this[key].constructor == Object) {
+      if (await this.isRWField(key)) {
         if (! (this[key].rw == null)) { // Some other txn is writing this field
           localDecision = false }
       } 
@@ -112,7 +116,7 @@ class GenericParticipant {
     if (localDecision) {
       for (const i in keys) {
         const key = keys[i]
-        if (this[key].constructor == Object) {
+        if (await this.isRWField(key)) {
             this[key].ro.push(txnId) }
       }
     }
@@ -124,7 +128,7 @@ class GenericParticipant {
     if (!localDecision) { return {values, writeMap} }
     for (const i in keys) {
       const key = keys[i]
-      if (this[key].constructor == Object) {
+      if (await this.isRWField(key)) {
         writeMap[key] = this[key]
         values[key] = this[key].val }
       else { values[key] = this[key] }
@@ -175,7 +179,7 @@ class GenericParticipant {
     let writeMap = {}
     if (decision) {
       for (let key in update) {
-        if (this[key] != null && this[key].constructor == Object ) {
+        if (this[key] != null && await this.isRWField(key) ) {
           this[key].val =  update[key] }
         else { 
           this[key] =  update[key] }
@@ -185,10 +189,10 @@ class GenericParticipant {
     if (await this.getTxnLocalDecision(txnId)) {
       for (let i in Object.keys(this)) {
         const key = Object.keys(this)[i]
-        if (this[key] != null && this[key].constructor == Object && key != 'kar') {
+        if (this[key] != null && await this.isRWField(key)) {
           if (this[key].rw == txnId) {
             this[key].rw =  null }
-          if (this[key].ro != null && this[key].ro.includes(txnId)) {
+          if (this[key].ro.includes(txnId)) {
             this[key].ro = this[key].ro.filter(item => item !== txnId)
           }
           writeMap[key] = this[key]
