@@ -21,13 +21,12 @@ var c = require('./constants.js')
 const verbose = process.env.VERBOSE
 const cIdRange = [2010, 3000]
 const NUM_TXNS =  100
-var txns = {id: { startTimer: null, endTimer: null} }
 var txnMetadata = {
   'newOrder': {cnt: 0, success: 0, txns: {}},
   'payment': {cnt: 0, success: 0, txns: {}},
-  'delivery': {cnt: 0, success: 0},
-  'orderStatus': {cnt: 0, success: 0},
-  'stockLevel': {cnt: 0, success: 0}
+  'delivery': {cnt: 0, success: 0, txns: {}},
+  'orderStatus': {cnt: 0, success: 0, txns: {}},
+  'stockLevel': {cnt: 0, success: 0, txns: {}}
 }
 async function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max + 1 - min) + min);
@@ -91,10 +90,14 @@ async function orderStatusTxn() {
   const dId = 'd' + await getRandomInt(1, c.NUM_DISTRICTS)
   const cId = 'c' + await getRandomInt(cIdRange[0], cIdRange[1])
 
-  const txnActor = actor.proxy('OrderStatusTxn', uuidv4())
+  const txnId = uuidv4()
+  const txnActor = actor.proxy('OrderStatusTxn', )
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
+  txnMetadata.orderStatus.txns[txnId] = {}
+  txnMetadata.orderStatus.txns[txnId].startTimer = await getTimeNanoSec()
   await actor.tell(txnActor, 'startTxn', txn)
+  txnMetadata.orderStatus.txns[txnId].endTimer = await getTimeNanoSec()
   if (verbose) { console.log("Order status txn complete") }
 }
 
@@ -102,10 +105,14 @@ async function deliveryTxn() {
   const wId = 'w' + await getRandomInt(1, c.NUM_WAREHOUSES)
   const carrierId = await getRandomInt(1, 10)
   const deliveryDate = new Date()
-  const txnActor = actor.proxy('DeliveryTxn', uuidv4())
+  const txnId = uuidv4()
+  const txnActor = actor.proxy('DeliveryTxn', txnId)
   var txn = {}
   txn.wId = wId, txn.carrierId = carrierId, txn.deliveryDate = deliveryDate
+  txnMetadata.delivery.txns[txnId] = {}
+  txnMetadata.delivery.txns[txnId].startTimer = await getTimeNanoSec()
   await actor.tell(txnActor, 'startTxn', txn)
+  txnMetadata.delivery.txns[txnId].endTimer = await getTimeNanoSec()
   if (verbose) { console.log("Delivery txn complete") }
 }
 
@@ -114,15 +121,19 @@ async function stockLevelTxn() {
   const dId = 'd' + await getRandomInt(1, c.NUM_DISTRICTS)
   const threshold = await getRandomInt(10, 20)
 
-  const txnActor = actor.proxy('StockLevelTxn', uuidv4())
+  const txnId = uuidv4()
+  const txnActor = actor.proxy('StockLevelTxn', txnId)
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.threshold = threshold
+  txnMetadata.stockLevel.txns[txnId] = {}
+  txnMetadata.stockLevel.txns[txnId].startTimer = await getTimeNanoSec()
   await actor.tell(txnActor, 'startTxn', txn)
+  txnMetadata.stockLevel.txns[txnId].endTimer = await getTimeNanoSec()
   if (verbose) { console.log("Stock level txn complete") }
 }
 
-async function getLatency() {
-  var newOrderLatency = 0, paymentLatency = 0
+async function getLatency(totalTime) {
+  var newOrderLatency = 0, paymentLatency = 0, totalLatency = 0, totalCnt = 0
   for(const i in txnMetadata.newOrder.txns) {
     const txn = txnMetadata.newOrder.txns[i]
     newOrderLatency += (txn.endTimer - txn.startTimer)
@@ -131,10 +142,20 @@ async function getLatency() {
     const txn = txnMetadata.payment.txns[i]
     paymentLatency += (txn.endTimer - txn.startTimer)
   }
+  for(const i in txnMetadata) {
+    for (const j in txnMetadata[i].txns) {
+      const txn = txnMetadata[i].txns[j]
+      totalLatency += (txn.endTimer - txn.startTimer)
+    }
+    totalCnt += txnMetadata[i].cnt
+  }
   console.log('New Order Latency in ms: ', newOrderLatency/1000000/txnMetadata.newOrder.cnt)
   console.log('Payment Latency in ms: ', paymentLatency/1000000/txnMetadata.payment.cnt)
+  console.log('Total Latency in ms: ', totalLatency/1000000/totalCnt)
+  console.log('Throughput :',  totalCnt/totalTime*1000000000)
 }
 async function main () {
+  const strt = await getTimeNanoSec()
   for (let i = 0; i < NUM_TXNS; i++) {
     const r = await getRandomInt(1, 100)
     if (r < 44) { await newOrderTxn(); txnMetadata.newOrder.cnt++ }
@@ -143,6 +164,7 @@ async function main () {
     else if (r < 96) { await deliveryTxn(); txnMetadata.delivery.cnt++ }
     else { await stockLevelTxn(); txnMetadata.stockLevel.cnt++ }
   }
+  const end = await getTimeNanoSec()
 
   for ( const i in txnMetadata) {
     console.log('Txn cnt of ', i , 'is', txnMetadata[i].cnt)
@@ -151,7 +173,7 @@ async function main () {
              (txnMetadata.newOrder.cnt + txnMetadata.payment.cnt), 'successful txns.')
   console.log(txnMetadata.payment.success, 'out of ', (txnMetadata.payment.cnt), 'successful Payment txns.')
   console.log(txnMetadata.newOrder.success, 'out of ', (txnMetadata.newOrder.cnt), 'successful NewOrder txns.')
-  await getLatency()
+  await getLatency(end-strt)
   console.log('Terminating sidecar')
   await sys.shutdown()
 }
