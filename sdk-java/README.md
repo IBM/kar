@@ -283,7 +283,6 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 	<feature>beanValidation-2.0</feature>
 	<feature>cdi-2.0</feature>
 	<feature>concurrent-1.0</feature>
-	<feature>mpOpenTracing-1.3</feature>
 </featureManager>
 ```
 `kar-runtime-liberty` loads actors at deploy time. Actor classfiles should be added to your CLASSPATH.  Declare your actors to `kar-runtime-liberty` as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
