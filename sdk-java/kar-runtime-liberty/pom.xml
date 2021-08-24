@@ -15,6 +15,13 @@
   <name>kar-runtime-liberty</name>
   <description>KAR Java SDK runtime for Open Liberty</description>
 
+  <properties>
+    <version.microprofile>3.3</version.microprofile>
+    <version.cxf-rt-rs-mp-client>3.4.0</version.cxf-rt-rs-mp-client>
+    <version.glassfish-json>1.1.4</version.glassfish-json>
+    <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
