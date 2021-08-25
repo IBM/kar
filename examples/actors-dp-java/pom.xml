@@ -12,4 +12,24 @@
     <module>quarkus</module>
   </modules>
 
+  <properties>
+    <version.kar-java-sdk>1.0.8</version.kar-java-sdk>
+  </properties>
+
+  <!-- This dependency section is here just to placate VSCode's Java Language Server. -->
+  <dependencies>
+    <dependency>
+      <groupId>javax</groupId>
+      <artifactId>javaee-api</artifactId>
+      <version>8.0</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.ibm.research.kar</groupId>
+      <artifactId>kar-runtime-liberty</artifactId>
+      <version>${version.kar-java-sdk}</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
 </project>
