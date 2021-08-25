@@ -17,7 +17,7 @@
 	<httpEndpoint httpPort="${default.http.port}"
 		httpsPort="${default.https.port}" id="defaultHttpEndpoint" host="*" />
 
-	<webApplication location="philosophers.war"
+	<webApplication location="philosophers-liberty.war"
 		contextRoot="/">
 		<classloader apiTypeVisibility="+third-party" />
 	</webApplication>

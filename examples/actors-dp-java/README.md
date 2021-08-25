@@ -33,12 +33,16 @@ Cafe tracks its occupancy and generates messages when it seats new
 tables or when a sated Philosopher leaves.
 
 ## Open Liberty
-To run the example locally in Open Liberty, first do a `mvn package`.
-Then in one window start up the server code:
+To run the example locally in Open Liberty, first change
+your working directory to the liberty sub-directory (`cd liberty`).
+
+Next compile and package the application by doing `mvn package`.
+
+Finally run the application by doing:
 ```shell
 kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
 ```
-In a second window, use the `kar` cli to invite some Philosopers to dinner:
+In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
 # Invite 10 Philosophers to a meal of 20 servings each
 kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
