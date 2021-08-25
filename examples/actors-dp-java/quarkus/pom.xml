@@ -86,6 +86,7 @@
   </dependencies>
 
   <build>
+    <sourceDirectory>../src/main/java</sourceDirectory>
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
