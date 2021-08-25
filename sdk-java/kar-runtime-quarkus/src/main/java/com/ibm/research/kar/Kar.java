@@ -140,6 +140,7 @@ public class Kar {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private static Subscription[] toSubscriptionArray(Response response) {
 		try {
 			ArrayList<Subscription> res = new ArrayList<Subscription>();
@@ -315,8 +316,8 @@ public class Kar {
 		 */
 		public static CompletionStage<Response> patchAsync(String service, String path, JsonValue body) {
 			return sidecar.callAsyncPatch(service, path, body);
-		}	
-		
+		}
+
 		/**
 		 * Synchronous REST POST
 		 *
@@ -368,7 +369,7 @@ public class Kar {
 		/*
 		 * Higher-level Service call/tell operations that hide the REST layer
 		 */
-		
+
 		/**
 		 * Asynchronous service invocation; returns as soon as the invocation has been
 		 * initiated.
