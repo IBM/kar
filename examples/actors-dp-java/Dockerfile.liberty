@@ -23,12 +23,14 @@ ARG JAVA_RUNTIME=localhost:5000/kar/kar-sdk-java-runtime-11
 FROM $JAVA_BUILDER as builder
 
 WORKDIR /kar/app
+COPY pom.xml ./
 COPY liberty/pom.xml ./liberty/pom.xml
 COPY liberty/src ./liberty/src
+COPY quarkus/pom.xml ./quarkus/pom.xml
 
-RUN cd liberty && mvn -q dependency:go-offline && cd /kar/app
+RUN mvn -q dependency:go-offline
 COPY src src
-RUN cd liberty && mvn -q package && cd /kar/app
+RUN mvn -q package
 
 #
 # Copy the artifacts to the runtime image
