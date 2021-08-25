@@ -53,11 +53,6 @@ public class KarSidecar {
 
     private static KarHttpClient karClient = new KarHttpClient();
 
-    public void close() throws Exception {
-        // TODO Auto-generated method stub
-
-    }
-
     public Response tellDelete(String service, String path) {
         path = KarSidecar.getServicePath(service, path);
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getAsyncServiceHeaders());
@@ -205,7 +200,7 @@ public class KarSidecar {
     public Response actorCancelReminders(String type, String id) {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_CALL);
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -215,7 +210,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callDelete(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -232,7 +227,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callGet(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -250,7 +245,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callGet(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -259,7 +254,7 @@ public class KarSidecar {
         path = path + key + "/" + subkey;
 
         Uni<Response> uni = karClient.callHead(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -278,7 +273,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callDelete(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -288,7 +283,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callGet(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -297,7 +292,7 @@ public class KarSidecar {
         path = path + key;
 
         Uni<Response> uni = karClient.callHead(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -306,7 +301,7 @@ public class KarSidecar {
         path = path + key;
 
         Uni<Response> uni = karClient.callPut(path, params, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -315,7 +310,7 @@ public class KarSidecar {
         path = path + key;
 
         Uni<Response> uni = karClient.callPost(path, params, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -325,7 +320,7 @@ public class KarSidecar {
 
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
         Uni<Response> uni = karClient.callDelete(path, queryParamMap, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -333,7 +328,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_STATE);
 
         Uni<Response> uni = karClient.callGet(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -341,7 +336,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_STATE);
 
         Uni<Response> uni = karClient.callPost(path, params, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -349,7 +344,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_STATE);
 
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -357,7 +352,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_OPERATION);
 
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -365,7 +360,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_EVENTS);
 
         Uni<Response> uni = karClient.callGet(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -373,7 +368,7 @@ public class KarSidecar {
         String path = KarSidecar.getActorPath(type, id, KAR_ACTOR_EVENTS);
 
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -382,7 +377,7 @@ public class KarSidecar {
         path = path + subscriptionId;
 
         Uni<Response> uni = karClient.callGet(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -391,7 +386,7 @@ public class KarSidecar {
         path = path + subscriptionId;
 
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -400,7 +395,7 @@ public class KarSidecar {
         path = path + subscriptionId;
 
         Uni<Response> uni = karClient.callPut(path, data, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -408,7 +403,7 @@ public class KarSidecar {
         String path = KarSidecar.getEventTopicPath(topic);
 
         Uni<Response> uni = karClient.callPut(path, configuration, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -416,31 +411,31 @@ public class KarSidecar {
         String path = KarSidecar.getEventTopicPath(topic);
 
         Uni<Response> uni = karClient.callDelete(path, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
     public Response eventPublish(String topic, JsonValue event) {
         String path = KarSidecar.getEventPublishPath(topic);
-        
+
         Uni<Response> uni = karClient.callPost(path, event, KarSidecar.getStandardActorHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
     public Response shutdown() {
        String path = KarSidecar.getSystemShutdownPath();
-       
+
        Uni<Response> uni = karClient.callPost(path, KarSidecar.getStandardServiceHeaders());
-        
+
        return (Response) uni.subscribeAsCompletionStage().join();
     }
 
     public Response systemInformation(String component) {
         String path = KarSidecar.getSystemInformationPath(component);
-        
+
         Uni<Response> uni = karClient.callGet(path, KarSidecar.getStandardServiceHeaders());
-        
+
         return (Response) uni.subscribeAsCompletionStage().join();
     }
 
@@ -450,7 +445,7 @@ public class KarSidecar {
 
     /**
      * Construct sidecar URI from service name and path for service calls
-     * 
+     *
      * @param service
      * @param path
      * @return path component of sidecar REST call
@@ -512,7 +507,7 @@ public class KarSidecar {
 
     /**
      * Return headers used by KAR calls for service calls
-     * 
+     *
      * @return headers
      */
     private static MultiMap getStandardServiceHeaders() {
@@ -531,7 +526,7 @@ public class KarSidecar {
 
     /**
      * Return headers used by KAR calls for Actor calls
-     * 
+     *
      * @return headers
      */
     private static MultiMap getStandardActorHeaders() {
@@ -605,14 +600,14 @@ public class KarSidecar {
         }
 
         /**
-         * 
+         *
          * HTTP REST methods
-         * 
+         *
          */
 
         /**
          * Service DELETE call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @return
@@ -627,7 +622,7 @@ public class KarSidecar {
 
         /**
          * Service Delete call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @return
@@ -649,7 +644,7 @@ public class KarSidecar {
 
         /**
          * Service GET call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @param params  JSON params
@@ -678,7 +673,7 @@ public class KarSidecar {
 
         /**
          * Service HEAD call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @param params  JSON Params
@@ -695,7 +690,7 @@ public class KarSidecar {
 
         /**
          * Service POST call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @param params  JSON Params
@@ -718,7 +713,7 @@ public class KarSidecar {
 
         /**
          * Service POST call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @param params  JSON Params
@@ -757,7 +752,7 @@ public class KarSidecar {
 
         /**
          * Service PUT call
-         * 
+         *
          * @param service name of service
          * @param path    path to call
          * @param params  JSON Params
@@ -814,7 +809,7 @@ public class KarSidecar {
 
         /**
          * Convert vert.x response to javax.rs Response
-         * 
+         *
          * @param response vert.x Response object
          * @return javax rs response object
          */
