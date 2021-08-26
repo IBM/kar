@@ -66,10 +66,11 @@ public class ActorManager {
 	 * @param nameList  the list of KAR actor types used to refer to the classes
 	 */
 	public static void initialize(List<String> classList, List<String> nameList) {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
 		MethodHandles.Lookup lookup = MethodHandles.lookup();
 		for (String actorClassName : classList) {
 			try {
-				Class<?> cls = Class.forName(actorClassName);
+				Class<?> cls = Class.forName(actorClassName, true, cl);
 				boolean isAnnotated = cls.getAnnotation(Actor.class) != null;
 				boolean isActorInstance = ActorInstance.class.isAssignableFrom(cls);
 
