@@ -70,8 +70,8 @@ class Customer extends gp.GenericParticipant {
     const keys = ['balance', 'name', 'lastOId']
     let localDecision = await super.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await this.checkForConflictRO(txnId, keys)
-    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    localDecision = this.checkForConflictRO(txnId, keys)
+    const maps = this.createPrepareValueAndWriteMap(localDecision, keys)
     await this.writePrepared(txnId, localDecision, maps.writeMap)
     return maps.values
   }
@@ -80,4 +80,4 @@ class Customer extends gp.GenericParticipant {
 // Server setup: register actors with KAR and start express
 const app = express()
 app.use(sys.actorRuntime({ Warehouse, District, Customer }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

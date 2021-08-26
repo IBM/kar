@@ -65,18 +65,18 @@ class Transaction {
   }
 
   async prepareTxn(actorUpdates, methodName) {
+    await actor.state.set(this, 'actorUpdates', actorUpdates)
     for (let i in actorUpdates) {
       actorUpdates[i].values  = await actor.asyncCall(actorUpdates[i].actr, methodName, this.txnId)
-    } 
+    }
     for (let i in actorUpdates) { actorUpdates[i].values = await actorUpdates[i].values() }
-    let decision = true
-    for (let i in actorUpdates) { decision = decision && actorUpdates[i].values.vote }
-    return { decision, actorUpdates }
+    return actorUpdates
   }
 
   async sendCommitAsync(decision, commitFunc = 'commit') {
-    if (await actor.state.get(this, 'commitComplete')) { return }
-    const actorUpdates = await actor.state.get(this, 'actorUpdates')
+    const getVals = await Promise.all([actor.state.get(this, 'commitComplete'), actor.state.get(this, 'actorUpdates')])
+    if (getVals[0]) { return }
+    const actorUpdates = getVals[1]
     try {
       let done = []
       for (const i in actorUpdates) {
@@ -92,10 +92,9 @@ class Transaction {
   }
 
   async purgeTxn() {
-    // await new Promise(r => setTimeout(r, 5000))
-    const txnComplete = await actor.state.get(this, 'commitComplete')
-    if (txnComplete) {
-      const actorUpdates = await actor.state.get(this, 'actorUpdates')
+    const getVals = await Promise.all([actor.state.get(this, 'commitComplete'), actor.state.get(this, 'actorUpdates')])
+    if (getVals[0]) {
+      const actorUpdates = getVals[1]
       for (const i in actorUpdates) {
         await actor.call(actorUpdates[i].actr, 'purgeTxnRecord', this.txnId)
       }

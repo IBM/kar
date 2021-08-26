@@ -23,24 +23,7 @@ class PaymentTxn extends t.Transaction {
     await super.activate()
   }
 
-  async prepareWarehouse(wId, txnId) {
-    const warehouse = actor.proxy('Warehouse', wId)
-    const wKeys = { rw:['ytd'] }
-    return [warehouse, await actor.call(warehouse, 'prepare', txnId, wKeys)]
-  }
-
-  async getDistrictDetails(wId, dId) {
-    const district = actor.proxy('District', wId + ':' + dId)
-    return [district, await actor.call(district, 'getMultiple', ['ytd'])]
-  }
-
-  async getCustomerDetails(wId, dId, cId) {
-    const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-    const keys = ['balance', 'ytdPayment', 'paymentCnt']
-    return [customer, await actor.call(customer, 'getMultiple', keys)]
-  }
-
-  async updateCustomerDetails(cDetails, amount) {
+  updateCustomerDetails(cDetails, amount) {
     let updatedCDetails = {}
     // Update customer details based on txn payment.
     updatedCDetails.balance = cDetails.balance - amount
@@ -50,12 +33,7 @@ class PaymentTxn extends t.Transaction {
   }
 
   async prepareTxn(txn) {
-    let actorUpdates = {}, decision
-    /* actorUpdates = {
-      'warehouse': { 'actr': actorInst, 'update': { key: val },
-      'district': { 'actr': actorInst, 'update': { key: val },
-      'customer': { 'actr': actorInst, 'update': { key: val }
-    } */
+    let actorUpdates = {}, decision = true
     const warehouse = actor.proxy('Warehouse', txn.wId)
     actorUpdates.warehouse = { actr: warehouse }
 
@@ -65,15 +43,15 @@ class PaymentTxn extends t.Transaction {
     const customer = actor.proxy('Customer', txn.wId + ':' + txn.dId + ':' + txn.cId)
     actorUpdates.customer = { actr: customer }
 
-    const prepared = await super.prepareTxn(actorUpdates, 'preparePayment')
-    decision = prepared.decision, actorUpdates = prepared.actorUpdates
+    actorUpdates = await super.prepareTxn(actorUpdates, 'preparePayment')
 
+    for (let i in actorUpdates) { decision = decision && actorUpdates[i].values.vote }
     if (decision) {
       const wDetails = actorUpdates.warehouse.values
       actorUpdates.warehouse.update = { ytd : wDetails.ytd + txn.amount }
       const dDetails = actorUpdates.district.values
       actorUpdates.district.update =  { ytd: dDetails.ytd + txn.amount }
-      actorUpdates.customer.update = await this.updateCustomerDetails(actorUpdates.customer.values, txn.amount)
+      actorUpdates.customer.update = this.updateCustomerDetails(actorUpdates.customer.values, txn.amount)
     }
     await actor.state.setMultiple(this, {decision: decision, actorUpdates: actorUpdates} )
     return decision

@@ -33,6 +33,10 @@ class GenericParticipant {
     return { val: val, rw:null, ro:[] }
   }
 
+  async returnNull() {
+    return
+  }
+
   async get(key) {
     return this[key]
   }
@@ -61,15 +65,15 @@ class GenericParticipant {
     await actor.state.setMultiple(this, keyValueMap)
   }
 
-  async isRWField(key) {
+  isRWField(key) {
     return (this[key].constructor == Object && 'val' in this[key])
   }
 
   async prepare(txnId, keys) {
     let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await this.checkForConflictRW(txnId, keys)
-    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    localDecision = this.checkForConflictRW(txnId, keys)
+    const maps = this.createPrepareValueAndWriteMap(localDecision, keys)
     await this.writePrepared(txnId, localDecision, maps.writeMap)
     return maps.values
   }
@@ -85,11 +89,11 @@ class GenericParticipant {
     return null
   }
 
-  async checkForConflictRW(txnId, keys) {
+  checkForConflictRW(txnId, keys) {
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
-      if (await this.isRWField(key)) {
+      if (this.isRWField(key)) {
         if(! (this[key].rw == null && this[key].ro.length == 0)) {
           localDecision = false }
       }
@@ -97,18 +101,18 @@ class GenericParticipant {
     if (localDecision) {
       for (const i in keys) {
         const key = keys[i]
-        if (await this.isRWField(key)) {
+        if (this.isRWField(key)) {
           this[key].rw = txnId }
       }
     }
     return localDecision
   }
 
-  async checkForConflictRO(txnId, keys) {
+  checkForConflictRO(txnId, keys) {
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
-      if (await this.isRWField(key)) {
+      if (this.isRWField(key)) {
         if (! (this[key].rw == null)) { // Some other txn is writing this field
           localDecision = false }
       } 
@@ -116,19 +120,19 @@ class GenericParticipant {
     if (localDecision) {
       for (const i in keys) {
         const key = keys[i]
-        if (await this.isRWField(key)) {
+        if (this.isRWField(key)) {
             this[key].ro.push(txnId) }
       }
     }
     return localDecision
   }
 
-  async createPrepareValueAndWriteMap(localDecision, keys) {
+  createPrepareValueAndWriteMap(localDecision, keys) {
     let values = {}, writeMap = {}
     if (!localDecision) { return {values, writeMap} }
     for (const i in keys) {
       const key = keys[i]
-      if (await this.isRWField(key)) {
+      if (this.isRWField(key)) {
         writeMap[key] = this[key]
         values[key] = this[key].val }
       else { values[key] = this[key] }
@@ -143,18 +147,12 @@ class GenericParticipant {
     const mapToWrite = Object.assign({ preparedTxns: this.preparedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
   }
-  
-  async getTxnLocalDecision(txnId) {
-    /* Can be true or false */
-    this.preparedTxns = await actor.state.get(this, 'preparedTxns') || {}
-    return this.preparedTxns[txnId]
-  }
 
   async commit(txnId, decision, update) {
-    let continueCommit = await this.isTxnAlreadyCommitted(txnId, decision) // TODO: take decision off
+    let continueCommit = await this.isTxnAlreadyCommitted(txnId)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    const writeMap = await this.createCommitWriteMap(txnId, decision, update)
-    await this.writeCommit(txnId, decision, writeMap)
+    const writeMap = this.createCommitWriteMap(txnId, decision, update)
+    this.writeCommit(txnId, decision, writeMap)
     if (verbose) { console.log(`${this.kar.id} committed transaction ${txnId}.\n`) }
     return
   }
@@ -162,7 +160,6 @@ class GenericParticipant {
   async isTxnAlreadyCommitted(txnId) {
     /* Check if txn is already committed or not. Retrun false if txn is already committed or txn is not 
     prepared, indicating this call to commit failed. */
-    this.committedTxns = await actor.state.get(this, 'committedTxns') || {}
     if (!(txnId in this.preparedTxns)) {
       this.preparedTxns[txnId] = false
       this.committedTxns[txnId] = false
@@ -175,21 +172,21 @@ class GenericParticipant {
     return true
   }
 
-  async createCommitWriteMap(txnId, decision, update) {
+  createCommitWriteMap(txnId, decision, update) {
     let writeMap = {}
     if (decision) {
       for (let key in update) {
-        if (this[key] != null && await this.isRWField(key) ) {
+        if (this[key] != null && this.isRWField(key) ) {
           this[key].val =  update[key] }
         else { 
           this[key] =  update[key] }
         writeMap[key] = this[key]
       }
     }
-    if (await this.getTxnLocalDecision(txnId)) {
+    if (this.preparedTxns[txnId]) {
       for (let i in Object.keys(this)) {
         const key = Object.keys(this)[i]
-        if (this[key] != null && await this.isRWField(key)) {
+        if (this[key] != null && this.isRWField(key)) {
           if (this[key].rw == txnId) {
             this[key].rw =  null }
           if (this[key].ro.includes(txnId)) {

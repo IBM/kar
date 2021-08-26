@@ -64,8 +64,8 @@ class Order extends gp.GenericParticipant {
     const that = await super.activate()
     this.oId = that.oId || this.kar.id
     this.cId = that.cId
-    this.dId = that.dId
-    this.wId = that.wId
+    this.dId = that.dId || this.kar.id.split(':')[1]
+    this.wId = that.wId || this.kar.id.split(':')[0]
     this.entryDate = that.entryDate || new Date()
     this.olCnt = that.olCnt || 0
     this.orderLines = that.orderLines || await super.createVal({})
@@ -89,7 +89,7 @@ class Order extends gp.GenericParticipant {
   }
 
   async prepareDelivery(txnId) {
-    const keys = ['cId', 'orderLines', 'carrierId']
+    const keys = ['cId', 'dId', 'orderLines', 'carrierId']
     return await this.prepare(txnId, keys)
   }
 
@@ -107,4 +107,4 @@ class Order extends gp.GenericParticipant {
 // Server setup: register actors with KAR and start express
 const app = express()
 app.use(sys.actorRuntime({ Order, NewOrder }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

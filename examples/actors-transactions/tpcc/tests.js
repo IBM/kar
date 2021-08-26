@@ -36,9 +36,10 @@ async function newOrderTxn(wId, dId, cId, itemIds, quantity) {
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.olCnt = itemIds.length
   txn.orderLines = orderLines
-
   let txnActor = actor.proxy('NewOrderTxn', uuidv4())
+  console.time(`newOrderTxn`)
   const success = await actor.call(txnActor, 'startTxn', txn)
+  console.timeEnd(`newOrderTxn`)
   console.log('Transaction success status: ', success)
   console.log('Transaction completion status: ', await actor.call(txnActor, 'txnComplete'), '\n')
   if (verbose) { console.log("New order txn complete") }
@@ -50,7 +51,9 @@ async function paymentTxn(wId, dId, cId) {
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   txn.amount = amount
+  console.time(`paymentTxn`)
   const success = await actor.call(txnActor, 'startTxn', txn)
+  console.timeEnd(`paymentTxn`)
   console.log('Transaction success status: ', success)
   console.log('Transaction completion status: ', await actor.call(txnActor, 'txnComplete'), '\n')
   if (verbose) { console.log("Payment complete") }
@@ -61,7 +64,9 @@ async function orderStatusTxn(wId, dId, cId) {
   const txnActor = actor.proxy('OrderStatusTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
+  console.time(`orderStatusTxn`)
   const txnDetails = await actor.call(txnActor, 'startTxn', txn)
+  console.timeEnd(`orderStatusTxn`)
   console.log('Transaction success status: ', txnDetails.decision)
   console.log('Transaction completion status: ', await actor.call(txnActor, 'txnComplete'), '\n')
   if (verbose) { console.log("Order status txn complete") }
@@ -72,7 +77,9 @@ async function deliveryTxn(wId, carrierId, deliveryDate) {
   const txnActor = actor.proxy('DeliveryTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.carrierId = carrierId, txn.deliveryDate = deliveryDate
+  console.time(`deliveryTxn`)
   const success = await actor.call(txnActor, 'startTxn', txn)
+  console.timeEnd(`deliveryTxn`)
   console.log('Transaction success status: ', success)
   console.log('Transaction completion status: ', await actor.call(txnActor, 'txnComplete'), '\n')
   if (verbose) { console.log("Delivery txn complete") }

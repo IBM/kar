@@ -53,4 +53,4 @@ class ItemStock extends gp.GenericParticipant {
 // Server setup: register actors with KAR and start express
 const app = express()
 app.use(sys.actorRuntime({ ItemStock }))
-app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')

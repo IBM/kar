@@ -25,81 +25,102 @@ class DeliveryTxn extends t.Transaction {
     this.actorUpdates = {}
   }
 
-  async getWarehouseDetails(wId) {
-    const warehouse = actor.proxy('Warehouse', wId)
-    return [warehouse, await actor.call(warehouse, 'getMultiple', ['ytd'])]
-  }
-
-  async prepareDistrict(wId, dId) {
-    const district = actor.proxy('District', wId + ':' + dId)
-    this.actorUpdates[dId] = { actr: district }
-    await actor.state.set(this, 'actorUpdates', this.actorUpdates)
-    return [district, await actor.call(district, 'prepareDelivery', this.txnId)]
-  }
-
-  async prepareCustomer(wId, dId, cId) {
-    const customer = actor.proxy('Customer', wId + ':' + dId + ':' + cId)
-    this.actorUpdates.customer = { actr: customer }
-    await actor.state.set(this, 'actorUpdates', this.actorUpdates)
-    return [customer, await actor.call(customer, 'prepareDelivery', this.txnId)]
-  }
-
-  async prepareOrder(oId) {
-    const order = actor.proxy('Order', oId)
-    this.actorUpdates.order = { actr: order }
-    await actor.state.set(this, 'actorUpdates', this.actorUpdates)
-    return [order, await actor.call(order, 'prepareDelivery', this.txnId)]
-  }
-
-  async getTotalOrderAmount(oDetails) {
-    let totalAmt = 0
-    for (let i in oDetails.orderLines) {
-      totalAmt += oDetails.orderLines[i].amount
-    }
-    return totalAmt
-  }
-
-  async updateOrderDetails(oDetails, carrierId, deliveryDate) {
-    let updatedODetails = Object.assign({}, oDetails)
-    updatedODetails.carrierId = carrierId
-    for (let i in oDetails.orderLines) {
-      updatedODetails.orderLines[i].deliveryDate = deliveryDate
-    }
-    return updatedODetails
-  }
-
-  async updateCustomerDetails(cDetails, totalAmount) {
-    let updatedCDetails = Object.assign({}, cDetails)
-    updatedCDetails.balance += totalAmount
-    updatedCDetails.deliveryCnt += 1
-    return updatedCDetails
-  }
-
-  async prepareTxn(txn) {
+  async prepareDistricts(wId) {
+    let districtActors = {}
     for (let i = 1; i <= c.NUM_DISTRICTS; i++) {
       let dId = 'd' + i
-      const dDetails = await this.prepareDistrict(txn.wId, dId)
-      this.actorUpdates[dId] = { actr: dDetails[0], values: dDetails[1] }
-      if (dDetails[1].nextOId == 1 || 
-        dDetails[1].lastDlvrOrd == dDetails[1].nextOId - 1) {
+      districtActors[dId] = {}
+      districtActors[dId].actr = actor.proxy('District', wId + ':' + dId)
+    }
+    const preparedActors = await super.prepareTxn(districtActors, 'prepareDelivery')
+    this.actorUpdates = Object.assign({}, this.actorUpdates, preparedActors)
+    let decision = true
+    for (let i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
+    return decision
+  }
+
+  async prepareOrder(wId) {
+    let orderActors = {}
+    for (let i in this.actorUpdates) {
+      if (!i.startsWith('d')) { continue }
+      const dDetails = this.actorUpdates[i].values
+      if (dDetails.nextOId == 1 || dDetails.lastDlvrOrd >= dDetails.nextOId - 1) {
         // This implies either no order was placed in this district
         // or all orders in the district are delivered; skip district
         continue
       }
-      this.actorUpdates[dId].update =  { lastDlvrOrd: dDetails[1].lastDlvrOrd + 1}
-
-      const orderId = txn.wId + ':' + dId + ':'+ 'o' + Number(dDetails[1].lastDlvrOrd+1)
-      await actor.remove(actor.proxy('NewOrder', orderId))
-
-      const oDetails = await this.prepareOrder(orderId)
-      this.actorUpdates.order = { actr: oDetails[0], values: oDetails[1] }
-      this.actorUpdates.order.update =  await this.updateOrderDetails(oDetails[1], txn.carrierId, txn.deliveryDate)
-      const totalOrderAmt = await this.getTotalOrderAmount(oDetails[1])
-
-      const cDetails = await this.prepareCustomer(txn.wId, dId, oDetails[1].cId)
-      this.actorUpdates.customer = { actr: cDetails[0], values: cDetails[1] }
-      this.actorUpdates.customer.update = await this.updateCustomerDetails(cDetails[1], totalOrderAmt)
+      const orderId = wId + ':' + i + ':'+ 'o' + Number(dDetails.lastDlvrOrd+1)
+      orderActors[orderId] = {}
+      orderActors[orderId].actr = actor.proxy('Order', orderId)
+      actor.remove(actor.proxy('NewOrder', orderId))
     }
+    if (Object.keys(orderActors).length == 0) { return false }
+    const preparedActors = await super.prepareTxn(orderActors, 'prepareDelivery')
+    this.actorUpdates = Object.assign({}, this.actorUpdates, preparedActors)
+    let decision = true
+    for (let i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
+    return decision
+  }
+
+  async prepareCustomers(wId) {
+    let custActors = {}
+    for (let i in this.actorUpdates) { 
+      if (!i.startsWith('w')) { continue }
+      const cId = this.actorUpdates[i].values.cId, dId = this.actorUpdates[i].values.dId
+      const custId = wId + ':' + dId + ':' + cId
+      custActors[custId] = {}
+      custActors[custId].actr = actor.proxy('Customer', custId)
+    }
+    const preparedActors = await super.prepareTxn(custActors, 'prepareDelivery')
+    this.actorUpdates = Object.assign({}, this.actorUpdates, preparedActors)
+  }
+
+  async updateDistricts() {
+    for (let i in this.actorUpdates) {
+      if (!i.startsWith('d')) { continue }
+      const dDetails = this.actorUpdates[i].values
+      this.actorUpdates[i].update =  { lastDlvrOrd: dDetails.lastDlvrOrd + 1}
+    }
+  }
+
+  async updateOrderDetails( carrierId, deliveryDate) {
+    for (let i in this.actorUpdates) {
+      if (!i.includes('o')) { continue }
+      let updatedODetails = Object.assign({}, this.actorUpdates[i].values)
+      updatedODetails.carrierId = carrierId
+      for (let j in this.actorUpdates[i].values.orderLines) {
+        updatedODetails.orderLines[j].deliveryDate = deliveryDate
+      }
+      this.actorUpdates[i].update = updatedODetails
+    }
+  }
+
+  async updateCustomerDetails(wId) {
+    for( let i in this.actorUpdates) {
+      if (!i.includes('o')) { continue }
+      let totalAmt = 0
+      const oDetails = this.actorUpdates[i].values
+      for (let j in oDetails.orderLines) {
+        totalAmt += oDetails.orderLines[j].amount
+      }
+      const custId = wId + ':' + oDetails.dId + ':' + oDetails.cId
+      this.actorUpdates[custId].update = {}
+      this.actorUpdates[custId].update.deliveryCnt = this.actorUpdates[custId].values.deliveryCnt + 1
+      this.actorUpdates[custId].update.balance = this.actorUpdates[custId].values.balance + totalAmt
+    }
+  }
+
+  async prepareTxn(txn) {
+    let earlyDecision = await this.prepareDistricts(txn.wId)
+    if(!earlyDecision) { await actor.state.set(this, 'decision', earlyDecision); return earlyDecision }
+
+    earlyDecision = await this.prepareOrder(txn.wId)
+    if(!earlyDecision) { await actor.state.set(this, 'decision', earlyDecision); return earlyDecision }
+
+    earlyDecision = await this.prepareCustomers(txn.wId)
+    await Promise.all([this.updateDistricts(),
+                      this.updateOrderDetails(txn.carrierId, txn.deliveryDate), 
+                      this.updateCustomerDetails(txn.wId)])
     let decision = true
     for (let i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
     await actor.state.setMultiple(this, {decision: decision, actorUpdates: this.actorUpdates} )
