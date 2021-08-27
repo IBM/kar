@@ -16,7 +16,6 @@
 
 package com.ibm.research.kar;
 
-import java.io.ByteArrayInputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,8 +35,6 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonNumber;
 import javax.json.JsonValue;
-import javax.json.JsonReaderFactory;
-import javax.json.JsonReader;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;

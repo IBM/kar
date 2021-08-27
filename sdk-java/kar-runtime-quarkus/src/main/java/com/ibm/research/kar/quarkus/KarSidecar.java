@@ -15,8 +15,6 @@
  */
 package com.ibm.research.kar.quarkus;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 
@@ -25,6 +23,7 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
 
 import org.jboss.logging.Logger;
 
@@ -37,6 +36,8 @@ import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpRequest;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import io.vertx.mutiny.ext.web.client.WebClient;
+import io.vertx.mutiny.ext.web.client.predicate.ErrorConverter;
+import io.vertx.mutiny.ext.web.client.predicate.ResponsePredicate;
 
 public class KarSidecar {
 
@@ -450,19 +451,26 @@ public class KarSidecar {
             return WebClient.create(vertx, options);
         }
 
+        public static class KarSidecarError extends Throwable {
+            final int statusCode;
+            KarSidecarError(int c) {
+                this.statusCode = c;
+            }
+        }
+
         /*
          *
          * HTTP REST methods
          *
          */
 
-        public Uni<HttpResponse<Buffer>> callDelete(String path, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, path, headers);
+        public Uni<HttpResponse<Buffer>> callDelete(String uri, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, uri, headers);
             return request.send();
         }
 
-        public Uni<HttpResponse<Buffer>> callDelete(String path, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, path, headers);
+        public Uni<HttpResponse<Buffer>> callDelete(String uri, Map<String, String> qparams, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, uri, headers);
 
             if ((qparams != null) && (qparams.size() != 0)) {
                 for (Map.Entry<String, String> entry : qparams.entrySet()) {
@@ -473,8 +481,8 @@ public class KarSidecar {
             return request.send();
         }
 
-        public Uni<HttpResponse<Buffer>> callGet(String path, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_GET, path, headers);
+        public Uni<HttpResponse<Buffer>> callGet(String uri, Map<String, String> qparams, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_GET, uri, headers);
 
             if ((qparams != null) && (qparams.size() != 0)) {
                 for (Map.Entry<String, String> entry : qparams.entrySet()) {
@@ -485,72 +493,75 @@ public class KarSidecar {
             return request.send();
         }
 
-        public Uni<HttpResponse<Buffer>> callGet(String path, MultiMap headers) {
-            return callGet(path, null, headers);
+        public Uni<HttpResponse<Buffer>> callGet(String uri, MultiMap headers) {
+            return callGet(uri, null, headers);
         }
 
-        public Uni<HttpResponse<Buffer>> callHead(String path, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_HEAD, path, headers);
+        public Uni<HttpResponse<Buffer>> callHead(String uri, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_HEAD, uri, headers);
             return request.send();
         }
 
-        public Uni<HttpResponse<Buffer>> callPatch(String path, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PATCH, path, headers);
+        public Uni<HttpResponse<Buffer>> callPatch(String uri, Object body, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PATCH, uri, headers);
             return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String path, Object body, MultiMap headers, String session) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_POST, path, headers);
+        public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers, String session) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_POST, uri, headers);
             if (session != null) {
                 request.addQueryParam(KAR_QUERYPARAM_SESSION_NAME, session);
             }
             return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String path, Object body, MultiMap headers) {
-            return callPost(path, body, headers, null);
+        public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers) {
+            return callPost(uri, body, headers, null);
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String path, MultiMap headers, String session) {
-            return callPost(path, null, headers, session);
+        public Uni<HttpResponse<Buffer>> callPost(String uri, MultiMap headers, String session) {
+            return callPost(uri, null, headers, session);
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String path, MultiMap headers) {
-            return callPost(path, null, headers, null);
+        public Uni<HttpResponse<Buffer>> callPost(String uri, MultiMap headers) {
+            return callPost(uri, null, headers, null);
         }
 
-        public Uni<HttpResponse<Buffer>> callPut(String path, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PUT, path, headers);
+        public Uni<HttpResponse<Buffer>> callPut(String uri, Object body, MultiMap headers) {
+            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PUT, uri, headers);
             return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
-        public HttpRequest<Buffer> httpCall(String method, String path, MultiMap headers) throws UnsupportedOperationException {
+        public HttpRequest<Buffer> httpCall(String method, String uri, MultiMap headers) throws UnsupportedOperationException {
             HttpRequest<Buffer> request = null;
 
             switch (method.toLowerCase()) {
                 case KarHttpClient.HTTP_DELETE:
-                    request = this.client.delete(path);
+                    request = this.client.delete(uri);
                     break;
                 case KarHttpClient.HTTP_GET:
-                    request = this.client.get(path);
+                    request = this.client.get(uri);
                     break;
                 case KarHttpClient.HTTP_HEAD:
-                    request = this.client.head(path);
+                    request = this.client.head(uri);
                     break;
                 case KarHttpClient.HTTP_PATCH:
-                    request = this.client.patch(path);
+                    request = this.client.patch(uri);
                     break;
                 case KarHttpClient.HTTP_POST:
-                    request = this.client.post(path);
+                    request = this.client.post(uri);
                     break;
                 case KarHttpClient.HTTP_PUT:
-                    request = this.client.put(path);
+                    request = this.client.put(uri);
                     break;
                 default:
                     throw new UnsupportedOperationException("Unknown method type " + method + "in http call request");
             }
 
             request.putHeaders(headers);
+
+            ErrorConverter ec = ErrorConverter.create(result -> new KarSidecarError(result.response().statusCode()));
+            request.expect(ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ec));
 
             return request;
         }
