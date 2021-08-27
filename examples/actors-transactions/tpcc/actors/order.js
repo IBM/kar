@@ -104,7 +104,5 @@ class Order extends tp.TransactionParticipant {
   }
 }
 
-// Server setup: register actors with KAR and start express
-const app = express()
-app.use(sys.actorRuntime({ Order, NewOrder }))
-sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+exports.NewOrder = NewOrder
+exports.Order = Order

@@ -15,6 +15,7 @@
  */
 
 const { actor, sys } = require('kar-sdk')
+const { or } = require('mathjs')
 const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
 const verbose = process.env.VERBOSE
@@ -167,7 +168,7 @@ async function getTotalOrderAmount(oDetails) {
 }
 
 async function deliveryConsistencyCheck() {
-  var dId, district, dDetailsOld
+  var dId, district, dDetailsOld, flag = false
   for (let i = 1; i <= c.NUM_DISTRICTS; i++) {
     dId = 'd' + i
     district = actor.proxy('District', wId + ':' + dId)
@@ -177,9 +178,9 @@ async function deliveryConsistencyCheck() {
       // This implies either no order was placed in this district
       // or all orders in the district are delivered; skip district
       continue
-    } else { break}
+    } else { flag = true; break}
   }
-  if (dId == null) { return }
+  if (!flag) { return }
   const orderId = wId + ':' + dId + ':'+ 'o' + Number(dDetailsOld.lastDlvrOrd.val+1)
   const order = actor.proxy('Order', orderId)
   const oCId = await actor.call(order, 'get', 'cId')

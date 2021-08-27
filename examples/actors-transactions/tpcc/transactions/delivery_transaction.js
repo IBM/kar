@@ -79,7 +79,9 @@ class DeliveryTxn extends t.Transaction {
     for (let i in this.actorUpdates) {
       if (!i.startsWith('d')) { continue }
       const dDetails = this.actorUpdates[i].values
-      this.actorUpdates[i].update =  { lastDlvrOrd: dDetails.lastDlvrOrd + 1}
+      if (! (dDetails.nextOId == 1 || dDetails.lastDlvrOrd >= dDetails.nextOId - 1)) {
+        this.actorUpdates[i].update =  { lastDlvrOrd: dDetails.lastDlvrOrd + 1}
+      }
     }
   }
 

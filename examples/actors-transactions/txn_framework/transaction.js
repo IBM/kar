@@ -29,51 +29,24 @@ class Transaction {
     return await actor.state.get(this, 'commitComplete')
   }
 
-  async transact (prtpnts, operations) {
-    if (prtpnts.length != operations.length) {
-      throw new Error('Length of participants and of operations do not match.'+
-      'Please ensure they have a 1:1 mapping')
-    }
-    if (verbose) { console.log(`Begin transaction ${this.txnId}.`) }
-    const that = await actor.state.getAll(this)
-    if (that.commitComplete) {
-      return that.decision
-    }
-    let decision = that.decision
-    if (that.decision == null) {
-      try {
-        let votes = []
-        for (const i in prtpnts) {
-          votes.push(await actor.asyncCall(prtpnts[i], 'prepare', this.txnId, operations[i]))
-        }
-        decision = true
-        for (const i in votes) { decision = decision && await votes[i]() }
-        await actor.state.set(this, 'decision', decision)
-      } catch (error) {
-        console.log(error.toString())
-        // If decision is not already set, abort this txn as something went wrong.
-        if (await actor.state.get(this, 'decision') == null) {
-          decision = false
-        }
-      }
-    }
-    if (that.commitComplete == null) {
-      await actor.tell(this, 'sendCommitAsync', prtpnts, operations, decision)
-    }
-    if (verbose) { console.log(`End transaction ${this.txnId}.\n`) }
-    return decision
-  }
-
-  async prepareTxn(actorUpdates, methodName) {
+  async prepareTxn(actorUpdates, prepareFunc='prepare') {
+    /* actorUpdates is a map of thr form { 'actorName': { actr: <actor instance> } }. And prepareFunc
+    is txn specific prepare method with default 'prepare' method. This method parallely invokes
+    prepare of each actor of actorUpdates and fills in the values for each actor. The output is of
+    the form { 'actorName': { actr: <actor instance>, values: <values returned by prepare> } } */
     await actor.state.set(this, 'actorUpdates', actorUpdates)
     for (let i in actorUpdates) {
-      actorUpdates[i].values  = await actor.asyncCall(actorUpdates[i].actr, methodName, this.txnId)
+      actorUpdates[i].values  = await actor.asyncCall(actorUpdates[i].actr, prepareFunc, this.txnId)
     }
     for (let i in actorUpdates) { actorUpdates[i].values = await actorUpdates[i].values() }
     return actorUpdates
   }
 
   async sendCommitAsync(decision, commitFunc = 'commit') {
+    /* This method assumes the necessary actors and their updates are stored in Redis. It expects actorUpdates
+    to be a map of the form { 'actorName': { actr: <actor instance>, updated: <key-value updates> } }.
+    It parallely calls commitFunc commit method specified by the caller (or 'commit' by default). When all calls 
+    return, it sets 'commitComplete' and purges txn record on all participating actors. */
     const getVals = await Promise.all([actor.state.get(this, 'commitComplete'), actor.state.get(this, 'actorUpdates')])
     if (getVals[0]) { return }
     const actorUpdates = getVals[1]

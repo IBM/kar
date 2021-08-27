@@ -30,6 +30,8 @@ class TransactionParticipant {
   }
 
   async createVal(val) {
+    /* Each writable class field has a rw field to indicate if a txn is writing this field;
+    and a read-only array ro to indicate the list of txns only reading this field. */
     return { val: val, rw:null, ro:[] }
   }
 
@@ -37,6 +39,7 @@ class TransactionParticipant {
     return
   }
 
+/* Non-transaction get and put methods. These do not provide ACID gurantees. Used for testing purposes. */
   async get(key) {
     return this[key]
   }
@@ -64,12 +67,15 @@ class TransactionParticipant {
     }
     await actor.state.setMultiple(this, keyValueMap)
   }
+/* End of non-transaction get and put methods. */
 
   isRWField(key) {
+    /* Checks if a given field is a read-write field. */
     return (this[key].constructor == Object && 'val' in this[key])
   }
 
   async prepare(txnId, keys) {
+    /* A generic prepare most commonly used by actors. This prepare is only for read-write txns. */
     let localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     localDecision = this.checkForConflictRW(txnId, keys)
@@ -90,6 +96,8 @@ class TransactionParticipant {
   }
 
   checkForConflictRW(txnId, keys) {
+    /* Check if any key in the txn is being read or written by any other txn. If no
+    other txn is accessing these keys, update the metadata of the keys. */
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
@@ -109,6 +117,8 @@ class TransactionParticipant {
   }
 
   checkForConflictRO(txnId, keys) {
+    /* Check if any key in the txn is being written by any other txn. If no
+    other txn is writing these keys, update the metadata of the keys. */
     let localDecision = true
     for (const i in keys) {
       const key = keys[i]
@@ -128,6 +138,8 @@ class TransactionParticipant {
   }
 
   createPrepareValueAndWriteMap(localDecision, keys) {
+    /* Since prepares are also reads, create a map to return to the caller.
+    Create a map to write to Redis consisting of any updated metadata of keys. */
     let values = {}, writeMap = {}
     if (!localDecision) { return {values, writeMap} }
     for (const i in keys) {
@@ -142,7 +154,7 @@ class TransactionParticipant {
   }
 
   async writePrepared(txnId, prepared, dataMap) {
-    /* Write 'preparedTxns' along with application specific data atomically. */
+    /* Write 'preparedTxns' along with txn specific data atomically. */
     this.preparedTxns[txnId] = prepared
     const mapToWrite = Object.assign({ preparedTxns: this.preparedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)
@@ -173,6 +185,8 @@ class TransactionParticipant {
   }
 
   createCommitWriteMap(txnId, decision, update) {
+    /* Update the values of the fields based on txn decision. If the txn was prepared,
+    release 'locks' held by this txn of any data field. */
     let writeMap = {}
     if (decision) {
       for (let key in update) {
@@ -200,7 +214,7 @@ class TransactionParticipant {
   }
 
   async writeCommit(txnId, decision, dataMap) {
-    /* Write 'committedTxns' along with application specific data atomically. */
+    /* Write 'committedTxns' along with txn specific data atomically. */
     this.committedTxns[txnId] = decision
     const mapToWrite = Object.assign({ committedTxns: this.committedTxns }, dataMap)
     await actor.state.setMultiple(this, mapToWrite)

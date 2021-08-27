@@ -18,10 +18,6 @@ const express = require('express')
 const { actor, sys } = require('kar-sdk')
 var tp = require('../../txn_framework/txn_participant.js')
 var c = require('../constants.js')
-var w = require('./warehouse.js')
-Warehouse = w.Warehouse 
-var d = require('./district.js')
-District = d.District
 const verbose = process.env.VERBOSE
 
 class Customer extends tp.TransactionParticipant {
@@ -77,7 +73,4 @@ class Customer extends tp.TransactionParticipant {
   }
 }
 
-// Server setup: register actors with KAR and start express
-const app = express()
-app.use(sys.actorRuntime({ Warehouse, District, Customer }))
-sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+exports.Customer = Customer
