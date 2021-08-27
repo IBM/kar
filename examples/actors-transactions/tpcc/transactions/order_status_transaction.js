@@ -15,7 +15,7 @@
  */
 
 const { actor, sys } = require('kar-sdk')
-var t = require('../../transaction.js')
+var t = require('../../txn_framework/transaction.js')
 const verbose = process.env.VERBOSE
 
 class OrderStatusTxn extends t.Transaction {

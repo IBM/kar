@@ -15,7 +15,7 @@
  */
 
 const { actor, sys } = require('kar-sdk')
-var t = require('../../transaction.js')
+var t = require('../../txn_framework/transaction.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 

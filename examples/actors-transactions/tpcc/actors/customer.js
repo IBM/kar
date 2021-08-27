@@ -16,7 +16,7 @@
 
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
-var gp = require('../../generic_participant.js')
+var tp = require('../../txn_framework/txn_participant.js')
 var c = require('../constants.js')
 var w = require('./warehouse.js')
 Warehouse = w.Warehouse 
@@ -24,7 +24,7 @@ var d = require('./district.js')
 District = d.District
 const verbose = process.env.VERBOSE
 
-class Customer extends gp.GenericParticipant {
+class Customer extends tp.TransactionParticipant {
   async activate() {
     const that = await super.activate()
     this.cId = that.cId || this.kar.id

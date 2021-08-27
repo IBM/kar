@@ -14,11 +14,11 @@
  */
 
 const { actor } = require('kar-sdk')
-var gp = require('../../generic_participant.js')
+var tp = require('../../txn_framework/txn_participant.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
-class Warehouse extends gp.GenericParticipant {
+class Warehouse extends tp.TransactionParticipant {
   async activate () {
     const that = await super.activate()
     this.wId = that.wId || this.kar.id

@@ -16,11 +16,11 @@
 
 const express = require('express')
 const { actor, sys } = require('kar-sdk')
-var gp = require('../../generic_participant.js')
+var tp = require('../../txn_framework/txn_participant.js')
 var c = require('../constants.js')
 const verbose = process.env.VERBOSE
 
-class ItemStock extends gp.GenericParticipant {
+class ItemStock extends tp.TransactionParticipant {
   async activate() {
     const that = await super.activate()
     this.itemId = that.itemId || this.kar.id
