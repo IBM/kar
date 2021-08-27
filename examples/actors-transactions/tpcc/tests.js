@@ -85,16 +85,16 @@ async function deliveryTxn(wId, carrierId, deliveryDate) {
   if (verbose) { console.log("Delivery txn complete") }
 }
 
-async function stockLevelTxn() {
-  const wId = 'w' + await getRandomInt(1, c.NUM_WAREHOUSES)
-  const dId = 'd' + await getRandomInt(1, c.NUM_DISTRICTS)
-  const threshold = await getRandomInt(10, 20)
-
+async function stockLevelTxn(threshold) {
   const txnActor = actor.proxy('StockLevelTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.threshold = threshold
-  await actor.tell(txnActor, 'startTxn', txn)
+  console.time(`stockLevelTxn`)
+  const txnDetails = await actor.call(txnActor, 'startTxn', txn)
+  console.timeEnd(`stockLevelTxn`)
+  console.log('Transaction success status: ', txnDetails.decision)
   if (verbose) { console.log("Stock level txn complete") }
+  return txnDetails.lowStockCnt
 }
 
 async function newOrderConsistencyCheck() {
@@ -227,11 +227,40 @@ async function orderStatusConsistencyCheck() {
   }
 }
 
+async function stockLevelConsistencyCheck() {
+  const district = actor.proxy('District', wId + ':' + dId)
+  const nextOId = await actor.call(district, 'get', 'nextOId')
+
+  const index = nextOId.val - 1
+  let orderPromises = [], stockPromises = []
+  for (let i = index; i > index - 20 && i > 0; i-- ) {
+    const order = actor.proxy('Order', wId + ':' + dId + ':' + 'o' + Number(i))
+    orderPromises.push(actor.call(order, 'get', 'orderLines'))
+  }
+  const oDetails = await Promise.all(orderPromises)
+  for (let i in oDetails) {
+    const ol = oDetails[i].val
+    for (let key in ol) {
+      const stock = actor.proxy('ItemStock', ol[key].itemId + ':' + ol[key].supplyWId)
+      stockPromises.push(actor.call(stock, 'get', 'quantity'))
+    }
+  }
+  let lowStockCnt = 0, threshold = c.DEFAULT_QUANTITY
+  const stockDetails = await Promise.all(stockPromises)
+  for (let i in stockDetails) {
+    if (stockDetails[i].val < threshold) { lowStockCnt ++ }
+  }
+  const txnLowStockCnt = await stockLevelTxn(threshold)
+  console.assert(txnLowStockCnt == lowStockCnt, 
+    "The estimated low stock count and returned low stock count do not match.")
+}
+
 async function main () {
   await newOrderConsistencyCheck()
   await paymentConsistencyCheck()
   await deliveryConsistencyCheck()
   await orderStatusConsistencyCheck()
+  await stockLevelConsistencyCheck()
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

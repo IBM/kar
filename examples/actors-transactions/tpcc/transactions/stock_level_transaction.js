@@ -27,31 +27,27 @@ class StockLevelTxn extends t.Transaction {
     return [district, await actor.call(district, 'getMultiple', ['nextOId'])]
   }
 
-  async getOrderDetails(wId, dId, oId) {
-    const order = actor.proxy('Order', wId + ':' + dId + ':' + oId)
-    return [order, await actor.call(order, 'getMultiple', ['orderLines'])]
-  }
-
-  async getItemDetails(itemId, supplyWId) {
-    const itemStock = actor.proxy('ItemStock', itemId + ':' + supplyWId)
-    return [itemStock, await actor.call(itemStock, 'getMultiple', ['quantity'])]
-  }
-
   async startTxn(txn) {
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
-    let lowStockCnt = 0
+    let lowStockCnt = 0, orderPromises = [], stockPromises = []
     const index = dDetails[1].nextOId.val - 1
     for (let i = index; i > index - 20 && i > 0; i-- ) {
-      const oDetails = await this.getOrderDetails(txn.wId, txn.dId, 'o' + Number(i))
-      const olines = oDetails[1].orderLines.val
-      for (let key in olines) {
-        const itemId = olines[key].itemId
-        const supplyWId = olines[key].supplyWId
-        const itemDetails = await this.getItemDetails(itemId, supplyWId)
-        if (itemDetails[1].quantity.val < txn.threshold) { lowStockCnt ++ }
+      const order = actor.proxy('Order', txn.wId + ':' + txn.dId + ':' + 'o' + Number(i))
+      orderPromises.push(actor.call(order, 'get', 'orderLines'))
+    }
+    const oDetails = await Promise.all(orderPromises)
+    for (let i in oDetails) {
+      const ol = oDetails[i].val
+      for (let key in ol) {
+        const stock = actor.proxy('ItemStock', ol[key].itemId + ':' + ol[key].supplyWId)
+        stockPromises.push(actor.call(stock, 'get', 'quantity'))
       }
     }
-    return lowStockCnt
+    const stockDetails = await Promise.all(stockPromises)
+    for (let i in stockDetails) {
+      if (stockDetails[i].val < txn.threshold) { lowStockCnt ++ }
+    }
+    return {decision:true, lowStockCnt:lowStockCnt}
   }
 }
 

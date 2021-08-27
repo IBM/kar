@@ -15,13 +15,16 @@
  */
 
 const e = require('express')
+const math = require('mathjs')
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
 const verbose = process.env.VERBOSE
 const cIdRange = [2010, 3000]
-const warmUpTxns = 10
-const NUM_TXNS =  100
+const WARN_UP_TXNS = 10
+const NUM_TXNS =  200
+const CONCURRENCY = 20
+
 var txnMetadata = {
   'newOrder': {cnt: 0, success: 0, txns: {}},
   'payment': {cnt: 0, success: 0, txns: {}},
@@ -56,7 +59,7 @@ async function getKafkaRedisLatencies() {
 }
 
 async function warmUp() {
-  for (let i = 0; i < warmUpTxns; i++) {
+  for (let i = 0; i < WARN_UP_TXNS; i++) {
     const r = getRandomInt(1, 100)
     if (r < 44) { await newOrderTxn(true)}
     else if (r < 88) { await paymentTxn(true)}
@@ -127,16 +130,17 @@ async function orderStatusTxn(isWarmUp = false) {
   const cId = 'c' + getRandomInt(cIdRange[0], cIdRange[1])
 
   const txnId = uuidv4()
-  const txnActor = actor.proxy('OrderStatusTxn', )
+  const txnActor = actor.proxy('OrderStatusTxn', uuidv4())
   var txn = {}
   txn.wId = wId, txn.dId = dId, txn.cId = cId
   if (!isWarmUp) {
     txnMetadata.orderStatus.txns[txnId] = {}
     txnMetadata.orderStatus.txns[txnId].startTimer = getTimeNanoSec()
   }
-  await actor.call(txnActor, 'startTxn', txn)
+  const status = await actor.call(txnActor, 'startTxn', txn)
   if (!isWarmUp) {
     txnMetadata.orderStatus.txns[txnId].endTimer = getTimeNanoSec()
+    if (status.decision) { txnMetadata.orderStatus.success++ }
   }
   if (verbose) { console.log("Order status txn complete") }
 }
@@ -153,8 +157,10 @@ async function deliveryTxn(isWarmUp = false) {
     txnMetadata.delivery.txns[txnId] = {}
     txnMetadata.delivery.txns[txnId].startTimer = getTimeNanoSec()
   }
-  await actor.call(txnActor, 'startTxn', txn)
-  if (!isWarmUp) { txnMetadata.delivery.txns[txnId].endTimer = getTimeNanoSec() }
+  const success = await actor.call(txnActor, 'startTxn', txn)
+  if (!isWarmUp) { 
+    txnMetadata.delivery.txns[txnId].endTimer = getTimeNanoSec()
+    if (success) { txnMetadata.delivery.success++ } }
   if (verbose) { console.log("Delivery txn complete") }
 }
 
@@ -172,20 +178,14 @@ async function stockLevelTxn(isWarmUp = false) {
     txnMetadata.stockLevel.txns[txnId].startTimer = getTimeNanoSec()
   }
   await actor.call(txnActor, 'startTxn', txn)
-  if (!isWarmUp) { txnMetadata.stockLevel.txns[txnId].endTimer = getTimeNanoSec() }
+  if (!isWarmUp) { 
+    txnMetadata.stockLevel.txns[txnId].endTimer = getTimeNanoSec()
+    txnMetadata.stockLevel.success++ }
   if (verbose) { console.log("Stock level txn complete") }
 }
 
 async function getLatency(totalTime) {
-  var newOrderLatency = 0, paymentLatency = 0, totalLatency = 0, totalCnt = 0
-  for(const i in txnMetadata.newOrder.txns) {
-    const txn = txnMetadata.newOrder.txns[i]
-    newOrderLatency += (txn.endTimer - txn.startTimer)
-  }
-  for(const i in txnMetadata.payment.txns) {
-    const txn = txnMetadata.payment.txns[i]
-    paymentLatency += (txn.endTimer - txn.startTimer)
-  }
+  var totalLatency = 0, totalCnt = 0
   for(const i in txnMetadata) {
     for (const j in txnMetadata[i].txns) {
       const txn = txnMetadata[i].txns[j]
@@ -193,8 +193,6 @@ async function getLatency(totalTime) {
     }
     totalCnt += txnMetadata[i].cnt
   }
-  console.log('New Order Latency in ms: ', newOrderLatency/1000000/txnMetadata.newOrder.cnt)
-  console.log('Payment Latency in ms: ', paymentLatency/1000000/txnMetadata.payment.cnt)
   console.log('Total Latency in ms: ', totalLatency/1000000/totalCnt)
   console.log('Throughput :',  totalCnt/totalTime*1000000000)
 }
@@ -203,23 +201,26 @@ async function main () {
   await warmUp()
   await getKafkaRedisLatencies()
   const strt = getTimeNanoSec()
-  for (let i = 0; i < NUM_TXNS; i++) {
+  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
     const r = getRandomInt(1, 100)
-    if (r < 44) { await newOrderTxn(); txnMetadata.newOrder.cnt++ }
-    else if (r < 88) { await paymentTxn(); txnMetadata.payment.cnt++ }
-    else if (r < 92) { await orderStatusTxn(); txnMetadata.orderStatus.cnt++ }
-    else if (r < 96) { await deliveryTxn(); txnMetadata.delivery.cnt++ }
-    else { await stockLevelTxn(); txnMetadata.stockLevel.cnt++ }
+    let promises = []
+    for (let j = 0; j < CONCURRENCY; j++) {
+      const r = getRandomInt(1, 100)
+      if (r < 44) { promises.push(newOrderTxn()); txnMetadata.newOrder.cnt++ }
+      else if (r < 88) { promises.push(paymentTxn()); txnMetadata.payment.cnt++ }
+      else if (r < 92) { promises.push(orderStatusTxn()); txnMetadata.orderStatus.cnt++ }
+      else if (r < 96) { promises.push(deliveryTxn()); txnMetadata.delivery.cnt++ }
+      else { promises.push(stockLevelTxn()); txnMetadata.stockLevel.cnt++ }
+    }
+    await Promise.all(promises)
   }
   const end = getTimeNanoSec()
-
-  for ( const i in txnMetadata) {
-    console.log('Txn cnt of ', i , 'is', txnMetadata[i].cnt)
+  var successTotal = 0
+  for (const i in txnMetadata) {
+    console.log('Success cnt of', i , 'txn is', txnMetadata[i].success, ' out of ', txnMetadata[i].cnt)
+    successTotal += txnMetadata[i].success
   }
-  console.log(txnMetadata.payment.success + txnMetadata.newOrder.success, 'out of ',
-             (txnMetadata.newOrder.cnt + txnMetadata.payment.cnt), 'successful txns.')
-  console.log(txnMetadata.payment.success, 'out of ', (txnMetadata.payment.cnt), 'successful Payment txns.')
-  console.log(txnMetadata.newOrder.success, 'out of ', (txnMetadata.newOrder.cnt), 'successful NewOrder txns.')
+  console.log(successTotal, 'success out of', NUM_TXNS, 'txns.')
   await getLatency(end-strt)
   console.log('Terminating sidecar')
   await sys.shutdown()
