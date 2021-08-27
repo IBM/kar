@@ -45,7 +45,7 @@ kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
 In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
 # Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
+kar invoke -app dp Cafe Cafe+de+Flore seatTable 10 20
 ```
 
 ## Quakrus
@@ -61,5 +61,5 @@ kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn quarkus:dev
 In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
 # Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
+kar invoke -app dp Cafe Cafe+de+Flore seatTable 10 20
 ```

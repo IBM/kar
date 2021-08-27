@@ -361,11 +361,6 @@ public class KarSidecar {
     }
 
     private static String buildActorPath(String type, String id) {
-        try {
-            id = URLEncoder.encode(id, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            ex.printStackTrace();
-        }
         return KAR_API_CONTEXT_ROOT + "/actor/" + type + "/" + id;
     }
 
