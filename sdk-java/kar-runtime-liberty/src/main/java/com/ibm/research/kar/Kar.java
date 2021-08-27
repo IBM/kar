@@ -800,7 +800,7 @@ public class Kar {
 					return 0;
 				ActorUpdateResult result = update(actor, Collections.emptyList(), Collections.emptyMap(), updates,
 						Collections.emptyMap());
-				return result.removed;
+				return result.added;
 			}
 
 			/**

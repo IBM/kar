@@ -33,7 +33,7 @@ Cafe tracks its occupancy and generates messages when it seats new
 tables or when a sated Philosopher leaves.
 
 ## Open Liberty
-To run the example locally in Open Liberty, first change
+To run the example locally using Open Liberty, first change
 your working directory to the liberty sub-directory (`cd liberty`).
 
 Next compile and package the application by doing `mvn package`.
@@ -45,5 +45,21 @@ kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
 In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
 # Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
+kar invoke -app dp Cafe Cafe+de+Flore seatTable 10 20
+```
+
+## Quakrus
+To run the example locally using Quakrus, first change
+your working directory to the quarkus sub-directory (`cd quarkus`).
+
+Next compile and package the application by doing `mvn package`.
+
+Finally run the application by doing:
+```shell
+kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn quarkus:dev
+```
+In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
+```shell
+# Invite 10 Philosophers to a meal of 20 servings each
+kar invoke -app dp Cafe Cafe+de+Flore seatTable 10 20
 ```
