@@ -281,7 +281,7 @@ public class KarSidecar {
     }
 
     public HttpResponse<Buffer> actorDelete(String type, String id) {
-        String path = buildActorPath(type, id, null);
+        String path = buildActorPath(type, id);
         Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
         return uni.subscribeAsCompletionStage().join();
     }
