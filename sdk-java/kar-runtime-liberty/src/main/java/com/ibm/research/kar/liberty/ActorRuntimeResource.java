@@ -16,7 +16,13 @@
 
 package com.ibm.research.kar.liberty;
 
+import java.util.Map;
+
+import javax.json.Json;
 import javax.json.JsonArray;
+import javax.json.JsonBuilderFactory;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -27,25 +33,56 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.runtime.ActorInvokeResult;
 import com.ibm.research.kar.runtime.ActorManager;
+import com.ibm.research.kar.runtime.KarResponse;
 
 @Path("actor")
 public class ActorRuntimeResource {
+
+	private final static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+
+	private static Response buildResponse(KarResponse kr) {
+		ResponseBuilder rb = Response.status(kr.statusCode);
+		if (kr.statusCode != KarResponse.NO_CONTENT && kr.contentType != null) {
+			rb.type(kr.contentType);
+			if (kr.body instanceof ActorInvokeResult) {
+				ActorInvokeResult ar = (ActorInvokeResult) kr.body;
+				JsonObjectBuilder jb = factory.createObjectBuilder();
+				if (ar.error) {
+					jb.add("error", true);
+					if (ar.message != null) {
+						jb.add("message", ar.message);
+					}
+					if (ar.stack != null) {
+						jb.add("stack", ar.stack);
+					}
+				} else {
+					jb.add("value", ar.value == null ? JsonValue.NULL : (JsonValue) ar.value);
+				}
+				rb.entity(jb.build());
+			} else {
+				rb.entity(kr.body);
+			}
+		}
+		return rb.build();
+	}
 
 	@GET
 	@Path("{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
-		return ActorManager.activateInstanceIfNotPresent(type, id);
+		return buildResponse(ActorManager.activateInstanceIfNotPresent(type, id));
 	}
 
 	@DELETE
 	@Path("{type}/{id}")
 	public Response deleteActor(@PathParam("type") String type, @PathParam("id") String id) {
-		return ActorManager.deactivateInstanceIfPresent(type, id);
+		return buildResponse(ActorManager.deactivateInstanceIfPresent(type, id));
 	}
 
 	@HEAD
@@ -61,6 +98,14 @@ public class ActorRuntimeResource {
 	@Produces(Kar.KAR_ACTOR_JSON)
 	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id,
 			@PathParam("sessionid") String sessionid, @PathParam("path") String path, JsonArray args) {
-		return ActorManager.invokeActorMethod(type, id, sessionid, path, args);
+
+		// build arguments array for the actual invoke;
+		// the actor instance will be injected into args[0] inside ActorManager.invokeActorMethod.
+		Object[] actuals = new Object[args.size() + 1];
+		for (int i = 0; i < args.size(); i++) {
+			actuals[i + 1] = args.get(i);
+		}
+
+		return buildResponse(ActorManager.invokeActorMethod(type, id, sessionid, path, actuals));
 	}
 }

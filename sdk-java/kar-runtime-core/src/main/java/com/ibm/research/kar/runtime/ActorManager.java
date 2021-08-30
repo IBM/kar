@@ -27,15 +27,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import javax.json.Json;
-import javax.json.JsonArray;
-import javax.json.JsonBuilderFactory;
-import javax.json.JsonObject;
-import javax.json.JsonObjectBuilder;
-import javax.json.JsonValue;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -50,8 +41,6 @@ public class ActorManager {
 
 	private final static String LOG_PREFIX = "ActorManager.";
 	private final static Logger logger = Logger.getLogger(ActorManager.class.getName());
-	private final static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
-	private final static String KAR_ACTOR_JSON = "application/kar+json";
 
 	// This map is read only once it is initialized.
 	private static final HashMap<String, ActorType> actorTypes = new HashMap<>();
@@ -160,16 +149,16 @@ public class ActorManager {
 	 * @return A Response indicating success (200, 201) or an error condition (400,
 	 *         404)
 	 */
-	public static Response activateInstanceIfNotPresent(String type, String id) {
+	public static KarResponse activateInstanceIfNotPresent(String type, String id) {
 		if (actorInstances.get(actorInstanceKey(type, id)) != null) {
 			// Already exists; nothing to do.
-			return Response.status(Response.Status.OK).build();
+			return new KarResponse(KarResponse.OK);
 		}
 
 		// Find the ActorType
 		ActorType actorType = actorTypes.get(type);
 		if (actorType == null) {
-			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
+			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Not found: " + type + " actor " + id);
 		}
 
 		// Allocate an instance
@@ -182,7 +171,7 @@ public class ActorManager {
 			actorInstances.put(actorInstanceKey(type, id), actorObj);
 		} catch (Throwable t) {
 			logger.severe(LOG_PREFIX + "activateInstanceIfNotPresent: " + t.toString());
-			return Response.status(Response.Status.BAD_REQUEST).entity(t.toString()).build();
+			return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
 		}
 
 		// Call the optional activate method
@@ -191,9 +180,9 @@ public class ActorManager {
 			if (activate != null) {
 				activate.invoke(actorObj);
 			}
-			return Response.status(Response.Status.CREATED).entity("Created " + type + " actor " + id).build();
+			return new KarResponse(KarResponse.CREATED, KarResponse.TEXT_PLAIN, "Created " + type + " actor " + id);
 		} catch (Throwable t) {
-			return Response.status(Response.Status.BAD_REQUEST).entity(t.toString()).build();
+			return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
 		}
 	}
 
@@ -207,10 +196,10 @@ public class ActorManager {
 	 * @param id   The id of the actor instance to be deactivated
 	 * @return A Response indicating success (200) or an error condition (400, 404)
 	 */
-	public static Response deactivateInstanceIfPresent(String type, String id) {
+	public static KarResponse deactivateInstanceIfPresent(String type, String id) {
 		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
 		if (actorObj == null) {
-			return Response.status(Response.Status.NOT_FOUND).entity("Not found: " + type + " actor " + id).build();
+			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Not found: " + type + " actor " + id);
 		}
 
 		// Call the optional deactivate method
@@ -219,14 +208,14 @@ public class ActorManager {
 			try {
 				actorType.getDeactivateMethod().invoke(actorObj);
 			} catch (Throwable t) {
-				return Response.status(Response.Status.BAD_REQUEST).entity(t.toString()).build();
+				return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
 			}
 		}
 
 		// Actually remove the instance
 		actorInstances.remove(actorInstanceKey(type, id));
 
-		return Response.status(Response.Status.OK).build();
+		return new KarResponse(KarResponse.OK);
 	}
 
 
@@ -240,37 +229,31 @@ public class ActorManager {
 	 * @param args The arguments to the method
 	 * @return a Response containing the result of the method invocation
 	 */
-	public static Response invokeActorMethod(String type, String id, String sessionid, String path, JsonArray args) {
-
+	public static KarResponse invokeActorMethod(String type, String id, String sessionid, String path, Object[] actuals) {
 		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
 		if (actorObj == null) {
-			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
+			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Actor instance not found: " + type + "[" + id +"]");
 		}
 
+		int nParams = actuals.length-1; // Java convention "this" doesn't count as an argument
 		ActorType actorType = actorTypes.get(type);
-		MethodHandle actorMethod = actorType != null ? actorType.getRemoteMethods().get(path + ":" + args.size()) : null;
+		MethodHandle actorMethod = actorType != null ? actorType.getRemoteMethods().get(path + ":" + nParams) : null;
 		if (actorMethod == null) {
-			return Response.status(Response.Status.NOT_FOUND).type(MediaType.TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
+			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Method not found: " + type + "." + path + " with " + nParams + " arguments");
 		}
 
 		// set the session
 		actorObj.setSession(sessionid);
 
-		// build arguments array for method handle invoke
-		Object[] actuals = new Object[args.size() + 1];
+		// inject the actorObject into the argument array
 		actuals[0] = actorObj;
-		for (int i = 0; i < args.size(); i++) {
-			actuals[i + 1] = args.get(i);
-		}
 
 		try {
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null && actorMethod.type().returnType().equals(Void.TYPE)) {
-				return Response.status(Response.Status.NO_CONTENT).build();
+				return new KarResponse(KarResponse.NO_CONTENT);
 			} else {
-				JsonValue jv = result != null ? (JsonValue)result : JsonValue.NULL;
-				JsonObject ro = factory.createObjectBuilder().add("value", jv).build();
-				return Response.status(Response.Status.OK).type(KAR_ACTOR_JSON).entity(ro).build();
+				return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(result));
 			}
 		} catch (Throwable t) {
 			if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
@@ -285,9 +268,7 @@ public class ActorManager {
 					}
 				}
 			}
-			JsonObjectBuilder ro = factory.createObjectBuilder();
-			ro.add("error", true);
-			ro.add("message", t.toString());
+
 			StringWriter sw = new StringWriter();
 			PrintWriter pw = new PrintWriter(sw);
 			t.printStackTrace(pw);
@@ -295,8 +276,7 @@ public class ActorManager {
 			if (backtrace.length() > KarConfig.MAX_STACKTRACE_SIZE) {
 				backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
 			}
-			ro.add("stack", sw.toString());
-			return Response.status(Response.Status.OK).type(KAR_ACTOR_JSON).entity(ro.build()).build();
+			return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(t.getMessage(), sw.toString()));
 		}
 	}
 
