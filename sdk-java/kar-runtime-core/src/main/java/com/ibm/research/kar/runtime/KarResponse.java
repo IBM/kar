@@ -20,8 +20,8 @@ package com.ibm.research.kar.runtime;
  * A framework agnostic representation of an HttpResponse.
  */
 public class KarResponse {
-	public static final String KAR_ACTOR_JSON = "application/kar+json";
-  public static final String TEXT_PLAIN = "text/plain; ";
+	public static final String KAR_ACTOR_JSON = "application/kar+json; charset=utf-8";
+  public static final String TEXT_PLAIN = "text/plain; charset=utf-8";
 
   public static final int OK = 200;
   public static final int CREATED = 201;
