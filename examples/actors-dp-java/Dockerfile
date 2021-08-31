@@ -25,20 +25,17 @@ FROM $JAVA_BUILDER as builder
 WORKDIR /kar/app
 
 COPY pom.xml ./
-COPY liberty/pom.xml ./liberty/pom.xml
-COPY quarkus/pom.xml ./quarkus/pom.xml
 RUN mvn -q dependency:go-offline
 
 COPY src src
-COPY liberty/src ./liberty/src
 RUN mvn -q package
 
 #
 # Copy the artifacts to the runtime image
 #
 FROM $JAVA_RUNTIME
-COPY --from=builder --chown=default:root /kar/app/liberty/target/philosophers-liberty.war /opt/ol/wlp/usr/servers/defaultServer/apps
-COPY --from=builder --chown=default:root /kar/app/liberty/src/main/liberty/config/server.xml /opt/ol/wlp/usr/servers/defaultServer
+COPY --from=builder --chown=default:root /kar/app/target/philosophers-liberty.war /opt/ol/wlp/usr/servers/defaultServer/apps
+COPY --from=builder --chown=default:root /kar/app/src/main/liberty/config/server.xml /opt/ol/wlp/usr/servers/defaultServer
 
 #
 # Run Open Liberty configure script.
