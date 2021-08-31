@@ -28,27 +28,29 @@ import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Remote;
 
+import io.smallrye.mutiny.Uni;
+
 @Actor
 public class Cafe extends ActorSkeleton {
 	@Remote
-	public JsonValue occupancy(JsonString table) {
+	public Uni<JsonValue> occupancy(JsonString table) {
 		return Actors.call(Actors.ref("Table", table.getString()), "occupancy");
 	}
 
 	@Remote
-	public JsonString seatTable() {
+	public Uni<JsonString> seatTable() {
 		return seatTable(Json.createValue(5), Json.createValue(20));
 	}
 
 	@Remote
-	public JsonString seatTable(JsonNumber n, JsonNumber servings) {
+	public Uni<JsonString> seatTable(JsonNumber n, JsonNumber servings) {
 		JsonString requestId = Json.createValue(UUID.randomUUID().toString());
 		return seatTable(n, servings, requestId);
 	}
 
 	@Remote
-	public JsonString seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId);
-		return requestId;
+	public Uni<JsonString> seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
+		return Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId)
+			.chain(() -> Uni.createFrom().item(requestId));
 	}
 }

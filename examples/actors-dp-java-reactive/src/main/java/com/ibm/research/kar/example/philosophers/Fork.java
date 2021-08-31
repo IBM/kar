@@ -26,6 +26,8 @@ import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Remote;
 
+import io.smallrye.mutiny.Uni;
+
 @Actor
 public class Fork extends ActorSkeleton {
 	private static JsonString nobody = Json.createValue("nobody");
@@ -33,34 +35,37 @@ public class Fork extends ActorSkeleton {
 	private JsonString inUseBy;
 
 	@Activate
-	public void activate() {
-		JsonValue user = Actors.State.get(this, "inUseBy");
-		if (user instanceof JsonString) {
-			this.inUseBy = (JsonString)user;
-		} else {
-			this.inUseBy = nobody;
-		}
+	public Uni<Void> activate() {
+		return Actors.State.get(this, "inUseBy").chain(user -> {
+			if (user instanceof JsonString) {
+				this.inUseBy = (JsonString)user;
+			} else {
+				this.inUseBy = nobody;
+			}
+			return Uni.createFrom().nullItem();
+		});
 	}
 
 	@Remote
-	public JsonValue pickUp(JsonString who) {
+	public Uni<JsonValue> pickUp(JsonString who) {
 		if (this.inUseBy.equals(nobody)) {
 			this.inUseBy = who;
-			Actors.State.set(this, "inUseBy", who);
-			return JsonValue.TRUE;
+			return Actors.State.set(this, "inUseBy", who).chain(() -> Uni.createFrom().item(JsonValue.TRUE));
 		} else if (this.inUseBy.equals(who)) {
 			// can happen if pickUp is re-executed due to a failure
-			return JsonValue.TRUE;
+			return Uni.createFrom().item(JsonValue.TRUE);
 		} else {
-			return JsonValue.FALSE;
+			return  Uni.createFrom().item(JsonValue.FALSE);
 		}
 	}
 
 	@Remote
-	public void putDown(JsonString who) {
+	public Uni<Void> putDown(JsonString who) {
 		if (this.inUseBy.equals(who)) { // can be false if putDown is re-executed due to failure
 			this.inUseBy = nobody;
-			Actors.State.set(this, "inUseBy", this.inUseBy);
+			return Actors.State.set(this, "inUseBy", this.inUseBy);
+		} else {
+			return Uni.createFrom().nullItem();
 		}
 	}
 }
