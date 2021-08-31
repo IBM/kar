@@ -16,7 +16,6 @@
 package com.ibm.research.kar.quarkus;
 
 import java.util.Map;
-import java.util.concurrent.CompletionStage;
 
 import javax.json.JsonArray;
 import javax.json.JsonObject;
@@ -49,300 +48,215 @@ public class KarSidecar {
 
     private static String CONTENT_JSON = "application/json; charset=utf-8";
 
-    public HttpResponse<Buffer> tellDelete(String service, String path) {
+    public Uni<HttpResponse<Buffer>> tellDelete(String service, String path) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(true));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(true));
     }
 
-    public HttpResponse<Buffer> tellPatch(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> tellPatch(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPatch(path, params, headers(CONTENT_JSON, true));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPatch(path, params, headers(CONTENT_JSON, true));
     }
 
-    public HttpResponse<Buffer> tellPost(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> tellPost(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, params, headers(CONTENT_JSON, true));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, params, headers(CONTENT_JSON, true));
     }
 
-    public HttpResponse<Buffer> tellPut(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> tellPut(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, true));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, params, headers(CONTENT_JSON, true));
     }
 
-    public HttpResponse<Buffer> callDelete(String service, String path) {
+    public Uni<HttpResponse<Buffer>> callDelete(String service, String path) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> callGet(String service, String path) {
+    public Uni<HttpResponse<Buffer>> callGet(String service, String path) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, null, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, null, headers(false));
     }
 
-    public HttpResponse<Buffer> callHead(String service, String path) {
+    public Uni<HttpResponse<Buffer>> callHead(String service, String path) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callHead(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callHead(path, headers(false));
     }
 
-    public HttpResponse<Buffer> callOptions(String service, String path, JsonValue params) {
-        throw new UnsupportedOperationException();
+    public Uni<HttpResponse<Buffer>> callOptions(String service, String path, JsonValue params) {
+        // TODO: Should be able to do the low-level hhtpCall with the OPTIONS method
+        return Uni.createFrom().failure(new UnsupportedOperationException());
     }
 
-    public HttpResponse<Buffer> callPatch(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> callPatch(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPatch(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPatch(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> callPost(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> callPost(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> callPut(String service, String path, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> callPut(String service, String path, JsonValue params) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public CompletionStage<HttpResponse<Buffer>> callAsyncDelete(String service, String path) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncGet(String service, String path) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncHead(String service, String path) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callHead(path, headers(false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncOptions(String service, String path, JsonValue params) {
-        throw new UnsupportedOperationException();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncPatch(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPatch(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncPost(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public CompletionStage<HttpResponse<Buffer>> callAsyncPut(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public HttpResponse<Buffer> actorTell(String type, String id, String path, JsonArray args) {
+    public Uni<HttpResponse<Buffer>> actorTell(String type, String id, String path, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, true));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, true));
     }
 
-    public HttpResponse<Buffer> actorCall(String type, String id, String path, String session, JsonArray args) {
+    public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, String session, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, false), session);
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, false), session);
     }
 
-    public CompletionStage<HttpResponse<Buffer>> actorCallAsync(String type, String id, String path, String session, JsonArray args) {
-        path = buildActorPath(type, id, "call/"+path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, false), session);
-        return uni.subscribeAsCompletionStage().minimalCompletionStage();
-    }
-
-    public HttpResponse<Buffer> actorCancelReminders(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorCancelReminders(String type, String id) {
         String path = buildActorPath(type, id, "reminders");
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorCancelReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorCancelReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "reminders/"+reminderId);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetReminders(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorGetReminders(String type, String id) {
         String path = buildActorPath(type, id, "reminders");
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "reminders/"+reminderId);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorScheduleReminder(String type, String id, String reminderId, JsonObject params) {
+    public Uni<HttpResponse<Buffer>> actorScheduleReminder(String type, String id, String reminderId, JsonObject params) {
         String path = buildActorPath(type, id, "reminders/"+reminderId);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> actorGetWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorHeadWithSubkeyState(String type, String id, String key, String subkey) {
+    public Uni<HttpResponse<Buffer>> actorHeadWithSubkeyState(String type, String id, String key, String subkey) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        Uni<HttpResponse<Buffer>> uni = karClient.callHead(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callHead(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorSetWithSubkeyState(String type, String id, String key, String subkey, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> actorSetWithSubkeyState(String type, String id, String key, String subkey, JsonValue params) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> actorDeleteWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorDeleteWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetState(String type, String id, String key, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "state/" + key);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorHeadState(String type, String id, String key) {
+    public Uni<HttpResponse<Buffer>> actorHeadState(String type, String id, String key) {
         String path = buildActorPath(type, id, "state/" + key);
-        Uni<HttpResponse<Buffer>> uni = karClient.callHead(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callHead(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorSetState(String type, String id, String key, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> actorSetState(String type, String id, String key, JsonValue params) {
         String path = buildActorPath(type, id, "state/" + key);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> actorSubmapOp(String type, String id, String key, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> actorSubmapOp(String type, String id, String key, JsonValue params) {
         String path = buildActorPath(type, id, "state/" + key);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> actorDeleteState(String type, String id, String key, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorDeleteState(String type, String id, String key, boolean nilOnAbsent) {
         String path = buildActorPath(type, id, "state/" + key);
         Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, queryParamMap, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, queryParamMap, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetAllState(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorGetAllState(String type, String id) {
         String path = buildActorPath(type, id, "state");
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorUpdate(String type, String id, JsonValue params) {
+    public Uni<HttpResponse<Buffer>> actorUpdate(String type, String id, JsonValue params) {
         String path = buildActorPath(type, id, "state");
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, params, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> actorDeleteAllState(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorDeleteAllState(String type, String id) {
         String path = buildActorPath(type, id, "state");
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorDelete(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorDelete(String type, String id) {
         String path = buildActorPath(type, id);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetAllSubscriptions(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorGetAllSubscriptions(String type, String id) {
         String path = buildActorPath(type, id, "events");
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorCancelAllSubscriptions(String type, String id) {
+    public Uni<HttpResponse<Buffer>> actorCancelAllSubscriptions(String type, String id) {
         String path = buildActorPath(type, id, "events");
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorGetSubscription(String type, String id, String subscriptionId) {
+    public Uni<HttpResponse<Buffer>> actorGetSubscription(String type, String id, String subscriptionId) {
         String path = buildActorPath(type, id, "events/"+subscriptionId);
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorCancelSubscription(String type, String id, String subscriptionId) {
+    public Uni<HttpResponse<Buffer>> actorCancelSubscription(String type, String id, String subscriptionId) {
         String path = buildActorPath(type, id, "events/"+subscriptionId);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> actorSubscribe(String type, String id, String subscriptionId, JsonValue data) {
+    public Uni<HttpResponse<Buffer>> actorSubscribe(String type, String id, String subscriptionId, JsonValue data) {
         String path = buildActorPath(type, id, "events/"+subscriptionId);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, data, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, data, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> eventCreateTopic(String topic, JsonValue configuration) {
+    public Uni<HttpResponse<Buffer>> eventCreateTopic(String topic, JsonValue configuration) {
         String path = buildEventTopicPath(topic);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPut(path, configuration, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPut(path, configuration, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> eventDeleteTopic(String topic) {
+    public Uni<HttpResponse<Buffer>> eventDeleteTopic(String topic) {
         String path = buildEventTopicPath(topic);
-        Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callDelete(path, headers(false));
     }
 
-    public HttpResponse<Buffer> eventPublish(String topic, JsonValue event) {
+    public Uni<HttpResponse<Buffer>> eventPublish(String topic, JsonValue event) {
         String path = buildEventPublishPath(topic);
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, event, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, event, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> shutdown() {
+    public Uni<HttpResponse<Buffer>> shutdown() {
         String path = getSystemShutdownPath();
-        Uni<HttpResponse<Buffer>> uni = karClient.callPost(path, headers(CONTENT_JSON, false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callPost(path, headers(CONTENT_JSON, false));
     }
 
-    public HttpResponse<Buffer> systemInformation(String component) {
+    public Uni<HttpResponse<Buffer>> systemInformation(String component) {
         String path = getSystemInformationPath(component);
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
-        return uni.subscribeAsCompletionStage().join();
+        return karClient.callGet(path, headers(false));
     }
 
     /*
