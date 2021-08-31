@@ -23,7 +23,6 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar;
-import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
 
 import org.jboss.logging.Logger;
 
@@ -122,7 +121,7 @@ public class KarSidecar {
 
     public CompletionStage<HttpResponse<Buffer>> callAsyncGet(String service, String path) {
         path = buildServicePath(service, path);
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, null, headers(false));
+        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
         return uni.subscribeAsCompletionStage().minimalCompletionStage();
     }
 
@@ -187,7 +186,7 @@ public class KarSidecar {
 
     public HttpResponse<Buffer> actorGetReminders(String type, String id) {
         String path = buildActorPath(type, id, "reminders");
-        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, null, headers(false));
+        Uni<HttpResponse<Buffer>> uni = karClient.callGet(path, headers(false));
         return uni.subscribeAsCompletionStage().join();
     }
 
@@ -281,7 +280,7 @@ public class KarSidecar {
     }
 
     public HttpResponse<Buffer> actorDelete(String type, String id) {
-        String path = buildActorPath(type, id, null);
+        String path = buildActorPath(type, id);
         Uni<HttpResponse<Buffer>> uni = karClient.callDelete(path, headers(false));
         return uni.subscribeAsCompletionStage().join();
     }

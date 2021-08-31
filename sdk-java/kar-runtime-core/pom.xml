@@ -16,17 +16,6 @@
   <description>KAR Java core actor runtime</description>
 
   <dependencies>
-    <dependency>
-      <groupId>javax</groupId>
-      <artifactId>javaee-api</artifactId>
-      <version>${version.javaee-api}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>jakarta.ws.rs</groupId>
-      <artifactId>jakarta.ws.rs-api</artifactId>
-      <version>${version.jakarta.ws.rs-api}</version>
-    </dependency>
   </dependencies>
 
   <build>
