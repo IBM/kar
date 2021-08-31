@@ -33,12 +33,12 @@ Cafe tracks its occupancy and generates messages when it seats new
 tables or when a sated Philosopher leaves.
 
 ## Running the example
-To run the example locally using Open Liberty, first
+To run the example locally using Quakrus, first
 compile and package the application by doing `mvn package`.
 
 Next, run the application by doing:
 ```shell
-kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
+kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn quarkus:dev
 ```
 In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell

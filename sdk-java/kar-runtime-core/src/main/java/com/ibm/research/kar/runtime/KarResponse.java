@@ -34,7 +34,6 @@ public class KarResponse {
 
   public static final int INTERNAL_ERROR = 500;
 
-
   /**
    * The http status code for this response
    */
