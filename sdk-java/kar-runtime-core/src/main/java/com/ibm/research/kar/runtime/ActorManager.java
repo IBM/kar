@@ -137,6 +137,81 @@ public class ActorManager {
 		return actorTypes.containsKey(type);
 	}
 
+	/**
+	 * Get the ActorType for a type
+	 * @param type
+	 * @return the requested actor type or null
+	 */
+	public static ActorType getActorType(String type) {
+		return actorTypes.get(type);
+	}
+
+	/**
+	 * Get the requested instance if it is already in memory
+	 * @param type
+	 * @param id
+	 * @return The Actor instance or null
+	 */
+	public static ActorInstance getInstanceIfPresent(String type, String id) {
+		return actorInstances.get(actorInstanceKey(type, id));
+	}
+
+	/**
+	 * Remove the requested instance if it is in memory
+	 * @param type
+	 * @param id
+	 * @return true if remove, false otherwise
+	 */
+	public static boolean removeInstanceIfPresent(String type, String id) {
+		return actorInstances.remove(actorInstanceKey(type, id)) != null;
+	}
+
+	/**
+	 * Allocate a fresh actor instance of the given type and id; the activate method is not invoked.
+	 * @param type
+	 * @param id
+	 * @return
+	 */
+	public static ActorInstance allocateFreshInstance(ActorType type, String id) {
+		Class<ActorInstance> actorClass = type.getActorClass();
+		ActorInstance actorObj;
+		try {
+			actorObj = actorClass.getConstructor().newInstance();
+			actorObj.setType(type.getType());
+			actorObj.setId(id);
+			actorInstances.put(actorInstanceKey(type.getType(), id), actorObj);
+		} catch (Throwable t) {
+			logger.severe(LOG_PREFIX + "allocateFreshInstance: " + t.toString());
+			return null;
+		}
+		return actorObj;
+	}
+
+	public static String stacktraceToString(Throwable t) {
+		if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
+			// Elide all of the implementation details above us in the backtrace
+			StackTraceElement [] fullBackTrace = t.getStackTrace();
+			for (int i=0; i<fullBackTrace.length; i++) {
+				if (fullBackTrace[i].getClassName().equals(ActorManager.class.getName()) && fullBackTrace[i].getMethodName().equals("invokeActorMethod")) {
+					StackTraceElement[] reducedBackTrace = new StackTraceElement[i+1];
+					System.arraycopy(fullBackTrace, 0, reducedBackTrace, 0, i+1);
+					t.setStackTrace(reducedBackTrace);
+					break;
+				}
+			}
+		}
+
+		StringWriter sw = new StringWriter();
+		PrintWriter pw = new PrintWriter(sw);
+		t.printStackTrace(pw);
+		String backtrace = sw.toString();
+		if (backtrace.length() > KarConfig.MAX_STACKTRACE_SIZE) {
+			backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
+		}
+		return backtrace;
+	}
+
+
 
 	/**
 	 * Activate an actor instance if it is not already in memory. If the specified
@@ -149,6 +224,7 @@ public class ActorManager {
 	 * @return A Response indicating success (200, 201) or an error condition (400,
 	 *         404)
 	 */
+	@Deprecated
 	public static KarResponse activateInstanceIfNotPresent(String type, String id) {
 		if (actorInstances.get(actorInstanceKey(type, id)) != null) {
 			// Already exists; nothing to do.
@@ -196,6 +272,7 @@ public class ActorManager {
 	 * @param id   The id of the actor instance to be deactivated
 	 * @return A Response indicating success (200) or an error condition (400, 404)
 	 */
+	@Deprecated
 	public static KarResponse deactivateInstanceIfPresent(String type, String id) {
 		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
 		if (actorObj == null) {
@@ -229,6 +306,7 @@ public class ActorManager {
 	 * @param args The arguments to the method
 	 * @return a Response containing the result of the method invocation
 	 */
+	@Deprecated
 	public static KarResponse invokeActorMethod(String type, String id, String sessionid, String path, Object[] actuals) {
 		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
 		if (actorObj == null) {
@@ -256,27 +334,8 @@ public class ActorManager {
 				return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(result));
 			}
 		} catch (Throwable t) {
-			if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
-				// Elide all of the implementation details above us in the backtrace
-				StackTraceElement [] fullBackTrace = t.getStackTrace();
-				for (int i=0; i<fullBackTrace.length; i++) {
-					if (fullBackTrace[i].getClassName().equals(ActorManager.class.getName()) && fullBackTrace[i].getMethodName().equals("invokeActorMethod")) {
-						StackTraceElement[] reducedBackTrace = new StackTraceElement[i+1];
-						System.arraycopy(fullBackTrace, 0, reducedBackTrace, 0, i+1);
-						t.setStackTrace(reducedBackTrace);
-						break;
-					}
-				}
-			}
-
-			StringWriter sw = new StringWriter();
-			PrintWriter pw = new PrintWriter(sw);
-			t.printStackTrace(pw);
-			String backtrace = sw.toString();
-			if (backtrace.length() > KarConfig.MAX_STACKTRACE_SIZE) {
-				backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
-			}
-			return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(t.getMessage(), sw.toString()));
+			String backtrace = stacktraceToString(t);
+			return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(t.getMessage(), backtrace));
 		}
 	}
 
