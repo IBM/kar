@@ -17,92 +17,79 @@
 const { actor, sys } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
 
-const numPrtpnts = 2
-const numTxns = 10
+const NUM_ACCTS = 1000
+const ACCTS_PER_TXN = 2
+const NUM_TXNS = 200
+const CONCURRENCY = 20
+var txns = {}, successCnt = 0
 
-async function functionalTest(prtpnts) {
-  let success = false
-  for (let i = 0; i < numTxns; i++) {
-    const txn1 = actor.proxy('Transaction', uuidv4())
-    let operations = []
-    for (let i = 0; i < prtpnts.length; i++) {
-      let sign = (i%2 == 0)
-      let op = (sign ? 10: -10)
-      operations.push(op)
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max + 1 - min) + min);
+}
+
+function getTimeNanoSec() {
+  var hrTime = process.hrtime()
+  return (hrTime[0] * 1000000000 + hrTime[1])
+}
+
+async function warmUp() {
+  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
+    let promises = []
+    for (let j = 0; j < CONCURRENCY; j++) {
+      promises.push(transfer(true))
     }
-    // let operations = [10, 20, -10, -10, -10]
-    success = await actor.call(txn1, 'transact', prtpnts, operations)
-    console.log('\nTransaction success status:', success)
-    await new Promise(r => setTimeout(r, 1000));
-    for (let j=1; j <= prtpnts.length; j++) {
-        console.log('Participant ', j , ': Available Balance =', await actor.call(prtpnts[j-1], 'getAvailableBalance'), 
-        'Exact Balance = ', await actor.call(prtpnts[j-1], 'getExactBalance'))
-    }
-    console.log('Transaction completion status: ', await actor.call(txn1, 'txnComplete'), '\n')
-    
-    // Attempt to transfer more than current balance of one of the participants. 
-    // That participant's prepare fails, aborting the transaction.
-    const txn2 = actor.proxy('Transaction', uuidv4())
-    const prtpntBalance = await actor.call(prtpnts[numPrtpnts-2], 'getAvailableBalance')
-    operations = [prtpntBalance+1, -(prtpntBalance+1)]
-    success = await actor.call(txn2, 'transact', prtpnts, operations)
-    console.log('Transaction success status:', success)
-    for (let j=1; j <= prtpnts.length; j++) {
-        console.log('Participant ', j , ': Available Balance =', await actor.call(prtpnts[j-1], 'getAvailableBalance'), 
-        'Exact Balance = ', await actor.call(prtpnts[j-1], 'getExactBalance'))
-    }
-    console.log('Transaction completion status: ', await actor.call(txn2, 'txnComplete'), '\n')
+    await Promise.all(promises)
   }
 }
 
-async function consistencyTest(prtpnts) {
-  let success1 = false, success2 = false
-  for (let i = 0; i < numTxns; i++) {
-    const txn1 = actor.proxy('Transaction', uuidv4())
-    const txn2 = actor.proxy('Transaction', uuidv4())
-  
-    let prtpntBalance = await actor.call(prtpnts[numPrtpnts-1], 'getAvailableBalance')
-    let operations = [prtpntBalance-0.8*prtpntBalance, -(prtpntBalance-0.8*prtpntBalance)]
-    success1 = await actor.tell(txn1, 'transact', prtpnts, operations)
-
-    // prtpntBalance = await actor.tell(prtpnts[numPrtpnts-1], 'getAvailableBalance')
-    operations = [prtpntBalance/1000, -(prtpntBalance/1000)]
-    success2 = await actor.tell(txn2, 'transact', prtpnts, operations)
-    console.log('\nTransaction success status:', success1, success2)
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    for (let j=1; j <= prtpnts.length; j++) {
-        console.log('Participant ', j , ': Available Balance =', await actor.call(prtpnts[j-1], 'getAvailableBalance'), 
-        'Exact Balance = ', await actor.call(prtpnts[j-1], 'getExactBalance'))
-    }
-    // console.log('Transaction completion status: ', await actor.call(txn1, 'txnComplete'), '\n')
-    
-    // // Attempt to transfer more than current balance of one of the participants. 
-    // // That participant's prepare fails, aborting the transaction.
-    
-    // operations = [prtpntBalance/1000, -(prtpntBalance/1000)]
-    
-    // console.log('Transaction success status:', success)
-    // for (let j=1; j <= prtpnts.length; j++) {
-    //     console.log('Participant ', j , ': Available Balance =', await actor.call(prtpnts[j-1], 'getAvailableBalance'), 
-    //     'Exact Balance = ', await actor.call(prtpnts[j-1], 'getExactBalance'))
-    // }
-    // console.log('Transaction completion status: ', await actor.call(txn2, 'txnComplete'), '\n')
+async function transfer(isWarmUp=false) {
+  let success = false, accts = []
+  for(let j = 0;; j++) {
+    const a = getRandomInt(1, NUM_ACCTS)
+    if(accts.includes('a'+a)) { continue }
+    accts.push('a'+a)
+    if (accts.length == ACCTS_PER_TXN) { break }
   }
+  const amt = getRandomInt(10, 100)
+  const txnId = uuidv4()
+  const txn = actor.proxy('MoneyTransfer', txnId)
+  let operations = []
+  for (let i = 0; i < accts.length; i++) {
+    let op = ((i%2 == 0) ? amt: -amt)
+    operations.push(op)
+  }
+  if (!isWarmUp) {
+    txns[txnId] = {}
+    txns[txnId].startTimer = getTimeNanoSec()
+  }
+  success = await actor.call(txn, 'startTxn', accts, operations)
+  if (!isWarmUp) { 
+    txns[txnId].endTimer = getTimeNanoSec()
+    if (success) { successCnt++ } }
+} 
+
+async function getLatency(totalTime) {
+  var totalLatency = 0
+  for(const i in txns) {
+    totalLatency += (txns[i].endTimer - txns[i].startTimer)
+  }
+  console.log('Total Latency in ms: ', totalLatency/1000000/NUM_TXNS)
+  console.log('Throughput :',  NUM_TXNS/totalTime*1000000000)
 }
 
 async function main () {
-  let prtpnts = []
-  for (let i = 1; i <= numPrtpnts; i++ ) {
-    const actorName = 'Participant' + i
-    const prtpnt = actor.proxy(actorName, actorName + ':id' + i)
-    prtpnts.push(prtpnt)
-    await actor.call(prtpnt, 'setBalance', 5000)
-    console.log('Participant ', i , ': Available Balance =', await actor.call(prtpnt, 'getAvailableBalance'), 
-    'Exact Balance = ', await actor.call(prtpnt, 'getExactBalance'))
+  await warmUp()
+  const strt = getTimeNanoSec()
+  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
+    let promises = []
+    for (let j = 0; j < CONCURRENCY; j++) {
+      promises.push(transfer())
+    }
+    await Promise.all(promises)
   }
-  // await functionalTest(prtpnts)
-  await consistencyTest(prtpnts)
-
+  const end = getTimeNanoSec()
+  console.log(successCnt, 'success out of', NUM_TXNS, 'txns.')
+  await getLatency(end-strt)
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

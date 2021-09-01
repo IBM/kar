@@ -160,6 +160,10 @@ class TransactionParticipant {
     await actor.state.setMultiple(this, mapToWrite)
   }
 
+  isLocalDecisionTrue(txnId) {
+    return this.preparedTxns[txnId]
+  }
+
   async commit(txnId, decision, update) {
     let continueCommit = await this.isTxnAlreadyCommitted(txnId)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
