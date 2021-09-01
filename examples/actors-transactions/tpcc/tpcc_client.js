@@ -21,9 +21,9 @@ const { v4: uuidv4 } = require('uuid')
 var c = require('./constants.js')
 const verbose = process.env.VERBOSE
 const cIdRange = [2010, 3000]
-const WARN_UP_TXNS = 10
+const WARM_UP_TXNS = 100
 const NUM_TXNS =  200
-const CONCURRENCY = 20
+const CONCURRENCY = 15
 
 var txnMetadata = {
   'newOrder': {cnt: 0, success: 0, txns: {}},
@@ -59,13 +59,17 @@ async function getKafkaRedisLatencies() {
 }
 
 async function warmUp() {
-  for (let i = 0; i < WARN_UP_TXNS; i++) {
-    const r = getRandomInt(1, 100)
-    if (r < 44) { await newOrderTxn(true)}
-    else if (r < 88) { await paymentTxn(true)}
-    else if (r < 92) { await orderStatusTxn(true)}
-    else if (r < 96) { await deliveryTxn(true)}
-    else { await stockLevelTxn(true)}
+  for (let i = 0; i < WARM_UP_TXNS/CONCURRENCY; i++) {
+    let promises = []
+    for (let j = 0; j < CONCURRENCY; j++) {
+      const r = getRandomInt(1, 100)
+      if (r < 44) { promises.push(newOrderTxn(true)) }
+      else if (r < 88) { promises.push(paymentTxn(true)) }
+      else if (r < 92) { promises.push(orderStatusTxn(true)) }
+      else if (r < 96) { promises.push(deliveryTxn(true)) }
+      else { promises.push(stockLevelTxn(true)) }
+    }
+    await Promise.all(promises)
   }
 }
 
@@ -197,23 +201,26 @@ async function getLatency(totalTime) {
   console.log('Throughput :',  totalCnt/totalTime*1000000000)
 }
 
+async function sendTxns() {
+  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
+    const r = getRandomInt(1, 100)
+    if (r < 44) { await newOrderTxn(); txnMetadata.newOrder.cnt++ }
+    else if (r < 88) { await paymentTxn(); txnMetadata.payment.cnt++ }
+    else if (r < 92) { await orderStatusTxn(); txnMetadata.orderStatus.cnt++ }
+    else if (r < 96) { await deliveryTxn(); txnMetadata.delivery.cnt++ }
+    else { await stockLevelTxn(); txnMetadata.stockLevel.cnt++ }
+  }
+}
+
 async function main () {
   await warmUp()
   await getKafkaRedisLatencies()
   const strt = getTimeNanoSec()
-  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
-    const r = getRandomInt(1, 100)
-    let promises = []
-    for (let j = 0; j < CONCURRENCY; j++) {
-      const r = getRandomInt(1, 100)
-      if (r < 44) { promises.push(newOrderTxn()); txnMetadata.newOrder.cnt++ }
-      else if (r < 88) { promises.push(paymentTxn()); txnMetadata.payment.cnt++ }
-      else if (r < 92) { promises.push(orderStatusTxn()); txnMetadata.orderStatus.cnt++ }
-      else if (r < 96) { promises.push(deliveryTxn()); txnMetadata.delivery.cnt++ }
-      else { promises.push(stockLevelTxn()); txnMetadata.stockLevel.cnt++ }
-    }
-    await Promise.all(promises)
+  let promises = []
+  for (let j = 0; j < CONCURRENCY; j++) {
+    promises.push(sendTxns())
   }
+  await Promise.all(promises)
   const end = getTimeNanoSec()
   var successTotal = 0
   for (const i in txnMetadata) {

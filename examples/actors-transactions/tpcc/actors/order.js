@@ -90,15 +90,19 @@ class Order extends tp.TransactionParticipant {
 
   async prepareDelivery(txnId) {
     const keys = ['cId', 'dId', 'orderLines', 'carrierId']
-    return await this.prepare(txnId, keys)
+    var localDecision = false
+    try {
+      localDecision = await this.prepare(txnId, keys)
+    } catch {}
+    return localDecision
   }
 
   async prepareOrderStatus(txnId) {
     const keys = ['entryDate', 'carrierId', 'orderLines']
     let localDecision = await super.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
-    localDecision = await this.checkForConflictRO(txnId, keys)
-    const maps = await this.createPrepareValueAndWriteMap(localDecision, keys)
+    localDecision = this.checkForConflictRO(txnId, keys)
+    const maps = this.createPrepareValueAndWriteMap(localDecision, keys)
     await this.writePrepared(txnId, localDecision, maps.writeMap)
     return maps.values
   }
