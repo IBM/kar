@@ -167,7 +167,7 @@ public class ActorEndpoints {
 						System.out.println("Async return of "+res+" for "+type+"."+path);
 						JsonObjectBuilder jb = factory.createObjectBuilder();
 						jb.add("value", (JsonValue)res);
-						Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build()).build();
+						Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 						return Uni.createFrom().item(resp);
 					}
 				});
@@ -175,7 +175,7 @@ public class ActorEndpoints {
 				System.out.println("return of "+result+" for "+type+"."+path);
 				JsonObjectBuilder jb = factory.createObjectBuilder();
 				jb.add("value", (JsonValue)result);
-				Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build()).build();
+				Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
@@ -187,7 +187,7 @@ public class ActorEndpoints {
 				jb.add("message", t.getMessage());
 			}
 			jb.add("stack", ActorManager.stacktraceToString(t));
-			Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build()).build();
+			Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 			return Uni.createFrom().item(resp);
 		}
 	}

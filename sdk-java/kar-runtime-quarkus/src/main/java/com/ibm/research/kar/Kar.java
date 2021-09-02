@@ -80,12 +80,8 @@ public class Kar {
 		String contentType = response.getHeader("Content-Type");
 		if (contentType == null) {
 			return JsonValue.NULL;
-		} else if (contentType.equals(KAR_ACTOR_JSON) || contentType.equals(MediaType.APPLICATION_JSON)) {
-			System.out.println("About to decode "+response.bodyAsString());
-			JsonValue tmp = readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
-			System.out.println("\t:"+tmp);
-			System.out.println("\t:"+tmp.getClass());
-			return tmp;
+		} else if (contentType.equals(KarResponse.KAR_ACTOR_JSON) || contentType.equals(MediaType.APPLICATION_JSON)) {
+			return readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
 		} else if (contentType.equals(MediaType.TEXT_PLAIN)) {
 			return response.bodyAsString();
 		} else {
@@ -392,7 +388,7 @@ public class Kar {
 		// result of the method (or a Uni with a failure that propagates the exception)
 		private static Uni<JsonValue> callProcessResponse(HttpResponse<Buffer> response, ActorRef actor, String path) {
 			if (response.statusCode() == Status.OK.getStatusCode()) {
-			JsonObject o = ((JsonValue)toValue(response)).asJsonObject();
+				JsonObject o = ((JsonValue)toValue(response)).asJsonObject();
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
 					Throwable cause = o.containsKey("stack") ? new Throwable(o.getString("stack")) : null;
@@ -400,7 +396,7 @@ public class Kar {
 					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this dummy exception...the real stack is in the msg.
 					return Uni.createFrom().failure(new ActorMethodInvocationException(message, cause));
 				} else {
-					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.getValue("value") : JsonValue.NULL);
+					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.get("value") : JsonValue.NULL);
 				}
 			} else if (response.statusCode() == Status.NOT_FOUND.getStatusCode()) {
 				String msg = response.bodyAsString();
