@@ -350,7 +350,7 @@ public class KarSidecar {
             LOG.info("Using KAR port " + karPort);
             // configure client with sidecar and port coordinates
             WebClientOptions options = new WebClientOptions().setDefaultHost(KarHttpClient.KAR_DEFAULT_SIDECAR_HOST)
-                    .setDefaultPort(karPort);
+                .setDefaultPort(karPort);
 
             String useHttp2 = System.getProperty("kar.http.http2");
             LOG.info("Property useHttp2 = " + useHttp2);

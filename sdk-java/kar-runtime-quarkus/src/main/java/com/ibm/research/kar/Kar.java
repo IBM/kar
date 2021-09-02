@@ -16,6 +16,7 @@
 
 package com.ibm.research.kar;
 
+import java.io.StringReader;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ import javax.json.JsonBuilderFactory;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.JsonReaderFactory;
 import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.MediaType;
@@ -59,6 +61,7 @@ public class Kar {
 
 	private static KarSidecar sidecar = instantiateSidecar();
 	private static final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+	private static final JsonReaderFactory readerFactory = Json.createReaderFactory(Map.of());
 
 
 	private static KarSidecar instantiateSidecar() {
@@ -73,45 +76,21 @@ public class Kar {
 		return ja.build();
 	}
 
-	private static JsonValue toJavaxJson(Object val) {
-		if (val instanceof javax.json.JsonValue) {
-			return (JsonValue)val;
-		} else if (val instanceof io.vertx.core.json.JsonObject) {
-			io.vertx.core.json.JsonObject vjo = (io.vertx.core.json.JsonObject)val;
-			JsonObjectBuilder b = Json.createObjectBuilder();
-			vjo.forEach(e -> b.add(e.getKey(), toJavaxJson(e.getValue())));
-			return b.build();
-		} else if (val instanceof io.vertx.core.json.JsonArray) {
-			JsonArrayBuilder b = Json.createArrayBuilder();
-			logger.severe("Unsupported type in toJavaxJson: "+val.getClass());
-			return b.build();
-		} else if (val instanceof String) {
-			return Json.createValue((String)val);
-		} else if (val instanceof Number) {
-			return Json.createValue(((Number)val).doubleValue());
-		} else if (val instanceof Boolean) {
-			return ((Boolean)val).booleanValue() ? JsonValue.TRUE : JsonValue.FALSE;
-		} else {
-			logger.severe("Unsupported type in toJavaxJson: "+val.getClass());
-			return JsonValue.NULL;
-		}
-	}
-
 	private static Object toValue(HttpResponse<Buffer> response) {
 		String contentType = response.getHeader("Content-Type");
 		if (contentType == null) {
 			return JsonValue.NULL;
 		} else if (contentType.equals(KAR_ACTOR_JSON) || contentType.equals(MediaType.APPLICATION_JSON)) {
-			return response.body().toJson();
+			System.out.println("About to decode "+response.bodyAsString());
+			JsonValue tmp = readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
+			System.out.println("\t:"+tmp);
+			System.out.println("\t:"+tmp.getClass());
+			return tmp;
 		} else if (contentType.equals(MediaType.TEXT_PLAIN)) {
 			return response.bodyAsString();
 		} else {
 			return JsonValue.NULL;
 		}
-	}
-
-	private static io.vertx.core.json.JsonObject toVertxJsonObject(HttpResponse<Buffer> response) {
-		return response.bodyAsJsonObject();
 	}
 
 	private static int toInt(HttpResponse<Buffer> response) {
@@ -413,7 +392,7 @@ public class Kar {
 		// result of the method (or a Uni with a failure that propagates the exception)
 		private static Uni<JsonValue> callProcessResponse(HttpResponse<Buffer> response, ActorRef actor, String path) {
 			if (response.statusCode() == Status.OK.getStatusCode()) {
-				io.vertx.core.json.JsonObject o = toVertxJsonObject(response);
+			JsonObject o = ((JsonValue)toValue(response)).asJsonObject();
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
 					Throwable cause = o.containsKey("stack") ? new Throwable(o.getString("stack")) : null;
@@ -421,7 +400,7 @@ public class Kar {
 					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this dummy exception...the real stack is in the msg.
 					return Uni.createFrom().failure(new ActorMethodInvocationException(message, cause));
 				} else {
-					return Uni.createFrom().item(o.containsKey("value") ? toJavaxJson(o.getValue("value")) : JsonValue.NULL);
+					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.getValue("value") : JsonValue.NULL);
 				}
 			} else if (response.statusCode() == Status.NOT_FOUND.getStatusCode()) {
 				String msg = response.bodyAsString();
@@ -559,7 +538,7 @@ public class Kar {
 			 */
 			public static Uni<JsonValue> get(ActorRef actor, String key) {
 				return sidecar.actorGetState(actor.getType(), actor.getId(), key, true)
-					.chain(response -> Uni.createFrom().item(toJavaxJson(toValue(response))))
+					.chain(response -> Uni.createFrom().item((JsonValue)toValue(response)))
 					.onFailure().recoverWithItem(JsonValue.NULL);
 			}
 
@@ -571,7 +550,7 @@ public class Kar {
 			 */
 			public static Uni<Map<String, JsonValue>> getAll(ActorRef actor) {
 				return sidecar.actorGetAllState(actor.getType(), actor.getId())
-					.chain(response -> Uni.createFrom().item((Map<String, JsonValue>)toJavaxJson(toValue(response))))
+					.chain(response -> Uni.createFrom().item((Map<String, JsonValue>)toValue(response)))
 					.onFailure().recoverWithItem(Collections.emptyMap());
 			}
 
@@ -718,7 +697,7 @@ public class Kar {
 				JsonObject params = requestBuilder.build();
 				return sidecar.actorUpdate(actor.getType(), actor.getId(), params)
 					.chain(response -> {
-						JsonObject responseObject = toJavaxJson(toValue(response)).asJsonObject();
+						JsonObject responseObject = ((JsonValue)toValue(response)).asJsonObject();
 						int added = responseObject.getInt("added");
 						int removed = responseObject.getInt("removed");
 						return Uni.createFrom().item(new ActorUpdateResult(added, removed));
@@ -740,7 +719,7 @@ public class Kar {
 				 */
 				public static Uni<JsonValue> get(ActorRef actor, String submap, String key) {
 					return sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key, true)
-						.chain(response -> Uni.createFrom().item(toJavaxJson(toValue(response))))
+						.chain(response -> Uni.createFrom().item((JsonValue)toValue(response)))
 						.onFailure().recoverWithItem(JsonValue.NULL);
 				}
 
@@ -756,7 +735,7 @@ public class Kar {
 					jb.add("op", Json.createValue("get"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-						.chain(response -> Uni.createFrom().item((Map<String,JsonValue>)toJavaxJson(toValue(response))))
+						.chain(response -> Uni.createFrom().item((Map<String, JsonValue>)toValue(response)))
 						.onFailure().recoverWithItem(Collections.emptyMap());
 				}
 
@@ -865,7 +844,7 @@ public class Kar {
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
 						.chain(response -> {
-							Object[] jstrings = toJavaxJson(toValue(response)).asJsonArray().toArray();
+							Object[] jstrings = ((JsonValue)toValue(response)).asJsonArray().toArray();
 							String[] ans = new String[jstrings.length];
 							for (int i = 0; i < jstrings.length; i++) {
 								ans[i] = ((JsonValue) jstrings[i]).toString();
