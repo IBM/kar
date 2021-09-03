@@ -37,7 +37,6 @@ import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReaderFactory;
 import javax.json.JsonValue;
-import javax.json.stream.JsonParsingException;
 
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
@@ -337,7 +336,9 @@ public class Kar {
 		 * @param args  The arguments with which to invoke the actor method.
 		 */
 		public static Uni<Void> tell(ActorRef actor, String path, JsonValue... args) {
-			return sidecar.actorTell(actor.getType(), actor.getId(), path, packArgs(args)).chain(()->Uni.createFrom().nullItem());
+			return sidecar.actorTell(actor.getType(), actor.getId(), path, packArgs(args))
+				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
+				.chain(()->Uni.createFrom().nullItem());
 		}
 
 		/**
@@ -352,6 +353,7 @@ public class Kar {
 		 */
 		public static Uni<JsonValue> call(ActorInstance caller, ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args))
+				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
 				.chain(response -> callProcessResponse(response, actor, path));
 		}
 
@@ -367,6 +369,7 @@ public class Kar {
 		 */
 		public static Uni<JsonValue> call(String session, ActorRef actor, String path, JsonValue... args) {
 				return sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args))
+					.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
 					.chain(response -> callProcessResponse(response, actor, path));
 		}
 
@@ -381,6 +384,7 @@ public class Kar {
 		 */
 		public static Uni<JsonValue> call(ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args))
+				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
 				.chain(response -> callProcessResponse(response, actor, path));
 		}
 
@@ -391,26 +395,34 @@ public class Kar {
 				JsonObject o = toJsonValue(response).asJsonObject();
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
-					Throwable cause = o.containsKey("stack") ? new Throwable(o.getString("stack")) : null;
-
+					Throwable cause = new Throwable(o.containsKey("stack") ? o.getString("stack") : "<no stack>");
 					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this dummy exception...the real stack is in the msg.
 					return Uni.createFrom().failure(new ActorMethodInvocationException(message, cause));
 				} else {
 					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.get("value") : JsonValue.NULL);
 				}
-			} else if (response.statusCode() == KarResponse.NOT_FOUND) {
-				String msg = response.bodyAsString();
-				if (msg != null) {
-					return Uni.createFrom().failure(new ActorMethodNotFoundException(msg));
-				} else {
-					return Uni.createFrom().failure(new ActorMethodNotFoundException("Not found: " + actor.getType() + "[" + actor.getId() + "]." + path));
-				}
 			} else if (response.statusCode() == KarResponse.NO_CONTENT) {
 				return Uni.createFrom().nullItem();
-			} else if (response.statusCode() == KarResponse.REQUEST_TIMEOUT) {
-				return Uni.createFrom().failure(new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path));
 			} else {
 				return Uni.createFrom().failure(new KarSidecarError(response));
+			}
+		}
+
+		// Internal helper to go from a KarSidecarError to a more useful exception for actor method invocations
+		private static Throwable callProcessError(KarSidecarError kse, ActorRef actor, String path) {
+			switch (kse.statusCode) {
+				case KarResponse.NOT_FOUND: {
+					Throwable e = new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path, kse);
+					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny that mean nothing to the end user
+					return e;
+				}
+				case KarResponse.REQUEST_TIMEOUT: {
+					Throwable e = new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
+					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny that mean nothing to the end user
+					return e;
+				}
+				default:
+					return kse;
 			}
 		}
 

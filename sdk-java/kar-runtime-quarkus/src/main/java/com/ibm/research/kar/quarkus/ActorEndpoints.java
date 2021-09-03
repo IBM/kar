@@ -35,11 +35,12 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
 import com.ibm.research.kar.runtime.KarResponse;
+
+import org.jboss.resteasy.reactive.common.util.Encode;
 
 import io.smallrye.mutiny.Uni;
 
@@ -157,16 +158,18 @@ public class ActorEndpoints {
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
 				return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
 			} else if (result instanceof Uni<?>) {
-				return ((Uni<?>)result).chain(res -> {
-					if (res == null) {
-						return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
-					} else {
-						JsonObjectBuilder jb = factory.createObjectBuilder();
-						jb.add("value", (JsonValue)res);
-						Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
-						return Uni.createFrom().item(resp);
-					}
-				});
+				return ((Uni<?>)result)
+					.chain(res -> {
+						if (res == null) {
+							return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
+						} else {
+							JsonObjectBuilder jb = factory.createObjectBuilder();
+							jb.add("value", (JsonValue)res);
+							Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+							return Uni.createFrom().item(resp);
+						}
+					})
+					.onFailure().recoverWithItem(t -> encodeInvocationError(t));
 			} else {
 				JsonObjectBuilder jb = factory.createObjectBuilder();
 				jb.add("value", (JsonValue)result);
@@ -174,14 +177,17 @@ public class ActorEndpoints {
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
-			JsonObjectBuilder jb = factory.createObjectBuilder();
-			jb.add("error", true);
-			if (t.getMessage() != null) {
-				jb.add("message", t.getMessage());
-			}
-			jb.add("stack", ActorManager.stacktraceToString(t));
-			Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
-			return Uni.createFrom().item(resp);
+			return Uni.createFrom().item(encodeInvocationError(t));
 		}
+	}
+
+	private static Response encodeInvocationError(Throwable t) {
+		JsonObjectBuilder jb = factory.createObjectBuilder();
+		jb.add("error", true);
+		if (t.getMessage() != null) {
+			jb.add("message", t.getMessage());
+		}
+		jb.add("stack", ActorManager.stacktraceToString(t));
+		return Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 	}
 }
