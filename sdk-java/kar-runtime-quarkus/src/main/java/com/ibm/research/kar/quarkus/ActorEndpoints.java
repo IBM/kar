@@ -126,8 +126,8 @@ public class ActorEndpoints {
 
 	@POST
 	@Path("/{type}/{id}/{sessionid}/{path}")
-	@Consumes(Kar.KAR_ACTOR_JSON)
-	@Produces(Kar.KAR_ACTOR_JSON)
+	@Consumes(KarResponse.KAR_ACTOR_JSON)
+	@Produces(KarResponse.KAR_ACTOR_JSON)
 	public Uni<Response> invokeActorMethod(String type, String id, String sessionid, String path, JsonArray args) {
 		ActorInstance actorObj = ActorManager.getInstanceIfPresent(type, id);
 		if (actorObj == null) {

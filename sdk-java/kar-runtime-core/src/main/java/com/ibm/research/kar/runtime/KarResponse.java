@@ -20,8 +20,8 @@ package com.ibm.research.kar.runtime;
  * A framework agnostic representation of an HttpResponse.
  */
 public class KarResponse {
-	public static final String KAR_ACTOR_JSON = "application/kar+json; charset=utf-8";
-  public static final String TEXT_PLAIN = "text/plain; charset=utf-8";
+	public static final String KAR_ACTOR_JSON = "application/kar+json";
+  public static final String TEXT_PLAIN = "text/plain";
 
   public static final int OK = 200;
   public static final int CREATED = 201;
@@ -30,7 +30,7 @@ public class KarResponse {
 
   public static final int BAD_REQUEST = 400;
   public static final int NOT_FOUND = 404;
-  public static final int TIMEOUT = 408;
+  public static final int REQUEST_TIMEOUT = 408;
 
   public static final int INTERNAL_ERROR = 500;
 

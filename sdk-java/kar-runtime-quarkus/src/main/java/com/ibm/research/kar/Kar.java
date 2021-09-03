@@ -31,14 +31,13 @@ import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonBuilderFactory;
+import javax.json.JsonException;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReaderFactory;
 import javax.json.JsonValue;
-import javax.ws.rs.ProcessingException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response.Status;
+import javax.json.stream.JsonParsingException;
 
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.actor.ActorRef;
@@ -48,6 +47,7 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 import com.ibm.research.kar.quarkus.KarSidecar;
+import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
 import com.ibm.research.kar.runtime.KarResponse;
 
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -55,8 +55,6 @@ import io.vertx.mutiny.ext.web.client.HttpResponse;
 import io.smallrye.mutiny.Uni;
 
 public class Kar {
-	public final static String KAR_ACTOR_JSON = "application/kar+json";
-
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
 	private static KarSidecar sidecar = instantiateSidecar();
@@ -78,19 +76,6 @@ public class Kar {
 
 	private static JsonValue toJsonValue(HttpResponse<Buffer> response) {
 			return readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
-	}
-
-	private static Object toValue(HttpResponse<Buffer> response) {
-		String contentType = response.getHeader("Content-Type");
-		if (contentType == null) {
-			return JsonValue.NULL;
-		} else if (contentType.startsWith(Kar.KAR_ACTOR_JSON) || contentType.startsWith(MediaType.APPLICATION_JSON)) {
-			return readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
-		} else if (contentType.equals(MediaType.TEXT_PLAIN)) {
-			return response.bodyAsString();
-		} else {
-			return JsonValue.NULL;
-		}
 	}
 
 	private static int toInt(HttpResponse<Buffer> response) {
@@ -303,7 +288,18 @@ public class Kar {
 		 * @return The result returned by the target service.
 		 */
 		public static Uni<Object> call(String service, String path, JsonValue body) {
-			return sidecar.callPost(service, path, body).chain(resp -> Uni.createFrom().item(toValue(resp)));
+			return sidecar.callPost(service, path, body).chain(resp -> {
+				Object result = resp.bodyAsString();
+				String contentType = resp.getHeader("Content-Type");
+				if (contentType != null && !contentType.startsWith(KarResponse.TEXT_PLAIN)) {
+					try {
+						result = readerFactory.createReader(new StringReader(resp.bodyAsString())).readValue();
+					} catch (JsonException e) {
+						result = resp.bodyAsString();
+					}
+				}
+				return Uni.createFrom().item(result);
+			});
 		}
 	}
 
@@ -391,7 +387,7 @@ public class Kar {
 		// Internal helper to go from a Response to the JsonValue representing the
 		// result of the method (or a Uni with a failure that propagates the exception)
 		private static Uni<JsonValue> callProcessResponse(HttpResponse<Buffer> response, ActorRef actor, String path) {
-			if (response.statusCode() == Status.OK.getStatusCode()) {
+			if (response.statusCode() == KarResponse.OK) {
 				JsonObject o = toJsonValue(response).asJsonObject();
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
@@ -402,20 +398,19 @@ public class Kar {
 				} else {
 					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.get("value") : JsonValue.NULL);
 				}
-			} else if (response.statusCode() == Status.NOT_FOUND.getStatusCode()) {
+			} else if (response.statusCode() == KarResponse.NOT_FOUND) {
 				String msg = response.bodyAsString();
 				if (msg != null) {
 					return Uni.createFrom().failure(new ActorMethodNotFoundException(msg));
 				} else {
 					return Uni.createFrom().failure(new ActorMethodNotFoundException("Not found: " + actor.getType() + "[" + actor.getId() + "]." + path));
 				}
-			} else if (response.statusCode() == Status.NO_CONTENT.getStatusCode()) {
+			} else if (response.statusCode() == KarResponse.NO_CONTENT) {
 				return Uni.createFrom().nullItem();
-			} else if (response.statusCode() == Status.REQUEST_TIMEOUT.getStatusCode()) {
+			} else if (response.statusCode() == KarResponse.REQUEST_TIMEOUT) {
 				return Uni.createFrom().failure(new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path));
 			} else {
-				// TODO: What's the generic Quarkus/Vertx "something went wrong exception" we should throw here??
-				return Uni.createFrom().failure(new ProcessingException(response.statusCode() + ": " + response.bodyAsString()));
+				return Uni.createFrom().failure(new KarSidecarError(response));
 			}
 		}
 

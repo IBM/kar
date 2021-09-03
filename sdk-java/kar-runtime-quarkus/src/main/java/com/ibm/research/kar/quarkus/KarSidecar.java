@@ -22,6 +22,7 @@ import javax.json.JsonObject;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.runtime.KarResponse;
 
 import org.jboss.logging.Logger;
 
@@ -105,12 +106,12 @@ public class KarSidecar {
 
     public Uni<HttpResponse<Buffer>> actorTell(String type, String id, String path, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, true));
+        return karClient.callPost(path, args, headers(KarResponse.KAR_ACTOR_JSON, true));
     }
 
     public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, String session, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(Kar.KAR_ACTOR_JSON, false), session);
+        return karClient.callPost(path, args, headers(KarResponse.KAR_ACTOR_JSON, false), session);
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminders(String type, String id) {
@@ -366,9 +367,20 @@ public class KarSidecar {
         }
 
         public static class KarSidecarError extends Throwable {
-            final int statusCode;
-            KarSidecarError(int c) {
-                this.statusCode = c;
+            public final int statusCode;
+
+            public KarSidecarError(HttpResponse<Buffer> response) {
+                super(extractMessage(response));
+                this.statusCode = response.statusCode();
+            }
+
+            private static String extractMessage(HttpResponse<Buffer> response) {
+                String msg = response.statusMessage();
+                String body = response.bodyAsString();
+                if (body != null && !body.isBlank()) {
+                    msg = msg + ": "+ body;
+                }
+                return msg;
             }
         }
 
@@ -474,7 +486,7 @@ public class KarSidecar {
 
             request.putHeaders(headers);
 
-            ErrorConverter ec = ErrorConverter.create(result -> new KarSidecarError(result.response().statusCode()));
+            ErrorConverter ec = ErrorConverter.create(result -> new KarSidecarError(result.response()));
             request.expect(ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ec));
 
             return request;
