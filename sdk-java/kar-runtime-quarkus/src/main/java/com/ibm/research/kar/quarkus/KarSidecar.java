@@ -352,13 +352,14 @@ public class KarSidecar {
             WebClientOptions options = new WebClientOptions().setDefaultHost(KarHttpClient.KAR_DEFAULT_SIDECAR_HOST)
                 .setDefaultPort(karPort);
 
-            String useHttp2 = System.getProperty("kar.http.http2");
-            LOG.info("Property useHttp2 = " + useHttp2);
-            if ((useHttp2 != null) && (useHttp2.equalsIgnoreCase("true"))) {
+            String useHttp1 = System.getProperty("kar.http.http1");
+            LOG.info("Property useHttp1 = " + useHttp1);
+            if ((useHttp1 != null) && (useHttp1.equalsIgnoreCase("true"))) {
+                LOG.info("Using HTTP/1 with max pool of 32");
+                options.setMaxPoolSize(32); //  bigger than the default of 5, but still a bottleneck
+            } else {
                 LOG.info("Configuring for HTTP/2");
                 options.setProtocolVersion(HttpVersion.HTTP_2).setUseAlpn(true).setHttp2ClearTextUpgrade(false);
-            } else {
-                LOG.info("Using HTTP/1");
             }
 
             return WebClient.create(vertx, options);
