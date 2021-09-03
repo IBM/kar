@@ -75,8 +75,8 @@ public class Table extends ActorSkeleton {
   }
 
   @Remote
-  public Uni<JsonNumber> occupancy() {
-    return Uni.createFrom().item(Json.createValue(this.diners != null ? this.diners.size() : 0));
+  public JsonNumber occupancy() {
+    return Json.createValue(this.diners != null ? this.diners.size() : 0);
   }
 
   private String philosopher(int p) {
