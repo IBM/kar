@@ -413,12 +413,12 @@ public class Kar {
 			switch (kse.statusCode) {
 				case KarResponse.NOT_FOUND: {
 					Throwable e = new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path, kse);
-					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny that mean nothing to the end user
+					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
 					return e;
 				}
 				case KarResponse.REQUEST_TIMEOUT: {
 					Throwable e = new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
-					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny that mean nothing to the end user
+					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
 					return e;
 				}
 				default:
