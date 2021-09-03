@@ -187,12 +187,12 @@ public class ActorManager {
 		return actorObj;
 	}
 
-	public static String stacktraceToString(Throwable t) {
+	public static String stacktraceToString(Throwable t, String filterClass, String filterMethod) {
 		if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
 			// Elide all of the implementation details above us in the backtrace
 			StackTraceElement [] fullBackTrace = t.getStackTrace();
 			for (int i=0; i<fullBackTrace.length; i++) {
-				if (fullBackTrace[i].getClassName().equals(ActorManager.class.getName()) && fullBackTrace[i].getMethodName().equals("invokeActorMethod")) {
+				if (fullBackTrace[i].getClassName().equals(filterClass) && fullBackTrace[i].getMethodName().equals(filterMethod)) {
 					StackTraceElement[] reducedBackTrace = new StackTraceElement[i+1];
 					System.arraycopy(fullBackTrace, 0, reducedBackTrace, 0, i+1);
 					t.setStackTrace(reducedBackTrace);
@@ -334,7 +334,7 @@ public class ActorManager {
 				return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(result));
 			}
 		} catch (Throwable t) {
-			String backtrace = stacktraceToString(t);
+			String backtrace = stacktraceToString(t, ActorManager.class.getName(), "invokeActorMethod");
 			return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(t.getMessage(), backtrace));
 		}
 	}

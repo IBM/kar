@@ -187,7 +187,7 @@ public class ActorEndpoints {
 		if (t.getMessage() != null) {
 			jb.add("message", t.getMessage());
 		}
-		jb.add("stack", ActorManager.stacktraceToString(t));
+		jb.add("stack", ActorManager.stacktraceToString(t, ActorEndpoints.class.getName(), "invokeActorMethod"));
 		return Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 	}
 }
