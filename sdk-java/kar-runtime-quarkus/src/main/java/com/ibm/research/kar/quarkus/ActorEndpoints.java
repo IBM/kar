@@ -153,18 +153,14 @@ public class ActorEndpoints {
 		}
 
 		try {
-			System.out.println("Invoking "+type+"."+path);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
-				System.out.println("Void return for "+type+"."+path);
 				return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
 			} else if (result instanceof Uni<?>) {
 				return ((Uni<?>)result).chain(res -> {
 					if (res == null) {
-						System.out.println("Async void return for "+type+"."+path);
 						return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
 					} else {
-						System.out.println("Async return of "+res+" for "+type+"."+path);
 						JsonObjectBuilder jb = factory.createObjectBuilder();
 						jb.add("value", (JsonValue)res);
 						Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
@@ -172,15 +168,12 @@ public class ActorEndpoints {
 					}
 				});
 			} else {
-				System.out.println("return of "+result+" for "+type+"."+path);
 				JsonObjectBuilder jb = factory.createObjectBuilder();
 				jb.add("value", (JsonValue)result);
 				Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
-			System.out.println("\tBOOM!!!");
-			t.printStackTrace();
 			JsonObjectBuilder jb = factory.createObjectBuilder();
 			jb.add("error", true);
 			if (t.getMessage() != null) {

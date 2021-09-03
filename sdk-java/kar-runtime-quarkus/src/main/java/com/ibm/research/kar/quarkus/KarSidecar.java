@@ -21,7 +21,6 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.Kar;
 import com.ibm.research.kar.runtime.KarResponse;
 
 import org.jboss.logging.Logger;
