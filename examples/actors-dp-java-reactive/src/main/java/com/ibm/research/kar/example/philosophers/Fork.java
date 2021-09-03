@@ -63,7 +63,7 @@ public class Fork extends ActorSkeleton {
 	public Uni<Void> putDown(JsonString who) {
 		if (this.inUseBy.equals(who)) { // can be false if putDown is re-executed due to failure
 			this.inUseBy = nobody;
-			return Actors.State.set(this, "inUseBy", this.inUseBy);
+			return Actors.State.setV(this, "inUseBy", this.inUseBy);
 		} else {
 			return Uni.createFrom().nullItem();
 		}

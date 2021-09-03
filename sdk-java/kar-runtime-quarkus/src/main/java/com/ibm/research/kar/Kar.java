@@ -573,8 +573,21 @@ public class Kar {
 			 * @param actor The Actor instance.
 			 * @param key   The key to use to access the instance's state
 			 * @param value The value to store
+			 * @return The number of new state entries created by this store (0 or 1)
 			 */
-			public static Uni<Void> set(ActorRef actor, String key, JsonValue value) {
+			public static Uni<Integer> set(ActorRef actor, String key, JsonValue value) {
+				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value)
+					.chain(response -> Uni.createFrom().item(toInt(response)));
+			}
+
+			/**
+			 * Store one value to an Actor's state
+			 *
+			 * @param actor The Actor instance.
+			 * @param key   The key to use to access the instance's state
+			 * @param value The value to store
+			 */
+			public static Uni<Void> setV(ActorRef actor, String key, JsonValue value) {
 				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value)
 					.chain(() -> Uni.createFrom().nullItem());
 			}
@@ -584,8 +597,23 @@ public class Kar {
 			 *
 			 * @param actor   The Actor instance.
 			 * @param updates A map containing the state updates to perform
+			 * @return The number of new state entries created by this store
 			 */
-			public static Uni<Void> set(ActorRef actor, Map<String, JsonValue> updates) {
+			public static Uni<Integer> set(ActorRef actor, Map<String, JsonValue> updates) {
+				if (updates.isEmpty()) {
+					return Uni.createFrom().nullItem();
+				}
+				return update(actor, Collections.emptyList(), Collections.emptyMap(), updates, Collections.emptyMap())
+					.chain(res -> Uni.createFrom().item(res.removed));
+			}
+
+			/**
+			 * Store multiple values to an Actor's state
+			 *
+			 * @param actor   The Actor instance.
+			 * @param updates A map containing the state updates to perform
+			 */
+			public static Uni<Void> setV(ActorRef actor, Map<String, JsonValue> updates) {
 				if (updates.isEmpty()) {
 					return Uni.createFrom().nullItem();
 				}
@@ -760,8 +788,22 @@ public class Kar {
 				 * @param submap The name of the submap to update
 				 * @param key    The key in the submap to update
 				 * @param value  The value to store at `key/subkey`
+				 * @return The number of new state entries created by this store (0 or 1)
 				 */
-				public static Uni<Void> set(ActorRef actor, String submap, String key, JsonValue value) {
+				public static Uni<Integer> set(ActorRef actor, String submap, String key, JsonValue value) {
+					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value)
+						.chain(response -> Uni.createFrom().item(toInt(response)));
+				}
+
+				/**
+				 * Store one value to a submap in an Actor's state
+				 *
+				 * @param actor  The Actor instance.
+				 * @param submap The name of the submap to update
+				 * @param key    The key in the submap to update
+				 * @param value  The value to store at `key/subkey`
+				 */
+				public static Uni<Void> setV(ActorRef actor, String submap, String key, JsonValue value) {
 					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(() -> Uni.createFrom().nullItem());
 				}
 
@@ -772,8 +814,28 @@ public class Kar {
 				 * @param submap  The name of the submap to which the updates should be
 				 *                performed
 				 * @param updates A map containing the (subkey, value) pairs to store
+				 * @return The number of new state entries created by this store (0 or 1)
 				 */
-				public static Uni<Void> set(ActorRef actor, String submap, Map<String, JsonValue> updates) {
+				public static Uni<Integer> set(ActorRef actor, String submap, Map<String, JsonValue> updates) {
+					if (updates.isEmpty()) {
+						return Uni.createFrom().nullItem();
+					}
+					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
+					tmp.put(submap, updates);
+					return update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), tmp)
+						.chain(res -> Uni.createFrom().item(res.added));
+				}
+
+				/**
+				 * Store multiple values to an Actor sub-map with name `key`
+				 *
+				 * @param actor   The Actor instance.
+				 * @param submap  The name of the submap to which the updates should be
+				 *                performed
+				 * @param updates A map containing the (subkey, value) pairs to store
+				 * @return The number of new state entries created by this store (0 or 1)
+				 */
+				public static Uni<Void> setV(ActorRef actor, String submap, Map<String, JsonValue> updates) {
 					if (updates.isEmpty()) {
 						return Uni.createFrom().nullItem();
 					}

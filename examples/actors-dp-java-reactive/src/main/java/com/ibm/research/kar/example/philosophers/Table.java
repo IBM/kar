@@ -71,7 +71,7 @@ public class Table extends ActorSkeleton {
     jb.add("diners", this.diners);
     jb.add("step", this.step);
     JsonObject state = jb.build();
-    return Actors.State.set(this, state);
+    return Actors.State.setV(this, state);
   }
 
   @Remote
@@ -128,7 +128,7 @@ public class Table extends ActorSkeleton {
       return Actors.call(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who)
         .chain(() -> {
           this.step = step;
-          return Actors.State.set(this, "step", step);
+          return Actors.State.setV(this, "step", step);
         });
     });
 
@@ -151,7 +151,7 @@ public class Table extends ActorSkeleton {
         return Actors.tell(this, "busTable", step)
           .chain(() -> {
             this.step = step;
-            return Actors.State.set(this, "step", step);
+            return Actors.State.setV(this, "step", step);
           });
       } else {
         return Uni.createFrom().nullItem();
@@ -174,7 +174,7 @@ public class Table extends ActorSkeleton {
     return k.chain(() -> {
       Actors.remove(this);
       this.step = step;
-      return Actors.State.set(this, "step", step);
+      return Actors.State.setV(this, "step", step);
     });
   }
 }

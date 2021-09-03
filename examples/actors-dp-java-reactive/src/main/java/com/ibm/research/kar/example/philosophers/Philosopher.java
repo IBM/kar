@@ -82,7 +82,7 @@ public class Philosopher extends ActorSkeleton {
 		jb.add("targetServings", this.targetServings);
 		jb.add("step", this.step);
 		JsonObject state = jb.build();
-		return Actors.State.set(this, state);
+		return Actors.State.setV(this, state);
 	}
 
 	private Instant nextStepTime() {
@@ -127,7 +127,7 @@ public class Philosopher extends ActorSkeleton {
 			})
 			.chain(() -> {
 				this.step = step;
-				return Actors.State.set(this, "step", step);
+				return Actors.State.setV(this, "step", step);
 			});
 	}
 
@@ -150,7 +150,7 @@ public class Philosopher extends ActorSkeleton {
 			})
 			.chain(() -> {
 				this.step = step;
-				return Actors.State.set(this, "step", step);
+				return Actors.State.setV(this, "step", step);
 			});
 	}
 
