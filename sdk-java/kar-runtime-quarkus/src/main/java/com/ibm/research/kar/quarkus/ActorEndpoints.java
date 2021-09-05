@@ -38,14 +38,12 @@ import javax.ws.rs.core.Response.Status;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
-import com.ibm.research.kar.runtime.KarResponse;
-
-import org.jboss.resteasy.reactive.common.util.Encode;
+import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import io.smallrye.mutiny.Uni;
 
 @Path("/kar/impl/v1/actor")
-public class ActorEndpoints {
+public class ActorEndpoints implements KarHttpConstants {
 
 	private final static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 
@@ -70,18 +68,18 @@ public class ActorEndpoints {
 
 		ActorType actorType = ActorManager.getActorType(type);
 		if (actorType == null) {
-			Response resp = Response.status(KarResponse.NOT_FOUND).type(KarResponse.TEXT_PLAIN).entity("Not found: " + type + " actor " + id).build();
+			Response resp = Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Not found: " + type + " actor " + id).build();
 			return Uni.createFrom().item(resp);
 		}
 
 		actorInstance = ActorManager.allocateFreshInstance(actorType, id);
 		if (actorInstance == null) {
-			Response resp = Response.status(KarResponse.BAD_REQUEST).type(KarResponse.TEXT_PLAIN).entity("Unable to allocate instance: " + type + " actor " + id).build();
+			Response resp = Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity("Unable to allocate instance: " + type + " actor " + id).build();
 			return Uni.createFrom().item(resp);
 		}
 
 		// Call the optional activate method
-		Response success = Response.status(KarResponse.CREATED).type(KarResponse.TEXT_PLAIN).entity("Created " + type + " actor " + id).build();
+		Response success = Response.status(CREATED).type(TEXT_PLAIN).entity("Created " + type + " actor " + id).build();
 		MethodHandle activate = actorType.getActivateMethod();
 		if (activate != null) {
 			try {
@@ -90,7 +88,7 @@ public class ActorEndpoints {
 					return ((Uni<?>)result).chain(() -> Uni.createFrom().item(success));
 				}
 			} catch (Throwable t) {
-				Response failure = Response.status(KarResponse.BAD_REQUEST).type(KarResponse.TEXT_PLAIN).entity(t.toString()).build();
+				Response failure = Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
 				return Uni.createFrom().item(failure);
 			}
 		}
@@ -112,7 +110,7 @@ public class ActorEndpoints {
 	public Uni<Response> deleteActor(String type, String id) {
 		ActorInstance actorInstance = ActorManager.getInstanceIfPresent(type, id);
 		if (actorInstance == null) {
-			Response resp = Response.status(KarResponse.NOT_FOUND).type(KarResponse.TEXT_PLAIN).entity("Not found: " + type + " actor " + id).build();
+			Response resp = Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Not found: " + type + " actor " + id).build();
 			return Uni.createFrom().item(resp);
 		}
 
@@ -129,7 +127,7 @@ public class ActorEndpoints {
 					});
 				}
 			} catch (Throwable t) {
-				Response resp = Response.status(KarResponse.BAD_REQUEST).type(KarResponse.TEXT_PLAIN).entity(t.toString()).build();
+				Response resp = Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		}
@@ -157,19 +155,19 @@ public class ActorEndpoints {
 	 */
 	@POST
 	@Path("/{type}/{id}/{sessionid}/{path}")
-	@Consumes(KarResponse.KAR_ACTOR_JSON)
-	@Produces(KarResponse.KAR_ACTOR_JSON)
+	@Consumes(KAR_ACTOR_JSON)
+	@Produces(KAR_ACTOR_JSON)
 	public Uni<Response> invokeActorMethod(String type, String id, String sessionid, String path, JsonArray args) {
 		ActorInstance actorObj = ActorManager.getInstanceIfPresent(type, id);
 		if (actorObj == null) {
-			Response resp = Response.status(KarResponse.NOT_FOUND).type(KarResponse.TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
+			Response resp = Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
 			return Uni.createFrom().item(resp);
 		}
 
 		ActorType actorType = ActorManager.getActorType(type);
 		MethodHandle actorMethod = actorType.getRemoteMethods().get(path + ":" + args.size());
 		if (actorMethod == null) {
-			Response resp = Response.status(KarResponse.NOT_FOUND).type(KarResponse.TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
+			Response resp = Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
 			return Uni.createFrom().item(resp);
 		}
 
@@ -186,16 +184,16 @@ public class ActorEndpoints {
 		try {
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
-				return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
+				return Uni.createFrom().item(Response.status(NO_CONTENT).build());
 			} else if (result instanceof Uni<?>) {
 				return ((Uni<?>)result)
 					.chain(res -> {
 						if (res == null) {
-							return Uni.createFrom().item(Response.status(KarResponse.NO_CONTENT).build());
+							return Uni.createFrom().item(Response.status(NO_CONTENT).build());
 						} else {
 							JsonObjectBuilder jb = factory.createObjectBuilder();
 							jb.add("value", (JsonValue)res);
-							Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+							Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 							return Uni.createFrom().item(resp);
 						}
 					})
@@ -203,7 +201,7 @@ public class ActorEndpoints {
 			} else {
 				JsonObjectBuilder jb = factory.createObjectBuilder();
 				jb.add("value", (JsonValue)result);
-				Response resp = Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+				Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
@@ -218,6 +216,6 @@ public class ActorEndpoints {
 			jb.add("message", t.getMessage());
 		}
 		jb.add("stack", ActorManager.stacktraceToString(t, ActorEndpoints.class.getName(), "invokeActorMethod"));
-		return Response.ok().type(KarResponse.KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+		return Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 	}
 }

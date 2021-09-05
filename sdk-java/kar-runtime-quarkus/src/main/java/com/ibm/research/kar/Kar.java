@@ -47,13 +47,13 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 import com.ibm.research.kar.quarkus.KarSidecar;
 import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
-import com.ibm.research.kar.runtime.KarResponse;
+import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import io.smallrye.mutiny.Uni;
 
-public class Kar {
+public class Kar implements KarHttpConstants {
 	private static final Logger logger = Logger.getLogger(Kar.class.getName());
 
 	private static KarSidecar sidecar = instantiateSidecar();
@@ -290,7 +290,7 @@ public class Kar {
 			return sidecar.callPost(service, path, body).chain(resp -> {
 				Object result = resp.bodyAsString();
 				String contentType = resp.getHeader("Content-Type");
-				if (contentType != null && !contentType.startsWith(KarResponse.TEXT_PLAIN)) {
+				if (contentType != null && !contentType.startsWith(TEXT_PLAIN)) {
 					try {
 						result = readerFactory.createReader(new StringReader(resp.bodyAsString())).readValue();
 					} catch (JsonException e) {
@@ -391,7 +391,7 @@ public class Kar {
 		// Internal helper to go from a Response to the JsonValue representing the
 		// result of the method (or a Uni with a failure that propagates the exception)
 		private static Uni<JsonValue> callProcessResponse(HttpResponse<Buffer> response, ActorRef actor, String path) {
-			if (response.statusCode() == KarResponse.OK) {
+			if (response.statusCode() == OK) {
 				JsonObject o = toJsonValue(response).asJsonObject();
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
@@ -401,7 +401,7 @@ public class Kar {
 				} else {
 					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.get("value") : JsonValue.NULL);
 				}
-			} else if (response.statusCode() == KarResponse.NO_CONTENT) {
+			} else if (response.statusCode() == NO_CONTENT) {
 				return Uni.createFrom().nullItem();
 			} else {
 				return Uni.createFrom().failure(new KarSidecarError(response));
@@ -411,12 +411,12 @@ public class Kar {
 		// Internal helper to go from a KarSidecarError to a more useful exception for actor method invocations
 		private static Throwable callProcessError(KarSidecarError kse, ActorRef actor, String path) {
 			switch (kse.statusCode) {
-				case KarResponse.NOT_FOUND: {
+				case NOT_FOUND: {
 					Throwable e = new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path, kse);
 					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
 					return e;
 				}
-				case KarResponse.REQUEST_TIMEOUT: {
+				case REQUEST_TIMEOUT: {
 					Throwable e = new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
 					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
 					return e;
@@ -571,7 +571,7 @@ public class Kar {
 			 */
 			public static Uni<Boolean> contains(ActorRef actor, String key) {
 				return sidecar.actorHeadState(actor.getType(), actor.getId(), key)
-					.chain(response -> Uni.createFrom().item(response.statusCode() == KarResponse.OK));
+					.chain(response -> Uni.createFrom().item(response.statusCode() == OK));
 			}
 
 			/**
@@ -785,7 +785,7 @@ public class Kar {
 				 */
 				public static Uni<Boolean> contains(ActorRef actor, String submap, String key) {
 					return sidecar.actorHeadWithSubkeyState(actor.getType(), actor.getId(), submap, key)
-						.chain(response -> Uni.createFrom().item(response.statusCode() == KarResponse.OK));
+						.chain(response -> Uni.createFrom().item(response.statusCode() == OK));
 				}
 
 				/**

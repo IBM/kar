@@ -21,7 +21,7 @@ import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
 
-import com.ibm.research.kar.runtime.KarResponse;
+import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import org.jboss.logging.Logger;
 
@@ -105,12 +105,12 @@ public class KarSidecar {
 
     public Uni<HttpResponse<Buffer>> actorTell(String type, String id, String path, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(KarResponse.KAR_ACTOR_JSON, true));
+        return karClient.callPost(path, args, headers(KarHttpConstants.KAR_ACTOR_JSON, true));
     }
 
     public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, String session, JsonArray args) {
         path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(KarResponse.KAR_ACTOR_JSON, false), session);
+        return karClient.callPost(path, args, headers(KarHttpConstants.KAR_ACTOR_JSON, false), session);
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminders(String type, String id) {

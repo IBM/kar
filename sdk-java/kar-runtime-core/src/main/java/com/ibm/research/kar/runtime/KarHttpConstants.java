@@ -19,7 +19,7 @@ package com.ibm.research.kar.runtime;
 /**
  * Constants used to encode HTTP responses.
  */
-public class KarResponse {
+public interface KarHttpConstants {
 	public static final String KAR_ACTOR_JSON = "application/kar+json";
   public static final String TEXT_PLAIN = "text/plain";
 
