@@ -49,6 +49,16 @@ public class ActorEndpoints {
 
 	private final static JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 
+	/**
+	 * Activate an actor instance if it is not already in memory. If the specified
+	 * instance is in memory already, simply return success. If the specified
+	 * instance it not in memory already, allocate a language-level instance for it
+	 * and, if provided by the ActorType, invoke the optional activate method.
+	 *
+	 * @param type The type of the actor instance to be activated
+	 * @param id   The id of the actor instance to be activated
+	 * @return A Uni<Response> that will indicate success (200, 201) or an error condition (400, 404)
+	 */
 	@GET
 	@Path("/{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
@@ -71,22 +81,32 @@ public class ActorEndpoints {
 		}
 
 		// Call the optional activate method
-		try {
-			Response success = Response.status(KarResponse.CREATED).type(KarResponse.TEXT_PLAIN).entity("Created " + type + " actor " + id).build();
-			MethodHandle activate = actorType.getActivateMethod();
-			if (activate != null) {
+		Response success = Response.status(KarResponse.CREATED).type(KarResponse.TEXT_PLAIN).entity("Created " + type + " actor " + id).build();
+		MethodHandle activate = actorType.getActivateMethod();
+		if (activate != null) {
+			try {
 				Object result = activate.invoke(actorInstance);
 				if (result instanceof Uni<?>) {
 					return ((Uni<?>)result).chain(() -> Uni.createFrom().item(success));
 				}
+			} catch (Throwable t) {
+				Response failure = Response.status(KarResponse.BAD_REQUEST).type(KarResponse.TEXT_PLAIN).entity(t.toString()).build();
+				return Uni.createFrom().item(failure);
 			}
-			return Uni.createFrom().item(success);
-		} catch (Throwable t) {
-			Response failure = Response.status(KarResponse.BAD_REQUEST).type(KarResponse.TEXT_PLAIN).entity(t.toString()).build();
-			return Uni.createFrom().item(failure);
 		}
+
+		return Uni.createFrom().item(success);
 	}
 
+	/**
+	 * Deactivate an actor instance. If the ActorType has a deactivate method, it
+	 * will be invoked on the instance. The actor instance will be removed from the
+	 * in-memory state of the runtime.
+	 *
+	 * @param type The type of the actor instance to be deactivated
+	 * @param id   The id of the actor instance to be deactivated
+	 * @return A Uni<Response> that will indeicate success (200) or an error condition (400, 404)
+	 */
 	@DELETE
 	@Path("/{type}/{id}")
 	public Uni<Response> deleteActor(String type, String id) {
@@ -125,6 +145,16 @@ public class ActorEndpoints {
 		return Response.status(status).build();
 	}
 
+	/**
+	 * Invoke an actor method
+	 *
+	 * @param type The type of the actor
+	 * @param id The id of the target instancr
+	 * @param sessionid The session in which the method is being invoked
+	 * @param path The method to invoke
+	 * @param args The arguments to the method
+	 * @return a Uni<Response> representing the result of the method invocation
+	 */
 	@POST
 	@Path("/{type}/{id}/{sessionid}/{path}")
 	@Consumes(KarResponse.KAR_ACTOR_JSON)

@@ -17,7 +17,7 @@
 package com.ibm.research.kar.runtime;
 
 /**
- * A framework agnostic representation of an HttpResponse.
+ * Constants used to encode HTTP responses.
  */
 public class KarResponse {
 	public static final String KAR_ACTOR_JSON = "application/kar+json";
@@ -33,41 +33,4 @@ public class KarResponse {
   public static final int REQUEST_TIMEOUT = 408;
 
   public static final int INTERNAL_ERROR = 500;
-
-  /**
-   * The http status code for this response
-   */
-  public final int statusCode;
-
-  /**
-   * The body of the response.
-   *
-   * If the response is to an HTTP operation that does not expect a body, this may null.
-   * If the response is to an HTTP operation that does expect a body, a value of
-   * `null` is interpreted as Json.NULL unless the statusCode is 202 (NO_CONTENT).
-   */
-  public final Object body;
-
-  /**
-   * The content type to use when serializing the body (null if statusCode is 202)
-   */
-  public final String contentType;
-
-  KarResponse() {
-    this.statusCode = NO_CONTENT;
-    this.body = null;
-    this.contentType = null;
-  }
-
-  KarResponse(int statusCode) {
-    this.statusCode = statusCode;
-    this.contentType = null;
-    this.body = null;
-  }
-
-  KarResponse(int statusCode, String contentType, Object body) {
-    this.statusCode = statusCode;
-    this.contentType = contentType;
-    this.body = body;
-  }
 }

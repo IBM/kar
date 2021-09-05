@@ -187,6 +187,9 @@ public class ActorManager {
 		return actorObj;
 	}
 
+	/**
+	 * Filter/truncate a Throwable's stacktrace to elide implementation details of actor method invocation
+	 */
 	public static String stacktraceToString(Throwable t, String filterClass, String filterMethod) {
 		if (KarConfig.SHORTEN_ACTOR_STACKTRACES) {
 			// Elide all of the implementation details above us in the backtrace
@@ -209,134 +212,6 @@ public class ActorManager {
 			backtrace = backtrace.substring(0, KarConfig.MAX_STACKTRACE_SIZE) + "\n...Backtrace truncated due to message length restrictions\n";
 		}
 		return backtrace;
-	}
-
-
-
-	/**
-	 * Activate an actor instance if it is not already in memory. If the specified
-	 * instance is in memory already, simply return success. If the specified
-	 * instance it not in memory already, allocate a language-level instance for it
-	 * and, if provided by the ActorType, invoke the optional activate method.
-	 *
-	 * @param type The type of the actor instance to be activated
-	 * @param id   The id of the actor instance to be activated
-	 * @return A Response indicating success (200, 201) or an error condition (400,
-	 *         404)
-	 */
-	@Deprecated
-	public static KarResponse activateInstanceIfNotPresent(String type, String id) {
-		if (actorInstances.get(actorInstanceKey(type, id)) != null) {
-			// Already exists; nothing to do.
-			return new KarResponse(KarResponse.OK);
-		}
-
-		// Find the ActorType
-		ActorType actorType = actorTypes.get(type);
-		if (actorType == null) {
-			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Not found: " + type + " actor " + id);
-		}
-
-		// Allocate an instance
-		Class<ActorInstance> actorClass = actorType.getActorClass();
-		ActorInstance actorObj;
-		try {
-			actorObj = actorClass.getConstructor().newInstance();
-			actorObj.setType(type);
-			actorObj.setId(id);
-			actorInstances.put(actorInstanceKey(type, id), actorObj);
-		} catch (Throwable t) {
-			logger.severe(LOG_PREFIX + "activateInstanceIfNotPresent: " + t.toString());
-			return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
-		}
-
-		// Call the optional activate method
-		try {
-			MethodHandle activate = actorType.getActivateMethod();
-			if (activate != null) {
-				activate.invoke(actorObj);
-			}
-			return new KarResponse(KarResponse.CREATED, KarResponse.TEXT_PLAIN, "Created " + type + " actor " + id);
-		} catch (Throwable t) {
-			return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
-		}
-	}
-
-
-	/**
-	 * Deactivate an actor instance. If the ActorType has a deactivate method, it
-	 * will be invoked on the instance. The actor instance will be removed from the
-	 * in-memory state of the runtime.
-	 *
-	 * @param type The type of the actor instance to be deactivated
-	 * @param id   The id of the actor instance to be deactivated
-	 * @return A Response indicating success (200) or an error condition (400, 404)
-	 */
-	@Deprecated
-	public static KarResponse deactivateInstanceIfPresent(String type, String id) {
-		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
-		if (actorObj == null) {
-			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Not found: " + type + " actor " + id);
-		}
-
-		// Call the optional deactivate method
-		ActorType actorType = actorTypes.get(type);
-		if (actorType != null && actorType.getDeactivateMethod() != null) {
-			try {
-				actorType.getDeactivateMethod().invoke(actorObj);
-			} catch (Throwable t) {
-				return new KarResponse(KarResponse.BAD_REQUEST, KarResponse.TEXT_PLAIN, t.toString());
-			}
-		}
-
-		// Actually remove the instance
-		actorInstances.remove(actorInstanceKey(type, id));
-
-		return new KarResponse(KarResponse.OK);
-	}
-
-
-	/**
-	 * Invoke an actor method
-	 *
-	 * @param type The type of the actor
-	 * @param id The id of the target instancr
-	 * @param sessionid The session in which the method is being invoked
-	 * @param path The method to invoke
-	 * @param args The arguments to the method
-	 * @return a Response containing the result of the method invocation
-	 */
-	@Deprecated
-	public static KarResponse invokeActorMethod(String type, String id, String sessionid, String path, Object[] actuals) {
-		ActorInstance actorObj = actorInstances.get(actorInstanceKey(type, id));
-		if (actorObj == null) {
-			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Actor instance not found: " + type + "[" + id +"]");
-		}
-
-		int nParams = actuals.length-1; // Java convention "this" doesn't count as an argument
-		ActorType actorType = actorTypes.get(type);
-		MethodHandle actorMethod = actorType != null ? actorType.getRemoteMethods().get(path + ":" + nParams) : null;
-		if (actorMethod == null) {
-			return new KarResponse(KarResponse.NOT_FOUND, KarResponse.TEXT_PLAIN, "Method not found: " + type + "." + path + " with " + nParams + " arguments");
-		}
-
-		// set the session
-		actorObj.setSession(sessionid);
-
-		// inject the actorObject into the argument array
-		actuals[0] = actorObj;
-
-		try {
-			Object result = actorMethod.invokeWithArguments(actuals);
-			if (result == null && actorMethod.type().returnType().equals(Void.TYPE)) {
-				return new KarResponse(KarResponse.NO_CONTENT);
-			} else {
-				return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(result));
-			}
-		} catch (Throwable t) {
-			String backtrace = stacktraceToString(t, ActorManager.class.getName(), "invokeActorMethod");
-			return new KarResponse(KarResponse.OK, KarResponse.KAR_ACTOR_JSON, new ActorInvokeResult(t.getMessage(), backtrace));
-		}
 	}
 
 	private static String actorInstanceKey(String type, String instance) {
