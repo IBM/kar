@@ -17,27 +17,20 @@
 package com.ibm.research.kar.runtime;
 
 /**
- * An object representing the result of invoking an Actor method.
- * If `error` is false, then `value` contains the result of the method
+ * Constants used to encode HTTP responses.
  */
-public class ActorInvokeResult {
-  public final boolean error;
-  public final Object value;
-  public final String message;
-  public final String stack;
+public interface KarHttpConstants {
+	public static final String KAR_ACTOR_JSON = "application/kar+json";
+  public static final String TEXT_PLAIN = "text/plain";
 
-  ActorInvokeResult(Object value) {
-    this.error = false;
-    this.value = value;
-    this.message = null;
-    this.stack = null;
-  }
+  public static final int OK = 200;
+  public static final int CREATED = 201;
+  public static final int ACCEPTED = 202;
+  public static final int NO_CONTENT = 204;
 
-  ActorInvokeResult(String message, String stack) {
-    this.error = true;
-    this.value = false;
-    this.message = message;
-    this.stack = stack;
-  }
+  public static final int BAD_REQUEST = 400;
+  public static final int NOT_FOUND = 404;
+  public static final int REQUEST_TIMEOUT = 408;
 
+  public static final int INTERNAL_ERROR = 500;
 }

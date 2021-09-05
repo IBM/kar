@@ -35,21 +35,19 @@
 
   <dependencies>
     <dependency>
-      <groupId>javax</groupId>
-      <artifactId>javaee-api</artifactId>
-      <version>8.0</version>
-      <scope>provided</scope>
+      <groupId>com.ibm.research.kar</groupId>
+      <artifactId>kar-runtime-core</artifactId>
+      <version>${version.kar-java-sdk}</version>
     </dependency>
-
     <dependency>
       <groupId>com.ibm.research.kar</groupId>
       <artifactId>kar-runtime-quarkus</artifactId>
       <version>${version.kar-java-sdk}</version>
     </dependency>
+
     <dependency>
       <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-resteasy-reactive</artifactId>
-      <scope>provided</scope>
+      <artifactId>quarkus-resteasy-reactive-jackson</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -72,16 +70,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-kqueue</artifactId>
       <classifier>osx-x86_64</classifier>
-    </dependency>
-    <dependency>
-      <groupId>io.quarkus</groupId>
-      <artifactId>quarkus-junit5</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.rest-assured</groupId>
-      <artifactId>rest-assured</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
