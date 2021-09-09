@@ -24,9 +24,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/internal/pubsub"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/pkg/logger"
 )
 
 // invokeActorMethod an actor method
@@ -132,7 +132,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				} else {
 					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
-				if actorMap, err := pubsub.GetAllActorInstances(config.GetActorType); err == nil {
+				if actorMap, err := pubsub.GetAllActorInstances(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {

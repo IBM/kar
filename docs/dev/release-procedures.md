@@ -14,10 +14,12 @@ A release of the core KAR system generates a number of artifacts:
 
 ## Release Procedures
 
+Locally create a branch "release-prep"
+
 ### Update CHANGELOG.md
 
 1. Summarize non-trivial changes from `git log` into CHANGELOG.md
-2. Commit update CHANGELOG.md to main.
+2. Commit update CHANGELOG.md to release-prep
 
 ### Prepare and publish SDKs
 
@@ -28,12 +30,12 @@ A release of the core KAR system generates a number of artifacts:
     + `mvn clean deploy -P release`
     + `mvn nexus-staging:close -DstagingRepositoryId=comibmresearchkar-NNNN`
     + `mvn nexus-staging:release -DstagingRepositoryId=comibmresearchkar-NNNN`
-3. Commit version bump to main branch
+3. Commit version bump to release-prep
 
 #### JavaScript SDK
 
 1. update `version` in package.json and package-lock.json
-2. Commit version bump to main branch
+2. Commit version bump to release-prep
 3. Publish to npmjs
    + `npm login`
    + `npm publish --dry-run`
@@ -63,7 +65,7 @@ npm notice total files:   5
 1. Update version numbers in:
     + scripts/helm/kar/Chart.yaml
     + scripts/helm/kar/values.yaml
-2. Commit change to main branch
+2. Commit change to release-prep
 3. `helm package scripts/helm/kar`
 4. switch to gh-pages branch
 5. copy in kar-x.y.z.tgz
@@ -79,11 +81,14 @@ npm notice total files:   5
 2. examples/*js* benchmark/*
    + update package.json and package-lock.json
 
-3. PR version bumps; all should run successfully. Merge.
+3. Commit changes to release-prep.
+
+4. PR the release-prep branch. Travis should pass. Merge PR.
 
 ### Tag repository
 
 1. `git tag -s vx.y.z`
+   `git tag -s core/vx.y.z`
 2. `git push --tags upstream`
 3. Tags starting with `v` trigger build processes that:
     * push tagged images to quay.io (via travis-ci)

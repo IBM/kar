@@ -24,8 +24,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/IBM/kar.git/core/internal/sidecar"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/sidecar"
+	"github.com/IBM/kar/core/pkg/logger"
 )
 
 var (

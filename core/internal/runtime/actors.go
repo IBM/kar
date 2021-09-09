@@ -26,9 +26,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/internal/pubsub"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/pkg/logger"
 )
 
 // Actor uniquely identifies an actor instance.
@@ -127,7 +127,7 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// no fairness issue trying to reacquire because this entry is dead
 			}
 		} else { // new entry
-			sidecar, err := pubsub.GetSidecar(actor.Type, actor.ID)
+			sidecar, err := pubsub.GetSidecar(ctx, actor.Type, actor.ID)
 			if err != nil {
 				<-e.lock
 				return nil, false, err
@@ -276,7 +276,7 @@ func (e *actorEntry) migrate(sidecar string) error {
 	e.session = ""
 	e.valid = false
 	actorTable.Delete(e.actor)
-	_, err := pubsub.CompareAndSetSidecar(e.actor.Type, e.actor.ID, config.ID, sidecar)
+	_, err := pubsub.CompareAndSetSidecar(ctx, e.actor.Type, e.actor.ID, config.ID, sidecar)
 	close(e.busy)
 	<-e.lock
 	return err

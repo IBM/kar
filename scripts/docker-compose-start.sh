@@ -26,4 +26,5 @@ if [ -z $(docker network ls --filter name=kar-bus --format '{{.Name}}') ]; then
     docker network create kar-bus
 fi
 
+export RESTART_POLICY=${RESTART_POLICY:-no}
 docker-compose up -d

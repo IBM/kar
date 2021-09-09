@@ -78,7 +78,7 @@ spec:
       containers:
       - name: redis
         image: {{ .Values.redis.imageRegistry }}/{{ .Values.redis.imageName }}:{{ .Values.redis.imageTag }}
-        command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --requirepass $REDIS_PASSWORD"]
+        command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user $REDIS_USER allcommands allkeys on \\>$REDIS_PASSWORD"]
 {{- if .Values.global.persistence }}
         volumeMounts:
         - mountPath: /data
@@ -90,6 +90,8 @@ spec:
         env:
         - name: REDIS_PASSWORD
           value: {{ .Values.redis.password }}
+        - name: REDIS_USER
+          value: {{ .Values.redis.user }}
 
 {{- if .Values.global.persistence }}
 ---

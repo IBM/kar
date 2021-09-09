@@ -20,20 +20,47 @@
 - Java 11
 - Maven 3.6+
 
-Note1: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty). You should not use v20.0.0.11 because of a known bug in the Microprofile Rest Client.
-
 # Overview
-The Java SDK provides:
-1. `kar-rest-client` - contains basic classes to communicate with KAR and implement the actor abstractions
-2. `kar-actor-runtime` - classes that implement the KAR actor runtime in Java
+
+The Java SDK provides an implementation of the KAR programming model
+that utilizes familar Java frameworks such as javax.json and javax.ws.
+To be complete, the core KAR Java SDK must be embedded in a Java
+middleware framework that provides it with webserver capabilities.
+We have a completed implementation based on Open Liberty and are
+developing a second one based on Quarkus.
+
+The Java SDK is structured internally into three sub-modules:
+1. `kar-runtime-core` - Defines the core abstractions of the
+    programming model and the runtime system that implements them
+    on top of an abstract REST client that represents the KAR
+    service mesh.
+2. `kar-runtime-liberty` - An implementation of the abstract REST
+   client using Open Liberty as the underlying server framework.
+3. `kar-runtime-quarkus` - An implementation of the abstract REST
+   client using Quarkus as the underlying server framework. This is
+   still a work in progress.
+
+To use the Java SDK in an application component, you declare a maven
+dependency on one of `kar-runtime-liberty` or `kar-runtime-quarkus` as
+shown in more detail below.  You then follow the framework-specific
+instructions on using annotations or xml configuration files
+toconfigure your component (eg. by specifying the Actor types).
+
 
 # Building
 
-## Open Liberty
-To build these packages to run on Open Liberty, run `mvn install`.  This will build both `kar-rest-client` and `kar-actor-runtime`.  \
+Builds are driven by maven.  The basic commmand is `mvn install`.
 
 # Basic KAR SDK usage
-The basic KAR SDK is in `kar-rest-client`. After building, add `target/kar-rest-client.jar` and `target/libs` to the CLASSPATH of your application. Note: `target/libs` contains dependent jars required by `target/kar-rest-client.jar`, which is implemented using the [Microprofile 3.3 Rest Client](https://github.com/eclipse/microprofile-rest-client).
+
+The developer-facing APIs for the KAR SDK are all defined in
+`kar-runtime-core`.  The primary API is defined by
+`com.ibm.research.kar.Kar` and is supported by types and annotations
+in `com.ibm.research.kar.actor` and its sub-packages. The package
+`com.ibm.research.kar.runtime` defines internal APIs that are not
+intended for developer use; they are only made public to enable them
+to be invoked from support code within `kar-runtime-liberty` and
+`kar-runtime-quarkus`.
 
 The following code examples show how to use the Kar SDK.
 
@@ -50,8 +77,7 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service
-    JsonValue value = call("MyService", "increment", params);
+    JsonValue value = Services.call("MyService", "increment", params);
 }
 ```
 
@@ -69,12 +95,12 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service
-    JsonValue value = actorCall("ActorType", "ActorID", "remoteMethodName", params);
+    ActorInstance actor = Actors.ref("ActorType", "ActorID");
+    JsonValue value = Actors.call(actor, "remoteMethodName", params);
 }
 ```
 
-## Invoke a service asynchronously 
+## Invoke a service asynchronously
 ```java
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -88,8 +114,7 @@ public static void main(String[] args) {
 				.add("number",42)
 				.build();
 
-    // call service asynchronously
-   CompletionStage<JsonValue> cf = callAsync("MyService", "increment", params);
+   CompletionStage<JsonValue> cf = Services.callAsync("MyService", "increment", params);
 
    JsonValue value = cf
                     .toCompletableFuture()
@@ -110,26 +135,28 @@ public static void main(String[] args) {
     JsonObject params = Json.createObjectBuilder()
 				.add("number",42)
 				.build();
-    // call actor asnchronously
-    CompletionStage<JsonValue> cf = actorCallAsync("ActorType", "ActorID", "remoteMethodName", params);
-    
+
+    ActorInstance actor = Actors.ref("ActorType", "ActorID");
+    CompletionStage<JsonValue> cf = Actors.callAsync(actor, "remoteMethodName", params);
+
     JsonValue value = cf
                     .toCompletableFuture()
                     .get();
 }
 ```
 
-# KAR actor runtime
-The KAR actor runtime in `kar-actor-runtime` allows you to:
+## KAR actors
+
+The KAR actor runtime allows you to:
 - Create an actor using an annotated POJO class
 - Execute actors as part of your microservice
 
-KAR requires all Actor classes to implement the ActorInstance interface. 
-## Actor Instance
+KAR requires all Actor classes to implement the ActorInstance interface.
+### Actor Instance
 ```java
 public interface ActorInstance extends ActorRef {
 
-  // Allow KAR to get and set session ids   
+  // Allow KAR to get and set session ids
   public String getSession();
   public void setSession(String session);
 
@@ -140,7 +167,7 @@ public interface ActorInstance extends ActorRef {
 ```
 The ActorInstance includes two methods to manage session IDs, which KAR uses for actor communications as part of the [KAR programming model](../docs/KAR.md).
 
-## Actor Annotations
+### Actor Annotations
 
 Actor annotations example:
 ```java
@@ -162,8 +189,8 @@ public class MyActor implements ActorInstance {
     @Activate // optional actor constructor
     public void init() {
         // init code
-    }	
-    
+    }
+
     // Expose this method to the actor runtime.
     // KAR synchronizes requests to the actor by default
     @Remote
@@ -171,15 +198,15 @@ public class MyActor implements ActorInstance {
         // remote code
     }
 
-    
+
     // Expose this method to the actor runtime.
     // KAR synchronizes requests to the actor by default
-    @Remote 
+    @Remote
     public String readMyState() {
         // read-only code
     }
-	
-    // methods not annotated as @Remote are 
+
+    // methods not annotated as @Remote are
     // not callable by actor runtime
     public void cannotBeInvoked() {
     }
@@ -193,10 +220,24 @@ public class MyActor implements ActorInstance {
 }
 ```
 
-## Building a microservice with `kar-actor-runtime`
-We have tested the Java actor runtime using openliberty. `kar-actor-runtime` will automatically bundle `kar-rest-client` and is packaged as a jar.  Include this as a dependency when you create your microserivce. Note that `kar-actor-runtime` will not execute on its own.  At a minimum, implement a class that extends `javax.ws.rs.core.Application`. 
 
- Using Maven, an example `pom.xml` to include `kar-actor-runtime` module into a microservice called `kar-actor-example` is:
+# Using the Open Liberty based KAR SDK
+
+Note1: the SDK and example code have been tested using MicroProfile 3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of openliberty). You should not use v20.0.0.11 because of a known bug in the Microprofile Rest Client.
+
+In addition to writing the framework independent application code
+using the KAR SDK, you will need to write some additional bits of
+boilerplate to enable Open Liberty to execute your component.
+
+1. You will need to add a stanza to your `pom.xml` to declare a
+   dependency on `kar-runtime-core`, `kar-runtime-liberty` and on
+   some Open Liberty dependencies used within KAR.
+2. You will need to provide a class that extends
+   `javax.ws.rs.core.Application`.
+3. If your application component contains any KAR Actor types, you
+   will need to specify them in your `web.xml`.
+
+Using Maven, an example `pom.xml` to include `kar-runtime-liberty` module into a microservice called `kar-actor-example` is:
  ```xml
 <?xml version='1.0' encoding='utf-8'?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
@@ -208,7 +249,7 @@ We have tested the Java actor runtime using openliberty. `kar-actor-runtime` wil
 
     <groupId>com.ibm.research.kar.example.actors</groupId>
     <artifactId>kar-example-actors</artifactId>
-    <version>0.5.1</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -217,30 +258,34 @@ We have tested the Java actor runtime using openliberty. `kar-actor-runtime` wil
     </modules>
 </project>
 ```
-The corresponding`pom.xml` in `kar-actor-example` should include the following dependency:
+The corresponding`pom.xml` in `kar-actor-example` should include the following dependencies:
 ```xml
 <!-- KAR SDK -->
 <dependency>
 	<groupId>com.ibm.research.kar</groupId>
-	<artifactId>kar-actor-runtime</artifactId>
-	<version>0.5.1</version>
+	<artifactId>kar-runtime-core</artifactId>
+	<version>X.Y.Z</version>
+</dependency>
+<dependency>
+	<groupId>com.ibm.research.kar</groupId>
+	<artifactId>kar-runtime-liberty</artifactId>
+	<version>X.Y.Z</version>
 </dependency>
 ```
-`kar-actor-runtime` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
+`kar-runtime-liberty` requires the following features as part of the runtime. The featureManager section of the `server.xml` for `openliberty` should look like:
 ```xml
 <featureManager>
-		<feature>jaxrs-2.1</feature>
-		<feature>jsonb-1.0</feature>
-		<feature>mpHealth-2.1</feature>
-		<feature>mpConfig-1.3</feature>
-		<feature>mpRestClient-1.3</feature>
-		<feature>beanValidation-2.0</feature>
-		<feature>cdi-2.0</feature>
-		<feature>concurrent-1.0</feature>
-		<feature>mpOpenTracing-1.3</feature>
-	</featureManager>
+	<feature>jaxrs-2.1</feature>
+	<feature>jsonb-1.0</feature>
+	<feature>mpHealth-2.1</feature>
+	<feature>mpConfig-1.3</feature>
+	<feature>mpRestClient-1.3</feature>
+	<feature>beanValidation-2.0</feature>
+	<feature>cdi-2.0</feature>
+	<feature>concurrent-1.0</feature>
+</featureManager>
 ```
-`kar-actor-runtime` loads actors at deploy time. Actor classfiles should be added to your CLASSPATH.  Declare your actors to `kar-actor-runtime` as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
+`kar-runtime-liberty` loads actors at deploy time. Actor classfiles should be added to your CLASSPATH.  Declare your actors to `kar-runtime-liberty` as context parameters in `web.xml`.  For example, if you have KAR actor types `Dog` and `Cat` which are implemented by `com.example.Actor1` and `com.example.Actor2`, respectively, your `web.xml` would have:
 ```xml
 <context-param>
     <param-name>kar-actor-classes</param-name>
@@ -252,14 +297,10 @@ The corresponding`pom.xml` in `kar-actor-example` should include the following d
 </context-param>
 ```
 
-# Quarkus Support
-We are experimenting with the KAR Java SDK for Quarkus.  This is an early preview and has the following limitations:
+# Using the Quarkus based KAR SDK
 
-- No support for native compilation.  The Quarkus native-image does not support Java `MethodHandle`, which we use for reflection in the actor runtime.
-- No support for `quarkus:dev`.  We have undiagnosed classpath errors when running under this mode.  To run a quarkus application that uses KAR, directly execute the runnable jar target, e.g. `kar -app myApp java -jar target/my-runnable-jar`
+In addition to writing the framework independent application code
+using the KAR SDK, you will need to write some additional bits of
+boilerplate to enable Quarkus to execute your component.
 
-## Building
-If you've previously built the KAR Java SDK for Open Liberty, it is highly recommended that you delete your local maven repository.  Then, to build the KAR SDK using Quarkus extensions, in the `sdk-java` directory execute `mvn -P quarkus install`. 
-
-## Usage
-The Quarkus version of the SDK is the same, except you should not declare an `@ApplicationPath` in your JAX-RS application class since this is already used by the actor runtime.  Quarkus does not allow multiple declarations of `@ApplicationPath` (it also does not require a JAX-RS application class).
+TODO:  Once this is working...we need to write the instructions!

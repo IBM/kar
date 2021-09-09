@@ -23,8 +23,10 @@ ARG JAVA_RUNTIME=localhost:5000/kar/kar-sdk-java-runtime-11
 FROM $JAVA_BUILDER as builder
 
 WORKDIR /kar/app
+
 COPY pom.xml ./
 RUN mvn -q dependency:go-offline
+
 COPY src src
 RUN mvn -q package
 
@@ -32,7 +34,7 @@ RUN mvn -q package
 # Copy the artifacts to the runtime image
 #
 FROM $JAVA_RUNTIME
-COPY --from=builder --chown=default:root /kar/app/target/philosophers.war /opt/ol/wlp/usr/servers/defaultServer/apps
+COPY --from=builder --chown=default:root /kar/app/target/philosophers-liberty.war /opt/ol/wlp/usr/servers/defaultServer/apps
 COPY --from=builder --chown=default:root /kar/app/src/main/liberty/config/server.xml /opt/ol/wlp/usr/servers/defaultServer
 
 #

@@ -29,10 +29,10 @@ COPY cmd cmd
 
 ARG KAR_VERSION=unofficial
 
-RUN CGO_ENABLED=0 go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$KAR_VERSION" ./...
+RUN CGO_ENABLED=0 go install -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$KAR_VERSION" ./...
 
 # Create image containing the sidecar
-FROM alpine:3.11
+FROM alpine:3.14
 ARG KAR_BINARY
 
 COPY --from=builder /go/bin/$KAR_BINARY /kar/bin/$KAR_BINARY

@@ -32,26 +32,16 @@ A Cafe may contain an arbitrary number of tables of Philosophers. Each
 Cafe tracks its occupancy and generates messages when it seats new
 tables or when a sated Philosopher leaves.
 
-## Open Liberty
-To run the example locally in Open Liberty, first do a `mvn package`.
-Then in one window start up the server code:
+## Running the example
+To run the example locally using Open Liberty, first
+compile and package the application by doing `mvn package`.
+
+Next, run the application by doing:
 ```shell
 kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run
 ```
-In a second window, use the `kar` cli to invite some Philosopers to dinner:
+In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
 # Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20
+kar invoke -app dp Cafe Cafe+de+Flore seatTable 10 20
 ```
-
-## Quarkus
-We have limited supportfor Quarkus. To run the example locally using Quarkus, first do a `mvn -DskipTests=true -f pom-quarkus.xml clean package`
-
-Then in one window start up the server code:
-```shell
- kar run -app dp -actors Cafe,Fork,Philosopher,Table java -jar target/actor-dp-quarkus-1.0.0-runner.jar
-```
-In a second window, use the `kar` cli to invite some Philosopers to dinner:
-```shell
-# Invite 10 Philosophers to a meal of 20 servings each
-kar invoke -app dp Cafe "Cafe de Flore" seatTable 10 20

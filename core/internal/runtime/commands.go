@@ -27,11 +27,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/store"
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/internal/pubsub"
-	"github.com/IBM/kar.git/core/internal/store"
-	"github.com/IBM/kar.git/core/pkg/logger"
 )
 
 const (
@@ -228,7 +228,12 @@ func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
 }
 
 func call(ctx context.Context, msg map[string]string) error {
-	reply, err := invoke(ctx, msg["method"], msg)
+	if !pubsub.IsLiveSidecar(msg["from"]) {
+		logger.Info("Cancelling %s from dead sidecar %s", msg["method"], msg["from"])
+		return nil
+	}
+
+	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
@@ -255,7 +260,7 @@ func callback(ctx context.Context, msg map[string]string) error {
 func bindingDel(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := deleteBindings(msg["kind"], actor, msg["bindingId"])
+	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
 	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
 		reply = &Reply{StatusCode: http.StatusNotFound}
 	} else {
@@ -313,7 +318,7 @@ func bindingTell(ctx context.Context, msg map[string]string) error {
 }
 
 func tell(ctx context.Context, msg map[string]string) error {
-	reply, err := invoke(ctx, msg["method"], msg)
+	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
@@ -409,6 +414,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	switch msg["protocol"] {
 	case "service":
 		if msg["service"] == config.ServiceName {
+			msg["metricLabel"] = msg["service"] + ":" + msg["path"]
 			err = dispatch(ctx, cancel, msg)
 		} else {
 			err = pubsub.Send(ctx, false, msg)
@@ -460,7 +466,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 					deactivate(ctx, actor)
 				}
 				// delete persistent actor state
-				if _, err := store.Del(stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
+				if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
 					logger.Error("deleting persistent state of %v failed with %v", actor, err)
 				}
 				// clear placement data and sidecar's in-memory state
@@ -487,6 +493,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			} else if err != nil { // failed to invoke activate
 				e.release(session, false)
 			} else { // invoke actor method
+				msg["metricLabel"] = actor.Type + ":" + msg["path"]
 				msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 				msg["content-type"] = "application/kar+json"
 				msg["method"] = "POST"
@@ -504,7 +511,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 // activate an actor
 func activate(ctx context.Context, actor Actor) (*Reply, error) {
-	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":activate")
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("activate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
@@ -520,7 +527,7 @@ func activate(ctx context.Context, actor Actor) (*Reply, error) {
 
 // deactivate an actor (but retains placement)
 func deactivate(ctx context.Context, actor Actor) error {
-	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID})
+	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":deactivate")
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("deactivate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
@@ -589,7 +596,7 @@ func ManageBindings(ctx context.Context) {
 // all the Actor types that were specified with `-actors` when the sidecar was launched.
 func ValidateActorConfig(ctx context.Context) {
 	for _, actorType := range config.ActorTypes {
-		reply, err := invoke(ctx, "HEAD", map[string]string{"path": actorRuntimeRoutePrefix + actorType})
+		reply, err := invoke(ctx, "HEAD", map[string]string{"path": actorRuntimeRoutePrefix + actorType}, "")
 		if err != nil {
 			if err != ctx.Err() {
 				logger.Error("validate actor type failed for %s: %v", actorType, err)

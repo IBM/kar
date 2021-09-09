@@ -20,13 +20,8 @@
 
 This example demonstrates how to use the
 Java Microprofile KAR SDK in conjunction with Microprofile based
-microservices.
-
-The Server provides a greeting service that responds to requests with
-a message.  The Client acts as a proxy to the Server (just to
-demonstrate KAR, obviously you can directly invoke the Server if you
-want to).  The Client uses the `kar-rest-client` library to call the
-Server.
+microservices. The Server provides a greeting service that responds
+to requests with a message.
 
 ### Prerequisites
 - Java 11

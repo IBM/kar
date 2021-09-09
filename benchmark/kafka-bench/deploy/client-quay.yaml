@@ -22,8 +22,9 @@ spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
   containers:
-  - name: consumer
-    image: quay.io/ibm/kar-kafka-bench-producer
+  - name: producer
+    image: quay.io/ibm/kar-kafka-bench
+    command: ["/kar/bin/producer"]
     env:
     - name: KAFKA_BROKERS
       valueFrom:

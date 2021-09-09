@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-	 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.ibm.research.kar.example</groupId>
@@ -10,25 +8,22 @@
   <packaging>war</packaging>
 
   <properties>
+    <version.java-compiler>11</version.java-compiler>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <failOnMissingWebXml>false</failOnMissingWebXml>
-
-    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
+    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
     <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
+
+    <!-- Liberty configuration -->
+    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
     <version.microprofile>3.3</version.microprofile>
     <version.slf4j>1.7.25</version.slf4j>
-    <jaeger.version>0.34.0</jaeger.version>
-    <!-- Liberty configuration -->
     <liberty.var.app.context.root>/</liberty.var.app.context.root>
-    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
-    <version.java-compiler>11</version.java-compiler>
     <version.glassfish-json>1.1.4</version.glassfish-json>
     <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
   </properties>
 
   <dependencies>
-    <!-- OpenLiberty dependencies -->
     <dependency>
       <groupId>javax</groupId>
       <artifactId>javaee-api</artifactId>
@@ -48,28 +43,28 @@
     <finalName>${project.artifactId}</finalName>
     <plugins>
       <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-compiler-plugin</artifactId>
-	<version>${version.maven-compiler-plugin}</version>
-	<configuration>
-	  <release>${version.java-compiler}</release>
-	</configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${version.maven-compiler-plugin}</version>
+        <configuration>
+          <release>${version.java-compiler}</release>
+        </configuration>
       </plugin>
       <plugin>
-	<artifactId>maven-war-plugin</artifactId>
-	<version>${version.maven-war-plugin}</version>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>${version.maven-war-plugin}</version>
       </plugin>
       <plugin>
-	<groupId>io.openliberty.tools</groupId>
-	<artifactId>liberty-maven-plugin</artifactId>
-	<version>${version.liberty-maven-plugin}</version>
-	<configuration>
-	  <runtimeArtifact>
-	    <groupId>io.openliberty</groupId>
-	    <artifactId>openliberty-runtime</artifactId>
-	    <type>zip</type>
-	  </runtimeArtifact>
-	</configuration>
+        <groupId>io.openliberty.tools</groupId>
+        <artifactId>liberty-maven-plugin</artifactId>
+        <version>${version.liberty-maven-plugin}</version>
+        <configuration>
+          <runtimeArtifact>
+            <groupId>io.openliberty</groupId>
+            <artifactId>openliberty-runtime</artifactId>
+            <type>zip</type>
+          </runtimeArtifact>
+        </configuration>
       </plugin>
     </plugins>
   </build>

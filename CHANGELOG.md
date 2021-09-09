@@ -16,6 +16,23 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.8 - 2021-08-13
++ Upgrade to zookeeper 3.6 and kafka 2.7 (#146)
++ Upgrade to use Redis 6 (#145)
++ Implement cancellation of actor calls from dead sidecars (#144)
+
+# KAR 1.0.7 - 2021-08-09
++ Simplify Java SDK initialization (#139)
+
+# KAR 1.0.6 - 2021-07-30
++ Restructure of Java SDK internals and new maven artifact names
++ Add Prometheus metrics endpoint to sidecar
+
+# KAR 1.0.5 - 2021-07-22
++ Use factory to create JsonObjectBuilder and JsonArrayBuilder instances (#126)
++ Update to kind 0.11.1 (#125)
++ Rationalize concurrency controls for Java actor runtime (#123)
+
 # KAR 1.0.4 - 2021-06-08
 + Support for general multi-element Actor state updates (#117)
 + Optimize submap operations by using HSCAN (#115, #114, #112)
