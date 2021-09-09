@@ -127,10 +127,9 @@ public class KarSidecar {
         return karClient.callGet(path, headers(false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorGetReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetReminder(String type, String id, String reminderId) {
         String path = buildActorPath(type, id, "reminders/"+reminderId);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callGet(path, queryParamMap, headers(false));
+        return karClient.callGet(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorScheduleReminder(String type, String id, String reminderId, JsonObject params) {
@@ -138,10 +137,9 @@ public class KarSidecar {
         return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorGetWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetWithSubkeyState(String type, String id, String key, String subkey) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callGet(path, queryParamMap, headers(false));
+        return karClient.callGet(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadWithSubkeyState(String type, String id, String key, String subkey) {
@@ -160,10 +158,9 @@ public class KarSidecar {
         return karClient.callDelete(path, queryParamMap, headers(false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key) {
         String path = buildActorPath(type, id, "state/" + key);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callGet(path, queryParamMap, headers(false));
+        return karClient.callGet(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadState(String type, String id, String key) {

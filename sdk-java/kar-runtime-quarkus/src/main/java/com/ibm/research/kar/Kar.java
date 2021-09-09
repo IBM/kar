@@ -483,9 +483,14 @@ public class Kar implements KarHttpConstants {
 			 * @return An array of matching reminders
 			 */
 			public static Uni<Reminder[]> get(ActorRef actor, String reminderId) {
-				return sidecar.actorGetReminder(actor.getType(), actor.getId(), reminderId, true).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
-					return Uni.createFrom().item(toReminderArray(resp));
+				return sidecar.actorGetReminder(actor.getType(), actor.getId(), reminderId).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toReminderArray(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(new Reminder[0]);
+					} else {
+						return Uni.createFrom().item(toReminderArray(resp));
+					}
 				});
 			}
 
@@ -560,8 +565,16 @@ public class Kar implements KarHttpConstants {
 			 * @return The value associated with `key`
 			 */
 			public static Uni<JsonValue> get(ActorRef actor, String key) {
-				return sidecar.actorGetState(actor.getType(), actor.getId(), key, true)
-						.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? toJsonValue(resp) : JsonValue.NULL));
+				return sidecar.actorGetState(actor.getType(), actor.getId(), key)
+						.chain(resp -> {
+							if (isSuccess(resp)) {
+								return Uni.createFrom().item(toJsonValue(resp));
+							} else if (resp.statusCode() == NOT_FOUND) {
+								return Uni.createFrom().item(JsonValue.NULL);
+							} else {
+								return Uni.createFrom().failure(new KarSidecarError(resp));
+							}
+						});
 			}
 
 			/**
@@ -775,8 +788,16 @@ public class Kar implements KarHttpConstants {
 				 * @return The value associated with `key/subkey`
 				 */
 				public static Uni<JsonValue> get(ActorRef actor, String submap, String key) {
-					return sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key, true)
-							.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? toJsonValue(resp) : JsonValue.NULL));
+					return sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key)
+							.chain(resp -> {
+								if (isSuccess(resp)) {
+									return 	Uni.createFrom().item(toJsonValue(resp));
+								} else if (resp.statusCode() == NOT_FOUND) {
+									return Uni.createFrom().item(JsonValue.NULL);
+								} else {
+									return Uni.createFrom().failure(new KarSidecarError(resp));
+								}
+							});
 				}
 
 				/**
