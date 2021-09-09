@@ -24,10 +24,10 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/Shopify/sarama"
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/store"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/Shopify/sarama"
 )
 
 // store key for topic, partition
@@ -68,32 +68,34 @@ func (e *Message) Mark() error {
 
 // handler of consumer group session
 type handler struct {
-	client  sarama.Client
-	conf    *sarama.Config               // kafka config
-	topic   string                       // subscribed topic
-	options *Options                     // options
-	f       func(Message)                // Message handler
-	ready   chan struct{}                // channel closed when ready to accept events
-	local   map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
-	lock    sync.Mutex                   // mutex to protect local map
-	live    map[int32]map[int64]struct{} // offsets in progress at beginning of session (from all sidecars)
-	done    map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
+	client     sarama.Client
+	conf       *sarama.Config // kafka config
+	karContext context.Context
+	topic      string                       // subscribed topic
+	options    *Options                     // options
+	f          func(Message)                // Message handler
+	ready      chan struct{}                // channel closed when ready to accept events
+	local      map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
+	lock       sync.Mutex                   // mutex to protect local map
+	live       map[int32]map[int64]struct{} // offsets in progress at beginning of session (from all sidecars)
+	done       map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, topic string, options *Options, f func(Message)) *handler {
+func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options, f func(Message)) *handler {
 	return &handler{
-		conf:    conf,
-		topic:   topic,
-		options: options,
-		f:       f,
-		ready:   make(chan struct{}),
-		local:   map[int32]map[int64]struct{}{},
+		conf:       conf,
+		karContext: karContext,
+		topic:      topic,
+		options:    options,
+		f:          f,
+		ready:      make(chan struct{}),
+		local:      map[int32]map[int64]struct{}{},
 	}
 }
 
 func (h *handler) mark(partition int32, offset int64) error {
 	logger.Debug("finishing work on topic %s, partition %d, offset %d", h.topic, partition, offset)
-	_, err := store.ZAdd(mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
+	_, err := store.ZAdd(h.karContext, mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
 	if err != nil {
 		// TODO retry logic
 		logger.Error("failed to mark message on topic %s, partition %d, offset %d: %v", err)
@@ -171,7 +173,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for _, p := range session.Claims()[h.topic] {
 		h.live[p] = map[int64]struct{}{}
 		h.done[p] = map[int64]struct{}{}
-		r, err := store.ZRange(mangle(h.topic, p), 0, -1) // fetch done offsets from store
+		r, err := store.ZRange(session.Context(), mangle(h.topic, p), 0, -1) // fetch done offsets from store
 		if err != nil {
 			logger.Error("failed to retrieve offsets from store: %v", err)
 			return err
@@ -250,7 +252,7 @@ func (h *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim processes messages of consumer claim
 func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	store.ZRemRangeByScore(mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
+	store.ZRemRangeByScore(session.Context(), mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
 	// ok to ignore error in ZRemRangeByScore as this is just garbage collection
 	mark := true
 	for m := range claim.Messages() {
@@ -303,7 +305,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	if options.OffsetOldest {
 		conf.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
-	handler := newHandler(conf, topic, options, f)
+	handler := newHandler(conf, ctx, topic, options, f)
 	handler.marshal()
 	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
 	if err != nil {

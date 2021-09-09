@@ -90,7 +90,7 @@ func loadBinding(ctx context.Context, kind string, actor Actor, partition, id st
 	if len(found) > 0 { // bindingscription is already loaded
 		return nil
 	}
-	data, err := store.HGetAll(key)
+	data, err := store.HGetAll(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -110,13 +110,13 @@ func loadBinding(ctx context.Context, kind string, actor Actor, partition, id st
 }
 
 // delete bindings in redis and memory
-func deleteBindings(kind string, actor Actor, id string) int {
+func deleteBindings(ctx context.Context, kind string, actor Actor, id string) int {
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
 	found := pair.bindings.cancel(actor, id)
 	for _, b := range found {
-		store.Del(b.k())
+		store.Del(ctx, b.k())
 	}
 	logger.Debug("deleted %v binding(s) matching {%v, %v}", len(found), actor, id)
 	return len(found)
@@ -137,7 +137,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
-	keys, _ := store.Keys(bindingKey(kind, actor, "*", id))
+	keys, _ := store.Keys(ctx, bindingKey(kind, actor, "*", id))
 	var key string
 	var successCode int
 	if len(keys) > 0 { // reuse existing key
@@ -158,7 +158,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 	if err != nil {
 		return code, err
 	}
-	store.HSetMultiple(key, m)
+	store.HSetMultiple(ctx, key, m)
 	logger.Debug("put binding %v", b)
 	return successCode, nil
 }
@@ -167,7 +167,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 func loadBindings(ctx context.Context, partitions []int32) error {
 	logger.Debug("loadBindings starting")
 	for _, p := range partitions {
-		keys, err := store.Keys(bindingPattern(strconv.Itoa(int(p))))
+		keys, err := store.Keys(ctx, bindingPattern(strconv.Itoa(int(p))))
 		if err != nil {
 			return err
 		}

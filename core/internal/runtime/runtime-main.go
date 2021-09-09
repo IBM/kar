@@ -285,7 +285,7 @@ func purge(pattern string) {
 	if err := pubsub.Purge(); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
-	if count, err := store.Purge(pattern); err != nil {
+	if count, err := store.Purge(ctx, pattern); err != nil {
 		logger.Error("failed to delete Redis keys: %v", err)
 	} else {
 		logger.Info("%v deleted keys", count)
