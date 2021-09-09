@@ -20,7 +20,7 @@ const { v4: uuidv4 } = require('uuid')
 const NUM_ACCTS = 1000
 const ACCTS_PER_TXN = 2
 const NUM_TXNS = 200
-const CONCURRENCY = 20
+const CONCURRENCY = 20 
 var txns = {}, successCnt = 0
 
 function getRandomInt(min, max) {
@@ -77,16 +77,20 @@ async function getLatency(totalTime) {
   console.log('Throughput :',  NUM_TXNS/totalTime*1000000000)
 }
 
+async function initiateTransfer() {
+  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
+    await transfer()
+  }
+}
+
 async function main () {
   await warmUp()
   const strt = getTimeNanoSec()
-  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
-    let promises = []
-    for (let j = 0; j < CONCURRENCY; j++) {
-      promises.push(transfer())
-    }
-    await Promise.all(promises)
+  let promises = []
+  for (let j = 0; j < CONCURRENCY; j++) {
+    promises.push(initiateTransfer())
   }
+  await Promise.all(promises)
   const end = getTimeNanoSec()
   console.log(successCnt, 'success out of', NUM_TXNS, 'txns.')
   await getLatency(end-strt)
