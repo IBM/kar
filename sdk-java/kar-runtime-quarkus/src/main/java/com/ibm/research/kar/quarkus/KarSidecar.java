@@ -34,8 +34,6 @@ import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpRequest;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
 import io.vertx.mutiny.ext.web.client.WebClient;
-import io.vertx.mutiny.ext.web.client.predicate.ErrorConverter;
-import io.vertx.mutiny.ext.web.client.predicate.ResponsePredicate;
 
 public class KarSidecar {
 
@@ -316,14 +314,6 @@ public class KarSidecar {
     }
 
     public static class KarHttpClient {
-        public static final String HTTP_DELETE = "delete";
-        public static final String HTTP_GET = "get";
-        public static final String HTTP_HEAD = "head";
-        public static final String HTTP_OPTION = "option";
-        public static final String HTTP_PATCH = "path";
-        public static final String HTTP_POST = "post";
-        public static final String HTTP_PUT = "put";
-
         private final static String KAR_DEFAULT_SIDECAR_HOST = "127.0.0.1";
         private final static int KAR_DEFAULT_SIDECAR_PORT = 3000;
 
@@ -365,7 +355,7 @@ public class KarSidecar {
             return WebClient.create(vertx, options);
         }
 
-        public static class KarSidecarError extends Throwable {
+        public static class KarSidecarError extends Exception {
             public final int statusCode;
 
             public KarSidecarError(HttpResponse<Buffer> response) {
@@ -390,30 +380,35 @@ public class KarSidecar {
          */
 
         public Uni<HttpResponse<Buffer>> callDelete(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, uri, headers);
+            HttpRequest<Buffer> request = this.client.delete(uri);
+            request.putHeaders(headers);
             return request.send();
         }
 
         public Uni<HttpResponse<Buffer>> callDelete(String uri, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_DELETE, uri, headers);
+            HttpRequest<Buffer> request = this.client.delete(uri);
 
             if ((qparams != null) && (qparams.size() != 0)) {
                 for (Map.Entry<String, String> entry : qparams.entrySet()) {
                     request.addQueryParam(entry.getKey(), entry.getValue());
                 }
             }
+
+            request.putHeaders(headers);
 
             return request.send();
         }
 
         public Uni<HttpResponse<Buffer>> callGet(String uri, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_GET, uri, headers);
+            HttpRequest<Buffer> request = this.client.get(uri);
 
             if ((qparams != null) && (qparams.size() != 0)) {
                 for (Map.Entry<String, String> entry : qparams.entrySet()) {
                     request.addQueryParam(entry.getKey(), entry.getValue());
                 }
             }
+
+            request.putHeaders(headers);
 
             return request.send();
         }
@@ -423,20 +418,23 @@ public class KarSidecar {
         }
 
         public Uni<HttpResponse<Buffer>> callHead(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_HEAD, uri, headers);
+            HttpRequest<Buffer> request = this.client.head(uri);
+            request.putHeaders(headers);
             return request.send();
         }
 
         public Uni<HttpResponse<Buffer>> callPatch(String uri, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PATCH, uri, headers);
+            HttpRequest<Buffer> request = this.client.patch(uri);
+            request.putHeaders(headers);
             return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
         public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers, String session) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_POST, uri, headers);
+            HttpRequest<Buffer> request = this.client.post(uri);
             if (session != null) {
                 request.addQueryParam(KAR_QUERYPARAM_SESSION_NAME, session);
             }
+            request.putHeaders(headers);
             return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
@@ -453,42 +451,9 @@ public class KarSidecar {
         }
 
         public Uni<HttpResponse<Buffer>> callPut(String uri, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = httpCall(KarHttpClient.HTTP_PUT, uri, headers);
-            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
-        }
-
-        public HttpRequest<Buffer> httpCall(String method, String uri, MultiMap headers) throws UnsupportedOperationException {
-            HttpRequest<Buffer> request = null;
-
-            switch (method.toLowerCase()) {
-                case KarHttpClient.HTTP_DELETE:
-                    request = this.client.delete(uri);
-                    break;
-                case KarHttpClient.HTTP_GET:
-                    request = this.client.get(uri);
-                    break;
-                case KarHttpClient.HTTP_HEAD:
-                    request = this.client.head(uri);
-                    break;
-                case KarHttpClient.HTTP_PATCH:
-                    request = this.client.patch(uri);
-                    break;
-                case KarHttpClient.HTTP_POST:
-                    request = this.client.post(uri);
-                    break;
-                case KarHttpClient.HTTP_PUT:
-                    request = this.client.put(uri);
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unknown method type " + method + "in http call request");
-            }
-
+            HttpRequest<Buffer> request = this.client.put(uri);
             request.putHeaders(headers);
-
-            ErrorConverter ec = ErrorConverter.create(result -> new KarSidecarError(result.response()));
-            request.expect(ResponsePredicate.create(ResponsePredicate.SC_SUCCESS, ec));
-
-            return request;
+            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
     }
 }
