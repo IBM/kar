@@ -57,7 +57,7 @@ func unmangle(key string) string {
 // send a command using a connection from the pool
 func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
-	conn, err := pool.GetContext(context.Background())
+	conn, err := pool.GetContext(ctx)
 	if err != nil {
 		b := backoff.NewExponentialBackOff()
 		if config.RequestRetryLimit >= 0 {
@@ -65,7 +65,7 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 		}
 		err = backoff.Retry(func() error {
 			conn.Close()
-			conn, err = pool.GetContext(context.Background())
+			conn, err = pool.GetContext(ctx)
 			return err
 		}, b)
 	}
