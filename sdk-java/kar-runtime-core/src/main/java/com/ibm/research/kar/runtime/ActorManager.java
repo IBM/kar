@@ -35,7 +35,7 @@ import com.ibm.research.kar.actor.annotations.Remote;
 
 /**
  * The ActorManager is responsible for creating and removing the in-memory instances
- * of KAR Actors and for invoking methods on them as requested by the applicaiton.
+ * of KAR Actors and for managing the reflective meta-data stored in ActorTypes.
  */
 public class ActorManager {
 
