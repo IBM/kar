@@ -93,7 +93,9 @@ class Order extends tp.TransactionParticipant {
     var localDecision = false
     try {
       localDecision = await this.prepare(txnId, keys)
-    } catch {}
+    } catch {
+      await this.writePrepared(txnId, localDecision, {})
+    }
     return localDecision
   }
 
