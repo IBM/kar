@@ -54,7 +54,7 @@ func unmangle(key string) string {
 	return key
 }
 
-// send a command while holding the connection mutex
+// send a command using a connection from the pool
 func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
 	conn, err := pool.GetContext(context.Background())
