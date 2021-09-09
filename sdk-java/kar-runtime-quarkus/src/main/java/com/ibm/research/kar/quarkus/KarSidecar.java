@@ -15,8 +15,6 @@
  */
 package com.ibm.research.kar.quarkus;
 
-import java.util.Map;
-
 import javax.json.JsonArray;
 import javax.json.JsonObject;
 import javax.json.JsonValue;
@@ -26,9 +24,9 @@ import com.ibm.research.kar.runtime.KarHttpConstants;
 import org.jboss.logging.Logger;
 
 import io.smallrye.mutiny.Uni;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.WebClientOptions;
-import io.vertx.mutiny.core.MultiMap;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpRequest;
@@ -40,220 +38,270 @@ public class KarSidecar {
     private static final Logger LOG = Logger.getLogger(KarSidecar.class);
 
     private final static String KAR_API_CONTEXT_ROOT = "/kar/v1";
+
     private final static String KAR_QUERYPARAM_SESSION_NAME = "session";
+    private final static String HEADER_CONTENT_TYPE = "Content-Type";
+    private final static String HEADER_PRAGMA = "PRAGMA";
+    private final static String HEADER_ASYNC = "async";
+    private static String CONTENT_JSON = "application/json; charset=utf-8";
 
     private static KarHttpClient karClient = new KarHttpClient();
 
-    private static String CONTENT_JSON = "application/json; charset=utf-8";
-
     public Uni<HttpResponse<Buffer>> tellDelete(String service, String path) {
-        path = buildServicePath(service, path);
-        return karClient.callDelete(path, headers(true));
+        String uri = buildServicePath(service, path);
+        return karClient.delete(uri).putHeader(HEADER_PRAGMA, HEADER_ASYNC).send();
     }
 
     public Uni<HttpResponse<Buffer>> tellPatch(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPatch(path, params, headers(CONTENT_JSON, true));
+        String uri = buildServicePath(service, path);
+        return karClient.patch(uri)
+            .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> tellPost(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPost(path, params, headers(CONTENT_JSON, true));
+        String uri = buildServicePath(service, path);
+        return karClient.post(uri)
+            .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> tellPut(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPut(path, params, headers(CONTENT_JSON, true));
+        String uri = buildServicePath(service, path);
+        return karClient.put(uri)
+            .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callDelete(String service, String path) {
-        path = buildServicePath(service, path);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildServicePath(service, path);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callGet(String service, String path) {
-        path = buildServicePath(service, path);
-        return karClient.callGet(path, headers(false));
+        String uri = buildServicePath(service, path);
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callHead(String service, String path) {
-        path = buildServicePath(service, path);
-        return karClient.callHead(path, headers(false));
+        String uri = buildServicePath(service, path);
+        return karClient.head(uri).send();
+    }
+
+    public Uni<HttpResponse<Buffer>> callOptions(String service, String path) {
+        String uri = buildServicePath(service, path);
+        return karClient.options(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callOptions(String service, String path, JsonValue params) {
-        // TODO: Should be able to do the low-level hhtpCall with the OPTIONS method
-        return Uni.createFrom().failure(new UnsupportedOperationException());
+        String uri = buildServicePath(service, path);
+        return karClient.options(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPatch(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPatch(path, params, headers(CONTENT_JSON, false));
+        String uri = buildServicePath(service, path);
+        return karClient.patch(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPost(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
+        String uri = buildServicePath(service, path);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPut(String service, String path, JsonValue params) {
-        path = buildServicePath(service, path);
-        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
+        String uri = buildServicePath(service, path);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorTell(String type, String id, String path, JsonArray args) {
-        path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(KarHttpConstants.KAR_ACTOR_JSON, true));
+        String uri = buildActorPath(type, id, "call/" + path);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
+            .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
+            .sendBuffer(Buffer.buffer(args.toString()));
+    }
+
+    public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, JsonArray args) {
+        String uri = buildActorPath(type, id, "call/"+path);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
+            .sendBuffer(Buffer.buffer(args.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, String session, JsonArray args) {
-        path = buildActorPath(type, id, "call/"+path);
-        return karClient.callPost(path, args, headers(KarHttpConstants.KAR_ACTOR_JSON, false), session);
+        String uri = buildActorPath(type, id, "call/"+path);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
+            .addQueryParam(KAR_QUERYPARAM_SESSION_NAME, session)
+            .sendBuffer(Buffer.buffer(args.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminders(String type, String id) {
-        String path = buildActorPath(type, id, "reminders");
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "reminders");
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminder(String type, String id, String reminderId) {
-        String path = buildActorPath(type, id, "reminders/"+reminderId);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetReminders(String type, String id) {
-        String path = buildActorPath(type, id, "reminders");
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "reminders");
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetReminder(String type, String id, String reminderId) {
-        String path = buildActorPath(type, id, "reminders/"+reminderId);
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorScheduleReminder(String type, String id, String reminderId, JsonObject params) {
-        String path = buildActorPath(type, id, "reminders/"+reminderId);
-        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorGetWithSubkeyState(String type, String id, String key, String subkey) {
-        String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadWithSubkeyState(String type, String id, String key, String subkey) {
-        String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        return karClient.callHead(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        return karClient.head(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSetWithSubkeyState(String type, String id, String key, String subkey, JsonValue params) {
-        String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteWithSubkeyState(String type, String id, String key, String subkey) {
-        String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key) {
-        String path = buildActorPath(type, id, "state/" + key);
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key);
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadState(String type, String id, String key) {
-        String path = buildActorPath(type, id, "state/" + key);
-        return karClient.callHead(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key);
+        return karClient.head(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSetState(String type, String id, String key, JsonValue params) {
-        String path = buildActorPath(type, id, "state/" + key);
-        return karClient.callPut(path, params, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "state/" + key);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorSubmapOp(String type, String id, String key, JsonValue params) {
-        String path = buildActorPath(type, id, "state/" + key);
-        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "state/" + key);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteState(String type, String id, String key) {
-        String path = buildActorPath(type, id, "state/" + key);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "state/" + key);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetAllState(String type, String id) {
-        String path = buildActorPath(type, id, "state");
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "state");
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorUpdate(String type, String id, JsonValue params) {
-        String path = buildActorPath(type, id, "state");
-        return karClient.callPost(path, params, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "state");
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteAllState(String type, String id) {
-        String path = buildActorPath(type, id, "state");
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "state");
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorDelete(String type, String id) {
-        String path = buildActorPath(type, id);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetAllSubscriptions(String type, String id) {
-        String path = buildActorPath(type, id, "events");
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "events");
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelAllSubscriptions(String type, String id) {
-        String path = buildActorPath(type, id, "events");
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "events");
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetSubscription(String type, String id, String subscriptionId) {
-        String path = buildActorPath(type, id, "events/"+subscriptionId);
-        return karClient.callGet(path, headers(false));
+        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelSubscription(String type, String id, String subscriptionId) {
-        String path = buildActorPath(type, id, "events/"+subscriptionId);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSubscribe(String type, String id, String subscriptionId, JsonValue data) {
-        String path = buildActorPath(type, id, "events/"+subscriptionId);
-        return karClient.callPut(path, data, headers(CONTENT_JSON, false));
+        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(data.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> eventCreateTopic(String topic, JsonValue configuration) {
-        String path = buildEventTopicPath(topic);
-        return karClient.callPut(path, configuration, headers(CONTENT_JSON, false));
+        String uri = buildEventTopicPath(topic);
+        return karClient.put(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(configuration.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> eventDeleteTopic(String topic) {
-        String path = buildEventTopicPath(topic);
-        return karClient.callDelete(path, headers(false));
+        String uri = buildEventTopicPath(topic);
+        return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> eventPublish(String topic, JsonValue event) {
-        String path = buildEventPublishPath(topic);
-        return karClient.callPost(path, event, headers(CONTENT_JSON, false));
+        String uri = buildEventPublishPath(topic);
+        return karClient.post(uri)
+            .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
+            .sendBuffer(Buffer.buffer(event.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> shutdown() {
-        String path = getSystemShutdownPath();
-        return karClient.callPost(path, headers(CONTENT_JSON, false));
+        String uri = getSystemShutdownPath();
+        return karClient.post(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> systemInformation(String component) {
-        String path = getSystemInformationPath(component);
-        return karClient.callGet(path, headers(false));
+        String uri = getSystemInformationPath(component);
+        return karClient.get(uri).send();
     }
-
-    /*
-     * Utility calls specific to Quarkus-based KarSidecar
-     */
 
     /*
      * Helpers to construct sidecar URIs
@@ -286,28 +334,7 @@ public class KarSidecar {
         return KAR_API_CONTEXT_ROOT + "/system/information/" + component;
     }
 
-    /*
-     * Helpers to build request headers
-     */
-
-    private static MultiMap headers(boolean async) {
-        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        if (async) {
-            headers.add("PRAGMA", "async");
-        }
-        return headers;
-    }
-
-    private static MultiMap headers(String contentType, boolean async) {
-        MultiMap headers = MultiMap.caseInsensitiveMultiMap();
-        headers.add("Content-type", contentType);
-        if (async) {
-            headers.add("PRAGMA", "async");
-        }
-        return headers;
-    }
-
-    public static class KarHttpClient {
+    static class KarHttpClient {
         private final static String KAR_DEFAULT_SIDECAR_HOST = "127.0.0.1";
         private final static int KAR_DEFAULT_SIDECAR_PORT = 3000;
 
@@ -349,62 +376,32 @@ public class KarSidecar {
             return WebClient.create(vertx, options);
         }
 
-
-        /*
-         *
-         * HTTP REST methods
-         *
-         */
-
-        public Uni<HttpResponse<Buffer>> callDelete(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.delete(uri);
-            request.putHeaders(headers);
-            return request.send();
+        HttpRequest<Buffer> delete(String uri) {
+            return this.client.delete(uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callGet(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.get(uri);
-            request.putHeaders(headers);
-            return request.send();
+        HttpRequest<Buffer> get(String uri) {
+            return this.client.get(uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callHead(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.head(uri);
-            request.putHeaders(headers);
-            return request.send();
+        HttpRequest<Buffer> head(String uri) {
+            return this.client.head(uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callPatch(String uri, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.patch(uri);
-            request.putHeaders(headers);
-            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
+        HttpRequest<Buffer> options(String uri) {
+            return this.client.request(HttpMethod.OPTIONS, uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers, String session) {
-            HttpRequest<Buffer> request = this.client.post(uri);
-            if (session != null) {
-                request.addQueryParam(KAR_QUERYPARAM_SESSION_NAME, session);
-            }
-            request.putHeaders(headers);
-            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
+        HttpRequest<Buffer> patch(String uri) {
+            return this.client.patch(uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.post(uri);
-            request.putHeaders(headers);
-            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
+        HttpRequest<Buffer> post(String uri) {
+            return this.client.post(uri);
         }
 
-        public Uni<HttpResponse<Buffer>> callPost(String uri, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.post(uri);
-            request.putHeaders(headers);
-            return request.send();
-        }
-
-        public Uni<HttpResponse<Buffer>> callPut(String uri, Object body, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.put(uri);
-            request.putHeaders(headers);
-            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
+        HttpRequest<Buffer> put(String uri) {
+            return this.client.put(uri);
         }
     }
 }

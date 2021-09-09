@@ -215,7 +215,7 @@ public class Kar implements KarHttpConstants {
 		 * @return The response returned by the target service.
 		 */
 		public static Uni<HttpResponse<Buffer>> options(String service, String path) {
-			return sidecar.callOptions(service, path, JsonValue.NULL);
+			return sidecar.callOptions(service, path);
 		}
 
 		/**
@@ -401,7 +401,7 @@ public class Kar implements KarHttpConstants {
 		 * @return The result of the invoked actor method.
 		 */
 		public static Uni<JsonValue> call(ActorRef actor, String path, JsonValue... args) {
-			return sidecar.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args))
+			return sidecar.actorCall(actor.getType(), actor.getId(), path, packArgs(args))
 					.chain(resp -> callProcessResponse(resp, actor, path));
 		}
 
