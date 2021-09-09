@@ -73,7 +73,7 @@ public class KarSidecar {
 
     public Uni<HttpResponse<Buffer>> callGet(String service, String path) {
         path = buildServicePath(service, path);
-        return karClient.callGet(path, null, headers(false));
+        return karClient.callGet(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> callHead(String service, String path) {
@@ -116,10 +116,9 @@ public class KarSidecar {
         return karClient.callDelete(path, headers(false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorCancelReminder(String type, String id, String reminderId, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorCancelReminder(String type, String id, String reminderId) {
         String path = buildActorPath(type, id, "reminders/"+reminderId);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callDelete(path, queryParamMap, headers(false));
+        return karClient.callDelete(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorGetReminders(String type, String id) {
@@ -152,10 +151,9 @@ public class KarSidecar {
         return karClient.callPut(path, params, headers(CONTENT_JSON, false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorDeleteWithSubkeyState(String type, String id, String key, String subkey, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorDeleteWithSubkeyState(String type, String id, String key, String subkey) {
         String path = buildActorPath(type, id, "state/" + key + "/" + subkey);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callDelete(path, queryParamMap, headers(false));
+        return karClient.callDelete(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key) {
@@ -178,10 +176,9 @@ public class KarSidecar {
         return karClient.callPost(path, params, headers(CONTENT_JSON, false));
     }
 
-    public Uni<HttpResponse<Buffer>> actorDeleteState(String type, String id, String key, boolean nilOnAbsent) {
+    public Uni<HttpResponse<Buffer>> actorDeleteState(String type, String id, String key) {
         String path = buildActorPath(type, id, "state/" + key);
-        Map<String, String> queryParamMap = Map.of("nilOnAbsent", Boolean.toString(nilOnAbsent));
-        return karClient.callDelete(path, queryParamMap, headers(false));
+        return karClient.callDelete(path, headers(false));
     }
 
     public Uni<HttpResponse<Buffer>> actorGetAllState(String type, String id) {
@@ -352,23 +349,6 @@ public class KarSidecar {
             return WebClient.create(vertx, options);
         }
 
-        public static class KarSidecarError extends Exception {
-            public final int statusCode;
-
-            public KarSidecarError(HttpResponse<Buffer> response) {
-                super(extractMessage(response));
-                this.statusCode = response.statusCode();
-            }
-
-            private static String extractMessage(HttpResponse<Buffer> response) {
-                String msg = response.statusMessage();
-                String body = response.bodyAsString();
-                if (body != null && !body.isBlank()) {
-                    msg = msg + ": "+ body;
-                }
-                return msg;
-            }
-        }
 
         /*
          *
@@ -382,36 +362,10 @@ public class KarSidecar {
             return request.send();
         }
 
-        public Uni<HttpResponse<Buffer>> callDelete(String uri, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.delete(uri);
-
-            if ((qparams != null) && (qparams.size() != 0)) {
-                for (Map.Entry<String, String> entry : qparams.entrySet()) {
-                    request.addQueryParam(entry.getKey(), entry.getValue());
-                }
-            }
-
-            request.putHeaders(headers);
-
-            return request.send();
-        }
-
-        public Uni<HttpResponse<Buffer>> callGet(String uri, Map<String, String> qparams, MultiMap headers) {
-            HttpRequest<Buffer> request = this.client.get(uri);
-
-            if ((qparams != null) && (qparams.size() != 0)) {
-                for (Map.Entry<String, String> entry : qparams.entrySet()) {
-                    request.addQueryParam(entry.getKey(), entry.getValue());
-                }
-            }
-
-            request.putHeaders(headers);
-
-            return request.send();
-        }
-
         public Uni<HttpResponse<Buffer>> callGet(String uri, MultiMap headers) {
-            return callGet(uri, null, headers);
+            HttpRequest<Buffer> request = this.client.get(uri);
+            request.putHeaders(headers);
+            return request.send();
         }
 
         public Uni<HttpResponse<Buffer>> callHead(String uri, MultiMap headers) {
@@ -436,15 +390,15 @@ public class KarSidecar {
         }
 
         public Uni<HttpResponse<Buffer>> callPost(String uri, Object body, MultiMap headers) {
-            return callPost(uri, body, headers, null);
-        }
-
-        public Uni<HttpResponse<Buffer>> callPost(String uri, MultiMap headers, String session) {
-            return callPost(uri, null, headers, session);
+            HttpRequest<Buffer> request = this.client.post(uri);
+            request.putHeaders(headers);
+            return body == null ? request.send() : request.sendBuffer(Buffer.buffer(body.toString()));
         }
 
         public Uni<HttpResponse<Buffer>> callPost(String uri, MultiMap headers) {
-            return callPost(uri, null, headers, null);
+            HttpRequest<Buffer> request = this.client.post(uri);
+            request.putHeaders(headers);
+            return request.send();
         }
 
         public Uni<HttpResponse<Buffer>> callPut(String uri, Object body, MultiMap headers) {

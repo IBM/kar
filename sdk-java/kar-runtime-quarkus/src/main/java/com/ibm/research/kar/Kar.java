@@ -46,7 +46,7 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 import com.ibm.research.kar.quarkus.KarSidecar;
-import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
+import com.ibm.research.kar.quarkus.KarSidecarError;
 import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -456,9 +456,14 @@ public class Kar implements KarHttpConstants {
 			 * @return The number of reminders that were cancelled.
 			 */
 			public static Uni<Integer> cancel(ActorRef actor, String reminderId) {
-				return sidecar.actorCancelReminder(actor.getType(), actor.getId(), reminderId, true).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
-					return Uni.createFrom().item(toInt(resp));
+				return sidecar.actorCancelReminder(actor.getType(), actor.getId(), reminderId).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toInt(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(0);
+					} else {
+						return Uni.createFrom().failure(new KarSidecarError(resp));
+					}
 				});
 			}
 
@@ -668,9 +673,14 @@ public class Kar implements KarHttpConstants {
 			 *         for `key`.
 			 */
 			public static Uni<Integer> remove(ActorRef actor, String key) {
-				return sidecar.actorDeleteState(actor.getType(), actor.getId(), key, true).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
-					return Uni.createFrom().item(toInt(resp));
+				return sidecar.actorDeleteState(actor.getType(), actor.getId(), key).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toInt(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(0);
+					} else {
+						return Uni.createFrom().failure(new KarSidecarError(resp));
+					}
 				});
 			}
 
@@ -908,9 +918,14 @@ public class Kar implements KarHttpConstants {
 				 *         for `key`.
 				 */
 				public static Uni<Integer> remove(ActorRef actor, String submap, String key) {
-					return sidecar.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), submap, key, true).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
-						return Uni.createFrom().item(toInt(resp));
+					return sidecar.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), submap, key).chain(resp -> {
+						if (isSuccess(resp)) {
+							return Uni.createFrom().item(toInt(resp));
+						} else if (resp.statusCode() == NOT_FOUND) {
+							return Uni.createFrom().item(0);
+						} else {
+							return Uni.createFrom().failure(new KarSidecarError(resp));
+						}
 					});
 				}
 
