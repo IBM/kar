@@ -260,7 +260,7 @@ func callback(ctx context.Context, msg map[string]string) error {
 func bindingDel(ctx context.Context, msg map[string]string) error {
 	var reply *Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
-	found := deleteBindings(msg["kind"], actor, msg["bindingId"])
+	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
 	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
 		reply = &Reply{StatusCode: http.StatusNotFound}
 	} else {
@@ -466,7 +466,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 					deactivate(ctx, actor)
 				}
 				// delete persistent actor state
-				if _, err := store.Del(stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
+				if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
 					logger.Error("deleting persistent state of %v failed with %v", actor, err)
 				}
 				// clear placement data and sidecar's in-memory state

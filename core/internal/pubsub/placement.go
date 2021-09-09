@@ -17,6 +17,7 @@
 package pubsub
 
 import (
+	"context"
 	"strings"
 
 	"github.com/IBM/kar/core/internal/config"
@@ -32,8 +33,8 @@ func placementKey(t, id string) string {
 }
 
 // GetSidecar returns the current sidecar for the given actor type and id or "" if none.
-func GetSidecar(t, id string) (string, error) {
-	s, err := store.Get(placementKey(t, id))
+func GetSidecar(ctx context.Context, t, id string) (string, error) {
+	s, err := store.Get(ctx, placementKey(t, id))
 	if err == store.ErrNil {
 		return "", nil
 	}
@@ -44,7 +45,7 @@ func GetSidecar(t, id string) (string, error) {
 // Use old = "" to atomically set the initial placement.
 // Use new = "" to atomically delete the current placement.
 // Returns 0 if unsuccessful, 1 if successful.
-func CompareAndSetSidecar(t, id, old, new string) (int, error) {
+func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, error) {
 	o := &old
 	if old == "" {
 		o = nil
@@ -53,13 +54,13 @@ func CompareAndSetSidecar(t, id, old, new string) (int, error) {
 	if new == "" {
 		n = nil
 	}
-	return store.CompareAndSet(placementKey(t, id), o, n)
+	return store.CompareAndSet(ctx, placementKey(t, id), o, n)
 }
 
 // GetAllActorInstances returns a mapping from actor types to instanceIDs
-func GetAllActorInstances(actorTypePrefix string) (map[string][]string, error) {
+func GetAllActorInstances(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
 	m := map[string][]string{}
-	reply, err := store.Keys(placementKeyPrefix(actorTypePrefix) + "*")
+	reply, err := store.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
 	if err != nil {
 		return nil, err
 	}

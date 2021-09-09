@@ -88,9 +88,9 @@ func persistReminder(r Reminder) map[string]string {
 	return rMap
 }
 
-func persistTargetTime(key string, targetTime time.Time) {
+func persistTargetTime(ctx context.Context, key string, targetTime time.Time) {
 	ts, _ := targetTime.MarshalText()
-	store.HSet(key, "targetTime", string(ts))
+	store.HSet(ctx, key, "targetTime", string(ts))
 }
 
 func (rq *reminderQueue) load(actor Actor, id, key string, rMap map[string]string) (binding, error) {
@@ -181,9 +181,9 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		if r.Period > 0 {
 			r.TargetTime = fireTime.Add(r.Period)
 			activeReminders.add(ctx, r)
-			persistTargetTime(r.key, r.TargetTime)
+			persistTargetTime(ctx, r.key, r.TargetTime)
 		} else {
-			store.Del(r.key)
+			store.Del(ctx, r.key)
 		}
 	}
 
