@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.ibm.research.kar.quarkus;
+package com.ibm.research.kar;
 
 import io.vertx.mutiny.core.buffer.Buffer;
 import io.vertx.mutiny.ext.web.client.HttpResponse;
@@ -23,13 +23,13 @@ import io.vertx.mutiny.ext.web.client.HttpResponse;
  * Indicates that a request to the attached sidecar has resulted in an
  * unanticipated error of some form.
  */
-public class KarSidecarError extends Exception {
+public class KarSidecarException extends Exception {
   /**
    * The http status code of the response
    */
   public final int statusCode;
 
-  public KarSidecarError(HttpResponse<Buffer> response) {
+  public KarSidecarException(HttpResponse<Buffer> response) {
     super(extractMessage(response));
     this.statusCode = response.statusCode();
   }

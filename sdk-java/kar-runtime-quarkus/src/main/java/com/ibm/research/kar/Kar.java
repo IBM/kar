@@ -46,7 +46,6 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 import com.ibm.research.kar.quarkus.KarSidecar;
-import com.ibm.research.kar.quarkus.KarSidecarError;
 import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -280,7 +279,7 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<Void> tell(String service, String path, JsonValue body) {
 			return sidecar.tellPost(service, path, body).chain(resp -> {
-				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 				return Uni.createFrom().nullItem();
 			});
 		}
@@ -295,7 +294,7 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<Object> call(String service, String path, JsonValue body) {
 			return sidecar.callPost(service, path, body).chain(resp -> {
-				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 				Object result = resp.bodyAsString();
 				String contentType = resp.getHeader("Content-Type");
 				if (contentType != null && !contentType.startsWith(TEXT_PLAIN)) {
@@ -333,7 +332,7 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<Void> remove(ActorRef actor) {
 			return sidecar.actorDelete(actor.getType(), actor.getId()).chain(resp -> {
-				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 				return Uni.createFrom().nullItem();
 			});
 		}
@@ -356,7 +355,7 @@ public class Kar implements KarHttpConstants {
 						} else if (resp.statusCode() == NOT_FOUND) {
 							return Uni.createFrom().failure(new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path));
 						} else {
-							return Uni.createFrom().failure(new KarSidecarError(resp));
+							return Uni.createFrom().failure(new KarSidecarException(resp));
 						}
 					});
 		}
@@ -426,7 +425,7 @@ public class Kar implements KarHttpConstants {
 			} else if (response.statusCode() == REQUEST_TIMEOUT) {
 				return Uni.createFrom().failure(new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path));
 			} else {
-				return Uni.createFrom().failure(new KarSidecarError(response));
+				return Uni.createFrom().failure(new KarSidecarException(response));
 			}
 		}
 
@@ -443,7 +442,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Integer> cancelAll(ActorRef actor) {
 				return sidecar.actorCancelReminders(actor.getType(), actor.getId()).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().item(toInt(resp));
 				});
 			}
@@ -462,7 +461,7 @@ public class Kar implements KarHttpConstants {
 					} else if (resp.statusCode() == NOT_FOUND) {
 						return Uni.createFrom().item(0);
 					} else {
-						return Uni.createFrom().failure(new KarSidecarError(resp));
+						return Uni.createFrom().failure(new KarSidecarException(resp));
 					}
 				});
 			}
@@ -475,7 +474,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Reminder[]> getAll(ActorRef actor) {
 				return sidecar.actorGetReminders(actor.getType(), actor.getId()).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().item(toReminderArray(resp));
 				});
 			}
@@ -542,7 +541,7 @@ public class Kar implements KarHttpConstants {
 				JsonObject requestBody = builder.build();
 
 				return sidecar.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().nullItem();
 				});
 			}
@@ -577,7 +576,7 @@ public class Kar implements KarHttpConstants {
 							} else if (resp.statusCode() == NOT_FOUND) {
 								return Uni.createFrom().item(JsonValue.NULL);
 							} else {
-								return Uni.createFrom().failure(new KarSidecarError(resp));
+								return Uni.createFrom().failure(new KarSidecarException(resp));
 							}
 						});
 			}
@@ -616,7 +615,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Integer> set(ActorRef actor, String key, JsonValue value) {
 				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().item(toInt(resp));
 				});
 			}
@@ -630,7 +629,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Void> setV(ActorRef actor, String key, JsonValue value) {
 				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().nullItem();
 				});
 			}
@@ -679,7 +678,7 @@ public class Kar implements KarHttpConstants {
 					} else if (resp.statusCode() == NOT_FOUND) {
 						return Uni.createFrom().item(0);
 					} else {
-						return Uni.createFrom().failure(new KarSidecarError(resp));
+						return Uni.createFrom().failure(new KarSidecarException(resp));
 					}
 				});
 			}
@@ -709,7 +708,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Integer> removeAll(ActorRef actor) {
 				return sidecar.actorDeleteAllState(actor.getType(), actor.getId()).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					return Uni.createFrom().item(toInt(resp));
 				});
 			}
@@ -776,7 +775,7 @@ public class Kar implements KarHttpConstants {
 
 				JsonObject params = requestBuilder.build();
 				return sidecar.actorUpdate(actor.getType(), actor.getId(), params).chain(resp -> {
-					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 					JsonObject responseObject = toJsonValue(resp).asJsonObject();
 					int added = responseObject.getInt("added");
 					int removed = responseObject.getInt("removed");
@@ -805,7 +804,7 @@ public class Kar implements KarHttpConstants {
 								} else if (resp.statusCode() == NOT_FOUND) {
 									return Uni.createFrom().item(JsonValue.NULL);
 								} else {
-									return Uni.createFrom().failure(new KarSidecarError(resp));
+									return Uni.createFrom().failure(new KarSidecarException(resp));
 								}
 							});
 				}
@@ -850,7 +849,7 @@ public class Kar implements KarHttpConstants {
 				 */
 				public static Uni<Integer> set(ActorRef actor, String submap, String key, JsonValue value) {
 					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 						return Uni.createFrom().item(toInt(resp));
 					});
 				}
@@ -865,7 +864,7 @@ public class Kar implements KarHttpConstants {
 				 */
 				public static Uni<Void> setV(ActorRef actor, String submap, String key, JsonValue value) {
 					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 						return Uni.createFrom().nullItem();
 					});
 				}
@@ -924,7 +923,7 @@ public class Kar implements KarHttpConstants {
 						} else if (resp.statusCode() == NOT_FOUND) {
 							return Uni.createFrom().item(0);
 						} else {
-							return Uni.createFrom().failure(new KarSidecarError(resp));
+							return Uni.createFrom().failure(new KarSidecarException(resp));
 						}
 					});
 				}
@@ -960,7 +959,7 @@ public class Kar implements KarHttpConstants {
 					jb.add("op", Json.createValue("clear"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 						return Uni.createFrom().item(toInt(resp));
 					});
 				}
@@ -977,7 +976,7 @@ public class Kar implements KarHttpConstants {
 					jb.add("op", Json.createValue("keys"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 						Object[] jstrings = toJsonValue(resp).asJsonArray().toArray();
 						String[] ans = new String[jstrings.length];
 						for (int i = 0; i < jstrings.length; i++) {
@@ -1000,7 +999,7 @@ public class Kar implements KarHttpConstants {
 					jb.add("op", Json.createValue("size"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
-						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarError(resp));
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 						return Uni.createFrom().item(toInt(resp));
 					});
 				}
