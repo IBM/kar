@@ -48,12 +48,12 @@ public class KarSidecar {
     private static KarHttpClient karClient = new KarHttpClient();
 
     public Uni<HttpResponse<Buffer>> tellDelete(String service, String path) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.delete(uri).putHeader(HEADER_PRAGMA, HEADER_ASYNC).send();
     }
 
     public Uni<HttpResponse<Buffer>> tellPatch(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.patch(uri)
             .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
@@ -61,7 +61,7 @@ public class KarSidecar {
     }
 
     public Uni<HttpResponse<Buffer>> tellPost(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.post(uri)
             .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
@@ -69,7 +69,7 @@ public class KarSidecar {
     }
 
     public Uni<HttpResponse<Buffer>> tellPut(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.put(uri)
             .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
@@ -77,55 +77,55 @@ public class KarSidecar {
     }
 
     public Uni<HttpResponse<Buffer>> callDelete(String service, String path) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callGet(String service, String path) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callHead(String service, String path) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.head(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callOptions(String service, String path) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.options(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> callOptions(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.options(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPatch(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.patch(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPost(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> callPut(String service, String path, JsonValue params) {
-        String uri = buildServicePath(service, path);
+        String uri = buildServiceUri(service, path);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorTell(String type, String id, String path, JsonArray args) {
-        String uri = buildActorPath(type, id, "call/" + path);
+        String uri = buildActorUri(type, id, "call/" + path);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
             .putHeader(HEADER_PRAGMA, HEADER_ASYNC)
@@ -133,14 +133,14 @@ public class KarSidecar {
     }
 
     public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, JsonArray args) {
-        String uri = buildActorPath(type, id, "call/"+path);
+        String uri = buildActorUri(type, id, "call/"+path);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
             .sendBuffer(Buffer.buffer(args.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorCall(String type, String id, String path, String session, JsonArray args) {
-        String uri = buildActorPath(type, id, "call/"+path);
+        String uri = buildActorUri(type, id, "call/"+path);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, KarHttpConstants.KAR_ACTOR_JSON)
             .addQueryParam(KAR_QUERYPARAM_SESSION_NAME, session)
@@ -148,189 +148,189 @@ public class KarSidecar {
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminders(String type, String id) {
-        String uri = buildActorPath(type, id, "reminders");
+        String uri = buildActorUri(type, id, "reminders");
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelReminder(String type, String id, String reminderId) {
-        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        String uri = buildActorUri(type, id, "reminders/"+reminderId);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetReminders(String type, String id) {
-        String uri = buildActorPath(type, id, "reminders");
+        String uri = buildActorUri(type, id, "reminders");
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetReminder(String type, String id, String reminderId) {
-        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        String uri = buildActorUri(type, id, "reminders/"+reminderId);
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorScheduleReminder(String type, String id, String reminderId, JsonObject params) {
-        String uri = buildActorPath(type, id, "reminders/"+reminderId);
+        String uri = buildActorUri(type, id, "reminders/"+reminderId);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorGetWithSubkeyState(String type, String id, String key, String subkey) {
-        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        String uri = buildActorUri(type, id, "state/" + key + "/" + subkey);
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadWithSubkeyState(String type, String id, String key, String subkey) {
-        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        String uri = buildActorUri(type, id, "state/" + key + "/" + subkey);
         return karClient.head(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSetWithSubkeyState(String type, String id, String key, String subkey, JsonValue params) {
-        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        String uri = buildActorUri(type, id, "state/" + key + "/" + subkey);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteWithSubkeyState(String type, String id, String key, String subkey) {
-        String uri = buildActorPath(type, id, "state/" + key + "/" + subkey);
+        String uri = buildActorUri(type, id, "state/" + key + "/" + subkey);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetState(String type, String id, String key) {
-        String uri = buildActorPath(type, id, "state/" + key);
+        String uri = buildActorUri(type, id, "state/" + key);
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorHeadState(String type, String id, String key) {
-        String uri = buildActorPath(type, id, "state/" + key);
+        String uri = buildActorUri(type, id, "state/" + key);
         return karClient.head(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSetState(String type, String id, String key, JsonValue params) {
-        String uri = buildActorPath(type, id, "state/" + key);
+        String uri = buildActorUri(type, id, "state/" + key);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorSubmapOp(String type, String id, String key, JsonValue params) {
-        String uri = buildActorPath(type, id, "state/" + key);
+        String uri = buildActorUri(type, id, "state/" + key);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteState(String type, String id, String key) {
-        String uri = buildActorPath(type, id, "state/" + key);
+        String uri = buildActorUri(type, id, "state/" + key);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetAllState(String type, String id) {
-        String uri = buildActorPath(type, id, "state");
+        String uri = buildActorUri(type, id, "state");
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorUpdate(String type, String id, JsonValue params) {
-        String uri = buildActorPath(type, id, "state");
+        String uri = buildActorUri(type, id, "state");
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(params.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> actorDeleteAllState(String type, String id) {
-        String uri = buildActorPath(type, id, "state");
+        String uri = buildActorUri(type, id, "state");
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorDelete(String type, String id) {
-        String uri = buildActorPath(type, id);
+        String uri = buildActorUri(type, id);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetAllSubscriptions(String type, String id) {
-        String uri = buildActorPath(type, id, "events");
+        String uri = buildActorUri(type, id, "events");
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelAllSubscriptions(String type, String id) {
-        String uri = buildActorPath(type, id, "events");
+        String uri = buildActorUri(type, id, "events");
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorGetSubscription(String type, String id, String subscriptionId) {
-        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        String uri = buildActorUri(type, id, "events/"+subscriptionId);
         return karClient.get(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorCancelSubscription(String type, String id, String subscriptionId) {
-        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        String uri = buildActorUri(type, id, "events/"+subscriptionId);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> actorSubscribe(String type, String id, String subscriptionId, JsonValue data) {
-        String uri = buildActorPath(type, id, "events/"+subscriptionId);
+        String uri = buildActorUri(type, id, "events/"+subscriptionId);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(data.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> eventCreateTopic(String topic, JsonValue configuration) {
-        String uri = buildEventTopicPath(topic);
+        String uri = buildEventTopicUri(topic);
         return karClient.put(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(configuration.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> eventDeleteTopic(String topic) {
-        String uri = buildEventTopicPath(topic);
+        String uri = buildEventTopicUri(topic);
         return karClient.delete(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> eventPublish(String topic, JsonValue event) {
-        String uri = buildEventPublishPath(topic);
+        String uri = buildEventPublishUri(topic);
         return karClient.post(uri)
             .putHeader(HEADER_CONTENT_TYPE, CONTENT_JSON)
             .sendBuffer(Buffer.buffer(event.toString()));
     }
 
     public Uni<HttpResponse<Buffer>> shutdown() {
-        String uri = getSystemShutdownPath();
+        String uri = buildSystemShutdownUri();
         return karClient.post(uri).send();
     }
 
     public Uni<HttpResponse<Buffer>> systemInformation(String component) {
-        String uri = getSystemInformationPath(component);
+        String uri = buildSystemInformationUri(component);
         return karClient.get(uri).send();
     }
 
     /*
      * Helpers to construct sidecar URIs
      */
-    private static String buildServicePath(String service, String path) {
+    private static String buildServiceUri(String service, String path) {
         return KAR_API_CONTEXT_ROOT + "/service/" + service + "/call/" + path;
     }
 
-    private static String buildActorPath(String type, String id, String suffix) {
-        return buildActorPath(type, id) + "/" + suffix;
+    private static String buildActorUri(String type, String id, String suffix) {
+        return buildActorUri(type, id) + "/" + suffix;
     }
 
-    private static String buildActorPath(String type, String id) {
+    private static String buildActorUri(String type, String id) {
         return KAR_API_CONTEXT_ROOT + "/actor/" + type + "/" + id;
     }
 
-    private static String buildEventTopicPath(String topic) {
+    private static String buildEventTopicUri(String topic) {
         return KAR_API_CONTEXT_ROOT + "/event/" + topic;
     }
 
-    private static String buildEventPublishPath(String topic) {
-        return buildEventTopicPath(topic) + "/publish";
+    private static String buildEventPublishUri(String topic) {
+        return buildEventTopicUri(topic) + "/publish";
     }
 
-    private static String getSystemShutdownPath() {
+    private static String buildSystemShutdownUri() {
         return KAR_API_CONTEXT_ROOT + "/system/shutdown";
     }
 
-    private static String getSystemInformationPath(String component) {
+    private static String buildSystemInformationUri(String component) {
         return KAR_API_CONTEXT_ROOT + "/system/information/" + component;
     }
 
