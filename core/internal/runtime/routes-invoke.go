@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
@@ -41,9 +42,9 @@ func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, di
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		err = TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
+		err = rpc.TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
 	} else {
-		err = TellActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
+		err = rpc.TellActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -104,7 +105,7 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, d
 //       default: responseGenericEndpointError
 //
 func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := AwaitPromise(ctx, ReadAll(r))
+	reply, err := rpc.AwaitPromise(ctx, ReadAll(r))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -306,7 +307,7 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	}
-	var reply *Reply
+	var reply *rpc.Reply
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
@@ -356,7 +357,7 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 //       500: response500
 //
 func routeImplDelActor(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := DeleteActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, false)
+	err := rpc.DeleteActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")}, false)
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)

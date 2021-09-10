@@ -28,6 +28,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -226,7 +227,7 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 				"command":   "getActiveActors",
 				"actorType": targetedActorType,
 			}
-			actorReply, err := callHelper(ctx, msg, false)
+			actorReply, err := rpc.CallSidecar(ctx, msg, false)
 			if err != nil || actorReply.StatusCode != 200 {
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err

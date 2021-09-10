@@ -26,6 +26,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 )
@@ -174,7 +175,7 @@ func loadBindings(ctx context.Context, partitions []int32) error {
 		logger.Debug("found %v persisted bindings for partition %v", len(keys), p)
 		for _, key := range keys {
 			kind, actor, partition, id := keyBinding(key)
-			err := tellBinding(ctx, kind, actor, partition, id)
+			err := rpc.TellBinding(ctx, kind, rpc.ActorTarget{Type: actor.Type, ID: actor.ID}, partition, id)
 			if err != nil {
 				if err != ctx.Err() {
 					logger.Error("tell binding failed: %v", err)

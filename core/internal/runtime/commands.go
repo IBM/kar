@@ -24,11 +24,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/google/uuid"
@@ -38,111 +38,8 @@ const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
 )
 
-var (
-	// pending requests: map request uuid (string) to channel (chan Reply)
-	requests = sync.Map{}
-)
-
-// TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service, path, payload, header, method string, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
-		"protocol": "service",
-		"service":  service,
-		"command":  "tell", // post with no callback expected
-		"path":     path,
-		"header":   header,
-		"method":   method,
-		"payload":  payload})
-}
-
-// TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Actor, path, payload string, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
-		"protocol": "actor",
-		"type":     actor.Type,
-		"id":       actor.ID,
-		"command":  "tell", // post with no callback expected
-		"path":     path,
-		"payload":  payload})
-}
-
-// DeleteActor sends a delete message to an actor and does not wait for a reply
-func DeleteActor(ctx context.Context, actor Actor, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
-		"protocol": "actor",
-		"type":     actor.Type,
-		"id":       actor.ID,
-		"command":  "delete"})
-}
-
-func tellBinding(ctx context.Context, kind string, actor Actor, partition, bindingID string) error {
-	return pubsub.Send(ctx, false, map[string]string{
-		"protocol":  "actor",
-		"type":      actor.Type,
-		"id":        actor.ID,
-		"command":   "binding:tell",
-		"kind":      kind,
-		"partition": partition,
-		"bindingId": bindingID})
-}
-
-// Reply represents the return value of a call
-type Reply struct {
-	StatusCode  int
-	ContentType string
-	Payload     string
-}
-
-// callHelper makes a call via pubsub to a sidecar and waits for a reply
-func callHelper(ctx context.Context, msg map[string]string, direct bool) (*Reply, error) {
-	request := uuid.New().String()
-	ch := make(chan *Reply)
-	requests.Store(request, ch)
-	defer requests.Delete(request)
-	msg["from"] = config.ID // this sidecar
-	msg["request"] = request
-	err := pubsub.Send(ctx, direct, msg)
-	if err != nil {
-		return nil, err
-	}
-	select {
-	case r := <-ch:
-		return r, nil
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-}
-
-func callPromiseHelper(ctx context.Context, msg map[string]string, direct bool) (string, error) {
-	request := uuid.New().String()
-	ch := make(chan *Reply)
-	requests.Store(request, ch)
-	// defer requests.Delete(request)
-	msg["from"] = config.ID // this sidecar
-	msg["request"] = request
-	err := pubsub.Send(ctx, direct, msg)
-	if err != nil {
-		return "", err
-	}
-	return request, nil
-}
-
-// AwaitPromise awaits the response to an actor or service call
-func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
-	if ch, ok := requests.Load(request); ok {
-		defer requests.Delete(request)
-		select {
-		case r := <-ch.(chan *Reply):
-			return r, nil
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		}
-	}
-	return nil, fmt.Errorf("unexpected request %s", request)
-}
-
 // CallService calls a service and waits for a reply
-func CallService(ctx context.Context, service, path, payload, header, method string, direct bool) (*Reply, error) {
+func CallService(ctx context.Context, service, path, payload, header, method string, direct bool) (*rpc.Reply, error) {
 	msg := map[string]string{
 		"protocol": "service",
 		"service":  service,
@@ -151,7 +48,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return callHelper(ctx, msg, direct)
+	return rpc.CallSidecar(ctx, msg, direct)
 }
 
 // CallPromiseService calls a service and returns a request id
@@ -164,11 +61,11 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return callPromiseHelper(ctx, msg, direct)
+	return rpc.CallPromiseSidecar(ctx, msg, direct)
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, session string, direct bool) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, session string, direct bool) (*rpc.Reply, error) {
 	msg := map[string]string{
 		"protocol": "actor",
 		"type":     actor.Type,
@@ -177,7 +74,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string, 
 		"path":     path,
 		"session":  session,
 		"payload":  payload}
-	return callHelper(ctx, msg, direct)
+	return rpc.CallSidecar(ctx, msg, direct)
 }
 
 // CallPromiseActor calls an actor and returns a request id
@@ -189,11 +86,11 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string, di
 		"command":  "call",
 		"path":     path,
 		"payload":  payload}
-	return callPromiseHelper(ctx, msg, direct)
+	return rpc.CallPromiseSidecar(ctx, msg, direct)
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
-func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbsent, action, payload, contentType, accept string) (*Reply, error) {
+func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbsent, action, payload, contentType, accept string) (*rpc.Reply, error) {
 	msg := map[string]string{
 		"protocol":     "actor",
 		"type":         actor.Type,
@@ -205,13 +102,13 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return callHelper(ctx, msg, false)
+	return rpc.CallSidecar(ctx, msg, false)
 }
 
 // helper methods to handle incoming messages
 // log ignored errors to logger.Error
 
-func respond(ctx context.Context, msg map[string]string, reply *Reply) error {
+func respond(ctx context.Context, msg map[string]string, reply *rpc.Reply) error {
 	err := pubsub.Send(ctx, msg["direct"] == "true", map[string]string{
 		"protocol":     "sidecar",
 		"sidecar":      msg["from"],
@@ -243,41 +140,27 @@ func call(ctx context.Context, msg map[string]string) error {
 	return respond(ctx, msg, reply)
 }
 
-func callback(ctx context.Context, msg map[string]string) error {
-	if ch, ok := requests.Load(msg["request"]); ok {
-		statusCode, _ := strconv.Atoi(msg["statusCode"])
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case ch.(chan *Reply) <- &Reply{StatusCode: statusCode, ContentType: msg["content-type"], Payload: msg["payload"]}:
-		}
-	} else {
-		logger.Error("unexpected request in callback %s", msg["request"])
-	}
-	return nil
-}
-
 func bindingDel(ctx context.Context, msg map[string]string) error {
-	var reply *Reply
+	var reply *rpc.Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
 	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
-		reply = &Reply{StatusCode: http.StatusNotFound}
+		reply = &rpc.Reply{StatusCode: http.StatusNotFound}
 	} else {
-		reply = &Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
+		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
 	}
 	return respond(ctx, msg, reply)
 }
 
 func bindingGet(ctx context.Context, msg map[string]string) error {
-	var reply *Reply
+	var reply *rpc.Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	found := getBindings(msg["kind"], actor, msg["bindingId"])
 	var responseBody interface{} = found
 	if msg["bindingId"] != "" {
 		if len(found) == 0 {
 			if msg["nilOnAbsent"] != "true" {
-				reply = &Reply{StatusCode: http.StatusNotFound}
+				reply = &rpc.Reply{StatusCode: http.StatusNotFound}
 				return respond(ctx, msg, reply)
 			}
 			responseBody = nil
@@ -287,21 +170,21 @@ func bindingGet(ctx context.Context, msg map[string]string) error {
 	}
 	blob, err := json.Marshal(responseBody)
 	if err != nil {
-		reply = &Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
+		reply = &rpc.Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = &Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
+		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
 	}
 	return respond(ctx, msg, reply)
 }
 
 func bindingSet(ctx context.Context, msg map[string]string) error {
-	var reply *Reply
+	var reply *rpc.Reply
 	actor := Actor{Type: msg["type"], ID: msg["id"]}
 	code, err := putBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
-		reply = &Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
+		reply = &rpc.Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = &Reply{StatusCode: code, Payload: "OK", ContentType: "text/plain"}
+		reply = &rpc.Reply{StatusCode: code, Payload: "OK", ContentType: "text/plain"}
 	}
 	return respond(ctx, msg, reply)
 }
@@ -357,12 +240,12 @@ func tell(ctx context.Context, msg map[string]string) error {
 func getActorInformation(ctx context.Context, msg map[string]string) error {
 	actorInfo := getMyActiveActors(msg["actorType"])
 	m, err := json.Marshal(actorInfo)
-	var reply *Reply
+	var reply *rpc.Reply
 	if err != nil {
 		logger.Debug("Error marshaling actor information data: %v", err)
-		reply = &Reply{StatusCode: http.StatusInternalServerError}
+		reply = &rpc.Reply{StatusCode: http.StatusInternalServerError}
 	} else {
-		reply = &Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
+		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
 	}
 	return respond(ctx, msg, reply)
 }
@@ -372,7 +255,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 	case "call":
 		return call(ctx, msg)
 	case "callback":
-		return callback(ctx, msg)
+		return rpc.Callback(ctx, msg) // KLUDGE....will fix once the lowest level of handler registration is implemented
 	case "cancel":
 		cancel() // never fails
 	case "binding:del":
@@ -448,7 +331,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
 			logger.Error("%s", payload)
 			if msg["command"] == "call" {
-				var reply *Reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
+				var reply *rpc.Reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
 				err = respond(ctx, msg, reply)
 			} else {
 				err = nil
@@ -477,7 +360,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				break
 			}
 
-			var reply *Reply
+			var reply *rpc.Reply
 			if fresh {
 				reply, err = activate(ctx, actor)
 			}
@@ -510,7 +393,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 // actors
 
 // activate an actor
-func activate(ctx context.Context, actor Actor) (*Reply, error) {
+func activate(ctx context.Context, actor Actor) (*rpc.Reply, error) {
 	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":activate")
 	if err != nil {
 		if err != ctx.Err() {

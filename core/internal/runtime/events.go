@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -175,7 +176,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 			}
 			arg = string(buf)
 		}
-		err := TellActor(ctx, s.Actor, s.Path, "["+arg+"]", false)
+		err := rpc.TellActor(ctx, rpc.ActorTarget{Type: s.Actor.Type, ID: s.Actor.ID}, s.Path, "["+arg+"]", false)
 		if err != nil {
 			logger.Error("failed to post event from topic %s: %v", s.Topic, err)
 		} else {
