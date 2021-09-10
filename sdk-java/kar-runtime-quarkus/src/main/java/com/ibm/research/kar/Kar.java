@@ -88,6 +88,19 @@ public class Kar implements KarHttpConstants {
 		}
 	}
 
+	private static Object toValue(HttpResponse<Buffer> resp) {
+		Object result = resp.bodyAsString();
+		String contentType = resp.getHeader("Content-Type");
+		if (contentType != null && !contentType.startsWith(TEXT_PLAIN)) {
+			try {
+				result = readerFactory.createReader(new StringReader(resp.bodyAsString())).readValue();
+			} catch (JsonException e) {
+				result = resp.bodyAsString();
+			}
+		}
+		return result;
+	}
+
 	private static Reminder[] toReminderArray(HttpResponse<Buffer> resp) {
 		try {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
@@ -295,16 +308,7 @@ public class Kar implements KarHttpConstants {
 		public static Uni<Object> call(String service, String path, JsonValue body) {
 			return sidecar.callPost(service, path, body).chain(resp -> {
 				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
-				Object result = resp.bodyAsString();
-				String contentType = resp.getHeader("Content-Type");
-				if (contentType != null && !contentType.startsWith(TEXT_PLAIN)) {
-					try {
-						result = readerFactory.createReader(new StringReader(resp.bodyAsString())).readValue();
-					} catch (JsonException e) {
-						result = resp.bodyAsString();
-					}
-				}
-				return Uni.createFrom().item(result);
+				return Uni.createFrom().item(toValue(resp));
 			});
 		}
 	}
@@ -589,7 +593,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Map<String, JsonValue>> getAll(ActorRef actor) {
 				return sidecar.actorGetAllState(actor.getType(), actor.getId())
-						.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? (Map<String, JsonValue>) toJsonValue(resp) : Collections.emptyMap()));
+						.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? toJsonValue(resp).asJsonObject() : Collections.emptyMap()));
 			}
 
 			/**
@@ -821,7 +825,7 @@ public class Kar implements KarHttpConstants {
 					jb.add("op", Json.createValue("get"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-							.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? (Map<String, JsonValue>) toJsonValue(resp) : Collections.emptyMap()));
+							.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? toJsonValue(resp).asJsonObject() : Collections.emptyMap()));
 				}
 
 				/**
@@ -1018,8 +1022,11 @@ public class Kar implements KarHttpConstants {
 		 * @param actor The Actor instance.
 		 * @return The number of subscriptions that were cancelled.
 		 */
-		public static int cancelAllSubscriptions(ActorRef actor) {
-			throw new UnsupportedOperationException();
+		public static Uni<Integer> cancelAllSubscriptions(ActorRef actor) {
+			return sidecar.actorCancelAllSubscriptions(actor.getType(), actor.getId()).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().item(toInt(resp));
+			});
 		}
 
 		/**
@@ -1029,8 +1036,11 @@ public class Kar implements KarHttpConstants {
 		 * @param subscriptionId The id of a specific subscription to cancel
 		 * @return The number of subscriptions that were cancelled.
 		 */
-		public static int cancelSubscription(ActorRef actor, String subscriptionId) {
-			throw new UnsupportedOperationException();
+		public static Uni<Integer> cancelSubscription(ActorRef actor, String subscriptionId) {
+			return sidecar.actorCancelSubscription(actor.getType(), actor.getId(), subscriptionId).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().item(toInt(resp));
+			});
 		}
 
 		/**
@@ -1039,8 +1049,11 @@ public class Kar implements KarHttpConstants {
 		 * @param actor The Actor instance.
 		 * @return An array of subscriptions
 		 */
-		public static Subscription[] getSubscriptions(ActorRef actor) {
-			throw new UnsupportedOperationException();
+		public static Uni<Subscription[]> getSubscriptions(ActorRef actor) {
+			return sidecar.actorGetAllSubscriptions(actor.getType(), actor.getId()).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().item(toSubscriptionArray(resp));
+			});
 		}
 
 		/**
@@ -1050,8 +1063,11 @@ public class Kar implements KarHttpConstants {
 		 * @param subscriptionId The id of a specific subscription to get
 		 * @return An array of zero or one subscription
 		 */
-		public static Subscription[] getSubscription(ActorRef actor, String subscriptionId) {
-			throw new UnsupportedOperationException();
+		public static Uni<Subscription[]> getSubscription(ActorRef actor, String subscriptionId) {
+			return sidecar.actorGetSubscription(actor.getType(), actor.getId(), subscriptionId).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().item(toSubscriptionArray(resp));
+			});
 		}
 
 		/**
@@ -1074,8 +1090,15 @@ public class Kar implements KarHttpConstants {
 		 * @param topic          The topic to which to subscribe
 		 * @param subscriptionId The subscriptionId to use for this subscription
 		 */
-		public static void subscribe(ActorRef actor, String path, String topic, String subscriptionId) {
-			throw new UnsupportedOperationException();
+		public static Uni<Void> subscribe(ActorRef actor, String path, String topic, String subscriptionId) {
+			JsonObjectBuilder builder = factory.createObjectBuilder();
+			builder.add("path", "/" + path);
+			builder.add("topic", topic);
+			JsonObject data = builder.build();
+			return sidecar.actorSubscribe(actor.getType(), actor.getId(), subscriptionId, data).chain(resp ->{
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 
 		/**
@@ -1083,8 +1106,11 @@ public class Kar implements KarHttpConstants {
 		 *
 		 * @param topic The name of the topic to create
 		 */
-		public static void createTopic(String topic) {
-			throw new UnsupportedOperationException();
+		public static Uni<Void> createTopic(String topic) {
+			return sidecar.eventCreateTopic(topic, JsonValue.EMPTY_JSON_OBJECT).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 
 		/**
@@ -1092,8 +1118,11 @@ public class Kar implements KarHttpConstants {
 		 *
 		 * @param topic the name of the topic to delete
 		 */
-		public static void deleteTopic(String topic) {
-			throw new UnsupportedOperationException();
+		public static Uni<Void> deleteTopic(String topic) {
+			return sidecar.eventDeleteTopic(topic).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 
 		/**
@@ -1102,8 +1131,11 @@ public class Kar implements KarHttpConstants {
 		 * @param topic the name of the topic on which to publish
 		 * @param event the event to publish
 		 */
-		public static void publish(String topic, JsonValue event) {
-			throw new UnsupportedOperationException();
+		public static Uni<Void> publish(String topic, JsonValue event) {
+			return sidecar.eventPublish(topic, event).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 	}
 
@@ -1112,10 +1144,10 @@ public class Kar implements KarHttpConstants {
 	 */
 	public static class Sys {
 		/**
-		 * Shutdown this sidecar. Does not return.
+		 * Shutdown this sidecar. Does not return; blocks internally until shutdown accomplished.
 		 */
 		public static void shutdown() {
-			throw new UnsupportedOperationException();
+			sidecar.shutdown().subscribe().asCompletionStage().join();
 		}
 
 		/**
@@ -1124,8 +1156,11 @@ public class Kar implements KarHttpConstants {
 		 * @param component The component whose information is being requested
 		 * @return information about the given component
 		 */
-		public static Object information(String component) {
-			throw new UnsupportedOperationException();
+		public static Uni<Object> information(String component) {
+			return sidecar.systemInformation(component).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().item(toValue(resp));
+			});
 		}
 	}
 }
