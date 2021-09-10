@@ -1,3 +1,19 @@
+<!--
+# Copyright IBM Corporation 2020,2021
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-->
+
 # TPC-C implementation in KAR
 This example runs [TPC-C](http://tpc.org/tpc_documents_current_versions/pdf/tpc-c_v5.11.0.pdf) transactional benchmarking in KAR. TPC-C benchmarking application mimics an ecommerce application where customers place new orders, make payments, etc,. TPC-C TPC-C consists of 5 types of transactions: New Order, Payment, Delivery, Order Status, and Stock Level; the first three are read-write transactions and the last two are read-only. New Order and Payment transactions form 88% (44% each) of the workload and the rest all form 4% of the workload. The first 4 transactions need strong consistency guarantees and the last one can be of relaxed consistency.
 
