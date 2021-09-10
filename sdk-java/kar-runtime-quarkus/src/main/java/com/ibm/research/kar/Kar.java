@@ -46,7 +46,6 @@ import com.ibm.research.kar.actor.exceptions.ActorMethodInvocationException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodNotFoundException;
 import com.ibm.research.kar.actor.exceptions.ActorMethodTimeoutException;
 import com.ibm.research.kar.quarkus.KarSidecar;
-import com.ibm.research.kar.quarkus.KarSidecar.KarHttpClient.KarSidecarError;
 import com.ibm.research.kar.runtime.KarHttpConstants;
 
 import io.vertx.mutiny.core.buffer.Buffer;
@@ -60,7 +59,6 @@ public class Kar implements KarHttpConstants {
 	private static final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
 	private static final JsonReaderFactory readerFactory = Json.createReaderFactory(Map.of());
 
-
 	private static KarSidecar instantiateSidecar() {
 		return new KarSidecar();
 	}
@@ -73,22 +71,27 @@ public class Kar implements KarHttpConstants {
 		return ja.build();
 	}
 
-	private static JsonValue toJsonValue(HttpResponse<Buffer> response) {
-			return readerFactory.createReader(new StringReader(response.bodyAsString())).readValue();
+
+	private static boolean isSuccess(HttpResponse<Buffer> resp) {
+		return resp.statusCode() >= 200 && resp.statusCode() < 300;
 	}
 
-	private static int toInt(HttpResponse<Buffer> response) {
+	private static JsonValue toJsonValue(HttpResponse<Buffer> resp) {
+		return readerFactory.createReader(new StringReader(resp.bodyAsString())).readValue();
+	}
+
+	private static int toInt(HttpResponse<Buffer> resp) {
 		try {
-			return Integer.parseInt(response.bodyAsString());
+			return Integer.parseInt(resp.bodyAsString());
 		} catch (NumberFormatException e) {
 			return 0;
 		}
 	}
 
-	private static Reminder[] toReminderArray(HttpResponse<Buffer> response) {
+	private static Reminder[] toReminderArray(HttpResponse<Buffer> resp) {
 		try {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
-			JsonArray ja = toJsonValue(response).asJsonArray();
+			JsonArray ja = toJsonValue(resp).asJsonArray();
 			for (JsonValue jv : ja) {
 				try {
 					JsonObject jo = jv.asJsonObject();
@@ -117,10 +120,10 @@ public class Kar implements KarHttpConstants {
 	}
 
 	@SuppressWarnings("unused")
-	private static Subscription[] toSubscriptionArray(HttpResponse<Buffer> response) {
+	private static Subscription[] toSubscriptionArray(HttpResponse<Buffer> resp) {
 		try {
 			ArrayList<Subscription> res = new ArrayList<Subscription>();
-			JsonArray ja = toJsonValue(response).asJsonArray();
+			JsonArray ja = toJsonValue(resp).asJsonArray();
 			for (JsonValue jv : ja) {
 				try {
 					JsonObject jo = jv.asJsonObject();
@@ -211,7 +214,7 @@ public class Kar implements KarHttpConstants {
 		 * @return The response returned by the target service.
 		 */
 		public static Uni<HttpResponse<Buffer>> options(String service, String path) {
-			return sidecar.callOptions(service, path, JsonValue.NULL);
+			return sidecar.callOptions(service, path);
 		}
 
 		/**
@@ -275,7 +278,10 @@ public class Kar implements KarHttpConstants {
 		 * @param body    The request body with which to invoke the service endpoint.
 		 */
 		public static Uni<Void> tell(String service, String path, JsonValue body) {
-			return sidecar.tellPost(service, path, body).chain(() -> Uni.createFrom().nullItem());
+			return sidecar.tellPost(service, path, body).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 
 		/**
@@ -288,6 +294,7 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<Object> call(String service, String path, JsonValue body) {
 			return sidecar.callPost(service, path, body).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
 				Object result = resp.bodyAsString();
 				String contentType = resp.getHeader("Content-Type");
 				if (contentType != null && !contentType.startsWith(TEXT_PLAIN)) {
@@ -324,7 +331,10 @@ public class Kar implements KarHttpConstants {
 		 * @param actor The Actor instance.
 		 */
 		public static Uni<Void> remove(ActorRef actor) {
-			return sidecar.actorDelete(actor.getType(), actor.getId()).chain(()->Uni.createFrom().nullItem());
+			return sidecar.actorDelete(actor.getType(), actor.getId()).chain(resp -> {
+				if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+				return Uni.createFrom().nullItem();
+			});
 		}
 
 		/**
@@ -337,8 +347,17 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<Void> tell(ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorTell(actor.getType(), actor.getId(), path, packArgs(args))
-				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
-				.chain(()->Uni.createFrom().nullItem());
+					.chain(resp -> {
+						if (isSuccess(resp)) {
+							return Uni.createFrom().nullItem();
+						} else if (resp.statusCode() == REQUEST_TIMEOUT) {
+							return Uni.createFrom().failure(new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path));
+						} else if (resp.statusCode() == NOT_FOUND) {
+							return Uni.createFrom().failure(new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path));
+						} else {
+							return Uni.createFrom().failure(new KarSidecarException(resp));
+						}
+					});
 		}
 
 		/**
@@ -353,8 +372,7 @@ public class Kar implements KarHttpConstants {
 		 */
 		public static Uni<JsonValue> call(ActorInstance caller, ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args))
-				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
-				.chain(response -> callProcessResponse(response, actor, path));
+					.chain(resp -> callProcessResponse(resp, actor, path));
 		}
 
 		/**
@@ -368,9 +386,8 @@ public class Kar implements KarHttpConstants {
 		 * @return The result of the invoked actor method.
 		 */
 		public static Uni<JsonValue> call(String session, ActorRef actor, String path, JsonValue... args) {
-				return sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args))
-					.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
-					.chain(response -> callProcessResponse(response, actor, path));
+			return sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args))
+					.chain(resp -> callProcessResponse(resp, actor, path));
 		}
 
 		/**
@@ -383,9 +400,8 @@ public class Kar implements KarHttpConstants {
 		 * @return The result of the invoked actor method.
 		 */
 		public static Uni<JsonValue> call(ActorRef actor, String path, JsonValue... args) {
-			return sidecar.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args))
-				.onFailure(KarSidecarError.class).transform(kse -> callProcessError((KarSidecarError)kse, actor, path))
-				.chain(response -> callProcessResponse(response, actor, path));
+			return sidecar.actorCall(actor.getType(), actor.getId(), path, packArgs(args))
+					.chain(resp -> callProcessResponse(resp, actor, path));
 		}
 
 		// Internal helper to go from a Response to the JsonValue representing the
@@ -396,33 +412,20 @@ public class Kar implements KarHttpConstants {
 				if (o.containsKey("error")) {
 					String message = o.containsKey("message") ? o.getString("message") : "Unknown error";
 					Throwable cause = new Throwable(o.containsKey("stack") ? o.getString("stack") : "<no stack>");
-					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this dummy exception...the real stack is in the msg.
+					cause.setStackTrace(new StackTraceElement[0]); // avoid duplicating the stack trace where we are creating this
+																													// dummy exception...the real stack is in the msg.
 					return Uni.createFrom().failure(new ActorMethodInvocationException(message, cause));
 				} else {
-					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue)o.get("value") : JsonValue.NULL);
+					return Uni.createFrom().item(o.containsKey("value") ? (JsonValue) o.get("value") : JsonValue.NULL);
 				}
 			} else if (response.statusCode() == NO_CONTENT) {
 				return Uni.createFrom().nullItem();
+			} else if (response.statusCode() == NOT_FOUND) {
+				return Uni.createFrom().failure(new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path));
+			} else if (response.statusCode() == REQUEST_TIMEOUT) {
+				return Uni.createFrom().failure(new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path));
 			} else {
-				return Uni.createFrom().failure(new KarSidecarError(response));
-			}
-		}
-
-		// Internal helper to go from a KarSidecarError to a more useful exception for actor method invocations
-		private static Throwable callProcessError(KarSidecarError kse, ActorRef actor, String path) {
-			switch (kse.statusCode) {
-				case NOT_FOUND: {
-					Throwable e = new ActorMethodNotFoundException("Not found: " + actor.getType() + "." + path, kse);
-					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
-					return e;
-				}
-				case REQUEST_TIMEOUT: {
-					Throwable e = new ActorMethodTimeoutException("Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
-					e.setStackTrace(new StackTraceElement[0]); // Stacktraces contain nothing but Vertx/Mutiny frames that mean nothing to the end user
-					return e;
-				}
-				default:
-					return kse;
+				return Uni.createFrom().failure(new KarSidecarException(response));
 			}
 		}
 
@@ -438,8 +441,10 @@ public class Kar implements KarHttpConstants {
 			 * @return The number of reminders that were cancelled.
 			 */
 			public static Uni<Integer> cancelAll(ActorRef actor) {
-				return sidecar.actorCancelReminders(actor.getType(), actor.getId())
-					.chain(response -> Uni.createFrom().item(toInt(response)));
+				return sidecar.actorCancelReminders(actor.getType(), actor.getId()).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().item(toInt(resp));
+				});
 			}
 
 			/**
@@ -450,8 +455,15 @@ public class Kar implements KarHttpConstants {
 			 * @return The number of reminders that were cancelled.
 			 */
 			public static Uni<Integer> cancel(ActorRef actor, String reminderId) {
-				return sidecar.actorCancelReminder(actor.getType(), actor.getId(), reminderId, true)
-					.chain(response -> Uni.createFrom().item(toInt(response)));
+				return sidecar.actorCancelReminder(actor.getType(), actor.getId(), reminderId).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toInt(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(0);
+					} else {
+						return Uni.createFrom().failure(new KarSidecarException(resp));
+					}
+				});
 			}
 
 			/**
@@ -461,8 +473,10 @@ public class Kar implements KarHttpConstants {
 			 * @return An array of matching reminders
 			 */
 			public static Uni<Reminder[]> getAll(ActorRef actor) {
-				return sidecar.actorGetReminders(actor.getType(), actor.getId())
-					.chain(response -> Uni.createFrom().item(toReminderArray(response)));
+				return sidecar.actorGetReminders(actor.getType(), actor.getId()).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().item(toReminderArray(resp));
+				});
 			}
 
 			/**
@@ -473,8 +487,15 @@ public class Kar implements KarHttpConstants {
 			 * @return An array of matching reminders
 			 */
 			public static Uni<Reminder[]> get(ActorRef actor, String reminderId) {
-				return sidecar.actorGetReminder(actor.getType(), actor.getId(), reminderId, true)
-					.chain(response -> Uni.createFrom().item(toReminderArray(response)));
+				return sidecar.actorGetReminder(actor.getType(), actor.getId(), reminderId).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toReminderArray(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(new Reminder[0]);
+					} else {
+						return Uni.createFrom().item(toReminderArray(resp));
+					}
+				});
 			}
 
 			/**
@@ -488,7 +509,8 @@ public class Kar implements KarHttpConstants {
 			 *                   GoLang's Duration
 			 * @param args       The arguments with which to invoke the actor method.
 			 */
-			public static Uni<Void> schedule(ActorRef actor, String path, String reminderId, Instant targetTime, Duration period, JsonValue... args) {
+			public static Uni<Void> schedule(ActorRef actor, String path, String reminderId, Instant targetTime,
+					Duration period, JsonValue... args) {
 				JsonObjectBuilder builder = factory.createObjectBuilder();
 				builder.add("path", "/" + path);
 				builder.add("targetTime", targetTime.toString());
@@ -518,7 +540,10 @@ public class Kar implements KarHttpConstants {
 				builder.add("data", packArgs(args));
 				JsonObject requestBody = builder.build();
 
-				return sidecar.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody).chain(() -> Uni.createFrom().nullItem());
+				return sidecar.actorScheduleReminder(actor.getType(), actor.getId(), reminderId, requestBody).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().nullItem();
+				});
 			}
 		}
 
@@ -526,7 +551,7 @@ public class Kar implements KarHttpConstants {
 		 * KAR API methods for Actor State
 		 */
 		public static class State {
-			public static class ActorUpdateResult {
+			private static class ActorUpdateResult {
 				public final int added;
 				public final int removed;
 
@@ -544,9 +569,16 @@ public class Kar implements KarHttpConstants {
 			 * @return The value associated with `key`
 			 */
 			public static Uni<JsonValue> get(ActorRef actor, String key) {
-				return sidecar.actorGetState(actor.getType(), actor.getId(), key, true)
-					.chain(response -> Uni.createFrom().item(toJsonValue(response)))
-					.onFailure().recoverWithItem(JsonValue.NULL);
+				return sidecar.actorGetState(actor.getType(), actor.getId(), key)
+						.chain(resp -> {
+							if (isSuccess(resp)) {
+								return Uni.createFrom().item(toJsonValue(resp));
+							} else if (resp.statusCode() == NOT_FOUND) {
+								return Uni.createFrom().item(JsonValue.NULL);
+							} else {
+								return Uni.createFrom().failure(new KarSidecarException(resp));
+							}
+						});
 			}
 
 			/**
@@ -557,8 +589,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Map<String, JsonValue>> getAll(ActorRef actor) {
 				return sidecar.actorGetAllState(actor.getType(), actor.getId())
-					.chain(response -> Uni.createFrom().item((Map<String, JsonValue>)toJsonValue(response)))
-					.onFailure().recoverWithItem(Collections.emptyMap());
+						.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? (Map<String, JsonValue>) toJsonValue(resp) : Collections.emptyMap()));
 			}
 
 			/**
@@ -571,7 +602,7 @@ public class Kar implements KarHttpConstants {
 			 */
 			public static Uni<Boolean> contains(ActorRef actor, String key) {
 				return sidecar.actorHeadState(actor.getType(), actor.getId(), key)
-					.chain(response -> Uni.createFrom().item(response.statusCode() == OK));
+						.chain(resp -> Uni.createFrom().item(resp.statusCode() == OK));
 			}
 
 			/**
@@ -583,8 +614,10 @@ public class Kar implements KarHttpConstants {
 			 * @return The number of new state entries created by this store (0 or 1)
 			 */
 			public static Uni<Integer> set(ActorRef actor, String key, JsonValue value) {
-				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value)
-					.chain(response -> Uni.createFrom().item(toInt(response)));
+				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().item(toInt(resp));
+				});
 			}
 
 			/**
@@ -595,8 +628,10 @@ public class Kar implements KarHttpConstants {
 			 * @param value The value to store
 			 */
 			public static Uni<Void> setV(ActorRef actor, String key, JsonValue value) {
-				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value)
-					.chain(() -> Uni.createFrom().nullItem());
+				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().nullItem();
+				});
 			}
 
 			/**
@@ -611,7 +646,7 @@ public class Kar implements KarHttpConstants {
 					return Uni.createFrom().nullItem();
 				}
 				return update(actor, Collections.emptyList(), Collections.emptyMap(), updates, Collections.emptyMap())
-					.chain(res -> Uni.createFrom().item(res.removed));
+						.chain(res -> Uni.createFrom().item(res.removed));
 			}
 
 			/**
@@ -625,7 +660,7 @@ public class Kar implements KarHttpConstants {
 					return Uni.createFrom().nullItem();
 				}
 				return update(actor, Collections.emptyList(), Collections.emptyMap(), updates, Collections.emptyMap())
-					.chain(() -> Uni.createFrom().nullItem());
+						.chain(() -> Uni.createFrom().nullItem());
 			}
 
 			/**
@@ -637,8 +672,15 @@ public class Kar implements KarHttpConstants {
 			 *         for `key`.
 			 */
 			public static Uni<Integer> remove(ActorRef actor, String key) {
-				return sidecar.actorDeleteState(actor.getType(), actor.getId(), key, true)
-					.chain(response -> Uni.createFrom().item(toInt(response)));
+				return sidecar.actorDeleteState(actor.getType(), actor.getId(), key).chain(resp -> {
+					if (isSuccess(resp)) {
+						return Uni.createFrom().item(toInt(resp));
+					} else if (resp.statusCode() == NOT_FOUND) {
+						return Uni.createFrom().item(0);
+					} else {
+						return Uni.createFrom().failure(new KarSidecarException(resp));
+					}
+				});
 			}
 
 			/**
@@ -653,7 +695,7 @@ public class Kar implements KarHttpConstants {
 					return Uni.createFrom().item(0);
 				}
 				return update(actor, keys, Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap())
-					.chain(res -> Uni.createFrom().item(res.removed));
+						.chain(res -> Uni.createFrom().item(res.removed));
 			}
 
 			/**
@@ -665,8 +707,10 @@ public class Kar implements KarHttpConstants {
 			 * @return The number of removed key/value pairs
 			 */
 			public static Uni<Integer> removeAll(ActorRef actor) {
-				return sidecar.actorDeleteAllState(actor.getType(), actor.getId())
-					.chain(response -> Uni.createFrom().item(toInt(response)));
+				return sidecar.actorDeleteAllState(actor.getType(), actor.getId()).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					return Uni.createFrom().item(toInt(resp));
+				});
 			}
 
 			/**
@@ -730,13 +774,13 @@ public class Kar implements KarHttpConstants {
 				}
 
 				JsonObject params = requestBuilder.build();
-				return sidecar.actorUpdate(actor.getType(), actor.getId(), params)
-					.chain(response -> {
-						JsonObject responseObject = toJsonValue(response).asJsonObject();
-						int added = responseObject.getInt("added");
-						int removed = responseObject.getInt("removed");
-						return Uni.createFrom().item(new ActorUpdateResult(added, removed));
-					});
+				return sidecar.actorUpdate(actor.getType(), actor.getId(), params).chain(resp -> {
+					if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+					JsonObject responseObject = toJsonValue(resp).asJsonObject();
+					int added = responseObject.getInt("added");
+					int removed = responseObject.getInt("removed");
+					return Uni.createFrom().item(new ActorUpdateResult(added, removed));
+				});
 			}
 
 			/**
@@ -753,9 +797,16 @@ public class Kar implements KarHttpConstants {
 				 * @return The value associated with `key/subkey`
 				 */
 				public static Uni<JsonValue> get(ActorRef actor, String submap, String key) {
-					return sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key, true)
-						.chain(response -> Uni.createFrom().item(toJsonValue(response)))
-						.onFailure().recoverWithItem(JsonValue.NULL);
+					return sidecar.actorGetWithSubkeyState(actor.getType(), actor.getId(), submap, key)
+							.chain(resp -> {
+								if (isSuccess(resp)) {
+									return 	Uni.createFrom().item(toJsonValue(resp));
+								} else if (resp.statusCode() == NOT_FOUND) {
+									return Uni.createFrom().item(JsonValue.NULL);
+								} else {
+									return Uni.createFrom().failure(new KarSidecarException(resp));
+								}
+							});
 				}
 
 				/**
@@ -770,8 +821,7 @@ public class Kar implements KarHttpConstants {
 					jb.add("op", Json.createValue("get"));
 					JsonObject params = jb.build();
 					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-						.chain(response -> Uni.createFrom().item((Map<String, JsonValue>)toJsonValue(response)))
-						.onFailure().recoverWithItem(Collections.emptyMap());
+							.chain(resp -> Uni.createFrom().item(isSuccess(resp) ? (Map<String, JsonValue>) toJsonValue(resp) : Collections.emptyMap()));
 				}
 
 				/**
@@ -785,7 +835,7 @@ public class Kar implements KarHttpConstants {
 				 */
 				public static Uni<Boolean> contains(ActorRef actor, String submap, String key) {
 					return sidecar.actorHeadWithSubkeyState(actor.getType(), actor.getId(), submap, key)
-						.chain(response -> Uni.createFrom().item(response.statusCode() == OK));
+							.chain(resp -> Uni.createFrom().item(resp.statusCode() == OK));
 				}
 
 				/**
@@ -798,8 +848,10 @@ public class Kar implements KarHttpConstants {
 				 * @return The number of new state entries created by this store (0 or 1)
 				 */
 				public static Uni<Integer> set(ActorRef actor, String submap, String key, JsonValue value) {
-					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value)
-						.chain(response -> Uni.createFrom().item(toInt(response)));
+					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(resp -> {
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+						return Uni.createFrom().item(toInt(resp));
+					});
 				}
 
 				/**
@@ -811,7 +863,10 @@ public class Kar implements KarHttpConstants {
 				 * @param value  The value to store at `key/subkey`
 				 */
 				public static Uni<Void> setV(ActorRef actor, String submap, String key, JsonValue value) {
-					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(() -> Uni.createFrom().nullItem());
+					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(resp -> {
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+						return Uni.createFrom().nullItem();
+					});
 				}
 
 				/**
@@ -830,7 +885,7 @@ public class Kar implements KarHttpConstants {
 					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
 					tmp.put(submap, updates);
 					return update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), tmp)
-						.chain(res -> Uni.createFrom().item(res.added));
+							.chain(res -> Uni.createFrom().item(res.added));
 				}
 
 				/**
@@ -849,7 +904,7 @@ public class Kar implements KarHttpConstants {
 					Map<String, Map<String, JsonValue>> tmp = new HashMap<String, Map<String, JsonValue>>();
 					tmp.put(submap, updates);
 					return update(actor, Collections.emptyList(), Collections.emptyMap(), Collections.emptyMap(), tmp)
-						.chain(() -> Uni.createFrom().nullItem());
+							.chain(() -> Uni.createFrom().nullItem());
 				}
 
 				/**
@@ -862,8 +917,15 @@ public class Kar implements KarHttpConstants {
 				 *         for `key`.
 				 */
 				public static Uni<Integer> remove(ActorRef actor, String submap, String key) {
-					return sidecar.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), submap, key, true)
-						.chain(response -> Uni.createFrom().item(toInt(response)));
+					return sidecar.actorDeleteWithSubkeyState(actor.getType(), actor.getId(), submap, key).chain(resp -> {
+						if (isSuccess(resp)) {
+							return Uni.createFrom().item(toInt(resp));
+						} else if (resp.statusCode() == NOT_FOUND) {
+							return Uni.createFrom().item(0);
+						} else {
+							return Uni.createFrom().failure(new KarSidecarException(resp));
+						}
+					});
 				}
 
 				/**
@@ -882,7 +944,7 @@ public class Kar implements KarHttpConstants {
 					Map<String, List<String>> tmp = new HashMap<String, List<String>>();
 					tmp.put(submap, keys);
 					return update(actor, Collections.emptyList(), tmp, Collections.emptyMap(), Collections.emptyMap())
-						.chain(res -> Uni.createFrom().item(res.removed));
+							.chain(res -> Uni.createFrom().item(res.removed));
 				}
 
 				/**
@@ -896,8 +958,10 @@ public class Kar implements KarHttpConstants {
 					JsonObjectBuilder jb = factory.createObjectBuilder();
 					jb.add("op", Json.createValue("clear"));
 					JsonObject params = jb.build();
-					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-						.chain(response -> Uni.createFrom().item(toInt(response)));
+					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+						return Uni.createFrom().item(toInt(resp));
+					});
 				}
 
 				/**
@@ -911,16 +975,16 @@ public class Kar implements KarHttpConstants {
 					JsonObjectBuilder jb = factory.createObjectBuilder();
 					jb.add("op", Json.createValue("keys"));
 					JsonObject params = jb.build();
-					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-						.chain(response -> {
-							Object[] jstrings = toJsonValue(response).asJsonArray().toArray();
-							String[] ans = new String[jstrings.length];
-							for (int i = 0; i < jstrings.length; i++) {
-								ans[i] = ((JsonValue) jstrings[i]).toString();
-							}
-							return Uni.createFrom().item(ans);
+					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+						Object[] jstrings = toJsonValue(resp).asJsonArray().toArray();
+						String[] ans = new String[jstrings.length];
+						for (int i = 0; i < jstrings.length; i++) {
+							ans[i] = ((JsonValue) jstrings[i]).toString();
+						}
+						return Uni.createFrom().item(ans);
 
-						});
+					});
 				}
 
 				/**
@@ -934,13 +998,14 @@ public class Kar implements KarHttpConstants {
 					JsonObjectBuilder jb = Json.createObjectBuilder();
 					jb.add("op", Json.createValue("size"));
 					JsonObject params = jb.build();
-					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params)
-						.chain(response -> Uni.createFrom().item(toInt(response)));
+					return sidecar.actorSubmapOp(actor.getType(), actor.getId(), submap, params).chain(resp -> {
+						if (!isSuccess(resp)) return Uni.createFrom().failure(new KarSidecarException(resp));
+						return Uni.createFrom().item(toInt(resp));
+					});
 				}
 			}
 		}
 	}
-
 
 	/**
 	 * KAR API methods for Eventing.
