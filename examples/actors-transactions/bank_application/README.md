@@ -19,7 +19,7 @@ After ensuring the KAR deployment works (instructions can be found [here](https:
 
 ```
 
-kar run -app money_transfer -actors MoneyTransfer,Account node account_server.js
+kar run -app money_transfer -app_port 8081 -actors MoneyTransfer,Account node account_server.js
 
 kar run -app money_transfer node account_client.js 
 

@@ -20,21 +20,21 @@ const { v4: uuidv4 } = require('uuid')
 const NUM_ACCTS = 1000
 const ACCTS_PER_TXN = 2
 const NUM_TXNS = 200
-const CONCURRENCY = 20 
-var txns = {}, successCnt = 0
+const CONCURRENCY = 20
+const txns = {}; let successCnt = 0
 
-function getRandomInt(min, max) {
-  return Math.floor(Math.random() * (max + 1 - min) + min);
+function getRandomInt (min, max) {
+  return Math.floor(Math.random() * (max + 1 - min) + min)
 }
 
-function getTimeNanoSec() {
-  var hrTime = process.hrtime()
+function getTimeNanoSec () {
+  const hrTime = process.hrtime()
   return (hrTime[0] * 1000000000 + hrTime[1])
 }
 
-async function warmUp() {
-  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
-    let promises = []
+async function warmUp () {
+  for (let i = 0; i < NUM_TXNS / CONCURRENCY; i++) {
+    const promises = []
     for (let j = 0; j < CONCURRENCY; j++) {
       promises.push(transfer(true))
     }
@@ -42,20 +42,20 @@ async function warmUp() {
   }
 }
 
-async function transfer(isWarmUp=false) {
-  let success = false, accts = []
-  for(let j = 0;; j++) {
+async function transfer (isWarmUp = false) {
+  let success = false; const accts = []
+  for (let j = 0; ; j++) {
     const a = getRandomInt(1, NUM_ACCTS)
-    if(accts.includes('a'+a)) { continue }
-    accts.push('a'+a)
-    if (accts.length == ACCTS_PER_TXN) { break }
+    if (accts.includes('a' + a)) { continue }
+    accts.push('a' + a)
+    if (accts.length === ACCTS_PER_TXN) { break }
   }
   const amt = getRandomInt(10, 100)
   const txnId = uuidv4()
   const txn = actor.proxy('MoneyTransfer', txnId)
-  let operations = []
+  const operations = []
   for (let i = 0; i < accts.length; i++) {
-    let op = ((i%2 == 0) ? amt: -amt)
+    const op = ((i % 2 === 0) ? amt : -amt)
     operations.push(op)
   }
   if (!isWarmUp) {
@@ -63,22 +63,23 @@ async function transfer(isWarmUp=false) {
     txns[txnId].startTimer = getTimeNanoSec()
   }
   success = await actor.call(txn, 'startTxn', accts, operations)
-  if (!isWarmUp) { 
+  if (!isWarmUp) {
     txns[txnId].endTimer = getTimeNanoSec()
-    if (success) { successCnt++ } }
-} 
-
-async function getLatency(totalTime) {
-  var totalLatency = 0
-  for(const i in txns) {
-    totalLatency += (txns[i].endTimer - txns[i].startTimer)
+    if (success) { successCnt++ }
   }
-  console.log('Total Latency in ms: ', totalLatency/1000000/NUM_TXNS)
-  console.log('Throughput :',  NUM_TXNS/totalTime*1000000000)
 }
 
-async function initiateTransfer() {
-  for (let i = 0; i < NUM_TXNS/CONCURRENCY; i++) {
+async function getLatency (totalTime) {
+  let totalLatency = 0
+  for (const i in txns) {
+    totalLatency += (txns[i].endTimer - txns[i].startTimer)
+  }
+  console.log('Total Latency in ms: ', totalLatency / 1000000 / NUM_TXNS)
+  console.log('Throughput :', NUM_TXNS / totalTime * 1000000000)
+}
+
+async function initiateTransfer () {
+  for (let i = 0; i < NUM_TXNS / CONCURRENCY; i++) {
     await transfer()
   }
 }
@@ -86,14 +87,14 @@ async function initiateTransfer() {
 async function main () {
   await warmUp()
   const strt = getTimeNanoSec()
-  let promises = []
+  const promises = []
   for (let j = 0; j < CONCURRENCY; j++) {
     promises.push(initiateTransfer())
   }
   await Promise.all(promises)
   const end = getTimeNanoSec()
   console.log(successCnt, 'success out of', NUM_TXNS, 'txns.')
-  await getLatency(end-strt)
+  await getLatency(end - strt)
   console.log('Terminating sidecar')
   await sys.shutdown()
 }

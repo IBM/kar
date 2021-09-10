@@ -15,17 +15,17 @@
  */
 
 const express = require('express')
-const { actor, sys } = require('kar-sdk')
-var not = require('./new_order_transaction.js')
-NewOrderTxn = not.NewOrderTxn 
-var pt = require('./payment_transaction.js')
-PaymentTxn = pt.PaymentTxn
-var ost = require('./order_status_transaction.js')
-OrderStatusTxn = ost.OrderStatusTxn
-var dt = require('./delivery_transaction.js')
-DeliveryTxn = dt.DeliveryTxn
-var slt = require('./stock_level_transaction.js')
-StockLevelTxn = slt.StockLevelTxn
+const { sys } = require('kar-sdk')
+const not = require('./new_order_transaction.js')
+const NewOrderTxn = not.NewOrderTxn
+const pt = require('./payment_transaction.js')
+const PaymentTxn = pt.PaymentTxn
+const ost = require('./order_status_transaction.js')
+const OrderStatusTxn = ost.OrderStatusTxn
+const dt = require('./delivery_transaction.js')
+const DeliveryTxn = dt.DeliveryTxn
+const slt = require('./stock_level_transaction.js')
+const StockLevelTxn = slt.StockLevelTxn
 
 // Server setup: register actors with KAR and start express
 const app = express()

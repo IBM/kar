@@ -13,10 +13,8 @@
  * limitations under the License.
  */
 
-const { actor } = require('kar-sdk')
-var tp = require('../../txn_framework/txn_participant.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
+const tp = require('../../txn_framework/txn_participant.js')
+const c = require('../constants.js')
 
 class Warehouse extends tp.TransactionParticipant {
   async activate () {
@@ -28,19 +26,19 @@ class Warehouse extends tp.TransactionParticipant {
     this.ytd = that.ytd || await super.createVal(0) // Year to date balance
   }
 
-  async preparePayment(txnId) {
+  async preparePayment (txnId) {
     const keys = ['ytd']
     return await this.prepare(txnId, keys)
   }
 
-  async prepareNewOrder(txnId) {
+  async prepareNewOrder (txnId) {
     // Accessing only a read-only field, 'tax'
-    return {vote: true, tax: this.tax}
+    return { vote: true, tax: this.tax }
   }
 
-  async commitNewOrder(txnId, decision, update) {
+  async commitNewOrder (txnId, decision, update) {
     // No-op
-    return
+
   }
 }
 

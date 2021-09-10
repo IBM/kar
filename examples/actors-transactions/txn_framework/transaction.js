@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar-sdk')
+const { actor } = require('kar-sdk')
 const { v4: uuidv4 } = require('uuid')
-
-const verbose = process.env.VERBOSE
 
 class Transaction {
   async activate () {
@@ -25,33 +23,33 @@ class Transaction {
     await actor.state.set(this, 'txnId', this.txnId)
   }
 
-  async txnComplete() {
+  async txnComplete () {
     return await actor.state.get(this, 'commitComplete')
   }
 
-  async prepareTxn(actorUpdates, prepareFunc='prepare') {
+  async prepareTxn (actorUpdates, prepareFunc = 'prepare') {
     /* actorUpdates is a map of thr form { 'actorName': { actr: <actor instance> } }. And prepareFunc
     is txn specific prepare method with default 'prepare' method. This method parallely invokes
     prepare of each actor of actorUpdates and fills in the values for each actor. The output is of
     the form { 'actorName': { actr: <actor instance>, values: <values returned by prepare> } } */
     await actor.state.set(this, 'actorUpdates', actorUpdates)
-    for (let i in actorUpdates) {
-      actorUpdates[i].values  = await actor.asyncCall(actorUpdates[i].actr, prepareFunc, this.txnId)
+    for (const i in actorUpdates) {
+      actorUpdates[i].values = await actor.asyncCall(actorUpdates[i].actr, prepareFunc, this.txnId)
     }
-    for (let i in actorUpdates) { actorUpdates[i].values = await actorUpdates[i].values() }
+    for (const i in actorUpdates) { actorUpdates[i].values = await actorUpdates[i].values() }
     return actorUpdates
   }
 
-  async sendCommitAsync(decision, commitFunc = 'commit') {
+  async sendCommitAsync (decision, commitFunc = 'commit') {
     /* This method assumes the necessary actors and their updates are stored in Redis. It expects actorUpdates
     to be a map of the form { 'actorName': { actr: <actor instance>, updated: <key-value updates> } }.
-    It parallely calls commitFunc commit method specified by the caller (or 'commit' by default). When all calls 
+    It parallely calls commitFunc commit method specified by the caller (or 'commit' by default). When all calls
     return, it sets 'commitComplete' and purges txn record on all participating actors. */
     const getVals = await Promise.all([actor.state.get(this, 'commitComplete'), actor.state.get(this, 'actorUpdates')])
     if (getVals[0]) { return }
     const actorUpdates = getVals[1]
     try {
-      let done = []
+      const done = []
       for (const i in actorUpdates) {
         done.push(await actor.asyncCall(actorUpdates[i].actr, commitFunc, this.txnId, decision, actorUpdates[i].update))
       }
@@ -64,7 +62,7 @@ class Transaction {
     await actor.tell(this, 'purgeTxn')
   }
 
-  async purgeTxn() {
+  async purgeTxn () {
     const getVals = await Promise.all([actor.state.get(this, 'commitComplete'), actor.state.get(this, 'actorUpdates')])
     if (getVals[0]) {
       const actorUpdates = getVals[1]

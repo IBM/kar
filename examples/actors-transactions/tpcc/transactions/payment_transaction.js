@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar-sdk')
-var t = require('../../txn_framework/transaction.js')
+const { actor } = require('kar-sdk')
+const t = require('../../txn_framework/transaction.js')
 const verbose = process.env.VERBOSE
 
 class PaymentTxn extends t.Transaction {
@@ -23,8 +23,8 @@ class PaymentTxn extends t.Transaction {
     await super.activate()
   }
 
-  updateCustomerDetails(cDetails, amount) {
-    let updatedCDetails = {}
+  updateCustomerDetails (cDetails, amount) {
+    const updatedCDetails = {}
     // Update customer details based on txn payment.
     updatedCDetails.balance = cDetails.balance - amount
     updatedCDetails.ytdPayment = cDetails.ytdPayment + amount
@@ -32,8 +32,8 @@ class PaymentTxn extends t.Transaction {
     return updatedCDetails
   }
 
-  async prepareTxn(txn) {
-    let actorUpdates = {}, decision = true
+  async prepareTxn (txn) {
+    let actorUpdates = {}; let decision = true
     const warehouse = actor.proxy('Warehouse', txn.wId)
     actorUpdates.warehouse = { actr: warehouse }
 
@@ -45,19 +45,19 @@ class PaymentTxn extends t.Transaction {
 
     actorUpdates = await super.prepareTxn(actorUpdates, 'preparePayment')
 
-    for (let i in actorUpdates) { decision = decision && actorUpdates[i].values.vote }
+    for (const i in actorUpdates) { decision = decision && actorUpdates[i].values.vote }
     if (decision) {
       const wDetails = actorUpdates.warehouse.values
-      actorUpdates.warehouse.update = { ytd : wDetails.ytd + txn.amount }
+      actorUpdates.warehouse.update = { ytd: wDetails.ytd + txn.amount }
       const dDetails = actorUpdates.district.values
-      actorUpdates.district.update =  { ytd: dDetails.ytd + txn.amount }
+      actorUpdates.district.update = { ytd: dDetails.ytd + txn.amount }
       actorUpdates.customer.update = this.updateCustomerDetails(actorUpdates.customer.values, txn.amount)
     }
-    await actor.state.setMultiple(this, {decision: decision, actorUpdates: actorUpdates} )
+    await actor.state.setMultiple(this, { decision: decision, actorUpdates: actorUpdates })
     return decision
   }
 
-  async startTxn(txn) {
+  async startTxn (txn) {
     if (verbose) { console.log(`Begin transaction ${this.txnId}.`) }
     const that = await actor.state.getAll(this)
     if (that.commitComplete) { return that.decision }

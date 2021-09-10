@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
-const { actor, sys } = require('kar-sdk')
-var tp = require('../../txn_framework/txn_participant.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
+const { actor } = require('kar-sdk')
+const tp = require('../../txn_framework/txn_participant.js')
+const c = require('../constants.js')
 
 class Customer extends tp.TransactionParticipant {
-  async activate() {
+  async activate () {
     const that = await super.activate()
     this.cId = that.cId || this.kar.id
     this.dId = that.dId || this.kar.id.split(':')[1]
@@ -38,31 +36,32 @@ class Customer extends tp.TransactionParticipant {
     this.lastOId = that.lastOId || await super.createVal(0)
   }
 
-  async addCustomerToDistrict(dId, wId) {
-    this.dId = dId, this.wId = wId
-    await actor.state.setMultiple(this, {dId : this.dId, wId : this.wId})
+  async addCustomerToDistrict (dId, wId) {
+    this.dId = dId
+    this.wId = wId
+    await actor.state.setMultiple(this, { dId: this.dId, wId: this.wId })
   }
 
-  async preparePayment(txnId) {
+  async preparePayment (txnId) {
     const keys = ['balance', 'ytdPayment', 'paymentCnt']
     return await this.prepare(txnId, keys)
   }
 
-  async prepareNewOrder(txnId) {
+  async prepareNewOrder (txnId) {
     const keys = ['discount', 'credit', 'lastOId']
     return await this.prepare(txnId, keys)
   }
 
-  async commitNewOrder(txnId, decision, update) {
+  async commitNewOrder (txnId, decision, update) {
     return await this.commit(txnId, decision, update)
   }
 
-  async prepareDelivery(txnId) {
+  async prepareDelivery (txnId) {
     const keys = ['balance', 'deliveryCnt']
     return await this.prepare(txnId, keys)
   }
 
-  async prepareOrderStatus(txnId) {
+  async prepareOrderStatus (txnId) {
     const keys = ['balance', 'name', 'lastOId']
     let localDecision = await super.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }

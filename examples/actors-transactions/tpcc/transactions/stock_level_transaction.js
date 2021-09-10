@@ -14,40 +14,40 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar-sdk')
-var t = require('../../txn_framework/transaction.js')
+const { actor } = require('kar-sdk')
+const t = require('../../txn_framework/transaction.js')
 
 class StockLevelTxn extends t.Transaction {
   async activate () {
     await super.activate()
   }
 
-  async getDistrictDetails(wId, dId) {
+  async getDistrictDetails (wId, dId) {
     const district = actor.proxy('District', wId + ':' + dId)
     return [district, await actor.call(district, 'getMultiple', ['nextOId'])]
   }
 
-  async startTxn(txn) {
+  async startTxn (txn) {
     const dDetails = await this.getDistrictDetails(txn.wId, txn.dId)
-    let lowStockCnt = 0, orderPromises = [], stockPromises = []
+    let lowStockCnt = 0; const orderPromises = []; const stockPromises = []
     const index = dDetails[1].nextOId.val - 1
-    for (let i = index; i > index - 20 && i > 0; i-- ) {
+    for (let i = index; i > index - 20 && i > 0; i--) {
       const order = actor.proxy('Order', txn.wId + ':' + txn.dId + ':' + 'o' + Number(i))
       orderPromises.push(actor.call(order, 'get', 'orderLines'))
     }
     const oDetails = await Promise.all(orderPromises)
-    for (let i in oDetails) {
+    for (const i in oDetails) {
       const ol = oDetails[i].val
-      for (let key in ol) {
+      for (const key in ol) {
         const stock = actor.proxy('ItemStock', ol[key].itemId + ':' + ol[key].supplyWId)
         stockPromises.push(actor.call(stock, 'get', 'quantity'))
       }
     }
     const stockDetails = await Promise.all(stockPromises)
-    for (let i in stockDetails) {
-      if (stockDetails[i].val < txn.threshold) { lowStockCnt ++ }
+    for (const i in stockDetails) {
+      if (stockDetails[i].val < txn.threshold) { lowStockCnt++ }
     }
-    return {decision:true, lowStockCnt:lowStockCnt}
+    return { decision: true, lowStockCnt: lowStockCnt }
   }
 }
 

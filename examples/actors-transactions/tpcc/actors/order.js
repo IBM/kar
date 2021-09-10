@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
-const { actor, sys } = require('kar-sdk')
-var tp = require('../../txn_framework/txn_participant.js')
+const { actor } = require('kar-sdk')
+const tp = require('../../txn_framework/txn_participant.js')
 const verbose = process.env.VERBOSE
 
 class NewOrder extends tp.TransactionParticipant {
-  async activate() {
+  async activate () {
     const that = await super.activate()
     this.noId = that.noId || this.kar.id
   }
@@ -30,37 +29,36 @@ class NewOrder extends tp.TransactionParticipant {
     await actor.state.removeAll(this)
   }
 
-  async prepareNewOrder(txnId) {
-    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+  async prepareNewOrder (txnId) {
+    const localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     await super.writePrepared(txnId, true, {})
-    return { vote:true } // Always return true as the txn always adds a new order entry.
+    return { vote: true } // Always return true as the txn always adds a new order entry.
   }
 
-  async commitNewOrder(txnId, decision, update) {
+  async commitNewOrder (txnId, decision, update) {
     return await this.commit(txnId, decision, update)
   }
 
-  async prepare(txnId) {
-    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+  async prepare (txnId) {
+    const localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     await super.writePrepared(txnId, true, {})
-    return { vote:true } // Always return true as the txn always adds a new order entry.
+    return { vote: true } // Always return true as the txn always adds a new order entry.
   }
 
-  async commit(txnId, decision, order) {
-    let continueCommit = await this.isTxnAlreadyCommitted(txnId)
+  async commit (txnId, decision, order) {
+    const continueCommit = await this.isTxnAlreadyCommitted(txnId)
     if (!continueCommit) { /* This txn is already committed or not prepared. */ return }
-    let writeMap = {}
+    const writeMap = {}
     if (decision) { writeMap.noId = this.noId }
     await this.writeCommit(txnId, decision, writeMap)
     if (verbose) { console.log(`Committed transaction ${txnId}. Added new order ${this.noId}.\n`) }
-    return
   }
 }
 
 class Order extends tp.TransactionParticipant {
-  async activate() {
+  async activate () {
     const that = await super.activate()
     this.oId = that.oId || this.kar.id
     this.cId = that.cId
@@ -73,24 +71,24 @@ class Order extends tp.TransactionParticipant {
     this.carrierId = that.carrierId || await super.createVal(0)
   }
 
-  async getOrder() {
+  async getOrder () {
     return await actor.state.getAll(this)
   }
 
-  async prepareNewOrder(txnId) {
-    let localDecision = await this.isTxnAlreadyPrepared(txnId)
+  async prepareNewOrder (txnId) {
+    const localDecision = await this.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }
     await super.writePrepared(txnId, true, {})
-    return { vote:true } // Always return true as the txn always adds a new order entry.
+    return { vote: true } // Always return true as the txn always adds a new order entry.
   }
 
-  async commitNewOrder(txnId, decision, update) {
+  async commitNewOrder (txnId, decision, update) {
     return await this.commit(txnId, decision, update)
   }
 
-  async prepareDelivery(txnId) {
+  async prepareDelivery (txnId) {
     const keys = ['cId', 'dId', 'orderLines', 'carrierId']
-    var localDecision = false
+    let localDecision = false
     try {
       localDecision = await this.prepare(txnId, keys)
     } catch {
@@ -99,7 +97,7 @@ class Order extends tp.TransactionParticipant {
     return localDecision
   }
 
-  async prepareOrderStatus(txnId) {
+  async prepareOrderStatus (txnId) {
     const keys = ['entryDate', 'carrierId', 'orderLines']
     let localDecision = await super.isTxnAlreadyPrepared(txnId)
     if (localDecision != null) { /* This txn is already prepared. */ return localDecision }

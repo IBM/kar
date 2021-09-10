@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-const express = require('express')
-const { actor, sys } = require('kar-sdk')
-var tp = require('../../txn_framework/txn_participant.js')
-var c = require('../constants.js')
-const verbose = process.env.VERBOSE
+const { actor } = require('kar-sdk')
+const tp = require('../../txn_framework/txn_participant.js')
+const c = require('../constants.js')
 
 class ItemStock extends tp.TransactionParticipant {
-  async activate() {
+  async activate () {
     const that = await super.activate()
     this.itemId = that.itemId || this.kar.id
     this.wId = that.wId || this.kar.id.split(':')[1]
@@ -33,19 +31,19 @@ class ItemStock extends tp.TransactionParticipant {
     this.remoteCnt = that.remoteCnt || await super.createVal(0)
   }
 
-  async addNewItem(item) {
+  async addNewItem (item) {
     this.wId = item.wId
     this.name = item.name || c.DEFAULT_ITEM_NAME
     this.price = item.price || c.DEFAULT_ITEM_PRICE
-    await actor.state.setMultiple(this, {wId : this.wId, name: this.name, price: this.price})
+    await actor.state.setMultiple(this, { wId: this.wId, name: this.name, price: this.price })
   }
 
-  async prepareNewOrder(txnId) {
+  async prepareNewOrder (txnId) {
     const keys = ['price', 'name', 'quantity', 'ytd', 'orderCnt']
     return await this.prepare(txnId, keys)
   }
 
-  async commitNewOrder(txnId, decision, update) {
+  async commitNewOrder (txnId, decision, update) {
     return await this.commit(txnId, decision, update)
   }
 }

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-const { actor, sys } = require('kar-sdk')
-var t = require('../../txn_framework/transaction.js')
+const { actor } = require('kar-sdk')
+const t = require('../../txn_framework/transaction.js')
 const verbose = process.env.VERBOSE
 
 class NewOrderTxn extends t.Transaction {
@@ -24,18 +24,19 @@ class NewOrderTxn extends t.Transaction {
     this.actorUpdates = {}
   }
 
-  getItemDetailsToWrite(itemDetails, ol) {
-    let itemDetailsToWrite = Object.assign({}, itemDetails)
+  getItemDetailsToWrite (itemDetails, ol) {
+    const itemDetailsToWrite = Object.assign({}, itemDetails)
     // Update item details based on order
-    const updatedQuantity = (itemDetails.quantity - ol.quantity) > 0? 
-          (itemDetails.quantity - ol.quantity) : (itemDetails.quantity - ol.quantity + 91)
+    const updatedQuantity = (itemDetails.quantity - ol.quantity) > 0
+      ? (itemDetails.quantity - ol.quantity)
+      : (itemDetails.quantity - ol.quantity + 91)
     itemDetailsToWrite.quantity = updatedQuantity
     itemDetailsToWrite.ytd = itemDetails.ytd + ol.quantity
     itemDetailsToWrite.orderCnt = itemDetails.orderCnt + 1
     return itemDetailsToWrite
   }
 
-  async prepareWDC(wId, dId, cId) {
+  async prepareWDC (wId, dId, cId) {
     const warehouse = actor.proxy('Warehouse', wId)
     this.actorUpdates.warehouse = { actr: warehouse }
 
@@ -47,57 +48,56 @@ class NewOrderTxn extends t.Transaction {
 
     this.actorUpdates = await super.prepareTxn(this.actorUpdates, 'prepareNewOrder')
     let decision = true
-    for (let i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
+    for (const i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
     return decision
   }
 
-  async prepareItemsAndOrders(orderLines, orderId) {
-    let itemOrderActors = {}
-    for (let i in orderLines) {
-      let ol = orderLines[i]
+  async prepareItemsAndOrders (orderLines, orderId) {
+    const itemOrderActors = {}
+    for (const i in orderLines) {
+      const ol = orderLines[i]
       const itemActor = actor.proxy('ItemStock', ol.itemId + ':' + ol.supplyWId)
-      itemOrderActors[ol.itemId] = {actr: itemActor}
+      itemOrderActors[ol.itemId] = { actr: itemActor }
     }
     const order = actor.proxy('Order', orderId)
-    itemOrderActors.order = {actr: order}
+    itemOrderActors.order = { actr: order }
     const newOrder = actor.proxy('NewOrder', orderId) // Create a new order entry
-    itemOrderActors.newOrder = {actr: newOrder}
+    itemOrderActors.newOrder = { actr: newOrder }
 
     const preparedActors = await super.prepareTxn(itemOrderActors, 'prepareNewOrder')
     this.actorUpdates = Object.assign({}, this.actorUpdates, preparedActors)
   }
 
-  async prepareTxn(txn) {
-    let earlyDecision = await this.prepareWDC(txn.wId, txn.dId, txn.cId)
-    if(!earlyDecision) { await actor.state.set(this, 'decision', earlyDecision); return earlyDecision }
+  async prepareTxn (txn) {
+    const earlyDecision = await this.prepareWDC(txn.wId, txn.dId, txn.cId)
+    if (!earlyDecision) { await actor.state.set(this, 'decision', earlyDecision); return earlyDecision }
     const wDetails = this.actorUpdates.warehouse.values
     const dDetails = this.actorUpdates.district.values
     const cDetails = this.actorUpdates.customer.values
-
-    this.actorUpdates.district.update =  { nextOId: dDetails.nextOId + 1}
+    this.actorUpdates.district.update = { nextOId: dDetails.nextOId + 1 }
 
     const orderId = txn.wId + ':' + txn.dId + ':' + 'o' + dDetails.nextOId
     this.actorUpdates.customer.update = { lastOId: orderId }
-  
+
     await this.prepareItemsAndOrders(txn.orderLines, orderId)
     let totalAmount = 0
-    for (let i in txn.orderLines) {
-      let ol = txn.orderLines[i]
+    for (const i in txn.orderLines) {
+      const ol = txn.orderLines[i]
       const itemDetails = this.actorUpdates[ol.itemId].values
       this.actorUpdates[ol.itemId].update = this.getItemDetailsToWrite(itemDetails, ol)
       txn.orderLines[i].amount = ol.quantity * itemDetails.price
       totalAmount += ol.amount
     }
-    totalAmount = totalAmount * (1 - cDetails.discount) * (1 + wDetails.wTax + dDetails.tax)
+    txn.totalAmount = totalAmount * (1 - cDetails.discount) * (1 + wDetails.wTax + dDetails.tax)
     this.actorUpdates.order.update = txn
-  
+
     let decision = true
-    for (let i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
-    await actor.state.setMultiple(this, {decision: decision, actorUpdates: this.actorUpdates} )
+    for (const i in this.actorUpdates) { decision = decision && this.actorUpdates[i].values.vote }
+    await actor.state.setMultiple(this, { decision: decision, actorUpdates: this.actorUpdates })
     return decision
   }
 
-  async startTxn(txn) {
+  async startTxn (txn) {
     if (verbose) { console.log(`Begin transaction ${this.txnId}.`) }
     const that = await actor.state.getAll(this)
     if (that.commitComplete) { return that.decision }
