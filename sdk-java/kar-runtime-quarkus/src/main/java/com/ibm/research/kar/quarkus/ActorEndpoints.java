@@ -55,7 +55,7 @@ public class ActorEndpoints implements KarHttpConstants {
 	 *
 	 * @param type The type of the actor instance to be activated
 	 * @param id   The id of the actor instance to be activated
-	 * @return A Uni<Response> that will indicate success (200, 201) or an error condition (400, 404)
+	 * @return A Uni that will indicate success (200, 201) or an error condition (400, 404)
 	 */
 	@GET
 	@Path("/{type}/{id}")
@@ -103,7 +103,7 @@ public class ActorEndpoints implements KarHttpConstants {
 	 *
 	 * @param type The type of the actor instance to be deactivated
 	 * @param id   The id of the actor instance to be deactivated
-	 * @return A Uni<Response> that will indeicate success (200) or an error condition (400, 404)
+	 * @return A Uni that will indeicate success (200) or an error condition (400, 404)
 	 */
 	@DELETE
 	@Path("/{type}/{id}")
@@ -151,7 +151,7 @@ public class ActorEndpoints implements KarHttpConstants {
 	 * @param sessionid The session in which the method is being invoked
 	 * @param path The method to invoke
 	 * @param args The arguments to the method
-	 * @return a Uni<Response> representing the result of the method invocation
+	 * @return a Uni representing the result of the method invocation
 	 */
 	@POST
 	@Path("/{type}/{id}/{sessionid}/{path}")
