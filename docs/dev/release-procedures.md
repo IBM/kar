@@ -83,7 +83,9 @@ npm notice total files:   5
 
 3. Commit changes to release-prep.
 
-4. PR the release-prep branch. Travis should pass. Merge PR.
+### PR & Merge the release-prep branch
+
+1. PR the release-prep branch. Travis should pass. Merge PR.
 
 ### Tag repository
 

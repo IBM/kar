@@ -16,6 +16,13 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.0.9 - 2021-09-10
++ Implement a Reactive Java SDK using Quarkus
++ Add a retry loop around failed redis connection attempts (#163)
++ Also allow controlling sidecar ports via envvar (#153)
++ Move from alpine 3.11 to 3.14 for sidecar/webhook images (#151)
++ Fixup kafka-bench and re-enable building it. (#150)
+
 # KAR 1.0.8 - 2021-08-13
 + Upgrade to zookeeper 3.6 and kafka 2.7 (#146)
 + Upgrade to use Redis 6 (#145)

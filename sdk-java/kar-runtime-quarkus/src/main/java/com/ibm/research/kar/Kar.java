@@ -289,6 +289,7 @@ public class Kar implements KarHttpConstants {
 		 * @param service The name of the service to invoke.
 		 * @param path    The service endpoint to invoke.
 		 * @param body    The request body with which to invoke the service endpoint.
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> tell(String service, String path, JsonValue body) {
 			return sidecar.tellPost(service, path, body).chain(resp -> {
@@ -333,6 +334,7 @@ public class Kar implements KarHttpConstants {
 		 * Asynchronously remove all user-level and runtime state of an Actor.
 		 *
 		 * @param actor The Actor instance.
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> remove(ActorRef actor) {
 			return sidecar.actorDelete(actor.getType(), actor.getId()).chain(resp -> {
@@ -348,6 +350,7 @@ public class Kar implements KarHttpConstants {
 		 * @param actor The target actor.
 		 * @param path  The actor method to invoke.
 		 * @param args  The arguments with which to invoke the actor method.
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> tell(ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorTell(actor.getType(), actor.getId(), path, packArgs(args))
@@ -512,6 +515,7 @@ public class Kar implements KarHttpConstants {
 			 * @param period     For periodic reminders, a String that is compatible with
 			 *                   GoLang's Duration
 			 * @param args       The arguments with which to invoke the actor method.
+			 * @return A Uni representing the continuation.
 			 */
 			public static Uni<Void> schedule(ActorRef actor, String path, String reminderId, Instant targetTime,
 					Duration period, JsonValue... args) {
@@ -630,6 +634,7 @@ public class Kar implements KarHttpConstants {
 			 * @param actor The Actor instance.
 			 * @param key   The key to use to access the instance's state
 			 * @param value The value to store
+			 * @return A Uni representing the continuation
 			 */
 			public static Uni<Void> setV(ActorRef actor, String key, JsonValue value) {
 				return sidecar.actorSetState(actor.getType(), actor.getId(), key, value).chain(resp -> {
@@ -658,6 +663,7 @@ public class Kar implements KarHttpConstants {
 			 *
 			 * @param actor   The Actor instance.
 			 * @param updates A map containing the state updates to perform
+			 * @return A Uni representing the continuation.
 			 */
 			public static Uni<Void> setV(ActorRef actor, Map<String, JsonValue> updates) {
 				if (updates.isEmpty()) {
@@ -865,6 +871,7 @@ public class Kar implements KarHttpConstants {
 				 * @param submap The name of the submap to update
 				 * @param key    The key in the submap to update
 				 * @param value  The value to store at `key/subkey`
+				 * @return A Uni representing the continuation.
 				 */
 				public static Uni<Void> setV(ActorRef actor, String submap, String key, JsonValue value) {
 					return sidecar.actorSetWithSubkeyState(actor.getType(), actor.getId(), submap, key, value).chain(resp -> {
@@ -1076,9 +1083,10 @@ public class Kar implements KarHttpConstants {
 		 * @param actor The Actor instance to subscribe
 		 * @param path  The actor method to invoke on each event received on the topic
 		 * @param topic The topic to which to subscribe
+		 * @return A Uni representing the continuation.
 		 */
-		public static void subscribe(ActorRef actor, String path, String topic) {
-			subscribe(actor, path, topic, topic);
+		public static Uni<Void> subscribe(ActorRef actor, String path, String topic) {
+			return subscribe(actor, path, topic, topic);
 		}
 
 		/**
@@ -1089,6 +1097,7 @@ public class Kar implements KarHttpConstants {
 		 *                       the topic
 		 * @param topic          The topic to which to subscribe
 		 * @param subscriptionId The subscriptionId to use for this subscription
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> subscribe(ActorRef actor, String path, String topic, String subscriptionId) {
 			JsonObjectBuilder builder = factory.createObjectBuilder();
@@ -1105,6 +1114,7 @@ public class Kar implements KarHttpConstants {
 		 * Create a topic using the default Kafka configuration options.
 		 *
 		 * @param topic The name of the topic to create
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> createTopic(String topic) {
 			return sidecar.eventCreateTopic(topic, JsonValue.EMPTY_JSON_OBJECT).chain(resp -> {
@@ -1117,6 +1127,7 @@ public class Kar implements KarHttpConstants {
 		 * Delete a topic.
 		 *
 		 * @param topic the name of the topic to delete
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> deleteTopic(String topic) {
 			return sidecar.eventDeleteTopic(topic).chain(resp -> {
@@ -1130,6 +1141,7 @@ public class Kar implements KarHttpConstants {
 		 *
 		 * @param topic the name of the topic on which to publish
 		 * @param event the event to publish
+		 * @return A Uni representing the continuation.
 		 */
 		public static Uni<Void> publish(String topic, JsonValue event) {
 			return sidecar.eventPublish(topic, event).chain(resp -> {
