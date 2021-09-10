@@ -35,14 +35,13 @@ KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)kar-examples-js-unit-tests:$(DOCKER_I
 KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-java-actors-dp:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(DOCKER_IMAGE_TAG)
 KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
-KAFKA_BENCH_CONSUMER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-consumer:$(DOCKER_IMAGE_TAG)
-KAFKA_BENCH_PRODUCER=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench-producer:$(DOCKER_IMAGE_TAG)
+KAFKA_BENCH=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench:$(DOCKER_IMAGE_TAG)
 KAR_HTTP_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-http-bench-js-image:$(DOCKER_IMAGE_TAG)
 
 install: cli
 
 cli:
-	cd core && go install -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$(KAR_VERSION)" ./...
+	cd core && go install -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$(KAR_VERSION)" ./...
 
 dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
@@ -62,9 +61,7 @@ dockerBuildExamples:
 
 dockerBuildBenchmarks:
 	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
-# DISABLED DUE TO https://github.com/IBM/kar/issues/118
-#	cd benchmark/kafka-bench/consumer && docker build -t $(KAFKA_BENCH_CONSUMER) .
-#	cd benchmark/kafka-bench/producer && docker build -t $(KAFKA_BENCH_PRODUCER) .
+	cd benchmark/kafka-bench && docker build -t $(KAFKA_BENCH) .
 	cd benchmark/http-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_HTTP_BENCH_JS_IMAGE) .
 
 dockerPushCore:
@@ -85,9 +82,7 @@ dockerPushExamples:
 
 dockerPushBenchmarks:
 	docker push $(KAR_BENCH_JS_IMAGE)
-# DISABLED DUE TO https://github.com/IBM/kar/issues/118
-#	docker push $(KAFKA_BENCH_CONSUMER)
-#	docker push $(KAFKA_BENCH_PRODUCER)
+	docker push $(KAFKA_BENCH)
 	docker push $(KAR_HTTP_BENCH_JS_IMAGE)
 
 docker:

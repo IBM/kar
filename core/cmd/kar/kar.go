@@ -18,7 +18,7 @@
 
 package main
 
-import "github.com/IBM/kar.git/core/internal/runtime"
+import "github.com/IBM/kar/core/internal/runtime"
 
 func main() {
 	runtime.Main()

@@ -36,7 +36,7 @@ async function testTermination (failure) {
 async function main () {
   let failure = false
   let countdown = 60
-  const cafe = actor.proxy('Cafe', 'Cafe de Flore')
+  const cafe = actor.proxy('Cafe', 'Cafe+de+Flore')
 
   console.log('Serving a meal:')
   const table = await actor.call(cafe, 'seatTable', 20, 5)

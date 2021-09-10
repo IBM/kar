@@ -28,8 +28,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 )
 
@@ -273,4 +273,10 @@ func Purge() error {
 		return err
 	}
 	return nil
+}
+
+// IsLiveSidecar return true if the argument sidecar is currently part of the application mesh
+func IsLiveSidecar(sidecar string) bool {
+	_, ok := addresses[sidecar]
+	return ok
 }

@@ -209,19 +209,11 @@ const actorSubmapContains = (actor, key, subkey) => head(`actor/${actor.kar.type
 
 const actorSubmapSet = (actor, key, subkey, value = {}) => put(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`, value)
 
-function actorSubmapSetMultiple (actor, key, state = {}) {
-  const payload = {}
-  payload[key] = state
-  return post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { submapupdates: payload }).then(res => res.added)
-}
+const actorSubmapSetMultiple = (actor, key, state = {}) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { submapupdates: { [key]: state } }).then(res => res.added)
 
 const actorSubmapRemove = (actor, key, subkey) => del(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}/${subkey}`)
 
-function actorSubmapRemoveSome (actor, key, keys = []) {
-  const payload = {}
-  payload[key] = keys
-  return post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { submapremovals: payload }).then(res => res.removed)
-}
+const actorSubmapRemoveSome = (actor, key, keys = []) => post(`actor/${actor.kar.type}/${actor.kar.id}/state`, { submapremovals: { [key]: keys } }).then(res => res.removed)
 
 const actorSubmapRemoveAll = (actor, key) => post(`actor/${actor.kar.type}/${actor.kar.id}/state/${key}`, { op: 'clear' })
 

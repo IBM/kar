@@ -27,7 +27,7 @@ import (
 	"net/http"
 
 	"github.com/Shopify/sarama"
-	"github.com/IBM/kar.git/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/julienschmidt/httprouter"
 )
 

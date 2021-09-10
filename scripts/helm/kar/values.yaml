@@ -30,9 +30,10 @@ redis:
     host: 'mustOverrideIfInternalIsFalse'
     port: 'mustOverrideIfInternalIsFalse'
     password: 'mustOverrideIfInternalIsFalse'
+    user: 'mustOverrideIfInternalIsFalse'
 
 kar:
-  version: 1.0.4
+  version: 1.0.8
   injector:
     replicaCount: 1
     imageName: 'quay.io/ibm/kar-injector'

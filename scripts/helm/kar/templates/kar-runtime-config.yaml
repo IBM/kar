@@ -38,10 +38,12 @@ data:
   redis_host: {{ include "kar.redis_host" . | b64enc }}
   redis_port: {{ print (int64 .Values.redis.port) | b64enc }}
   redis_password: {{ .Values.redis.password | b64enc }}
+  redis_user: {{ .Values.redis.user | b64enc }}
 {{ else }}
   redis_ca: {{ .Values.redis.externalConfig.ca | b64enc }}
   redis_host: {{ .Values.redis.externalConfig.host | b64enc }}
   redis_port: {{ print (int64 .Values.redis.externalConfig.port) | b64enc }}
   redis_password: {{ .Values.redis.externalConfig.password | b64enc }}
+  redis_user: {{ .Values.redis.externalConfig.user | b64enc }}
   redis_enable_tls: {{ .Values.redis.externalConfig.enabletls | b64enc }}
 {{ end -}}

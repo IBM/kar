@@ -44,6 +44,7 @@ unset REDIS_ENABLE_TLS
 unset REDIS_HOST
 unset REDIS_PORT
 unset REDIS_PASSWORD
+unset REDIS_USER
 unset KAFKA_VERSION
 unset KAFKA_ENABLE_TLS
 unset KAFKA_BROKERS
@@ -54,6 +55,7 @@ export REDIS_ENABLE_TLS=true
 export REDIS_HOST=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.hosts[0].hostname`
 export REDIS_PORT=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.hosts[0].port`
 export REDIS_PASSWORD=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.authentication.password`
+export REDIS_USER=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.authentication.username`
 export REDIS_CA=`echo $REDIS_KEY | jq -r .credentials.connection.rediss.certificate.certificate_base64`
 
 # setup kafka env variables

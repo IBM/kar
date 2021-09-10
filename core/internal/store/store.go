@@ -18,6 +18,7 @@
 package store
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"net"
@@ -25,8 +26,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -52,10 +54,21 @@ func unmangle(key string) string {
 	return key
 }
 
-// send a command while holding the connection mutex
-func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
+// send a command using a connection from the pool
+func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
-	conn := pool.Get()
+	conn, err := pool.GetContext(ctx)
+	if err != nil {
+		b := backoff.NewExponentialBackOff()
+		if config.RequestRetryLimit >= 0 {
+			b.MaxElapsedTime = config.RequestRetryLimit
+		}
+		err = backoff.Retry(func() error {
+			conn.Close()
+			conn, err = pool.GetContext(ctx)
+			return err
+		}, b)
+	}
 	defer conn.Close()
 	start := time.Now()
 	reply, err = conn.Do(command, args...)
@@ -66,40 +79,40 @@ func doRaw(command string, args ...interface{}) (reply interface{}, err error) {
 		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
 	}
 	if err != nil {
-		logger.Error("failed to send command to redis: %v", err)
+		logger.Fatal("Failed to send command %v to redis: %v", command, err)
 	}
 	return
 }
 
 // mangle the key before sending the command (assuming args[0] is the key)
-func do(command string, args ...interface{}) (interface{}, error) {
+func do(ctx context.Context, command string, args ...interface{}) (interface{}, error) {
 	args[0] = mangle(args[0].(string))
-	return doRaw(command, args...)
+	return doRaw(ctx, command, args...)
 }
 
 // Keys
 
 // Set sets the value associated with a key.
-func Set(key, value string) (string, error) {
-	return redis.String(do("SET", key, value))
+func Set(ctx context.Context, key, value string) (string, error) {
+	return redis.String(do(ctx, "SET", key, value))
 }
 
 // Get returns the value associated with a key.
-func Get(key string) (string, error) {
-	return redis.String(do("GET", key))
+func Get(ctx context.Context, key string) (string, error) {
+	return redis.String(do(ctx, "GET", key))
 }
 
 // Del deletes the value associated with a key.
-func Del(key string) (int, error) {
-	return redis.Int(do("DEL", key))
+func Del(ctx context.Context, key string) (int, error) {
+	return redis.Int(do(ctx, "DEL", key))
 }
 
 // CompareAndSet sets the value associated with a key if its current value is
 // equal to the expected value. Use nil values to create or delete the key.
 // Returns 0 if unsuccessful, 1 if successful.
-func CompareAndSet(key string, expected, value *string) (int, error) {
+func CompareAndSet(ctx context.Context, key string, expected, value *string) (int, error) {
 	if expected == nil && value == nil {
-		_, err := redis.String(do("GET", key))
+		_, err := redis.String(do(ctx, "GET", key))
 		if err != nil {
 			if err == ErrNil {
 				return 1, nil
@@ -109,17 +122,17 @@ func CompareAndSet(key string, expected, value *string) (int, error) {
 		return 0, nil
 	}
 	if expected == nil {
-		return redis.Int(do("SETNX", key, *value))
+		return redis.Int(do(ctx, "SETNX", key, *value))
 	}
 	if value == nil {
-		return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1 else return 0 end", 1, mangle(key), *expected))
+		return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1 else return 0 end", 1, mangle(key), *expected))
 	}
-	return redis.Int(doRaw("EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), *expected, *value))
+	return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), *expected, *value))
 }
 
 // Keys returns all keys that match the argument pattern
-func Keys(pattern string) ([]string, error) {
-	mangledKeys, err := redis.Strings(do("KEYS", pattern))
+func Keys(ctx context.Context, pattern string) ([]string, error) {
+	mangledKeys, err := redis.Strings(do(ctx, "KEYS", pattern))
 	if err == nil {
 		for idx, val := range mangledKeys {
 			mangledKeys[idx] = unmangle(val)
@@ -129,12 +142,12 @@ func Keys(pattern string) ([]string, error) {
 }
 
 // Purge deletes all keys that match the argument pattern
-func Purge(pattern string) (int, error) {
+func Purge(ctx context.Context, pattern string) (int, error) {
 	pattern = mangle(pattern)
 	bags := [][]interface{}{}
 	cursor := 0
 	for {
-		reply, err := redis.Values(doRaw("SCAN", cursor, "MATCH", pattern, "COUNT", 100))
+		reply, err := redis.Values(doRaw(ctx, "SCAN", cursor, "MATCH", pattern, "COUNT", 100))
 		if err != nil {
 			return 0, err
 		}
@@ -149,7 +162,7 @@ func Purge(pattern string) (int, error) {
 	}
 	count := 0
 	for _, keys := range bags {
-		n, err := redis.Int(doRaw("DEL", keys...))
+		n, err := redis.Int(doRaw(ctx, "DEL", keys...))
 		count += n
 		if err != nil {
 			return count, err
@@ -161,22 +174,22 @@ func Purge(pattern string) (int, error) {
 // Hashes
 
 // HSet hash key value
-func HSet(hash, key, value string) (int, error) {
-	return redis.Int(do("HSET", hash, key, value))
+func HSet(ctx context.Context, hash, key, value string) (int, error) {
+	return redis.Int(do(ctx, "HSET", hash, key, value))
 }
 
 // HSet2 hash key1 value1 key2 value2
-func HSet2(hash, key1, value1, key2, value2 string) (int, error) {
-	return redis.Int(do("HSET", hash, key1, value1, key2, value2))
+func HSet2(ctx context.Context, hash, key1, value1, key2, value2 string) (int, error) {
+	return redis.Int(do(ctx, "HSET", hash, key1, value1, key2, value2))
 }
 
 // HSet3 hash key1 value1 key2 value2 key3 value3
-func HSet3(hash, key1, value1, key2, value2, key3, value3 string) (int, error) {
-	return redis.Int(do("HSET", hash, key1, value1, key2, value2, key3, value3))
+func HSet3(ctx context.Context, hash, key1, value1, key2, value2, key3, value3 string) (int, error) {
+	return redis.Int(do(ctx, "HSET", hash, key1, value1, key2, value2, key3, value3))
 }
 
 // HSetMultiple hash map[string]string does an HSET of the entire map
-func HSetMultiple(hash string, keyValuePairs map[string]string) (int, error) {
+func HSetMultiple(ctx context.Context, hash string, keyValuePairs map[string]string) (int, error) {
 	nPairs := len(keyValuePairs)
 	if nPairs == 0 {
 		return 0, nil
@@ -189,47 +202,47 @@ func HSetMultiple(hash string, keyValuePairs map[string]string) (int, error) {
 		args[idx+1] = v
 		idx += 2
 	}
-	return redis.Int(do("HSET", args...))
+	return redis.Int(do(ctx, "HSET", args...))
 }
 
 // HGet hash key
-func HGet(hash, key string) (string, error) {
-	return redis.String(do("HGET", hash, key))
+func HGet(ctx context.Context, hash, key string) (string, error) {
+	return redis.String(do(ctx, "HGET", hash, key))
 }
 
 // HDel hash key
-func HDel(hash, key string) (int, error) {
-	return redis.Int(do("HDEL", hash, key))
+func HDel(ctx context.Context, hash, key string) (int, error) {
+	return redis.Int(do(ctx, "HDEL", hash, key))
 }
 
 //HDelMultiple hash key[]
-func HDelMultiple(hash string, keys []string) (int, error) {
+func HDelMultiple(ctx context.Context, hash string, keys []string) (int, error) {
 	args := make([]interface{}, len(keys)+1)
 	args[0] = hash
 	for i := range keys {
 		args[i+1] = keys[i]
 	}
-	return redis.Int(do("HDEL", args...))
+	return redis.Int(do(ctx, "HDEL", args...))
 }
 
 // HMGet hash key[]
-func HMGet(hash string, keys []string) ([]string, error) {
+func HMGet(ctx context.Context, hash string, keys []string) ([]string, error) {
 	args := make([]interface{}, len(keys)+1)
 	args[0] = hash
 	for i := range keys {
 		args[i+1] = keys[i]
 	}
-	return redis.Strings(do("HMGET", args...))
+	return redis.Strings(do(ctx, "HMGET", args...))
 }
 
 // HScan hash cursor [MATCH match]
-func HScan(hash string, cursor int, match string) (int, []string, error) {
+func HScan(ctx context.Context, hash string, cursor int, match string) (int, []string, error) {
 	var response []interface{}
 	var err error
 	if match != "" {
-		response, err = redis.Values(do("HSCAN", hash, cursor, "MATCH", match, "COUNT", 1000)) // if we are filtering, increase count by quite a bit to compensate
+		response, err = redis.Values(do(ctx, "HSCAN", hash, cursor, "MATCH", match, "COUNT", 1000)) // if we are filtering, increase count by quite a bit to compensate
 	} else {
-		response, err = redis.Values(do("HSCAN", hash, cursor))
+		response, err = redis.Values(do(ctx, "HSCAN", hash, cursor))
 	}
 	if err != nil {
 		return 0, nil, err
@@ -247,35 +260,35 @@ func HScan(hash string, cursor int, match string) (int, []string, error) {
 }
 
 // HGetAll hash
-func HGetAll(hash string) (map[string]string, error) {
-	return redis.StringMap(do("HGETALL", hash))
+func HGetAll(ctx context.Context, hash string) (map[string]string, error) {
+	return redis.StringMap(do(ctx, "HGETALL", hash))
 }
 
 // HExists hash key
-func HExists(hash string, key string) (int, error) {
-	return redis.Int(do("HEXISTS", hash, key))
+func HExists(ctx context.Context, hash string, key string) (int, error) {
+	return redis.Int(do(ctx, "HEXISTS", hash, key))
 }
 
 // HKeys hash key
-func HKeys(hash string) ([]string, error) {
-	return redis.Strings(do("HKEYS", hash))
+func HKeys(ctx context.Context, hash string) ([]string, error) {
+	return redis.Strings(do(ctx, "HKEYS", hash))
 }
 
 // Sorted sets
 
 // ZAdd adds an element to a sorted set.
-func ZAdd(key string, score int64, value string) (int, error) {
-	return redis.Int(do("ZADD", key, score, value))
+func ZAdd(ctx context.Context, key string, score int64, value string) (int, error) {
+	return redis.Int(do(ctx, "ZADD", key, score, value))
 }
 
 // ZRange returns a range of elements from a sorted set.
-func ZRange(key string, start, stop int) ([]string, error) {
-	return redis.Strings(do("ZRANGE", key, start, stop))
+func ZRange(ctx context.Context, key string, start, stop int) ([]string, error) {
+	return redis.Strings(do(ctx, "ZRANGE", key, start, stop))
 }
 
 // ZRemRangeByScore removes elements by scores from a sorted set.
-func ZRemRangeByScore(key string, min, max int64) (int, error) {
-	return redis.Int(do("ZREMRANGEBYSCORE", key, min, max))
+func ZRemRangeByScore(ctx context.Context, key string, min, max int64) (int, error) {
+	return redis.Int(do(ctx, "ZREMRANGEBYSCORE", key, min, max))
 }
 
 // Dial connects to Redis.
@@ -292,6 +305,9 @@ func Dial() error {
 		if config.RedisTLSSkipVerify {
 			redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true))
 		}
+	}
+	if config.RedisUser != "" {
+		redisOptions = append(redisOptions, redis.DialUsername(config.RedisUser))
 	}
 	if config.RedisPassword != "" {
 		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))

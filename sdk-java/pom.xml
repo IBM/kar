@@ -8,14 +8,15 @@
 
   <groupId>com.ibm.research.kar</groupId>
   <artifactId>kar-java</artifactId>
-  <version>1.0.5-SNAPSHOT</version>
+  <version>1.0.9-SNAPSHOT</version>
 
   <name>kar-java</name>
   <packaging>pom</packaging>
 
   <modules>
-    <module>kar-rest-client</module>
-    <module>kar-actor-runtime</module>
+    <module>kar-runtime-core</module>
+    <module>kar-runtime-liberty</module>
+    <module>kar-runtime-quarkus</module>
   </modules>
 
   <description>KAR Java SDK</description>
@@ -34,17 +35,8 @@
     <version.maven-source-plugin>2.2.1</version.maven-source-plugin>
     <version.versions-maven-plugin>2.7</version.versions-maven-plugin>
     <version.nexus-staging-maven-plugin>1.6.7</version.nexus-staging-maven-plugin>
-    <version.microprofile>3.3</version.microprofile>
-    <version.cxf-rt-rs-mp-client>3.4.0</version.cxf-rt-rs-mp-client>
-    <version.glassfish-json>1.1.4</version.glassfish-json>
-    <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
     <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
-    <quarkus-plugin.version>1.8.1.Final</quarkus-plugin.version>
-    <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
-    <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-    <quarkus.platform.version>1.8.1.Final</quarkus.platform.version>
-    <surefire-plugin.version>2.22.1</surefire-plugin.version>
-    <jandex-plugin.version>1.0.8</jandex-plugin.version>
+    <version.javaee-api>8.0</version.javaee-api>
   </properties>
 
   <licenses>
@@ -178,6 +170,10 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${version.maven-javadoc-plugin}</version>
+            <configuration>
+              <source>8</source>
+              <detectJavaApiLink>false</detectJavaApiLink>
+            </configuration>
             <executions>
               <execution>
                 <id>attach-javadocs</id>

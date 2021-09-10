@@ -27,8 +27,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/IBM/kar.git/core/internal/config"
-	"github.com/IBM/kar.git/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 )
 
@@ -93,7 +93,7 @@ func routeToSidecar(sidecar string) (int32, error) {
 // only switching to a new sidecar if the existing sidecar has died
 func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
 	for { // keep trying
-		sidecar, err = GetSidecar(t, id) // retrieve already assigned sidecar if any
+		sidecar, err = GetSidecar(ctx, t, id) // retrieve already assigned sidecar if any
 		if err != nil {
 			return // store error
 		}
@@ -137,7 +137,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			}
 		}
 		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)
-		_, err = CompareAndSetSidecar(t, id, expected, sidecar) // try saving sidecar
+		_, err = CompareAndSetSidecar(ctx, t, id, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // store error
 		}

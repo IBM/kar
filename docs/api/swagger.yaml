@@ -8,7 +8,7 @@ definitions:
         type: string
     title: Actor uniquely identifies an actor instance.
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   Duration:
     description: |-
       A Duration represents the elapsed time between two instants
@@ -38,7 +38,7 @@ definitions:
         type: string
         x-go-name: Topic
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   Reminder:
     description: Reminder describes a time-triggered asynchronous invocation of a
       Path on an Actor
@@ -61,7 +61,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   actorCallResult:
     properties:
       error:
@@ -82,7 +82,7 @@ definitions:
         x-go-name: Value
     title: actorCallResult encodes the result of invoking an actor method.
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   scheduleReminderPayload:
     description: scheduleReminderPayload is the JSON request body for scheduling a
       new reminder
@@ -115,7 +115,7 @@ definitions:
         type: string
         x-go-name: TargetTime
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   source:
     description: source describes an event source (subscription)
     properties:
@@ -147,7 +147,7 @@ definitions:
         type: string
         x-go-name: Topic
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   stateUpdateOp:
     description: stateUpdateOp describes a multi-element update operation on an Actors
       state
@@ -177,7 +177,7 @@ definitions:
         type: object
         x-go-name: Updates
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   submapOp:
     description: submapOp describes the requested operation on a submap in an Actors
       state
@@ -186,7 +186,7 @@ definitions:
         type: string
         x-go-name: Op
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
   topicCreateOptions:
     description: topicCreateOptions documents the request body for creating a topic
     properties:
@@ -204,7 +204,7 @@ definitions:
         type: integer
         x-go-name: ReplicationFactor
     type: object
-    x-go-package: github.com/IBM/kar.git/core/internal/runtime
+    x-go-package: github.com/IBM/kar/core/internal/runtime
 info:
   description: |-
     This document describes the RESTful APIs provided or assumed by the

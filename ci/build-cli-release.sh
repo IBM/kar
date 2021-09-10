@@ -30,7 +30,7 @@ buildOne() {
     OUT=build/$OS-$ARCH
     mkdir -p $OUT
     echo "Building cli for $OS $ARCH"
-    GOOS=$OS GOARCH=$ARCH go build -ldflags "-X github.com/IBM/kar.git/core/internal/config.Version=$KAR_VERSION" -o $OUT ./...
+    GOOS=$OS GOARCH=$ARCH go build -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$KAR_VERSION" -o $OUT ./...
     if [[ "$OS" == "windows" ]]; then
         zip -j build/kar-$OS-$ARCH.zip $OUT/kar.exe
     elif [[ "$OS" == "darwin" ]]; then
