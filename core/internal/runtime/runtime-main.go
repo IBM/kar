@@ -105,7 +105,6 @@ func server(listener net.Listener) http.Server {
 	// kar system methods
 	router.GET(base+"/system/health", routeImplHealth)
 	router.POST(base+"/system/shutdown", routeImplShutdown)
-	router.POST(base+"/system/post", routeImplPost)
 	router.GET(base+"/system/information/:component", routeImplGetInformation)
 
 	// events

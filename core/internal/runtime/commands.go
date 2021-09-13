@@ -39,7 +39,7 @@ const (
 )
 
 // CallService calls a service and waits for a reply
-func CallService(ctx context.Context, service, path, payload, header, method string, direct bool) (*rpc.Reply, error) {
+func CallService(ctx context.Context, service, path, payload, header, method string) (*rpc.Reply, error) {
 	msg := map[string]string{
 		"protocol": "service",
 		"service":  service,
@@ -48,11 +48,11 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return rpc.CallSidecar(ctx, msg, direct)
+	return rpc.CallSidecar(ctx, msg)
 }
 
 // CallPromiseService calls a service and returns a request id
-func CallPromiseService(ctx context.Context, service, path, payload, header, method string, direct bool) (string, error) {
+func CallPromiseService(ctx context.Context, service, path, payload, header, method string) (string, error) {
 	msg := map[string]string{
 		"protocol": "service",
 		"service":  service,
@@ -61,11 +61,11 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":   header,
 		"method":   method,
 		"payload":  payload}
-	return rpc.CallPromiseSidecar(ctx, msg, direct)
+	return rpc.CallPromiseSidecar(ctx, msg)
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, session string, direct bool) (*rpc.Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, session string) (*rpc.Reply, error) {
 	msg := map[string]string{
 		"protocol": "actor",
 		"type":     actor.Type,
@@ -74,11 +74,11 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string, 
 		"path":     path,
 		"session":  session,
 		"payload":  payload}
-	return rpc.CallSidecar(ctx, msg, direct)
+	return rpc.CallSidecar(ctx, msg)
 }
 
 // CallPromiseActor calls an actor and returns a request id
-func CallPromiseActor(ctx context.Context, actor Actor, path, payload string, direct bool) (string, error) {
+func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (string, error) {
 	msg := map[string]string{
 		"protocol": "actor",
 		"type":     actor.Type,
@@ -86,7 +86,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string, di
 		"command":  "call",
 		"path":     path,
 		"payload":  payload}
-	return rpc.CallPromiseSidecar(ctx, msg, direct)
+	return rpc.CallPromiseSidecar(ctx, msg)
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
@@ -102,14 +102,14 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return rpc.CallSidecar(ctx, msg, false)
+	return rpc.CallSidecar(ctx, msg)
 }
 
 // helper methods to handle incoming messages
 // log ignored errors to logger.Error
 
 func respond(ctx context.Context, msg map[string]string, reply *rpc.Reply) error {
-	err := pubsub.Send(ctx, msg["direct"] == "true", map[string]string{
+	err := pubsub.Send(ctx, map[string]string{
 		"protocol":     "sidecar",
 		"sidecar":      msg["from"],
 		"command":      "callback",
@@ -277,7 +277,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, msg map[string]str
 }
 
 func forwardToSidecar(ctx context.Context, msg map[string]string) error {
-	err := pubsub.Send(ctx, false, msg)
+	err := pubsub.Send(ctx, msg)
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping message to dead sidecar %s: %v", msg["sidecar"], err)
 		return nil
@@ -300,7 +300,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			msg["metricLabel"] = msg["service"] + ":" + msg["path"]
 			err = dispatch(ctx, cancel, msg)
 		} else {
-			err = pubsub.Send(ctx, false, msg)
+			err = pubsub.Send(ctx, msg)
 		}
 	case "sidecar":
 		if msg["sidecar"] == config.ID {
@@ -326,7 +326,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		var fresh bool
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
-			err = pubsub.Send(ctx, false, msg) // forward
+			err = pubsub.Send(ctx, msg) // forward
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
 			logger.Error("%s", payload)

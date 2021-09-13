@@ -30,8 +30,8 @@ type ActorTarget struct {
 }
 
 // TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service, path, payload, header, method string, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
+func TellService(ctx context.Context, service, path, payload, header, method string) error {
+	return pubsub.Send(ctx, map[string]string{
 		"protocol": "service",
 		"service":  service,
 		"command":  "tell", // post with no callback expected
@@ -42,8 +42,8 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor ActorTarget, path, payload string, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
+func TellActor(ctx context.Context, actor ActorTarget, path, payload string) error {
+	return pubsub.Send(ctx, map[string]string{
 		"protocol": "actor",
 		"type":     actor.Type,
 		"id":       actor.ID,
@@ -53,8 +53,8 @@ func TellActor(ctx context.Context, actor ActorTarget, path, payload string, dir
 }
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
-func DeleteActor(ctx context.Context, actor ActorTarget, direct bool) error {
-	return pubsub.Send(ctx, direct, map[string]string{
+func DeleteActor(ctx context.Context, actor ActorTarget) error {
+	return pubsub.Send(ctx, map[string]string{
 		"protocol": "actor",
 		"type":     actor.Type,
 		"id":       actor.ID,
@@ -62,7 +62,7 @@ func DeleteActor(ctx context.Context, actor ActorTarget, direct bool) error {
 }
 
 func TellBinding(ctx context.Context, kind string, actor ActorTarget, partition, bindingID string) error {
-	return pubsub.Send(ctx, false, map[string]string{
+	return pubsub.Send(ctx, map[string]string{
 		"protocol":  "actor",
 		"type":      actor.Type,
 		"id":        actor.ID,
@@ -73,19 +73,19 @@ func TellBinding(ctx context.Context, kind string, actor ActorTarget, partition,
 }
 
 // CallSidecar makes a call via pubsub to a sidecar and waits for a reply
-func CallSidecar(ctx context.Context, msg map[string]string, direct bool) (*Reply, error) {
-	return callHelper(ctx, msg, direct)
+func CallSidecar(ctx context.Context, msg map[string]string) (*Reply, error) {
+	return callHelper(ctx, msg)
 }
 
 // callHelper makes a call via pubsub to a sidecar and waits for a reply
-func callHelper(ctx context.Context, msg map[string]string, direct bool) (*Reply, error) {
+func callHelper(ctx context.Context, msg map[string]string) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	msg["from"] = config.ID // this sidecar
 	msg["request"] = request
-	err := pubsub.Send(ctx, direct, msg)
+	err := pubsub.Send(ctx, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,18 +98,18 @@ func callHelper(ctx context.Context, msg map[string]string, direct bool) (*Reply
 }
 
 // CallPromiseSidecar makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
-func CallPromiseSidecar(ctx context.Context, msg map[string]string, direct bool) (string, error) {
-	return callPromiseHelper(ctx, msg, direct)
+func CallPromiseSidecar(ctx context.Context, msg map[string]string) (string, error) {
+	return callPromiseHelper(ctx, msg)
 }
 
-func callPromiseHelper(ctx context.Context, msg map[string]string, direct bool) (string, error) {
+func callPromiseHelper(ctx context.Context, msg map[string]string) (string, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
 	msg["from"] = config.ID // this sidecar
 	msg["request"] = request
-	err := pubsub.Send(ctx, direct, msg)
+	err := pubsub.Send(ctx, msg)
 	if err != nil {
 		return "", err
 	}

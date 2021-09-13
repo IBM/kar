@@ -23,7 +23,6 @@ package runtime
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/IBM/kar/core/internal/pubsub"
@@ -62,16 +61,6 @@ func routeImplShutdown(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 //       200: response200
 //
 func routeImplHealth(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	fmt.Fprint(w, "OK")
-}
-
-// post handles a direct http request from a peer sidecar
-// TODO swagger
-func routeImplPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	value, _ := ioutil.ReadAll(r.Body)
-	m := pubsub.Message{Value: value}
-	process(m)
-	w.WriteHeader(http.StatusAccepted)
 	fmt.Fprint(w, "OK")
 }
 

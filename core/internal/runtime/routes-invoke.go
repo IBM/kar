@@ -34,7 +34,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
+func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
@@ -42,9 +42,9 @@ func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, di
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		err = rpc.TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
+		err = rpc.TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
-		err = rpc.TellActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
+		err = rpc.TellActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r))
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -58,7 +58,7 @@ func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params, di
 	}
 }
 
-func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, direct bool) {
+func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var request string
 	var err error
 	if ps.ByName("service") != "" {
@@ -67,9 +67,9 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params, d
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		request, err = CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
+		request, err = CallPromiseService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
-		request, err = CallPromiseActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), direct)
+		request, err = CallPromiseActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r))
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -291,19 +291,12 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 //       503: response503
 //
 func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	direct := false
-	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
-		if strings.ToLower(pragma) == "http" {
-			direct = true
-			break
-		}
-	}
 	for _, pragma := range r.Header[textproto.CanonicalMIMEHeaderKey("Pragma")] {
 		if strings.ToLower(pragma) == "async" {
-			tellHelper(w, r, ps, direct)
+			tellHelper(w, r, ps)
 			return
 		} else if strings.ToLower(pragma) == "promise" {
-			callPromise(w, r, ps, direct)
+			callPromise(w, r, ps)
 			return
 		}
 	}
@@ -315,10 +308,10 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		reply, err = CallService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method, direct)
+		reply, err = CallService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
 		session := r.FormValue("session")
-		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), session, direct)
+		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), session)
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -357,7 +350,7 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 //       500: response500
 //
 func routeImplDelActor(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := rpc.DeleteActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")}, false)
+	err := rpc.DeleteActor(ctx, rpc.ActorTarget{Type: ps.ByName("type"), ID: ps.ByName("id")})
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)

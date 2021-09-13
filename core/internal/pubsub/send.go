@@ -17,13 +17,10 @@
 package pubsub
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -146,7 +143,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 }
 
 // Send sends message to receiver
-func Send(ctx context.Context, direct bool, msg map[string]string) error {
+func Send(ctx context.Context, msg map[string]string) error {
 	select { // make sure we have joined
 	case <-joined:
 	case <-ctx.Done():
@@ -181,22 +178,10 @@ func Send(ctx context.Context, direct bool, msg map[string]string) error {
 		}
 		partition = int32(p)
 	}
-	if direct {
-		msg["direct"] = "true"
-	}
 	m, err := json.Marshal(msg)
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
-	}
-	if direct && msg["sidecar"] != "" {
-		logger.Debug("sending message via direct http connection to sidecar %v", msg["sidecar"])
-		err = httpSend(addresses[msg["sidecar"]], m)
-		if err != nil {
-			logger.Error("failed to send message to sidecar %v: %v", msg["sidecar"], err)
-			return err
-		}
-		return nil
 	}
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
@@ -220,17 +205,4 @@ func Sidecars() []string {
 	}
 	mu.RUnlock()
 	return sidecars
-}
-
-func httpSend(address string, message []byte) error {
-	res, err := http.Post("http://"+address+"/kar/v1/system/post", "application/octet-stream", bytes.NewReader(message))
-	if err != nil {
-		return err
-	}
-	ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode != http.StatusAccepted {
-		return errors.New(res.Status)
-	}
-	return nil
 }

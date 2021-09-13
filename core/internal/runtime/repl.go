@@ -46,7 +46,7 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		exitCode = 1
 		return
 	}
-	reply, err := CallActor(ctx, actor, path, string(payload), "", false)
+	reply, err := CallActor(ctx, actor, path, string(payload), "")
 	if err != nil {
 		logger.Error("error invoking the actor: %v", err)
 		exitCode = 1
@@ -91,7 +91,7 @@ func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
 		body = ""
 	}
 
-	reply, err := CallService(ctx, service, path, body, header, method, false)
+	reply, err := CallService(ctx, service, path, body, header, method)
 	if err != nil {
 		logger.Error("error invoking the service: %v", err)
 		exitCode = 1

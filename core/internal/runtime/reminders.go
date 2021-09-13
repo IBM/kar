@@ -172,7 +172,7 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 		}
 
 		logger.Debug("ProcessReminders: firing %v to %v[%v]%v (targetTime %v)", r.ID, r.Actor.Type, r.Actor.ID, r.Path, r.TargetTime)
-		if err := rpc.TellActor(ctx, rpc.ActorTarget{Type: r.Actor.Type, ID: r.Actor.ID}, r.Path, r.EncodedData, false); err != nil {
+		if err := rpc.TellActor(ctx, rpc.ActorTarget{Type: r.Actor.Type, ID: r.Actor.ID}, r.Path, r.EncodedData); err != nil {
 			logger.Debug("ProcessReminders: firing %v raised error %v", r, err)
 			logger.Debug("ProcessReminders: ending this round; putting reminder back in queue to retry in next round")
 			activeReminders.add(ctx, r)
