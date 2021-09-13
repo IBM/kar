@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/store"
+	"github.com/IBM/kar/core/pkg/redis"
 )
 
 func placementKeyPrefix(t string) string {
@@ -34,8 +34,8 @@ func placementKey(t, id string) string {
 
 // GetSidecar returns the current sidecar for the given actor type and id or "" if none.
 func GetSidecar(ctx context.Context, t, id string) (string, error) {
-	s, err := store.Get(ctx, placementKey(t, id))
-	if err == store.ErrNil {
+	s, err := redis.Get(ctx, placementKey(t, id))
+	if err == redis.ErrNil {
 		return "", nil
 	}
 	return s, err
@@ -54,13 +54,13 @@ func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, err
 	if new == "" {
 		n = nil
 	}
-	return store.CompareAndSet(ctx, placementKey(t, id), o, n)
+	return redis.CompareAndSet(ctx, placementKey(t, id), o, n)
 }
 
 // GetAllActorInstances returns a mapping from actor types to instanceIDs
 func GetAllActorInstances(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
 	m := map[string][]string{}
-	reply, err := store.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
+	reply, err := redis.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
 	if err != nil {
 		return nil, err
 	}

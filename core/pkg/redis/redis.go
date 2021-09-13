@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-// Package store implements the store API.
-package store
+// Package redis provides an API for connecting to Redis
+package redis
 
 import (
 	"context"
@@ -23,10 +23,8 @@ import (
 	"crypto/x509"
 	"net"
 	"strconv"
-	"strings"
 	"time"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/gomodule/redigo/redis"
@@ -38,20 +36,45 @@ var (
 
 	// connection pool
 	pool *redis.Pool
+
+	// store configuration
+	sc *StoreConfig
 )
 
-// mangle add common prefix to all keys
-func mangle(key string) string {
-	return "kar" + config.Separator + config.AppName + config.Separator + key
-}
+type StoreConfig struct {
+	// MangleKey is a hook to allow keys to be name mangled before they are passed through to Redis
+	MangleKey func(string) string
 
-// unmangle a key by removing the common prefix if it has it
-func unmangle(key string) string {
-	parts := strings.Split(key, config.Separator)
-	if parts[0] == "kar" && parts[1] == config.AppName {
-		return strings.Join(parts[2:], config.Separator)
-	}
-	return key
+	// UnmangleKey computes the inverse of MangleKey
+	UnmangleKey func(string) string
+
+	// RequestRetryLimit is how long to retry failing connections in a Redis call before giving up
+	// A negative time will apply default durations
+	RequestRetryLimit time.Duration
+
+	// LongOperation sets a threshold used to report long-running redis operations
+	LongOperation time.Duration
+
+	// Host is the host of the Redis instance
+	Host string
+
+	// Port is the port of the Redis instance
+	Port int
+
+	// EnableTLS is set if the Redis connection requires TLS
+	EnableTLS bool
+
+	// RedisTLSSkipVerify is set to skip server name verification for Redis when connecting over TLS
+	TLSSkipVerify bool
+
+	// RedisPassword the password to use to connect to the Redis instance (required)
+	Password string
+
+	// RedisUser the user to use to connect to the Redis instance (required)
+	User string
+
+	// Redis certificate
+	CA *x509.Certificate
 }
 
 // send a command using a connection from the pool
@@ -60,8 +83,8 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 	conn, err := pool.GetContext(ctx)
 	if err != nil {
 		b := backoff.NewExponentialBackOff()
-		if config.RequestRetryLimit >= 0 {
-			b.MaxElapsedTime = config.RequestRetryLimit
+		if sc.RequestRetryLimit >= 0 {
+			b.MaxElapsedTime = sc.RequestRetryLimit
 		}
 		err = backoff.Retry(func() error {
 			conn.Close()
@@ -75,7 +98,7 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 	last := time.Now()
 	elapsed := last.Sub(opStart)
 	connElapsed := last.Sub(start)
-	if elapsed > config.LongRedisOperation {
+	if elapsed > sc.LongOperation {
 		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
 	}
 	if err != nil {
@@ -86,7 +109,7 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 
 // mangle the key before sending the command (assuming args[0] is the key)
 func do(ctx context.Context, command string, args ...interface{}) (interface{}, error) {
-	args[0] = mangle(args[0].(string))
+	args[0] = sc.MangleKey(args[0].(string))
 	return doRaw(ctx, command, args...)
 }
 
@@ -125,9 +148,9 @@ func CompareAndSet(ctx context.Context, key string, expected, value *string) (in
 		return redis.Int(do(ctx, "SETNX", key, *value))
 	}
 	if value == nil {
-		return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1 else return 0 end", 1, mangle(key), *expected))
+		return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1 else return 0 end", 1, sc.MangleKey(key), *expected))
 	}
-	return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, mangle(key), *expected, *value))
+	return redis.Int(doRaw(ctx, "EVAL", "if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('SET', KEYS[1], ARGV[2]); return 1 else return 0 end", 1, sc.MangleKey(key), *expected, *value))
 }
 
 // Keys returns all keys that match the argument pattern
@@ -135,7 +158,7 @@ func Keys(ctx context.Context, pattern string) ([]string, error) {
 	mangledKeys, err := redis.Strings(do(ctx, "KEYS", pattern))
 	if err == nil {
 		for idx, val := range mangledKeys {
-			mangledKeys[idx] = unmangle(val)
+			mangledKeys[idx] = sc.UnmangleKey(val)
 		}
 	}
 	return mangledKeys, err
@@ -143,7 +166,7 @@ func Keys(ctx context.Context, pattern string) ([]string, error) {
 
 // Purge deletes all keys that match the argument pattern
 func Purge(ctx context.Context, pattern string) (int, error) {
-	pattern = mangle(pattern)
+	pattern = sc.MangleKey(pattern)
 	bags := [][]interface{}{}
 	cursor := 0
 	for {
@@ -292,33 +315,33 @@ func ZRemRangeByScore(ctx context.Context, key string, min, max int64) (int, err
 }
 
 // Dial connects to Redis.
-func Dial() error {
+func Dial(conf *StoreConfig) error {
 	redisOptions := []redis.DialOption{}
 
-	if config.RedisEnableTLS {
+	if conf.EnableTLS {
 		redisOptions = append(redisOptions, redis.DialUseTLS(true))
-		if config.RedisCA != nil {
+		if sc.CA != nil {
 			roots := x509.NewCertPool()
-			roots.AddCert(config.RedisCA)
+			roots.AddCert(sc.CA)
 			redisOptions = append(redisOptions, redis.DialTLSConfig(&tls.Config{RootCAs: roots}))
 		}
-		if config.RedisTLSSkipVerify {
+		if sc.TLSSkipVerify {
 			redisOptions = append(redisOptions, redis.DialTLSSkipVerify(true))
 		}
 	}
-	if config.RedisUser != "" {
-		redisOptions = append(redisOptions, redis.DialUsername(config.RedisUser))
+	if sc.User != "" {
+		redisOptions = append(redisOptions, redis.DialUsername(sc.User))
 	}
-	if config.RedisPassword != "" {
-		redisOptions = append(redisOptions, redis.DialPassword(config.RedisPassword))
+	if sc.Password != "" {
+		redisOptions = append(redisOptions, redis.DialPassword(sc.Password))
 	}
-	if config.RequestRetryLimit >= 0 {
-		redisOptions = append(redisOptions, redis.DialConnectTimeout(config.RequestRetryLimit))
-		redisOptions = append(redisOptions, redis.DialReadTimeout(config.RequestRetryLimit))
-		redisOptions = append(redisOptions, redis.DialWriteTimeout(config.RequestRetryLimit))
+	if sc.RequestRetryLimit >= 0 {
+		redisOptions = append(redisOptions, redis.DialConnectTimeout(sc.RequestRetryLimit))
+		redisOptions = append(redisOptions, redis.DialReadTimeout(sc.RequestRetryLimit))
+		redisOptions = append(redisOptions, redis.DialWriteTimeout(sc.RequestRetryLimit))
 	}
 
-	address := net.JoinHostPort(config.RedisHost, strconv.Itoa(config.RedisPort))
+	address := net.JoinHostPort(sc.Host, strconv.Itoa(sc.Port))
 
 	pool = &redis.Pool{
 		MaxIdle:     3,
