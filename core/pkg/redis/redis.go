@@ -316,6 +316,8 @@ func ZRemRangeByScore(ctx context.Context, key string, min, max int64) (int, err
 
 // Dial connects to Redis.
 func Dial(conf *StoreConfig) error {
+	sc = conf // persist conf internally
+
 	redisOptions := []redis.DialOption{}
 
 	if conf.EnableTLS {
