@@ -25,8 +25,8 @@ import (
 	"sync"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/store"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/Shopify/sarama"
 )
 

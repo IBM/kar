@@ -39,8 +39,8 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
-	"github.com/IBM/kar/core/internal/store"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/julienschmidt/httprouter"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -165,7 +165,27 @@ func Main() {
 		logger.Fatal("TCP listener failed: %v", err)
 	}
 
-	if err = store.Dial(); err != nil {
+	redisConfig := store.StoreConfig{
+		MangleKey: func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key },
+		UnmangleKey: func(key string) string {
+			parts := strings.Split(key, config.Separator)
+			if parts[0] == "kar" && parts[1] == config.AppName {
+				return strings.Join(parts[2:], config.Separator)
+			}
+			return key
+		},
+		RequestRetryLimit: config.RequestRetryLimit,
+		LongOperation:     config.LongRedisOperation,
+		Host:              config.RedisHost,
+		Port:              config.RedisPort,
+		EnableTLS:         config.RedisEnableTLS,
+		TLSSkipVerify:     config.RedisTLSSkipVerify,
+		Password:          config.RedisPassword,
+		User:              config.RedisUser,
+		CA:                config.RedisCA,
+	}
+
+	if err = store.Dial(&redisConfig); err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
 	}
 	defer store.Close()

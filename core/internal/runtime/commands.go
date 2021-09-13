@@ -29,8 +29,8 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
-	"github.com/IBM/kar/core/internal/store"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/google/uuid"
 )
 
