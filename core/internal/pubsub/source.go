@@ -26,7 +26,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/redis"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/Shopify/sarama"
 )
 
@@ -95,7 +95,7 @@ func newHandler(conf *sarama.Config, karContext context.Context, topic string, o
 
 func (h *handler) mark(partition int32, offset int64) error {
 	logger.Debug("finishing work on topic %s, partition %d, offset %d", h.topic, partition, offset)
-	_, err := redis.ZAdd(h.karContext, mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
+	_, err := store.ZAdd(h.karContext, mangle(h.topic, partition), offset, strconv.FormatInt(offset, 10)) // tell store offset is done first
 	if err != nil {
 		// TODO retry logic
 		logger.Error("failed to mark message on topic %s, partition %d, offset %d: %v", err)
@@ -173,7 +173,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	for _, p := range session.Claims()[h.topic] {
 		h.live[p] = map[int64]struct{}{}
 		h.done[p] = map[int64]struct{}{}
-		r, err := redis.ZRange(session.Context(), mangle(h.topic, p), 0, -1) // fetch done offsets from store
+		r, err := store.ZRange(session.Context(), mangle(h.topic, p), 0, -1) // fetch done offsets from store
 		if err != nil {
 			logger.Error("failed to retrieve offsets from store: %v", err)
 			return err
@@ -252,7 +252,7 @@ func (h *handler) Cleanup(session sarama.ConsumerGroupSession) error {
 
 // ConsumeClaim processes messages of consumer claim
 func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
-	redis.ZRemRangeByScore(session.Context(), mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
+	store.ZRemRangeByScore(session.Context(), mangle(h.topic, claim.Partition()), 0, claim.InitialOffset()-1) // trim done list
 	// ok to ignore error in ZRemRangeByScore as this is just garbage collection
 	mark := true
 	for m := range claim.Messages() {

@@ -25,7 +25,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/redis"
+	"github.com/IBM/kar/core/pkg/store"
 )
 
 var (
@@ -90,7 +90,7 @@ func persistReminder(r Reminder) map[string]string {
 
 func persistTargetTime(ctx context.Context, key string, targetTime time.Time) {
 	ts, _ := targetTime.MarshalText()
-	redis.HSet(ctx, key, "targetTime", string(ts))
+	store.HSet(ctx, key, "targetTime", string(ts))
 }
 
 func (rq *reminderQueue) load(actor Actor, id, key string, rMap map[string]string) (binding, error) {
@@ -183,7 +183,7 @@ func processReminders(ctx context.Context, fireTime time.Time) {
 			activeReminders.add(ctx, r)
 			persistTargetTime(ctx, r.key, r.TargetTime)
 		} else {
-			redis.Del(ctx, r.key)
+			store.Del(ctx, r.key)
 		}
 	}
 

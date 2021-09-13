@@ -14,8 +14,8 @@
 // limitations under the License.
 //
 
-// Package redis provides an API for connecting to Redis
-package redis
+// Package store provides an API for connecting to Redis
+package store
 
 import (
 	"context"

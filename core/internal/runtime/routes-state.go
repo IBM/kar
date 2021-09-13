@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/pkg/redis"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -91,7 +91,7 @@ func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.
 		mangledEntryKey = flatEntryKey(ps.ByName("key"))
 	}
 
-	if reply, err := redis.HExists(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
+	if reply, err := store.HExists(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
 		http.Error(w, fmt.Sprintf("HExists failed: %v", err), http.StatusInternalServerError)
 	} else {
 		if reply == 0 {
@@ -152,7 +152,7 @@ func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		mangledEntryKey = flatEntryKey(ps.ByName("key"))
 	}
 
-	if reply, err := redis.HSet(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, ReadAll(r)); err != nil {
+	if reply, err := store.HSet(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey, ReadAll(r)); err != nil {
 		http.Error(w, fmt.Sprintf("HSET failed: %v", err), http.StatusInternalServerError)
 	} else if reply == 1 {
 		if subkey := ps.ByName("subkey"); subkey != "" {
@@ -216,7 +216,7 @@ func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 		mangledEntryKey = flatEntryKey(ps.ByName("key"))
 	}
 
-	if reply, err := redis.HGet(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err == redis.ErrNil {
+	if reply, err := store.HGet(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err == store.ErrNil {
 		if noa := r.FormValue("nilOnAbsent"); noa == "true" {
 			fmt.Fprint(w, reply)
 		} else {
@@ -282,7 +282,7 @@ func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 			http.Error(w, fmt.Sprintf("submapOps:clear: subMapScan failed: %v", err), http.StatusInternalServerError)
 			return
 		}
-		numCleared, err := redis.HDelMultiple(ctx, stateKey, mapKeys)
+		numCleared, err := store.HDelMultiple(ctx, stateKey, mapKeys)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("submapOps: HDEL failed  %v", err), http.StatusInternalServerError)
 			return
@@ -353,7 +353,7 @@ func subMapScan(stateKey string, mapName string, op func(key string, value strin
 	cursor := 0
 	subkeyPrefix := nestedEntryKeyPrefix(mapName) + "*"
 	for {
-		newCursor, result, err := redis.HScan(ctx, stateKey, cursor, subkeyPrefix)
+		newCursor, result, err := store.HScan(ctx, stateKey, cursor, subkeyPrefix)
 		if err != nil {
 			return err
 		}
@@ -417,7 +417,7 @@ func routeImplDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	} else {
 		mangledEntryKey = flatEntryKey(ps.ByName("key"))
 	}
-	if reply, err := redis.HDel(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
+	if reply, err := store.HDel(ctx, stateKey(ps.ByName("type"), ps.ByName("id")), mangledEntryKey); err != nil {
 		http.Error(w, fmt.Sprintf("HDEL failed: %v", err), http.StatusInternalServerError)
 	} else {
 		fmt.Fprint(w, reply)
@@ -452,7 +452,7 @@ func routeImplGetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 }
 
 func actorGetAllState(actorType string, actorID string) (map[string]interface{}, error) {
-	reply, err := redis.HGetAll(ctx, stateKey(actorType, actorID))
+	reply, err := store.HGetAll(ctx, stateKey(actorType, actorID))
 	if err != nil {
 		return nil, err
 	}
@@ -547,14 +547,14 @@ func routeImplStateUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.
 	numCleared := 0
 	numAdded := 0
 	if len(toClear) > 0 {
-		numCleared, err = redis.HDelMultiple(ctx, stateKey, toClear)
+		numCleared, err = store.HDelMultiple(ctx, stateKey, toClear)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("StateUpate: HDEL failed  %v", err), http.StatusInternalServerError)
 			return
 		}
 	}
 	if len(toUpdate) > 0 {
-		numAdded, err = redis.HSetMultiple(ctx, stateKey, toUpdate)
+		numAdded, err = store.HSetMultiple(ctx, stateKey, toUpdate)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("StateUpate: HSET failed  %v", err), http.StatusInternalServerError)
 			return
@@ -588,7 +588,7 @@ func routeImplStateUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.
 //       500: response500
 //
 func routeImplDelAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	if reply, err := redis.Del(ctx, stateKey(ps.ByName("type"), ps.ByName("id"))); err == redis.ErrNil {
+	if reply, err := store.Del(ctx, stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
 	} else if err != nil {
 		http.Error(w, fmt.Sprintf("DEL failed: %v", err), http.StatusInternalServerError)

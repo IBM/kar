@@ -30,7 +30,7 @@ import (
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/redis"
+	"github.com/IBM/kar/core/pkg/store"
 	"github.com/google/uuid"
 )
 
@@ -466,7 +466,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 					deactivate(ctx, actor)
 				}
 				// delete persistent actor state
-				if _, err := redis.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != redis.ErrNil {
+				if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
 					logger.Error("deleting persistent state of %v failed with %v", actor, err)
 				}
 				// clear placement data and sidecar's in-memory state

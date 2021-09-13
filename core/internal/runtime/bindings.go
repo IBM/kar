@@ -27,7 +27,7 @@ import (
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/redis"
+	"github.com/IBM/kar/core/pkg/store"
 )
 
 // a persistent binding of an actor to something
@@ -90,7 +90,7 @@ func loadBinding(ctx context.Context, kind string, actor Actor, partition, id st
 	if len(found) > 0 { // bindingscription is already loaded
 		return nil
 	}
-	data, err := redis.HGetAll(ctx, key)
+	data, err := store.HGetAll(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func deleteBindings(ctx context.Context, kind string, actor Actor, id string) in
 	defer pair.mu.Unlock()
 	found := pair.bindings.cancel(actor, id)
 	for _, b := range found {
-		redis.Del(ctx, b.k())
+		store.Del(ctx, b.k())
 	}
 	logger.Debug("deleted %v binding(s) matching {%v, %v}", len(found), actor, id)
 	return len(found)
@@ -137,7 +137,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 	pair := pairs[kind]
 	pair.mu.Lock()
 	defer pair.mu.Unlock()
-	keys, _ := redis.Keys(ctx, bindingKey(kind, actor, "*", id))
+	keys, _ := store.Keys(ctx, bindingKey(kind, actor, "*", id))
 	var key string
 	var successCode int
 	if len(keys) > 0 { // reuse existing key
@@ -158,7 +158,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 	if err != nil {
 		return code, err
 	}
-	redis.HSetMultiple(ctx, key, m)
+	store.HSetMultiple(ctx, key, m)
 	logger.Debug("put binding %v", b)
 	return successCode, nil
 }
@@ -167,7 +167,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 func loadBindings(ctx context.Context, partitions []int32) error {
 	logger.Debug("loadBindings starting")
 	for _, p := range partitions {
-		keys, err := redis.Keys(ctx, bindingPattern(strconv.Itoa(int(p))))
+		keys, err := store.Keys(ctx, bindingPattern(strconv.Itoa(int(p))))
 		if err != nil {
 			return err
 		}
