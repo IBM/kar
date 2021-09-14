@@ -489,24 +489,3 @@ func ValidateActorConfig(ctx context.Context) {
 		}
 	}
 }
-
-// Migrate migrates an actor and associated reminders to a new sidecar
-// NOTE: This method is currently unused and not exposed via the KAR REST API.
-func Migrate(ctx context.Context, actor Actor, sidecar string) error {
-	e, fresh, err := actor.acquire(ctx, "exclusive")
-	if err != nil {
-		return err
-	}
-	if !fresh {
-		err = deactivate(ctx, actor)
-		if err != nil {
-			logger.Error("failed to deactivate actor %v before migration: %v", actor, err)
-		}
-	}
-	err = e.migrate(sidecar)
-	if err != nil {
-		return err
-	}
-	// migrateReminders(ctx, actor) TODO
-	return nil
-}
