@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
@@ -143,7 +142,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 }
 
 // Send sends message to receiver
-func Send(ctx context.Context, msg map[string]string) error {
+func Send(ctx context.Context, msg KarStructuredMsg) error {
 	select { // make sure we have joined
 	case <-joined:
 	case <-ctx.Done():
@@ -151,32 +150,27 @@ func Send(ctx context.Context, msg map[string]string) error {
 	}
 	var partition int32
 	var err error
-	switch msg["protocol"] {
+	switch msg.Protocol {
 	case "service": // route to service
-		partition, msg["sidecar"], err = routeToService(ctx, msg["service"])
+		partition, msg.Node, err = routeToService(ctx, msg.Name)
 		if err != nil {
-			logger.Error("failed to route to service %s: %v", msg["service"], err)
+			logger.Error("failed to route to service %s: %v", msg.Name, err)
 			return err
 		}
 	case "actor": // route to actor
-		partition, msg["sidecar"], err = routeToActor(ctx, msg["type"], msg["id"])
+		partition, msg.Node, err = routeToActor(ctx, msg.Name, msg.ID)
 		if err != nil {
-			logger.Error("failed to route to actor type %s, id %s: %v", msg["type"], msg["id"], err)
+			logger.Error("failed to route to actor type %s, id %s: %v", msg.Name, msg.ID, err)
 			return err
 		}
 	case "sidecar": // route to sidecar
-		partition, err = routeToSidecar(msg["sidecar"])
+		partition, err = routeToSidecar(msg.Node)
 		if err != nil {
-			logger.Error("failed to route to sidecar %s: %v", msg["sidecar"], err)
+			logger.Error("failed to route to sidecar %s: %v", msg.Node, err)
 			return err
 		}
 	case "partition": // route to partition
-		p, err := strconv.ParseInt(msg["partition"], 10, 32)
-		if err != nil {
-			logger.Error("failed to route to partition %s: %v", msg["partition"], err)
-			return err
-		}
-		partition = int32(p)
+		partition = msg.Partition
 	}
 	m, err := json.Marshal(msg)
 	if err != nil {

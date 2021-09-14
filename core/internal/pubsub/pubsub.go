@@ -56,6 +56,17 @@ var (
 	ErrUnknownSidecar = errors.New("unknown sidecar")
 )
 
+// Staging type to allow migratioin to new RPC library
+type KarStructuredMsg struct {
+	Protocol string
+	Name     string
+	ID       string
+	// Endpoint string // TODO for now this is still implied by Protocol and Msg["command"]
+	Node     string
+	Partition int32
+	Msg      map[string]string
+}
+
 func partitioner(t string) sarama.Partitioner {
 	if t == topic {
 		return manualPartitioner
