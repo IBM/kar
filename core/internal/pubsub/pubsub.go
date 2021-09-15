@@ -45,7 +45,7 @@ var (
 	address   string              // host:port of sidecar http server (for peer-to-peer connections)
 	addresses map[string]string   // map sidecards to addresses
 	tick      = make(chan struct{})
-	joined    = tick
+	Joined    = tick // TODO: should not be public; kludge to support rpc package
 	mu        = &sync.RWMutex{}
 
 	manualPartitioner = sarama.NewManualPartitioner(topic)
@@ -55,24 +55,6 @@ var (
 	// ErrUnknownSidecar error
 	ErrUnknownSidecar = errors.New("unknown sidecar")
 )
-
-// Staging types to allow migration to new RPC library
-type KarMsgTarget struct {
-	Protocol  string
-	Name      string
-	ID        string
-	Node      string
-	Partition int32
-}
-
-type KarMsgBody struct {
-	Msg map[string]string
-}
-
-type KarMsg struct {
-	Target KarMsgTarget
-	Body   KarMsgBody
-}
 
 func partitioner(t string) sarama.Partitioner {
 	if t == topic {

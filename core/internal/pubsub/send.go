@@ -18,7 +18,6 @@ package pubsub
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"math/rand"
 	"time"
@@ -36,8 +35,8 @@ var ErrRouteToServiceTimeout = errors.New("timeout occurred while looking for se
 
 // use debug logger for errors returned to caller
 
-// routeToService maps a service to a partition (keep trying)
-func routeToService(ctx context.Context, service string) (partition int32, sidecar string, err error) {
+// RouteToService maps a service to a partition (keep trying) -- only public so rpc can call it
+func RouteToService(ctx context.Context, service string) (partition int32, sidecar string, err error) {
 	for {
 		mu.RLock()
 		sidecars := replicas[service]
@@ -73,8 +72,8 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 	}
 }
 
-// routeToSidecar maps a sidecar to a partition (no retries)
-func routeToSidecar(sidecar string) (int32, error) {
+// RouteToSidecar maps a sidecar to a partition (no retries)
+func RouteToSidecar(sidecar string) (int32, error) {
 	mu.RLock()
 	partitions := routes[sidecar]
 	mu.RUnlock()
@@ -85,16 +84,16 @@ func routeToSidecar(sidecar string) (int32, error) {
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }
 
-// routeToActor maps an actor to a stable sidecar to a random partition (keep trying)
+// RouteToActor maps an actor to a stable sidecar to a random partition (keep trying)
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
+func RouteToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
 	for { // keep trying
 		sidecar, err = GetSidecar(ctx, t, id) // retrieve already assigned sidecar if any
 		if err != nil {
 			return // store error
 		}
 		if sidecar != "" { // sidecar is already assigned
-			partition, err = routeToSidecar(sidecar) // find partition for sidecar
+			partition, err = RouteToSidecar(sidecar) // find partition for sidecar
 			if err == nil {
 				return // found sidecar and partition
 			}
@@ -141,42 +140,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 	}
 }
 
-// Send sends message to receiver
-func Send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
-	select { // make sure we have joined
-	case <-joined:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	var partition int32
-	var err error
-	switch target.Protocol {
-	case "service": // route to service
-		partition, target.Node, err = routeToService(ctx, target.Name)
-		if err != nil {
-			logger.Error("failed to route to service %s: %v", target.Name, err)
-			return err
-		}
-	case "actor": // route to actor
-		partition, target.Node, err = routeToActor(ctx, target.Name, target.ID)
-		if err != nil {
-			logger.Error("failed to route to actor type %s, id %s: %v", target.Name, target.ID, err)
-			return err
-		}
-	case "sidecar": // route to sidecar
-		partition, err = routeToSidecar(target.Node)
-		if err != nil {
-			logger.Error("failed to route to sidecar %s: %v", target.Node, err)
-			return err
-		}
-	case "partition": // route to partition
-		partition = target.Partition
-	}
-	m, err := json.Marshal(KarMsg{Target: target, Body: msg})
-	if err != nil {
-		logger.Error("failed to marshal message: %v", err)
-		return err
-	}
+func SendBytes(ctx context.Context, partition int32, m []byte) error {
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic:     topic,
 		Partition: partition,

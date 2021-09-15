@@ -226,8 +226,8 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 				"actorType": targetedActorType,
 			}
 			actorReply, err := rpc.CallSidecar(ctx,
-				pubsub.KarMsgTarget{Protocol: "sidecar", Node: sidecar},
-				pubsub.KarMsgBody{Msg: msg})
+				rpc.KarMsgTarget{Protocol: "sidecar", Node: sidecar},
+				rpc.KarMsgBody{Msg: msg})
 			if err != nil || actorReply.StatusCode != 200 {
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err
