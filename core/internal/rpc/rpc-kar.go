@@ -33,10 +33,9 @@ func TellService(ctx context.Context, service Service, path, payload, header, me
 		"method":  method,
 		"payload": payload}
 
-	return pubsub.Send(ctx, pubsub.KarStructuredMsg{
-		Protocol: "service",
-		Name:     service.Name,
-		Msg:      msg})
+	return pubsub.Send(ctx,
+		pubsub.KarMsgTarget{Protocol: "service", Name: service.Name},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
@@ -46,22 +45,18 @@ func TellActor(ctx context.Context, actor Session, path, payload string) error {
 		"path":    path,
 		"payload": payload}
 
-	return pubsub.Send(ctx, pubsub.KarStructuredMsg{
-		Protocol: "actor",
-		Name:     actor.Name,
-		ID:       actor.ID,
-		Msg:      msg})
+	return pubsub.Send(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
 func DeleteActor(ctx context.Context, actor Session) error {
 	msg := map[string]string{"command": "delete"}
 
-	return pubsub.Send(ctx, pubsub.KarStructuredMsg{
-		Protocol: "actor",
-		Name:     actor.Name,
-		ID:       actor.ID,
-		Msg:      msg})
+	return pubsub.Send(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 func TellBinding(ctx context.Context, kind string, actor Session, partition int32, bindingID string) error {
@@ -70,28 +65,25 @@ func TellBinding(ctx context.Context, kind string, actor Session, partition int3
 		"kind":      kind,
 		"bindingId": bindingID}
 
-	return pubsub.Send(ctx, pubsub.KarStructuredMsg{
-		Protocol:  "actor",
-		Name:      actor.Name,
-		ID:        actor.ID,
-		Partition: partition,
-		Msg:       msg})
+	return pubsub.Send(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // CallSidecar makes a call via pubsub to a sidecar and waits for a reply
-func CallSidecar(ctx context.Context, msg pubsub.KarStructuredMsg) (*Reply, error) {
-	return callHelper(ctx, msg)
+func CallSidecar(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) (*Reply, error) {
+	return callHelper(ctx, target, msg)
 }
 
 // callHelper makes a call via pubsub to a sidecar and waits for a reply
-func callHelper(ctx context.Context, msg pubsub.KarStructuredMsg) (*Reply, error) {
+func callHelper(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	msg.Msg["from"] = config.ID // this sidecar
 	msg.Msg["request"] = request
-	err := pubsub.Send(ctx, msg)
+	err := pubsub.Send(ctx, target, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -104,18 +96,18 @@ func callHelper(ctx context.Context, msg pubsub.KarStructuredMsg) (*Reply, error
 }
 
 // CallPromiseSidecar makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
-func CallPromiseSidecar(ctx context.Context, msg pubsub.KarStructuredMsg) (string, error) {
-	return callPromiseHelper(ctx, msg)
+func CallPromiseSidecar(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) (string, error) {
+	return callPromiseHelper(ctx, target, msg)
 }
 
-func callPromiseHelper(ctx context.Context, msg pubsub.KarStructuredMsg) (string, error) {
+func callPromiseHelper(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) (string, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
 	msg.Msg["from"] = config.ID // this sidecar
 	msg.Msg["request"] = request
-	err := pubsub.Send(ctx, msg)
+	err := pubsub.Send(ctx, target, msg)
 	if err != nil {
 		return "", err
 	}
@@ -137,7 +129,7 @@ func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
 }
 
 // TEMP: This should not be exposed; temporary until i push handler registration down here.
-func Callback(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func Callback(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	if ch, ok := requests.Load(msg.Msg["request"]); ok {
 		statusCode, _ := strconv.Atoi(msg.Msg["statusCode"])
 		select {

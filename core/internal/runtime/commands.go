@@ -46,10 +46,9 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallSidecar(ctx, pubsub.KarStructuredMsg{
-		Protocol: "service",
-		Name:     service,
-		Msg:      msg})
+	return rpc.CallSidecar(ctx,
+		pubsub.KarMsgTarget{Protocol: "service", Name: service},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // CallPromiseService calls a service and returns a request id
@@ -60,10 +59,9 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallPromiseSidecar(ctx, pubsub.KarStructuredMsg{
-		Protocol: "service",
-		Name:     service,
-		Msg:      msg})
+	return rpc.CallPromiseSidecar(ctx,
+		pubsub.KarMsgTarget{Protocol: "service", Name: service},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // CallActor calls an actor and waits for a reply
@@ -73,11 +71,9 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 		"path":    path,
 		"session": session,
 		"payload": payload}
-	return rpc.CallSidecar(ctx, pubsub.KarStructuredMsg{
-		Protocol: "actor",
-		Name:     actor.Type,
-		ID:       actor.ID,
-		Msg:      msg})
+	return rpc.CallSidecar(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // CallPromiseActor calls an actor and returns a request id
@@ -86,11 +82,9 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		"command": "call",
 		"path":    path,
 		"payload": payload}
-	return rpc.CallPromiseSidecar(ctx, pubsub.KarStructuredMsg{
-		Protocol: "actor",
-		Name:     actor.Type,
-		ID:       actor.ID,
-		Msg:      msg})
+	return rpc.CallPromiseSidecar(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
@@ -103,11 +97,9 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return rpc.CallSidecar(ctx, pubsub.KarStructuredMsg{
-		Protocol: "actor",
-		Name:     actor.Type,
-		ID:       actor.ID,
-		Msg:      msg})
+	return rpc.CallSidecar(ctx,
+		pubsub.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		pubsub.KarMsgBody{Msg: msg})
 }
 
 // helper methods to handle incoming messages
@@ -121,10 +113,9 @@ func respond(ctx context.Context, msg map[string]string, reply *rpc.Reply) error
 		"content-type": reply.ContentType,
 		"payload":      reply.Payload}
 
-	err := pubsub.Send(ctx, pubsub.KarStructuredMsg{
-		Protocol: "sidecar",
-		Node: msg["from"],
-		Msg: response})
+	err := pubsub.Send(ctx,
+		pubsub.KarMsgTarget{Protocol: "sidecar", Node: msg["from"]},
+		pubsub.KarMsgBody{Msg: response})
 
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", msg["request"], msg["from"], err)
@@ -133,7 +124,7 @@ func respond(ctx context.Context, msg map[string]string, reply *rpc.Reply) error
 	return err
 }
 
-func call(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func call(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	if !pubsub.IsLiveSidecar(msg.Msg["from"]) {
 		logger.Info("Cancelling %s from dead sidecar %s", msg.Msg["method"], msg.Msg["from"])
 		return nil
@@ -149,9 +140,9 @@ func call(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 	return respond(ctx, msg.Msg, reply)
 }
 
-func bindingDel(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func bindingDel(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	var reply *rpc.Reply
-	actor := Actor{Type: msg.Name, ID: msg.ID}
+	actor := Actor{Type: target.Name, ID: target.ID}
 	found := deleteBindings(ctx, msg.Msg["kind"], actor, msg.Msg["bindingId"])
 	if found == 0 && msg.Msg["bindingId"] != "" && msg.Msg["nilOnAbsent"] != "true" {
 		reply = &rpc.Reply{StatusCode: http.StatusNotFound}
@@ -161,9 +152,9 @@ func bindingDel(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 	return respond(ctx, msg.Msg, reply)
 }
 
-func bindingGet(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func bindingGet(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	var reply *rpc.Reply
-	actor := Actor{Type: msg.Name, ID: msg.ID}
+	actor := Actor{Type: target.Name, ID: target.ID}
 	found := getBindings(msg.Msg["kind"], actor, msg.Msg["bindingId"])
 	var responseBody interface{} = found
 	if msg.Msg["bindingId"] != "" {
@@ -186,9 +177,9 @@ func bindingGet(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 	return respond(ctx, msg.Msg, reply)
 }
 
-func bindingSet(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func bindingSet(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	var reply *rpc.Reply
-	actor := Actor{Type: msg.Name, ID: msg.ID}
+	actor := Actor{Type: target.Name, ID: target.ID}
 	code, err := putBinding(ctx, msg.Msg["kind"], actor, msg.Msg["bindingId"], msg.Msg["payload"])
 	if err != nil {
 		reply = &rpc.Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
@@ -198,9 +189,9 @@ func bindingSet(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 	return respond(ctx, msg.Msg, reply)
 }
 
-func bindingTell(ctx context.Context, msg pubsub.KarStructuredMsg) error {
-	actor := Actor{Type: msg.Name, ID: msg.ID}
-	err := loadBinding(ctx, msg.Msg["kind"], actor, msg.Node, msg.Msg["bindingId"])
+func bindingTell(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
+	actor := Actor{Type: target.Name, ID: target.ID}
+	err := loadBinding(ctx, msg.Msg["kind"], actor, target.Node, msg.Msg["bindingId"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Error("load binding failed: %v", err)
@@ -209,7 +200,7 @@ func bindingTell(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 	return nil
 }
 
-func tell(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func tell(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	reply, err := invoke(ctx, msg.Msg["method"], msg.Msg, msg.Msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
@@ -246,7 +237,7 @@ func tell(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 }
 
 // Returns information about this sidecar's actors
-func getActorInformation(ctx context.Context, msg pubsub.KarStructuredMsg) error {
+func getActorInformation(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	actorInfo := getMyActiveActors(msg.Msg["actorType"])
 	m, err := json.Marshal(actorInfo)
 	var reply *rpc.Reply
@@ -259,36 +250,36 @@ func getActorInformation(ctx context.Context, msg pubsub.KarStructuredMsg) error
 	return respond(ctx, msg.Msg, reply)
 }
 
-func dispatch(ctx context.Context, cancel context.CancelFunc, msg pubsub.KarStructuredMsg) error {
+func dispatch(ctx context.Context, cancel context.CancelFunc, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
 	switch msg.Msg["command"] {
 	case "call":
-		return call(ctx, msg)
+		return call(ctx, target, msg)
 	case "callback":
-		return rpc.Callback(ctx, msg) // KLUDGE....will fix once the lowest level of handler registration is implemented
+		return rpc.Callback(ctx, target, msg) // KLUDGE....will fix once the lowest level of handler registration is implemented
 	case "cancel":
 		cancel() // never fails
 	case "binding:del":
-		return bindingDel(ctx, msg)
+		return bindingDel(ctx, target, msg)
 	case "binding:get":
-		return bindingGet(ctx, msg)
+		return bindingGet(ctx, target, msg)
 	case "binding:set":
-		return bindingSet(ctx, msg)
+		return bindingSet(ctx, target, msg)
 	case "binding:tell":
-		return bindingTell(ctx, msg)
+		return bindingTell(ctx, target, msg)
 	case "tell":
-		return tell(ctx, msg)
+		return tell(ctx, target, msg)
 	case "getActiveActors":
-		return getActorInformation(ctx, msg)
+		return getActorInformation(ctx, target, msg)
 	default:
 		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
 	}
 	return nil
 }
 
-func forwardToSidecar(ctx context.Context, msg pubsub.KarStructuredMsg) error {
-	err := pubsub.Send(ctx, msg)
+func forwardToSidecar(ctx context.Context, target pubsub.KarMsgTarget, msg pubsub.KarMsgBody) error {
+	err := pubsub.Send(ctx, target, msg)
 	if err == pubsub.ErrUnknownSidecar {
-		logger.Debug("dropping message to dead sidecar %s: %v", msg.Node, err)
+		logger.Debug("dropping message to dead sidecar %s: %v", target.Node, err)
 		return nil
 	}
 	return err
@@ -296,36 +287,36 @@ func forwardToSidecar(ctx context.Context, msg pubsub.KarStructuredMsg) error {
 
 // Process processes one incoming message
 func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
-	var msg pubsub.KarStructuredMsg
+	var msg pubsub.KarMsg
 	err := json.Unmarshal(message.Value, &msg)
 	if err != nil {
 		logger.Error("failed to unmarshal message: %v", err)
 		message.Mark()
 		return
 	}
-	switch msg.Protocol {
+	switch msg.Target.Protocol {
 	case "service":
-		if msg.Name == config.ServiceName {
-			msg.Msg["metricLabel"] = msg.Name + ":" + msg.Msg["path"]
-			err = dispatch(ctx, cancel, msg)
+		if msg.Target.Name == config.ServiceName {
+			msg.Body.Msg["metricLabel"] = msg.Target.Name + ":" + msg.Body.Msg["path"]
+			err = dispatch(ctx, cancel, msg.Target, msg.Body)
 		} else {
-			err = pubsub.Send(ctx, msg)
+			err = pubsub.Send(ctx, msg.Target, msg.Body)
 		}
 	case "sidecar":
-		if msg.Node == config.ID {
-			err = dispatch(ctx, cancel, msg)
+		if msg.Target.Node == config.ID {
+			err = dispatch(ctx, cancel, msg.Target, msg.Body)
 		} else {
-			err = forwardToSidecar(ctx, msg)
+			err = forwardToSidecar(ctx, msg.Target, msg.Body)
 		}
 	case "partition":
-		err = dispatch(ctx, cancel, msg)
+		err = dispatch(ctx, cancel, msg.Target, msg.Body)
 	case "actor":
-		actor := Actor{Type: msg.Name, ID: msg.ID}
-		session := msg.Msg["session"]
+		actor := Actor{Type: msg.Target.Name, ID: msg.Target.ID}
+		session := msg.Body.Msg["session"]
 		if session == "" {
-			if strings.HasPrefix(msg.Msg["command"], "binding:") {
+			if strings.HasPrefix(msg.Body.Msg["command"], "binding:") {
 				session = "reminder"
-			} else if msg.Msg["command"] == "delete" {
+			} else if msg.Body.Msg["command"] == "delete" {
 				session = "exclusive"
 			} else {
 				session = uuid.New().String() // start new session
@@ -335,24 +326,24 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		var fresh bool
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
-			err = pubsub.Send(ctx, msg) // forward
+			err = pubsub.Send(ctx, msg.Target, msg.Body) // forward
 		} else if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Body.Msg["command"], msg.Body.Msg["path"], session)
 			logger.Error("%s", payload)
-			if msg.Msg["command"] == "call" {
+			if msg.Body.Msg["command"] == "call" {
 				var reply *rpc.Reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
-				err = respond(ctx, msg.Msg, reply)
+				err = respond(ctx, msg.Body.Msg, reply)
 			} else {
 				err = nil
 			}
 		} else if err == nil {
 			if session == "reminder" { // do not activate actor
-				err = dispatch(ctx, cancel, msg)
+				err = dispatch(ctx, cancel, msg.Target, msg.Body)
 				e.release(session, false)
 				break
 			}
 
-			if msg.Msg["command"] == "delete" {
+			if msg.Body.Msg["command"] == "delete" {
 				// delete SDK-level in-memory state
 				if !fresh {
 					deactivate(ctx, actor)
@@ -374,22 +365,22 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 				reply, err = activate(ctx, actor)
 			}
 			if reply != nil { // activate returned an error, report or log error, do not retry
-				if msg.Msg["command"] == "call" {
-					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
-					err = respond(ctx, msg.Msg, reply) // return activation error to caller
+				if msg.Body.Msg["command"] == "call" {
+					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Body.Msg["path"])
+					err = respond(ctx, msg.Body.Msg, reply) // return activation error to caller
 				} else {
-					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Body.Msg["path"])
 					err = nil // not to be retried
 				}
 				e.release(session, false)
 			} else if err != nil { // failed to invoke activate
 				e.release(session, false)
 			} else { // invoke actor method
-				msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
-				msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
-				msg.Msg["content-type"] = "application/kar+json"
-				msg.Msg["method"] = "POST"
-				err = dispatch(ctx, cancel, msg)
+				msg.Body.Msg["metricLabel"] = actor.Type + ":" + msg.Body.Msg["path"]
+				msg.Body.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Body.Msg["path"]
+				msg.Body.Msg["content-type"] = "application/kar+json"
+				msg.Body.Msg["method"] = "POST"
+				err = dispatch(ctx, cancel, msg.Target, msg.Body)
 				e.release(session, true)
 			}
 		}

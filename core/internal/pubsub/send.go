@@ -142,7 +142,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 }
 
 // Send sends message to receiver
-func Send(ctx context.Context, msg KarStructuredMsg) error {
+func Send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
 	select { // make sure we have joined
 	case <-joined:
 	case <-ctx.Done():
@@ -150,29 +150,29 @@ func Send(ctx context.Context, msg KarStructuredMsg) error {
 	}
 	var partition int32
 	var err error
-	switch msg.Protocol {
+	switch target.Protocol {
 	case "service": // route to service
-		partition, msg.Node, err = routeToService(ctx, msg.Name)
+		partition, target.Node, err = routeToService(ctx, target.Name)
 		if err != nil {
-			logger.Error("failed to route to service %s: %v", msg.Name, err)
+			logger.Error("failed to route to service %s: %v", target.Name, err)
 			return err
 		}
 	case "actor": // route to actor
-		partition, msg.Node, err = routeToActor(ctx, msg.Name, msg.ID)
+		partition, target.Node, err = routeToActor(ctx, target.Name, target.ID)
 		if err != nil {
-			logger.Error("failed to route to actor type %s, id %s: %v", msg.Name, msg.ID, err)
+			logger.Error("failed to route to actor type %s, id %s: %v", target.Name, target.ID, err)
 			return err
 		}
 	case "sidecar": // route to sidecar
-		partition, err = routeToSidecar(msg.Node)
+		partition, err = routeToSidecar(target.Node)
 		if err != nil {
-			logger.Error("failed to route to sidecar %s: %v", msg.Node, err)
+			logger.Error("failed to route to sidecar %s: %v", target.Node, err)
 			return err
 		}
 	case "partition": // route to partition
-		partition = msg.Partition
+		partition = target.Partition
 	}
-	m, err := json.Marshal(msg)
+	m, err := json.Marshal(KarMsg{Target: target, Body: msg})
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
