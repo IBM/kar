@@ -19,6 +19,8 @@ package rpc
 import (
 	"context"
 
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -58,14 +60,12 @@ func reclaim(requestID string) {
 
 // GetNodeID returns the node id for the current node
 func getNodeID() string {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return ""
+	return config.ID
 }
 
 // GetNodeIDs returns the sorted list of live node ids
 func getNodeIDs() []string {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	return pubsub.Sidecars()
 }
 
 // GetPartition returns the partition for the current node

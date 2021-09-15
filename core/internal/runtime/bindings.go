@@ -179,7 +179,7 @@ func loadBindings(ctx context.Context, partitions []int32) error {
 		logger.Debug("found %v persisted bindings for partition %v", len(keys), p)
 		for _, key := range keys {
 			kind, actor, partition, id := keyBinding(key)
-			err = rpc.TellBinding(ctx, kind, rpc.Session{Name: actor.Type, ID: actor.ID}, partition, id)
+			err = TellBinding(ctx, kind, rpc.Session{Name: actor.Type, ID: actor.ID}, partition, id)
 			if err != nil {
 				if err != ctx.Err() {
 					logger.Error("tell binding failed: %v", err)

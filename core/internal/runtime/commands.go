@@ -46,7 +46,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallSidecar(ctx,
+	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
 		rpc.KarMsgBody{Msg: msg})
 }
@@ -59,7 +59,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallPromiseSidecar(ctx,
+	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
 		rpc.KarMsgBody{Msg: msg})
 }
@@ -71,7 +71,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 		"path":    path,
 		"session": session,
 		"payload": payload}
-	return rpc.CallSidecar(ctx,
+	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
 		rpc.KarMsgBody{Msg: msg})
 }
@@ -82,7 +82,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		"command": "call",
 		"path":    path,
 		"payload": payload}
-	return rpc.CallPromiseSidecar(ctx,
+	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
 		rpc.KarMsgBody{Msg: msg})
 }
@@ -97,8 +97,54 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return rpc.CallSidecar(ctx,
+	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		rpc.KarMsgBody{Msg: msg})
+}
+
+// TellService sends a message to a service and does not wait for a reply
+func TellService(ctx context.Context, service rpc.Service, path, payload, header, method string) error {
+	msg := map[string]string{
+		"command": "tell", // post with no callback expected
+		"path":    path,
+		"header":  header,
+		"method":  method,
+		"payload": payload}
+
+	return rpc.TellKAR(ctx,
+		rpc.KarMsgTarget{Protocol: "service", Name: service.Name},
+		rpc.KarMsgBody{Msg: msg})
+}
+
+// TellActor sends a message to an actor and does not wait for a reply
+func TellActor(ctx context.Context, actor rpc.Session, path, payload string) error {
+	msg := map[string]string{
+		"command": "tell", // post with no callback expected
+		"path":    path,
+		"payload": payload}
+
+	return rpc.TellKAR(ctx,
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		rpc.KarMsgBody{Msg: msg})
+}
+
+// DeleteActor sends a delete message to an actor and does not wait for a reply
+func DeleteActor(ctx context.Context, actor rpc.Session) error {
+	msg := map[string]string{"command": "delete"}
+
+	return rpc.TellKAR(ctx,
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		rpc.KarMsgBody{Msg: msg})
+}
+
+func TellBinding(ctx context.Context, kind string, actor rpc.Session, partition int32, bindingID string) error {
+	msg := map[string]string{
+		"command":   "binding:tell",
+		"kind":      kind,
+		"bindingId": bindingID}
+
+	return rpc.TellKAR(ctx,
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -113,7 +159,7 @@ func respond(ctx context.Context, msg map[string]string, reply *rpc.Reply) error
 		"content-type": reply.ContentType,
 		"payload":      reply.Payload}
 
-	err := rpc.Send(ctx,
+	err := rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "sidecar", Node: msg["from"]},
 		rpc.KarMsgBody{Msg: response})
 
@@ -277,7 +323,7 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgT
 }
 
 func forwardToSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) error {
-	err := rpc.Send(ctx, target, msg)
+	err := rpc.TellKAR(ctx, target, msg)
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping message to dead sidecar %s: %v", target.Node, err)
 		return nil
@@ -300,10 +346,10 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 			msg.Body.Msg["metricLabel"] = msg.Target.Name + ":" + msg.Body.Msg["path"]
 			err = dispatch(ctx, cancel, msg.Target, msg.Body)
 		} else {
-			err = rpc.Send(ctx, msg.Target, msg.Body)
+			err = rpc.TellKAR(ctx, msg.Target, msg.Body)
 		}
 	case "sidecar":
-		if msg.Target.Node == config.ID {
+		if msg.Target.Node == rpc.GetNodeID() {
 			err = dispatch(ctx, cancel, msg.Target, msg.Body)
 		} else {
 			err = forwardToSidecar(ctx, msg.Target, msg.Body)
@@ -326,7 +372,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		var fresh bool
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
-			err = rpc.Send(ctx, msg.Target, msg.Body) // forward
+			err = rpc.TellKAR(ctx, msg.Target, msg.Body) // forward
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Body.Msg["command"], msg.Body.Msg["path"], session)
 			logger.Error("%s", payload)

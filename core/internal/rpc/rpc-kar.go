@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
@@ -32,8 +31,10 @@ type KarMsgBody struct {
 }
 
 type KarMsg struct {
-	Target KarMsgTarget
-	Body   KarMsgBody
+	Target      KarMsgTarget
+	SendingNode string
+	Request     string
+	Body        KarMsgBody
 }
 
 // Reply represents the return value of a call
@@ -43,66 +44,20 @@ type Reply struct {
 	Payload     string
 }
 
-// TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service Service, path, payload, header, method string) error {
-	msg := map[string]string{
-		"command": "tell", // post with no callback expected
-		"path":    path,
-		"header":  header,
-		"method":  method,
-		"payload": payload}
-
-	return Send(ctx,
-		KarMsgTarget{Protocol: "service", Name: service.Name},
-		KarMsgBody{Msg: msg})
+// TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
+func TellKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
+	return send(ctx, target, msg)
 }
 
-// TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Session, path, payload string) error {
-	msg := map[string]string{
-		"command": "tell", // post with no callback expected
-		"path":    path,
-		"payload": payload}
-
-	return Send(ctx,
-		KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
-		KarMsgBody{Msg: msg})
-}
-
-// DeleteActor sends a delete message to an actor and does not wait for a reply
-func DeleteActor(ctx context.Context, actor Session) error {
-	msg := map[string]string{"command": "delete"}
-
-	return Send(ctx,
-		KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
-		KarMsgBody{Msg: msg})
-}
-
-func TellBinding(ctx context.Context, kind string, actor Session, partition int32, bindingID string) error {
-	msg := map[string]string{
-		"command":   "binding:tell",
-		"kind":      kind,
-		"bindingId": bindingID}
-
-	return Send(ctx,
-		KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
-		KarMsgBody{Msg: msg})
-}
-
-// CallSidecar makes a call via pubsub to a sidecar and waits for a reply
-func CallSidecar(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (*Reply, error) {
-	return callHelper(ctx, target, msg)
-}
-
-// callHelper makes a call via pubsub to a sidecar and waits for a reply
-func callHelper(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (*Reply, error) {
+// CallKAR makes a call via pubsub to a sidecar and waits for a reply
+func CallKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	msg.Msg["from"] = config.ID // this sidecar
+	msg.Msg["from"] = GetNodeID() // this sidecar
 	msg.Msg["request"] = request
-	err := Send(ctx, target, msg)
+	err := send(ctx, target, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -114,19 +69,15 @@ func callHelper(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (*Repl
 	}
 }
 
-// CallPromiseSidecar makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
-func CallPromiseSidecar(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (string, error) {
-	return callPromiseHelper(ctx, target, msg)
-}
-
-func callPromiseHelper(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (string, error) {
+// CallPromiseKAR makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
+func CallPromiseKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (string, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
-	msg.Msg["from"] = config.ID // this sidecar
+	msg.Msg["from"] = GetNodeID() // this sidecar
 	msg.Msg["request"] = request
-	err := Send(ctx, target, msg)
+	err := send(ctx, target, msg)
 	if err != nil {
 		return "", err
 	}
@@ -162,8 +113,8 @@ func Callback(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
 	return nil
 }
 
-// Send sends message to receiver
-func Send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
+// send sends message to receiver
+func send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
 	select { // make sure we have joined
 	case <-pubsub.Joined:
 	case <-ctx.Done():

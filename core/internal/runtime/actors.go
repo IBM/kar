@@ -133,7 +133,7 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				<-e.lock
 				return nil, false, err
 			}
-			if sidecar == config.ID { // start new session
+			if sidecar == rpc.GetNodeID() { // start new session
 				e.valid = true
 				e.session = session
 				e.depth = 1
@@ -217,15 +217,15 @@ func getMyActiveActors(targetedActorType string) map[string][]string {
 // getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
 func getAllActiveActors(ctx context.Context, targetedActorType string) (map[string][]string, error) {
 	information := make(map[string][]string)
-	for _, sidecar := range pubsub.Sidecars() {
+	for _, sidecar := range rpc.GetNodeIDs() {
 		var actorInformation map[string][]string
-		if sidecar != config.ID {
+		if sidecar != rpc.GetNodeID() {
 			// Make call to another sidecar, returns the result of GetMyActiveActors() there
 			msg := map[string]string{
 				"command":   "getActiveActors",
 				"actorType": targetedActorType,
 			}
-			actorReply, err := rpc.CallSidecar(ctx,
+			actorReply, err := rpc.CallKAR(ctx,
 				rpc.KarMsgTarget{Protocol: "sidecar", Node: sidecar},
 				rpc.KarMsgBody{Msg: msg})
 			if err != nil || actorReply.StatusCode != 200 {
@@ -277,7 +277,7 @@ func (e *actorEntry) migrate(sidecar string) error {
 	e.session = ""
 	e.valid = false
 	actorTable.Delete(e.actor)
-	_, err := pubsub.CompareAndSetSidecar(ctx, e.actor.Type, e.actor.ID, config.ID, sidecar)
+	_, err := pubsub.CompareAndSetSidecar(ctx, e.actor.Type, e.actor.ID, rpc.GetNodeID(), sidecar)
 	close(e.busy)
 	<-e.lock
 	return err
