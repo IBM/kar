@@ -45,7 +45,7 @@ type Partition struct {
 }
 
 // Handler for method
-type Handler func(Target, []byte) ([]byte, error)
+type Handler func(context.Context, Target, []byte) ([]byte, error)
 
 // Result of async call
 type Result struct {
@@ -83,14 +83,24 @@ func Reclaim(requestID string) {
 	reclaim(requestID)
 }
 
+// GetServices returns the sorted list of services currently available
+func GetServices() ([]string, <-chan struct{}) {
+	return getServices()
+}
+
 // GetNodeID returns the node id for the current node
 func GetNodeID() string {
 	return getNodeID()
 }
 
-// GetNodeIDs returns the sorted list of live node ids
-func GetNodeIDs() []string {
+// GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
+func GetNodeIDs() ([]string, <-chan struct{}) {
 	return getNodeIDs()
+}
+
+// GetServiceNodeIDs returns the sorted list of live node ids for a given service
+func GetServiceNodeIDs(service string) []string {
+	return getServiceNodeIDs(service)
 }
 
 // GetPartition returns the partition for the current node
@@ -98,7 +108,7 @@ func GetPartition() int32 {
 	return getPartition()
 }
 
-// GetPartitions returns the sorted list of partitions in use
-func GetPartitions() []int32 {
+// GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
+func GetPartitions() ([]int32, <-chan struct{}) {
 	return getPartitions()
 }

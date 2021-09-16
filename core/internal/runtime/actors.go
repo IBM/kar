@@ -217,7 +217,8 @@ func getMyActiveActors(targetedActorType string) map[string][]string {
 // getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
 func getAllActiveActors(ctx context.Context, targetedActorType string) (map[string][]string, error) {
 	information := make(map[string][]string)
-	for _, sidecar := range rpc.GetNodeIDs() {
+	sidecars, _ := rpc.GetNodeIDs()
+	for _, sidecar := range sidecars {
 		var actorInformation map[string][]string
 		if sidecar != rpc.GetNodeID() {
 			// Make call to another sidecar, returns the result of GetMyActiveActors() there

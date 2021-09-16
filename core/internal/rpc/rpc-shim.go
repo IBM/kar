@@ -58,14 +58,25 @@ func reclaim(requestID string) {
 	logger.Fatal("Unimplemented rpc-shim function")
 }
 
+func getServices() ([]string, <-chan struct{}) {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil, nil
+}
+
 // GetNodeID returns the node id for the current node
 func getNodeID() string {
 	return config.ID
 }
 
-// GetNodeIDs returns the sorted list of live node ids
-func getNodeIDs() []string {
-	return pubsub.Sidecars()
+// GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
+func getNodeIDs() ([]string, <-chan struct{}) {
+	return pubsub.Sidecars(), nil
+}
+
+// GetServiceNodeIDs returns the sorted list of live node ids for a given service
+func getServiceNodeIDs(service string) []string {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
 }
 
 // GetPartition returns the partition for the current node
@@ -75,7 +86,7 @@ func getPartition() int32 {
 }
 
 // GetPartitions returns the sorted list of partitions in use
-func getPartitions() []int32 {
+func getPartitions() ([]int32, <-chan struct{}) {
 	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	return nil, nil
 }
