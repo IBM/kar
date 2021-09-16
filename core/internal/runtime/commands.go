@@ -122,7 +122,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 }
 
 // TellService sends a message to a service and does not wait for a reply
-func TellService(ctx context.Context, service rpc.Service, path, payload, header, method string) error {
+func TellService(ctx context.Context, service, path, payload, header, method string) error {
 	msg := map[string]string{
 		"command": "tell", // post with no callback expected
 		"path":    path,
@@ -131,42 +131,42 @@ func TellService(ctx context.Context, service rpc.Service, path, payload, header
 		"payload": payload}
 
 	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "service", Name: service.Name},
+		rpc.KarMsgTarget{Protocol: "service", Name: service},
 		serviceEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor rpc.Session, path, payload string) error {
+func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	msg := map[string]string{
 		"command": "tell", // post with no callback expected
 		"path":    path,
 		"payload": payload}
 
 	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
 		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
-func DeleteActor(ctx context.Context, actor rpc.Session) error {
+func DeleteActor(ctx context.Context, actor Actor) error {
 	msg := map[string]string{"command": "delete"}
 
 	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
 		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
-func TellBinding(ctx context.Context, kind string, actor rpc.Session, partition int32, bindingID string) error {
+func TellBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
 		"command":   "binding:tell",
 		"kind":      kind,
 		"bindingId": bindingID}
 
 	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
+		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID, Partition: partition},
 		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }

@@ -42,9 +42,9 @@ func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		if err != nil {
 			logger.Error("failed to marshal header: %v", err)
 		}
-		err = TellService(ctx, rpc.Service{Name: ps.ByName("service")}, ps.ByName("path"), ReadAll(r), string(m), r.Method)
+		err = TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
-		err = TellActor(ctx, rpc.Session{Name: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r))
+		err = TellActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r))
 	}
 	if err != nil {
 		if err == ctx.Err() {
@@ -350,7 +350,7 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 //       500: response500
 //
 func routeImplDelActor(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := DeleteActor(ctx, rpc.Session{Name: ps.ByName("type"), ID: ps.ByName("id")})
+	err := DeleteActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")})
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
