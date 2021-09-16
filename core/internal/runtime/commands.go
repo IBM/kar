@@ -175,22 +175,21 @@ func TellBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func call(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	reply, err := invoke(ctx, msg.Msg["method"], msg.Msg, msg.Msg["metricLabel"])
+func call(ctx context.Context, msg map[string]string) (*rpc.Reply, error) {
+	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Debug("call failed to invoke %s: %v", msg.Msg["path"], err)
+			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
 		}
 		return nil, err
 	}
 	return reply, nil
 }
 
-func bindingDel(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+func bindingDel(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
 	var reply *rpc.Reply
-	actor := Actor{Type: target.Name, ID: target.ID}
-	found := deleteBindings(ctx, msg.Msg["kind"], actor, msg.Msg["bindingId"])
-	if found == 0 && msg.Msg["bindingId"] != "" && msg.Msg["nilOnAbsent"] != "true" {
+	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
+	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
 		reply = &rpc.Reply{StatusCode: http.StatusNotFound}
 	} else {
 		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
@@ -198,14 +197,13 @@ func bindingDel(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody
 	return reply, nil
 }
 
-func bindingGet(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+func bindingGet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
 	var reply *rpc.Reply
-	actor := Actor{Type: target.Name, ID: target.ID}
-	found := getBindings(msg.Msg["kind"], actor, msg.Msg["bindingId"])
+	found := getBindings(msg["kind"], actor, msg["bindingId"])
 	var responseBody interface{} = found
-	if msg.Msg["bindingId"] != "" {
+	if msg["bindingId"] != "" {
 		if len(found) == 0 {
-			if msg.Msg["nilOnAbsent"] != "true" {
+			if msg["nilOnAbsent"] != "true" {
 				reply = &rpc.Reply{StatusCode: http.StatusNotFound}
 				return reply, nil
 			}
@@ -223,10 +221,9 @@ func bindingGet(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody
 	return reply, nil
 }
 
-func bindingSet(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+func bindingSet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
 	var reply *rpc.Reply
-	actor := Actor{Type: target.Name, ID: target.ID}
-	code, err := putBinding(ctx, msg.Msg["kind"], actor, msg.Msg["bindingId"], msg.Msg["payload"])
+	code, err := putBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
 		reply = &rpc.Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
@@ -235,9 +232,9 @@ func bindingSet(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody
 	return reply, nil
 }
 
-func bindingTell(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) error {
+func bindingTell(ctx context.Context, target rpc.KarMsgTarget, msg map[string]string) error {
 	actor := Actor{Type: target.Name, ID: target.ID}
-	err := loadBinding(ctx, msg.Msg["kind"], actor, target.Node, msg.Msg["bindingId"])
+	err := loadBinding(ctx, msg["kind"], actor, target.Node, msg["bindingId"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Error("load binding failed: %v", err)
@@ -246,11 +243,11 @@ func bindingTell(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBod
 	return nil
 }
 
-func tell(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) error {
-	reply, err := invoke(ctx, msg.Msg["method"], msg.Msg, msg.Msg["metricLabel"])
+func tell(ctx context.Context, msg map[string]string) error {
+	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Debug("tell failed to invoke %s: %v", msg.Msg["path"], err)
+			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
 		}
 		return err
 	}
@@ -258,33 +255,33 @@ func tell(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) erro
 	// Examine the reply and log any that represent appliction-level errors.
 	// We do this because a tell does not have a caller to which such reporting can be delegated.
 	if reply.StatusCode == http.StatusNoContent {
-		logger.Debug("Asynchronous invoke of %s returned void", msg.Msg["path"])
+		logger.Debug("Asynchronous invoke of %s returned void", msg["path"])
 	} else if reply.StatusCode == http.StatusOK {
 		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
 			var result actorCallResult
 			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
-				logger.Error("Asynchronous invoke of %s had malformed result. %v", msg.Msg["path"], err)
+				logger.Error("Asynchronous invoke of %s had malformed result. %v", msg["path"], err)
 			} else {
 				if result.Error {
-					logger.Error("Asynchronous invoke of %s raised error %s", msg.Msg["path"], result.Message)
+					logger.Error("Asynchronous invoke of %s raised error %s", msg["path"], result.Message)
 					logger.Error("Stacktrace: %v", result.Stack)
 				} else {
-					logger.Debug("Asynchronous invoke of %s returned %v", msg.Msg["path"], result.Value)
+					logger.Debug("Asynchronous invoke of %s returned %v", msg["path"], result.Value)
 				}
 			}
 		} else {
-			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", msg.Msg["path"], reply.ContentType)
+			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", msg["path"], reply.ContentType)
 		}
 	} else {
-		logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg.Msg["path"], reply.StatusCode, reply.Payload)
+		logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], reply.StatusCode, reply.Payload)
 	}
 
 	return nil
 }
 
 // Returns information about this sidecar's actors
-func getActorInformation(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	actorInfo := getMyActiveActors(msg.Msg["actorType"])
+func getActorInformation(ctx context.Context, msg map[string]string) (*rpc.Reply, error) {
+	actorInfo := getMyActiveActors(msg["actorType"])
 	m, err := json.Marshal(actorInfo)
 	var reply *rpc.Reply
 	if err != nil {
@@ -297,30 +294,22 @@ func getActorInformation(ctx context.Context, target rpc.KarMsgTarget, msg rpc.K
 }
 
 func handlerService(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	if target.Protocol != "service" {
-		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
-	}
-
 	msg.Msg["metricLabel"] = target.Name + ":" + msg.Msg["path"]
 
 	switch msg.Msg["command"] {
 	case "call":
-		return call(ctx, target, msg)
+		return call(ctx, msg.Msg)
 	case "tell":
-		return nil, tell(ctx, target, msg)
+		return nil, tell(ctx, msg.Msg)
 	default:
 		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+		return nil, nil
 	}
-	return nil, nil
 }
 
 func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	if target.Protocol != "sidecar" {
-		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
-	}
-
 	if msg.Msg["command"] == "getActiveActors" {
-		return getActorInformation(ctx, target, msg)
+		return getActorInformation(ctx, msg.Msg)
 	} else {
 		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
 		return nil, nil
@@ -328,10 +317,6 @@ func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsg
 }
 
 func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	if target.Protocol != "actor" {
-		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
-	}
-
 	var reply *rpc.Reply = nil
 	var err error = nil
 
@@ -374,14 +359,14 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 	if session == "reminder" { // do not activate actor
 		switch msg.Msg["command"] {
 		case "binding:del":
-			reply, err = bindingDel(ctx, target, msg)
+			reply, err = bindingDel(ctx, actor, msg.Msg)
 		case "binding:get":
-			reply, err = bindingGet(ctx, target, msg)
+			reply, err = bindingGet(ctx, actor, msg.Msg)
 		case "binding:set":
-			reply, err = bindingSet(ctx, target, msg)
+			reply, err = bindingSet(ctx, actor, msg.Msg)
 		case "binding:tell":
 			reply = nil
-			err = bindingTell(ctx, target, msg)
+			err = bindingTell(ctx, target, msg.Msg)
 		default:
 			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
 			reply = nil
@@ -429,10 +414,10 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 		msg.Msg["method"] = "POST"
 
 		if msg.Msg["command"] == "call" {
-			reply, err = call(ctx, target, msg)
+			reply, err = call(ctx, msg.Msg)
 		} else if msg.Msg["command"] == "tell" {
 			reply = nil
-			err = tell(ctx, target, msg)
+			err = tell(ctx, msg.Msg)
 		} else {
 			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
 			reply = nil

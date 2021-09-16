@@ -34,20 +34,8 @@ type KarMsgTarget struct {
 
 type KarHandler func(context.Context, KarMsgTarget, KarMsgBody) (*Reply, error)
 
-type KarCallbackInfo struct {
-	SendingNode string
-	Request     string
-}
-
 type KarMsgBody struct {
 	Msg map[string]string
-}
-
-type KarMsg struct {
-	Target   KarMsgTarget
-	Callback KarCallbackInfo
-	Method   string
-	Body     KarMsgBody
 }
 
 // Reply represents the return value of a call
@@ -55,6 +43,20 @@ type Reply struct {
 	StatusCode  int
 	ContentType string
 	Payload     string
+}
+
+// Internal types specific to the original pub-sub based implementation of the library
+
+type karCallbackInfo struct {
+	SendingNode string
+	Request     string
+}
+
+type karMsg struct {
+	Target   KarMsgTarget
+	Callback karCallbackInfo
+	Method   string
+	Body     KarMsgBody
 }
 
 func init() {
@@ -71,7 +73,7 @@ func RegisterKAR(method string, handler KarHandler) {
 
 // TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
 func TellKAR(ctx context.Context, target KarMsgTarget, method string, msg KarMsgBody) error {
-	return send(ctx, target, method, KarCallbackInfo{}, msg)
+	return send(ctx, target, method, karCallbackInfo{}, msg)
 }
 
 // CallKAR makes a call via pubsub to a sidecar and waits for a reply
@@ -80,7 +82,7 @@ func CallKAR(ctx context.Context, target KarMsgTarget, method string, msg KarMsg
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	err := send(ctx, target, method, KarCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +100,7 @@ func CallPromiseKAR(ctx context.Context, target KarMsgTarget, method string, msg
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
-	err := send(ctx, target, method, KarCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
 	if err != nil {
 		return "", err
 	}
@@ -124,7 +126,7 @@ func AwaitPromiseKAR(ctx context.Context, request string) (*Reply, error) {
 ////
 
 // send sends message to receiver
-func send(ctx context.Context, target KarMsgTarget, method string, callback KarCallbackInfo, msg KarMsgBody) error {
+func send(ctx context.Context, target KarMsgTarget, method string, callback karCallbackInfo, msg KarMsgBody) error {
 	select { // make sure we have joined
 	case <-pubsub.Joined:
 	case <-ctx.Done():
@@ -154,7 +156,7 @@ func send(ctx context.Context, target KarMsgTarget, method string, callback KarC
 	case "partition": // route to partition
 		partition = target.Partition
 	}
-	m, err := json.Marshal(KarMsg{Target: target, Method: method, Callback: callback, Body: msg})
+	m, err := json.Marshal(karMsg{Target: target, Method: method, Callback: callback, Body: msg})
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
@@ -168,7 +170,7 @@ func send(ctx context.Context, target KarMsgTarget, method string, callback KarC
 
 // Process processes one incoming message
 func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
-	var msg KarMsg
+	var msg karMsg
 	var reply *Reply = nil
 	err := json.Unmarshal(message.Value, &msg)
 	if err != nil {
@@ -230,7 +232,7 @@ func forwardToSidecar(ctx context.Context, target KarMsgTarget, method string, m
 // lowlevel reponse support in caller
 ////
 
-func respond(ctx context.Context, callback KarCallbackInfo, reply *Reply) error {
+func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error {
 	response := map[string]string{
 		"request":      callback.Request,
 		"statusCode":   strconv.Itoa(reply.StatusCode),
