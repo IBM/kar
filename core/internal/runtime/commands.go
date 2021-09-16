@@ -36,11 +36,16 @@ import (
 
 const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
+	requestMethod = "request"
 )
 
 func init() {
-	rpc.RegisterKAR(handler)
+	rpc.RegisterKAR(requestMethod, handler)
 }
+
+////////////////////
+// Caller (sending) side of RPCs
+////////////////////
 
 // CallService calls a service and waits for a reply
 func CallService(ctx context.Context, service, path, payload, header, method string) (*rpc.Reply, error) {
@@ -52,6 +57,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"payload": payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -65,6 +71,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"payload": payload}
 	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -77,6 +84,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 		"payload": payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -88,6 +96,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		"payload": payload}
 	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -103,6 +112,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"payload":      payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -117,6 +127,7 @@ func TellService(ctx context.Context, service rpc.Service, path, payload, header
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service.Name},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -129,6 +140,7 @@ func TellActor(ctx context.Context, actor rpc.Session, path, payload string) err
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -138,6 +150,7 @@ func DeleteActor(ctx context.Context, actor rpc.Session) error {
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -149,11 +162,15 @@ func TellBinding(ctx context.Context, kind string, actor rpc.Session, partition 
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
+		requestMethod,
 		rpc.KarMsgBody{Msg: msg})
 }
 
-// helper methods to handle incoming messages
-// log ignored errors to logger.Error
+
+////////////////////
+// Callee (receiving) side of RPCs
+////////////////////
+
 
 func call(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
 	reply, err := invoke(ctx, msg.Msg["method"], msg.Msg, msg.Msg["metricLabel"])
@@ -280,8 +297,6 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgT
 	switch msg.Msg["command"] {
 	case "call":
 		return call(ctx, target, msg)
-	case "callback":
-		return nil, rpc.Callback(ctx, target, msg) // KLUDGE....will fix once the lowest level of handler registration is implemented
 	case "cancel":
 		cancel() // never fails
 	case "binding:del":
@@ -330,7 +345,7 @@ func handler(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (
 		var fresh bool
 		e, fresh, err = actor.acquire(ctx, session)
 		if err == errActorHasMoved {
-			err = rpc.TellKAR(ctx, target, msg) // forward
+			err = rpc.TellKAR(ctx, target, requestMethod, msg) // forward
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
 			logger.Error("%s", payload)
