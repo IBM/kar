@@ -37,17 +37,15 @@ import (
 const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
 
-	actorEndpoint     = "handlerActor"
-	serviceEndpoint   = "handlerService"
-	sidecarEndpoint   = "handlerSidecar"
-	partitionEndpoint = "handlerPartition"
+	actorEndpoint   = "handlerActor"
+	serviceEndpoint = "handlerService"
+	sidecarEndpoint = "handlerSidecar"
 )
 
 func init() {
 	rpc.RegisterKAR(actorEndpoint, handlerActor)
 	rpc.RegisterKAR(serviceEndpoint, handlerService)
 	rpc.RegisterKAR(sidecarEndpoint, handlerSidecar)
-	rpc.RegisterKAR(partitionEndpoint, handlerPartition)
 }
 
 ////////////////////
@@ -302,8 +300,6 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgT
 	switch msg.Msg["command"] {
 	case "call":
 		return call(ctx, target, msg)
-	case "cancel":
-		cancel() // never fails
 	case "binding:del":
 		return bindingDel(ctx, target, msg)
 	case "binding:get":
@@ -314,8 +310,6 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgT
 		return nil, bindingTell(ctx, target, msg)
 	case "tell":
 		return nil, tell(ctx, target, msg)
-	case "getActiveActors":
-		return getActorInformation(ctx, target, msg)
 	default:
 		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
 	}
@@ -326,22 +320,31 @@ func handlerService(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsg
 	if target.Protocol != "service" {
 		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
 	}
+
 	msg.Msg["metricLabel"] = target.Name + ":" + msg.Msg["path"]
-	return dispatch(ctx, cancel, target, msg)
+
+	switch msg.Msg["command"] {
+	case "call":
+		return call(ctx, target, msg)
+	case "tell":
+		return nil, tell(ctx, target, msg)
+	default:
+		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+	}
+	return nil, nil
 }
 
 func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
 	if target.Protocol != "sidecar" {
 		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
 	}
-	return dispatch(ctx, cancel, target, msg)
-}
 
-func handlerPartition(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	if target.Protocol != "partition" {
-		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
+	if msg.Msg["command"] == "getActiveActors" {
+		return getActorInformation(ctx, target, msg)
+	} else {
+		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+		return nil, nil
 	}
-	return dispatch(ctx, cancel, target, msg)
 }
 
 func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {

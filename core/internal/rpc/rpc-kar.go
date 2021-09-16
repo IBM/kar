@@ -61,6 +61,10 @@ func init() {
 	RegisterKAR(responseMethod, responseHandler)
 }
 
+////////
+// Staging code...these methods are meant to be directly replacable by their corresponding RPC versions once the APIs converge
+////////
+
 func RegisterKAR(method string, handler KarHandler) {
 	handlers[method] = handler
 }
@@ -115,6 +119,10 @@ func AwaitPromiseKAR(ctx context.Context, request string) (*Reply, error) {
 	return nil, fmt.Errorf("unexpected request %s", request)
 }
 
+////
+// lowlevel request support in caller
+////
+
 // send sends message to receiver
 func send(ctx context.Context, target KarMsgTarget, method string, callback KarCallbackInfo, msg KarMsgBody) error {
 	select { // make sure we have joined
@@ -153,6 +161,10 @@ func send(ctx context.Context, target KarMsgTarget, method string, callback KarC
 	}
 	return pubsub.SendBytes(ctx, partition, m)
 }
+
+////
+// lowlevel request support in callee
+////
 
 // Process processes one incoming message
 func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
@@ -213,6 +225,10 @@ func forwardToSidecar(ctx context.Context, target KarMsgTarget, method string, m
 	}
 	return err
 }
+
+////
+// lowlevel reponse support in caller
+////
 
 func respond(ctx context.Context, callback KarCallbackInfo, reply *Reply) error {
 	response := map[string]string{
