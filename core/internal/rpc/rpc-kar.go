@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
@@ -15,6 +16,8 @@ import (
 var (
 	// pending requests: map request uuid (string) to channel (chan Reply)
 	requests = sync.Map{}
+
+	handler KarHandler
 )
 
 // Staging types to allow migration to new RPC library
@@ -25,6 +28,8 @@ type KarMsgTarget struct {
 	Node      string
 	Partition int32
 }
+
+type KarHandler func(context.Context, KarMsgTarget, KarMsgBody) (*Reply, error)
 
 type KarCallbackInfo struct {
 	SendingNode string
@@ -46,6 +51,10 @@ type Reply struct {
 	StatusCode  int
 	ContentType string
 	Payload     string
+}
+
+func RegisterKAR(h KarHandler) {
+	handler = h
 }
 
 // TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
@@ -150,4 +159,80 @@ func send(ctx context.Context, target KarMsgTarget, callback KarCallbackInfo, ms
 		return err
 	}
 	return pubsub.SendBytes(ctx, partition, m)
+}
+
+// Process processes one incoming message
+func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
+	var msg KarMsg
+	var reply *Reply = nil
+	err := json.Unmarshal(message.Value, &msg)
+	if err != nil {
+		logger.Error("failed to unmarshal message: %v", err)
+		message.Mark()
+		return
+	}
+	/*
+		 * TODO: restore this functionality
+		         Need to cancel calls that originated from dead sidecars
+		if !pubsub.IsLiveSidecar(msg.Msg["from"]) {
+			logger.Info("Cancelling %s from dead sidecar %s", msg.Msg["method"], msg.Msg["from"])
+			return nil, nil
+		}
+	*/
+
+	// Forwarding
+	forwarded := false
+	switch msg.Target.Protocol {
+	case "service":
+		if msg.Target.Name != config.ServiceName {
+			forwarded = true
+			err = TellKAR(ctx, msg.Target, msg.Body)
+		}
+	case "sidecar":
+		if msg.Target.Node != GetNodeID() {
+			forwarded = true
+			err = forwardToSidecar(ctx, msg.Target, msg.Body)
+		}
+	}
+
+	// If not forwarded elsewhere, actually dispatch up to the handler
+	if !forwarded {
+		reply, err = handler(ctx, msg.Target, msg.Body)
+	}
+
+	if reply != nil {
+		err = respond(ctx, msg.Callback, reply)
+	}
+
+	if err == nil {
+		message.Mark()
+	}
+}
+
+func forwardToSidecar(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
+	err := TellKAR(ctx, target, msg)
+	if err == pubsub.ErrUnknownSidecar {
+		logger.Debug("dropping message to dead sidecar %s: %v", target.Node, err)
+		return nil
+	}
+	return err
+}
+
+func respond(ctx context.Context, callback KarCallbackInfo, reply *Reply) error {
+	response := map[string]string{
+		"command":      "callback",
+		"request":      callback.Request,
+		"statusCode":   strconv.Itoa(reply.StatusCode),
+		"content-type": reply.ContentType,
+		"payload":      reply.Payload}
+
+	err := TellKAR(ctx,
+		KarMsgTarget{Protocol: "sidecar", Node: callback.SendingNode},
+		KarMsgBody{Msg: response})
+
+	if err == pubsub.ErrUnknownSidecar {
+		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
+		return nil
+	}
+	return err
 }

@@ -39,6 +39,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/julienschmidt/httprouter"
@@ -127,7 +128,7 @@ func process(m pubsub.Message) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		Process(ctx, cancel, m)
+		rpc.Process(ctx, cancel, m)
 	}()
 }
 
