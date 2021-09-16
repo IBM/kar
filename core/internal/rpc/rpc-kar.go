@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"sync"
 
 	"github.com/IBM/kar/core/internal/config"
@@ -228,18 +227,18 @@ func forwardToSidecar(ctx context.Context, target KarMsgTarget, method string, v
 // lowlevel reponse support in caller
 ////
 
-func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error {
-	response := map[string]string{
-		"request":      callback.Request,
-		"statusCode":   strconv.Itoa(reply.StatusCode),
-		"content-type": reply.ContentType,
-		"payload":      reply.Payload}
+type callResponse struct {
+	Request string
+	Value   Reply
+}
 
-		value, err := json.Marshal(response)
-		if err != nil {
-			logger.Error("respond: failed to serialize response: %v", err)
-			return err
-		}
+func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error {
+	response := callResponse{Request: callback.Request, Value: *reply}
+	value, err := json.Marshal(response)
+	if err != nil {
+		logger.Error("respond: failed to serialize response: %v", err)
+		return err
+	}
 
 	err = TellKAR(ctx,
 		KarMsgTarget{Protocol: "sidecar", Node: callback.SendingNode},
@@ -254,22 +253,21 @@ func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error 
 }
 
 func responseHandler(ctx context.Context, target KarMsgTarget, value []byte) (*Reply, error) {
-	var msg map[string]string
-	err := json.Unmarshal(value, &msg)
+	var response callResponse
+	err := json.Unmarshal(value, &response)
 	if err != nil {
 		logger.Error("responseHandler: failed to unmarshal response: %v", err)
 		return nil, err
 	}
 
-	if ch, ok := requests.Load(msg["request"]); ok {
-		statusCode, _ := strconv.Atoi(msg["statusCode"])
+	if ch, ok := requests.Load(response.Request); ok {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case ch.(chan *Reply) <- &Reply{StatusCode: statusCode, ContentType: msg["content-type"], Payload: msg["payload"]}:
+		case ch.(chan *Reply) <- &response.Value:
 		}
 	} else {
-		logger.Error("unexpected request in callback %s", msg["request"])
+		logger.Error("unexpected request in callback %s", response.Request)
 	}
 	return nil, nil
 }
