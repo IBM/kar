@@ -296,26 +296,6 @@ func getActorInformation(ctx context.Context, target rpc.KarMsgTarget, msg rpc.K
 	return reply, nil
 }
 
-func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	switch msg.Msg["command"] {
-	case "call":
-		return call(ctx, target, msg)
-	case "binding:del":
-		return bindingDel(ctx, target, msg)
-	case "binding:get":
-		return bindingGet(ctx, target, msg)
-	case "binding:set":
-		return bindingSet(ctx, target, msg)
-	case "binding:tell":
-		return nil, bindingTell(ctx, target, msg)
-	case "tell":
-		return nil, tell(ctx, target, msg)
-	default:
-		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
-	}
-	return nil, nil
-}
-
 func handlerService(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
 	if target.Protocol != "service" {
 		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
@@ -351,9 +331,11 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 	if target.Protocol != "actor" {
 		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
 	}
+
 	var reply *rpc.Reply = nil
 	var err error = nil
 
+	// Determine session to use when acquiring actor instance lock
 	actor := Actor{Type: target.Name, ID: target.ID}
 	session := msg.Msg["session"]
 	if session == "" {
@@ -365,67 +347,101 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 			session = uuid.New().String() // start new session
 		}
 	}
+
+	// Acquire the actor instance lock
 	var e *actorEntry
 	var fresh bool
 	e, fresh, err = actor.acquire(ctx, session)
-	if err == errActorHasMoved {
-		err = rpc.TellKAR(ctx, target, actorEndpoint, msg) // forward
-	} else if err == errActorAcquireTimeout {
-		payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
-		logger.Error("%s", payload)
-		if msg.Msg["command"] == "call" {
+	if err != nil {
+		if err == errActorHasMoved {
+			// TODO: This code path should not possible with the new rpc library.
+			err = rpc.TellKAR(ctx, target, actorEndpoint, msg) // forward
+			return nil, nil
+		} else if err == errActorAcquireTimeout {
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
+			logger.Error("%s", payload)
 			reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
-			err = nil
+			return reply, nil
 		} else {
-			err = nil
-		}
-	} else if err == nil {
-		if session == "reminder" { // do not activate actor
-			reply, err = dispatch(ctx, cancel, target, msg)
-			e.release(session, false)
-			return reply, err
-		}
-
-		if msg.Msg["command"] == "delete" {
-			// delete SDK-level in-memory state
-			if !fresh {
-				deactivate(ctx, actor)
-			}
-			// delete persistent actor state
-			if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
-				logger.Error("deleting persistent state of %v failed with %v", actor, err)
-			}
-			// clear placement data and sidecar's in-memory state
-			err = e.migrate("")
-			if err != nil {
-				logger.Error("deleting placement date for %v failed with %v", actor, err)
-			}
-			return reply, err
-		}
-
-		if fresh {
-			reply, err = activate(ctx, actor)
-		}
-		if reply != nil { // activate returned an error, report or log error, do not retry
-			if msg.Msg["command"] == "call" {
-				logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
-				err = nil
-			} else {
-				logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
-				err = nil // not to be retried
-			}
-			e.release(session, false)
-		} else if err != nil { // failed to invoke activate
-			e.release(session, false)
-		} else { // invoke actor method
-			msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
-			msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
-			msg.Msg["content-type"] = "application/kar+json"
-			msg.Msg["method"] = "POST"
-			reply, err = dispatch(ctx, cancel, target, msg)
-			e.release(session, true)
+			// An error or cancelation that caused us to fail to acquire the lock.
+			return nil, err
 		}
 	}
+
+	// We now have the lock on the actor instance.
+	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
+
+	if session == "reminder" { // do not activate actor
+		switch msg.Msg["command"] {
+		case "binding:del":
+			reply, err = bindingDel(ctx, target, msg)
+		case "binding:get":
+			reply, err = bindingGet(ctx, target, msg)
+		case "binding:set":
+			reply, err = bindingSet(ctx, target, msg)
+		case "binding:tell":
+			reply = nil
+			err = bindingTell(ctx, target, msg)
+		default:
+			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+			reply = nil
+			err = nil
+		}
+		e.release(session, false)
+		return reply, err
+	}
+
+	if msg.Msg["command"] == "delete" {
+		// delete SDK-level in-memory state
+		if !fresh {
+			deactivate(ctx, actor)
+		}
+		// delete persistent actor state
+		if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
+			logger.Error("deleting persistent state of %v failed with %v", actor, err)
+		}
+		// clear placement data and sidecar's in-memory state
+		err = e.migrate("")
+		if err != nil {
+			logger.Error("deleting placement date for %v failed with %v", actor, err)
+		}
+		return reply, err
+	}
+
+	if fresh {
+		reply, err = activate(ctx, actor)
+	}
+	if reply != nil { // activate returned an error, report or log error, do not retry
+		if msg.Msg["command"] == "call" {
+			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+			err = nil
+		} else {
+			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+			err = nil // not to be retried
+		}
+		e.release(session, false)
+	} else if err != nil { // failed to invoke activate
+		e.release(session, false)
+	} else { // invoke actor method
+		msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
+		msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
+		msg.Msg["content-type"] = "application/kar+json"
+		msg.Msg["method"] = "POST"
+
+		if msg.Msg["command"] == "call" {
+			reply, err = call(ctx, target, msg)
+		} else if msg.Msg["command"] == "tell" {
+			reply = nil
+			err = tell(ctx, target, msg)
+		} else {
+			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+			reply = nil
+			err = nil
+		}
+
+		e.release(session, true)
+	}
+
 	return reply, err
 }
 
