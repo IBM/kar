@@ -36,11 +36,18 @@ import (
 
 const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
-	requestMethod = "request"
+
+	actorEndpoint     = "handlerActor"
+	serviceEndpoint   = "handlerService"
+	sidecarEndpoint   = "handlerSidecar"
+	partitionEndpoint = "handlerPartition"
 )
 
 func init() {
-	rpc.RegisterKAR(requestMethod, handler)
+	rpc.RegisterKAR(actorEndpoint, handlerActor)
+	rpc.RegisterKAR(serviceEndpoint, handlerService)
+	rpc.RegisterKAR(sidecarEndpoint, handlerSidecar)
+	rpc.RegisterKAR(partitionEndpoint, handlerPartition)
 }
 
 ////////////////////
@@ -57,7 +64,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"payload": payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
-		requestMethod,
+		serviceEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -71,7 +78,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"payload": payload}
 	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service},
-		requestMethod,
+		serviceEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -84,7 +91,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 		"payload": payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -96,7 +103,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		"payload": payload}
 	return rpc.CallPromiseKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -112,7 +119,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"payload":      payload}
 	return rpc.CallKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -127,7 +134,7 @@ func TellService(ctx context.Context, service rpc.Service, path, payload, header
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "service", Name: service.Name},
-		requestMethod,
+		serviceEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -140,7 +147,7 @@ func TellActor(ctx context.Context, actor rpc.Session, path, payload string) err
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -150,7 +157,7 @@ func DeleteActor(ctx context.Context, actor rpc.Session) error {
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
 
@@ -162,15 +169,13 @@ func TellBinding(ctx context.Context, kind string, actor rpc.Session, partition 
 
 	return rpc.TellKAR(ctx,
 		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Name, ID: actor.ID, Partition: partition},
-		requestMethod,
+		actorEndpoint,
 		rpc.KarMsgBody{Msg: msg})
 }
-
 
 ////////////////////
 // Callee (receiving) side of RPCs
 ////////////////////
-
 
 func call(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
 	reply, err := invoke(ctx, msg.Msg["method"], msg.Msg, msg.Msg["metricLabel"])
@@ -317,90 +322,105 @@ func dispatch(ctx context.Context, cancel context.CancelFunc, target rpc.KarMsgT
 	return nil, nil
 }
 
-func handler(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+func handlerService(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+	if target.Protocol != "service" {
+		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
+	}
+	msg.Msg["metricLabel"] = target.Name + ":" + msg.Msg["path"]
+	return dispatch(ctx, cancel, target, msg)
+}
+
+func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+	if target.Protocol != "sidecar" {
+		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
+	}
+	return dispatch(ctx, cancel, target, msg)
+}
+
+func handlerPartition(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+	if target.Protocol != "partition" {
+		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
+	}
+	return dispatch(ctx, cancel, target, msg)
+}
+
+func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+	if target.Protocol != "actor" {
+		logger.Fatal("PROTOCOL MISMATCH: %v %v", target, msg)
+	}
 	var reply *rpc.Reply = nil
 	var err error = nil
 
-	switch target.Protocol {
-	case "service":
-		msg.Msg["metricLabel"] = target.Name + ":" + msg.Msg["path"]
-		reply, err = dispatch(ctx, cancel, target, msg)
-	case "sidecar":
-		reply, err = dispatch(ctx, cancel, target, msg)
-	case "partition":
-		reply, err = dispatch(ctx, cancel, target, msg)
-	case "actor":
-		actor := Actor{Type: target.Name, ID: target.ID}
-		session := msg.Msg["session"]
-		if session == "" {
-			if strings.HasPrefix(msg.Msg["command"], "binding:") {
-				session = "reminder"
-			} else if msg.Msg["command"] == "delete" {
-				session = "exclusive"
-			} else {
-				session = uuid.New().String() // start new session
-			}
+	actor := Actor{Type: target.Name, ID: target.ID}
+	session := msg.Msg["session"]
+	if session == "" {
+		if strings.HasPrefix(msg.Msg["command"], "binding:") {
+			session = "reminder"
+		} else if msg.Msg["command"] == "delete" {
+			session = "exclusive"
+		} else {
+			session = uuid.New().String() // start new session
 		}
-		var e *actorEntry
-		var fresh bool
-		e, fresh, err = actor.acquire(ctx, session)
-		if err == errActorHasMoved {
-			err = rpc.TellKAR(ctx, target, requestMethod, msg) // forward
-		} else if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
-			logger.Error("%s", payload)
+	}
+	var e *actorEntry
+	var fresh bool
+	e, fresh, err = actor.acquire(ctx, session)
+	if err == errActorHasMoved {
+		err = rpc.TellKAR(ctx, target, actorEndpoint, msg) // forward
+	} else if err == errActorAcquireTimeout {
+		payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
+		logger.Error("%s", payload)
+		if msg.Msg["command"] == "call" {
+			reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
+			err = nil
+		} else {
+			err = nil
+		}
+	} else if err == nil {
+		if session == "reminder" { // do not activate actor
+			reply, err = dispatch(ctx, cancel, target, msg)
+			e.release(session, false)
+			return reply, err
+		}
+
+		if msg.Msg["command"] == "delete" {
+			// delete SDK-level in-memory state
+			if !fresh {
+				deactivate(ctx, actor)
+			}
+			// delete persistent actor state
+			if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
+				logger.Error("deleting persistent state of %v failed with %v", actor, err)
+			}
+			// clear placement data and sidecar's in-memory state
+			err = e.migrate("")
+			if err != nil {
+				logger.Error("deleting placement date for %v failed with %v", actor, err)
+			}
+			return reply, err
+		}
+
+		if fresh {
+			reply, err = activate(ctx, actor)
+		}
+		if reply != nil { // activate returned an error, report or log error, do not retry
 			if msg.Msg["command"] == "call" {
-				reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
+				logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
 				err = nil
 			} else {
-				err = nil
+				logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+				err = nil // not to be retried
 			}
-		} else if err == nil {
-			if session == "reminder" { // do not activate actor
-				reply, err = dispatch(ctx, cancel, target, msg)
-				e.release(session, false)
-				break
-			}
-
-			if msg.Msg["command"] == "delete" {
-				// delete SDK-level in-memory state
-				if !fresh {
-					deactivate(ctx, actor)
-				}
-				// delete persistent actor state
-				if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
-					logger.Error("deleting persistent state of %v failed with %v", actor, err)
-				}
-				// clear placement data and sidecar's in-memory state
-				err = e.migrate("")
-				if err != nil {
-					logger.Error("deleting placement date for %v failed with %v", actor, err)
-				}
-				break
-			}
-
-			if fresh {
-				reply, err = activate(ctx, actor)
-			}
-			if reply != nil { // activate returned an error, report or log error, do not retry
-				if msg.Msg["command"] == "call" {
-					logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
-					err = nil
-				} else {
-					logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
-					err = nil // not to be retried
-				}
-				e.release(session, false)
-			} else if err != nil { // failed to invoke activate
-				e.release(session, false)
-			} else { // invoke actor method
-				msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
-				msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
-				msg.Msg["content-type"] = "application/kar+json"
-				msg.Msg["method"] = "POST"
-				reply, err = dispatch(ctx, cancel, target, msg)
-				e.release(session, true)
-			}
+			e.release(session, false)
+		} else if err != nil { // failed to invoke activate
+			e.release(session, false)
+		} else { // invoke actor method
+			msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
+			msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
+			msg.Msg["content-type"] = "application/kar+json"
+			msg.Msg["method"] = "POST"
+			reply, err = dispatch(ctx, cancel, target, msg)
+			e.release(session, true)
 		}
 	}
 	return reply, err
