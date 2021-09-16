@@ -93,8 +93,8 @@ func CallPromiseKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (s
 	return request, nil
 }
 
-// AwaitPromise awaits the response to an actor or service call
-func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
+// AwaitPromiseKAR awaits the response to an actor or service call
+func AwaitPromiseKAR(ctx context.Context, request string) (*Reply, error) {
 	if ch, ok := requests.Load(request); ok {
 		defer requests.Delete(request)
 		select {
@@ -105,21 +105,6 @@ func AwaitPromise(ctx context.Context, request string) (*Reply, error) {
 		}
 	}
 	return nil, fmt.Errorf("unexpected request %s", request)
-}
-
-// TEMP: This should not be exposed; temporary until i push handler registration down here.
-func Callback(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
-	if ch, ok := requests.Load(msg.Msg["request"]); ok {
-		statusCode, _ := strconv.Atoi(msg.Msg["statusCode"])
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case ch.(chan *Reply) <- &Reply{StatusCode: statusCode, ContentType: msg.Msg["content-type"], Payload: msg.Msg["payload"]}:
-		}
-	} else {
-		logger.Error("unexpected request in callback %s", msg.Msg["request"])
-	}
-	return nil
 }
 
 // send sends message to receiver
@@ -159,6 +144,22 @@ func send(ctx context.Context, target KarMsgTarget, callback KarCallbackInfo, ms
 		return err
 	}
 	return pubsub.SendBytes(ctx, partition, m)
+}
+
+// TEMP: This should not be exposed; temporary until i push handler registration down here.
+// This is the handler in the caller node that gets the response to a Call
+func Callback(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
+	if ch, ok := requests.Load(msg.Msg["request"]); ok {
+		statusCode, _ := strconv.Atoi(msg.Msg["statusCode"])
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ch.(chan *Reply) <- &Reply{StatusCode: statusCode, ContentType: msg.Msg["content-type"], Payload: msg.Msg["payload"]}:
+		}
+	} else {
+		logger.Error("unexpected request in callback %s", msg.Msg["request"])
+	}
+	return nil
 }
 
 // Process processes one incoming message

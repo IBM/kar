@@ -105,7 +105,7 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := rpc.AwaitPromise(ctx, ReadAll(r))
+	reply, err := rpc.AwaitPromiseKAR(ctx, ReadAll(r))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
