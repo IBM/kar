@@ -60,10 +60,12 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "service", Name: service},
-		serviceEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	} else {
+		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+	}
 }
 
 // CallPromiseService calls a service and returns a request id
@@ -74,10 +76,12 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-	return rpc.CallPromiseKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "service", Name: service},
-		serviceEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return "", err
+	} else {
+		return rpc.CallPromiseKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+	}
 }
 
 // CallActor calls an actor and waits for a reply
@@ -87,10 +91,12 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 		"path":    path,
 		"session": session,
 		"payload": payload}
-	return rpc.CallKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	} else {
+		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	}
 }
 
 // CallPromiseActor calls an actor and returns a request id
@@ -99,10 +105,12 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		"command": "call",
 		"path":    path,
 		"payload": payload}
-	return rpc.CallPromiseKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return "", err
+	} else {
+		return rpc.CallPromiseKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	}
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
@@ -115,10 +123,12 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"content-type": contentType,
 		"accept":       accept,
 		"payload":      payload}
-	return rpc.CallKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, err
+	} else {
+		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	}
 }
 
 // TellService sends a message to a service and does not wait for a reply
@@ -129,11 +139,12 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 		"header":  header,
 		"method":  method,
 		"payload": payload}
-
-	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "service", Name: service},
-		serviceEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	} else {
+		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+	}
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
@@ -142,21 +153,23 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 		"command": "tell", // post with no callback expected
 		"path":    path,
 		"payload": payload}
-
-	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	} else {
+		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	}
 }
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
 func DeleteActor(ctx context.Context, actor Actor) error {
 	msg := map[string]string{"command": "delete"}
-
-	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	} else {
+		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	}
 }
 
 func TellBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
@@ -164,11 +177,12 @@ func TellBinding(ctx context.Context, kind string, actor Actor, partition int32,
 		"command":   "binding:tell",
 		"kind":      kind,
 		"bindingId": bindingID}
-
-	return rpc.TellKAR(ctx,
-		rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID, Partition: partition},
-		actorEndpoint,
-		rpc.KarMsgBody{Msg: msg})
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	} else {
+		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID, Partition: partition}, actorEndpoint, bytes)
+	}
 }
 
 ////////////////////
@@ -293,40 +307,58 @@ func getActorInformation(ctx context.Context, msg map[string]string) (*rpc.Reply
 	return reply, nil
 }
 
-func handlerService(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	msg.Msg["metricLabel"] = target.Name + ":" + msg.Msg["path"]
+func handlerService(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
+	var msg map[string]string
+	err := json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, err
+	}
 
-	switch msg.Msg["command"] {
+	msg["metricLabel"] = target.Name + ":" + msg["path"]
+
+	switch msg["command"] {
 	case "call":
-		return call(ctx, msg.Msg)
+		return call(ctx, msg)
 	case "tell":
-		return nil, tell(ctx, msg.Msg)
+		return nil, tell(ctx, msg)
 	default:
-		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil
 	}
 }
 
-func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
-	if msg.Msg["command"] == "getActiveActors" {
-		return getActorInformation(ctx, msg.Msg)
+func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
+	var msg map[string]string
+	err := json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, err
+	}
+
+	if msg["command"] == "getActiveActors" {
+		return getActorInformation(ctx, msg)
 	} else {
-		logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil
 	}
 }
 
-func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBody) (*rpc.Reply, error) {
+func handlerActor(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
 	var reply *rpc.Reply = nil
 	var err error = nil
+	var msg map[string]string
+
+	err = json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, err
+	}
 
 	// Determine session to use when acquiring actor instance lock
 	actor := Actor{Type: target.Name, ID: target.ID}
-	session := msg.Msg["session"]
+	session := msg["session"]
 	if session == "" {
-		if strings.HasPrefix(msg.Msg["command"], "binding:") {
+		if strings.HasPrefix(msg["command"], "binding:") {
 			session = "reminder"
-		} else if msg.Msg["command"] == "delete" {
+		} else if msg["command"] == "delete" {
 			session = "exclusive"
 		} else {
 			session = uuid.New().String() // start new session
@@ -339,11 +371,11 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 	e, fresh, err = actor.acquire(ctx, session)
 	if err != nil {
 		if err == errActorHasMoved {
-			// TODO: This code path should not possible with the new rpc library.
-			err = rpc.TellKAR(ctx, target, actorEndpoint, msg) // forward
+			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
+			err = rpc.TellKAR(ctx, target, actorEndpoint, value) // forward
 			return nil, nil
 		} else if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg.Msg["command"], msg.Msg["path"], session)
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
 			logger.Error("%s", payload)
 			reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
 			return reply, nil
@@ -357,18 +389,18 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
 
 	if session == "reminder" { // do not activate actor
-		switch msg.Msg["command"] {
+		switch msg["command"] {
 		case "binding:del":
-			reply, err = bindingDel(ctx, actor, msg.Msg)
+			reply, err = bindingDel(ctx, actor, msg)
 		case "binding:get":
-			reply, err = bindingGet(ctx, actor, msg.Msg)
+			reply, err = bindingGet(ctx, actor, msg)
 		case "binding:set":
-			reply, err = bindingSet(ctx, actor, msg.Msg)
+			reply, err = bindingSet(ctx, actor, msg)
 		case "binding:tell":
 			reply = nil
-			err = bindingTell(ctx, target, msg.Msg)
+			err = bindingTell(ctx, target, msg)
 		default:
-			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
 			err = nil
 		}
@@ -376,7 +408,7 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 		return reply, err
 	}
 
-	if msg.Msg["command"] == "delete" {
+	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
 		if !fresh {
 			deactivate(ctx, actor)
@@ -397,29 +429,29 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, msg rpc.KarMsgBo
 		reply, err = activate(ctx, actor)
 	}
 	if reply != nil { // activate returned an error, report or log error, do not retry
-		if msg.Msg["command"] == "call" {
-			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+		if msg["command"] == "call" {
+			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg["path"])
 			err = nil
 		} else {
-			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg.Msg["path"])
+			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg["path"])
 			err = nil // not to be retried
 		}
 		e.release(session, false)
 	} else if err != nil { // failed to invoke activate
 		e.release(session, false)
 	} else { // invoke actor method
-		msg.Msg["metricLabel"] = actor.Type + ":" + msg.Msg["path"]
-		msg.Msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg.Msg["path"]
-		msg.Msg["content-type"] = "application/kar+json"
-		msg.Msg["method"] = "POST"
+		msg["metricLabel"] = actor.Type + ":" + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+		msg["content-type"] = "application/kar+json"
+		msg["method"] = "POST"
 
-		if msg.Msg["command"] == "call" {
-			reply, err = call(ctx, msg.Msg)
-		} else if msg.Msg["command"] == "tell" {
+		if msg["command"] == "call" {
+			reply, err = call(ctx, msg)
+		} else if msg["command"] == "tell" {
 			reply = nil
-			err = tell(ctx, msg.Msg)
+			err = tell(ctx, msg)
 		} else {
-			logger.Error("unexpected command %s", msg.Msg["command"]) // dropping message
+			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
 			err = nil
 		}
