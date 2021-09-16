@@ -26,15 +26,19 @@ type KarMsgTarget struct {
 	Partition int32
 }
 
+type KarCallbackInfo struct {
+	SendingNode string
+	Request     string
+}
+
 type KarMsgBody struct {
 	Msg map[string]string
 }
 
 type KarMsg struct {
-	Target      KarMsgTarget
-	SendingNode string
-	Request     string
-	Body        KarMsgBody
+	Target   KarMsgTarget
+	Callback KarCallbackInfo
+	Body     KarMsgBody
 }
 
 // Reply represents the return value of a call
@@ -46,7 +50,7 @@ type Reply struct {
 
 // TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
 func TellKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
-	return send(ctx, target, msg)
+	return send(ctx, target, KarCallbackInfo{}, msg)
 }
 
 // CallKAR makes a call via pubsub to a sidecar and waits for a reply
@@ -55,9 +59,7 @@ func CallKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (*Reply, 
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	msg.Msg["from"] = GetNodeID() // this sidecar
-	msg.Msg["request"] = request
-	err := send(ctx, target, msg)
+	err := send(ctx, target, KarCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +77,7 @@ func CallPromiseKAR(ctx context.Context, target KarMsgTarget, msg KarMsgBody) (s
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
-	msg.Msg["from"] = GetNodeID() // this sidecar
-	msg.Msg["request"] = request
-	err := send(ctx, target, msg)
+	err := send(ctx, target, KarCallbackInfo{SendingNode: getNodeID(), Request: request}, msg)
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +114,7 @@ func Callback(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
 }
 
 // send sends message to receiver
-func send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
+func send(ctx context.Context, target KarMsgTarget, callback KarCallbackInfo, msg KarMsgBody) error {
 	select { // make sure we have joined
 	case <-pubsub.Joined:
 	case <-ctx.Done():
@@ -144,7 +144,7 @@ func send(ctx context.Context, target KarMsgTarget, msg KarMsgBody) error {
 	case "partition": // route to partition
 		partition = target.Partition
 	}
-	m, err := json.Marshal(KarMsg{Target: target, Body: msg})
+	m, err := json.Marshal(KarMsg{Target: target, Callback: callback, Body: msg})
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
