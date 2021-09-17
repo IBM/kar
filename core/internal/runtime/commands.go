@@ -172,16 +172,18 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	}
 }
 
-func TellBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
+// LoadBindings sends a binding:load message to the target actor
+func LoadBindings(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
-		"command":   "binding:tell",
+		"command":   "binding:load",
 		"kind":      kind,
+		"partition": strconv.Itoa(int(partition)),
 		"bindingId": bindingID}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID, Partition: partition}, actorEndpoint, bytes)
+		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -246,9 +248,8 @@ func bindingSet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.R
 	return reply, nil
 }
 
-func bindingTell(ctx context.Context, target rpc.KarMsgTarget, msg map[string]string) error {
-	actor := Actor{Type: target.Name, ID: target.ID}
-	err := loadBinding(ctx, msg["kind"], actor, target.Node, msg["bindingId"])
+func bindingLoad(ctx context.Context, actor Actor, msg map[string]string) error {
+	err := loadBinding(ctx, msg["kind"], actor, msg["partition"], msg["bindingId"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Error("load binding failed: %v", err)
@@ -396,9 +397,9 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*
 			reply, err = bindingGet(ctx, actor, msg)
 		case "binding:set":
 			reply, err = bindingSet(ctx, actor, msg)
-		case "binding:tell":
+		case "binding:load":
 			reply = nil
-			err = bindingTell(ctx, target, msg)
+			err = bindingLoad(ctx, actor, msg)
 		default:
 			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
