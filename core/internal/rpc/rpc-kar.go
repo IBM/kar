@@ -29,14 +29,7 @@ import (
 )
 
 // Staging types to allow migration to new RPC library
-type KarMsgTarget struct {
-	Protocol string
-	Name     string
-	ID       string
-	Node     string
-}
-
-type KarHandler func(context.Context, KarMsgTarget, []byte) (*Reply, error)
+type KarHandler func(context.Context, Target, []byte) (*Reply, error)
 
 ////////
 // Staging code...these methods are meant to be directly replacable by their corresponding RPC versions once the APIs converge
@@ -47,12 +40,12 @@ func RegisterKAR(method string, handler KarHandler) {
 }
 
 // TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
-func TellKAR(ctx context.Context, target KarMsgTarget, method string, value []byte) error {
+func TellKAR(ctx context.Context, target Target, method string, value []byte) error {
 	return send(ctx, target, method, karCallbackInfo{}, value)
 }
 
 // CallKAR makes a call via pubsub to a sidecar and waits for a reply
-func CallKAR(ctx context.Context, target KarMsgTarget, method string, value []byte) (*Reply, error) {
+func CallKAR(ctx context.Context, target Target, method string, value []byte) (*Reply, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)
@@ -70,7 +63,7 @@ func CallKAR(ctx context.Context, target KarMsgTarget, method string, value []by
 }
 
 // CallPromiseKAR makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
-func CallPromiseKAR(ctx context.Context, target KarMsgTarget, method string, value []byte) (string, error) {
+func CallPromiseKAR(ctx context.Context, target Target, method string, value []byte) (string, error) {
 	request := uuid.New().String()
 	ch := make(chan *Reply)
 	requests.Store(request, ch)

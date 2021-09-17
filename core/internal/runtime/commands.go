@@ -64,7 +64,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+		return rpc.CallKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 	}
 }
 
@@ -80,7 +80,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 	if err != nil {
 		return "", err
 	} else {
-		return rpc.CallPromiseKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+		return rpc.CallPromiseKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 	}
 }
 
@@ -95,7 +95,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -109,7 +109,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 	if err != nil {
 		return "", err
 	} else {
-		return rpc.CallPromiseKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.CallPromiseKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -127,7 +127,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -143,7 +143,7 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "service", Name: service}, serviceEndpoint, bytes)
+		return rpc.TellKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 	}
 }
 
@@ -157,7 +157,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -168,12 +168,12 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
-// LoadBindings sends a binding:load message to the target actor
-func LoadBindings(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
+// LoadBinding sends a binding:load message to the target actor
+func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
 		"command":   "binding:load",
 		"kind":      kind,
@@ -183,7 +183,7 @@ func LoadBindings(ctx context.Context, kind string, actor Actor, partition int32
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.KarMsgTarget{Protocol: "actor", Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -308,14 +308,18 @@ func getActorInformation(ctx context.Context, msg map[string]string) (*rpc.Reply
 	return reply, nil
 }
 
-func handlerService(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
+func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+	targetAsService, ok := target.(rpc.Service)
+	if !ok {
+		return nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
+	}
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
 		return nil, err
 	}
 
-	msg["metricLabel"] = target.Name + ":" + msg["path"]
+	msg["metricLabel"] = targetAsService.Name + ":" + msg["path"]
 
 	switch msg["command"] {
 	case "call":
@@ -328,7 +332,11 @@ func handlerService(ctx context.Context, target rpc.KarMsgTarget, value []byte) 
 	}
 }
 
-func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
+func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+	_, ok := target.(rpc.Node)
+	if !ok {
+		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
+	}
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
@@ -343,7 +351,12 @@ func handlerSidecar(ctx context.Context, target rpc.KarMsgTarget, value []byte) 
 	}
 }
 
-func handlerActor(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*rpc.Reply, error) {
+func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+	targetAsSession, ok := target.(rpc.Session)
+	if !ok {
+		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
+	}
+	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
 	var reply *rpc.Reply = nil
 	var err error = nil
 	var msg map[string]string
@@ -354,7 +367,6 @@ func handlerActor(ctx context.Context, target rpc.KarMsgTarget, value []byte) (*
 	}
 
 	// Determine session to use when acquiring actor instance lock
-	actor := Actor{Type: target.Name, ID: target.ID}
 	session := msg["session"]
 	if session == "" {
 		if strings.HasPrefix(msg["command"], "binding:") {

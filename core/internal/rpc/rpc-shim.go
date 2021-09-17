@@ -47,13 +47,24 @@ type Reply struct {
 	Payload     string
 }
 
+func (s Service) target() {}
+func (s Session) target() {}
+func (s Node) target()    {}
+
 type karCallbackInfo struct {
 	SendingNode string
 	Request     string
 }
 
+type karTarget struct {
+	Type string
+	Name string
+	ID   string
+}
+
 type karMsg struct {
-	Target   KarMsgTarget
+	Target   karTarget
+	Sidecar  string
 	Callback karCallbackInfo
 	Method   string
 	Body     []byte
@@ -135,35 +146,41 @@ func getPartitions() ([]int32, <-chan struct{}) {
 ////
 
 // send sends message to receiver
-func send(ctx context.Context, target KarMsgTarget, method string, callback karCallbackInfo, value []byte) error {
+func send(ctx context.Context, target Target, method string, callback karCallbackInfo, value []byte) error {
 	select { // make sure we have joined
 	case <-pubsub.Joined:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+	var kt karTarget
 	var partition int32
+	var sidecar string
 	var err error
-	switch target.Protocol {
-	case "service": // route to service
-		partition, target.Node, err = pubsub.RouteToService(ctx, target.Name)
+	switch t := target.(type) {
+	case Service: // route to service
+		partition, sidecar, err = pubsub.RouteToService(ctx, t.Name)
+		kt = karTarget{Type: "service", Name: t.Name}
 		if err != nil {
-			logger.Error("failed to route to service %s: %v", target.Name, err)
+			logger.Error("failed to route to service %s: %v", t.Name, err)
 			return err
 		}
-	case "actor": // route to actor
-		partition, target.Node, err = pubsub.RouteToActor(ctx, target.Name, target.ID)
+	case Session: // route to actor
+		partition, sidecar, err = pubsub.RouteToActor(ctx, t.Name, t.ID)
+		kt = karTarget{Type: "session", Name: t.Name, ID: t.ID}
 		if err != nil {
-			logger.Error("failed to route to actor type %s, id %s: %v", target.Name, target.ID, err)
+			logger.Error("failed to route to actor type %s, id %s: %v", t.Name, t.ID, err)
 			return err
 		}
-	case "sidecar": // route to sidecar
-		partition, err = pubsub.RouteToSidecar(target.Node)
+	case Node: // route to sidecar
+		partition, err = pubsub.RouteToSidecar(t.ID)
+		sidecar = t.ID
+		kt = karTarget{Type: "node", ID: t.ID}
 		if err != nil {
-			logger.Error("failed to route to sidecar %s: %v", target.Node, err)
+			logger.Error("failed to route to sidecar %s: %v", t.ID, err)
 			return err
 		}
 	}
-	m, err := json.Marshal(karMsg{Target: target, Method: method, Callback: callback, Body: value})
+	m, err := json.Marshal(karMsg{Target: kt, Sidecar: sidecar, Method: method, Callback: callback, Body: value})
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
@@ -185,6 +202,18 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		message.Mark()
 		return
 	}
+	var target Target
+	if msg.Target.Type == "service" {
+		target = Service{Name: msg.Target.Name}
+	} else if msg.Target.Type == "session" {
+		target = Session{Name: msg.Target.Name, ID: msg.Target.ID}
+	} else if msg.Target.Type == "node" {
+		target = Node{ID: msg.Target.ID}
+	} else {
+		logger.Error("unknown message target type %v", msg.Target.Type)
+		message.Mark()
+		return
+	}
 	/*
 		 * TODO: restore this functionality
 		         Need to cancel calls (but not tells) that originated from dead sidecars
@@ -196,23 +225,27 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 	// Forwarding
 	forwarded := false
-	switch msg.Target.Protocol {
-	case "service":
-		if msg.Target.Name != config.ServiceName {
+	switch t := target.(type) {
+	case Service:
+		if t.Name != config.ServiceName {
 			forwarded = true
-			err = TellKAR(ctx, msg.Target, msg.Method, msg.Body)
+			err = TellKAR(ctx, target, msg.Method, msg.Body)
 		}
-	case "sidecar":
-		if msg.Target.Node != GetNodeID() {
+	case Node:
+		if t.ID != GetNodeID() {
 			forwarded = true
-			err = forwardToSidecar(ctx, msg.Target, msg.Method, msg.Body)
+			err := TellKAR(ctx, target, msg.Method, msg.Body)
+			if err == pubsub.ErrUnknownSidecar {
+				logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
+				err = nil
+			}
 		}
 	}
 
 	// If not forwarded elsewhere, actually dispatch up to the handler
 	if !forwarded {
 		if handler, ok := handlers[msg.Method]; ok {
-			reply, err = handler(ctx, msg.Target, msg.Body)
+			reply, err = handler(ctx, target, msg.Body)
 			if reply != nil {
 				err = respond(ctx, msg.Callback, reply)
 			}
@@ -224,15 +257,6 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	if err == nil {
 		message.Mark()
 	}
-}
-
-func forwardToSidecar(ctx context.Context, target KarMsgTarget, method string, value []byte) error {
-	err := TellKAR(ctx, target, method, value)
-	if err == pubsub.ErrUnknownSidecar {
-		logger.Debug("dropping message to dead sidecar %s: %v", target.Node, err)
-		return nil
-	}
-	return err
 }
 
 ////
@@ -252,7 +276,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error 
 		return err
 	}
 
-	err = TellKAR(ctx, KarMsgTarget{Protocol: "sidecar", Node: callback.SendingNode}, responseMethod, value)
+	err = TellKAR(ctx, Node{ID: callback.SendingNode}, responseMethod, value)
 
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
@@ -261,7 +285,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error 
 	return err
 }
 
-func responseHandler(ctx context.Context, target KarMsgTarget, value []byte) (*Reply, error) {
+func responseHandler(ctx context.Context, target Target, value []byte) (*Reply, error) {
 	var response callResponse
 	err := json.Unmarshal(value, &response)
 	if err != nil {
