@@ -230,8 +230,18 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 			if err != nil {
 				logger.Debug("Error marshalling a map[string][string]: %v", err)
 			}
-			actorReply, err := rpc.CallKAR(ctx, rpc.Node{ID: sidecar}, sidecarEndpoint, bytes)
-			if err != nil || actorReply.StatusCode != 200 {
+			bytes, err = rpc.CallKAR(ctx, rpc.Node{ID: sidecar}, sidecarEndpoint, bytes)
+			if err != nil {
+				logger.Debug("Error gathering actor information: %v", err)
+				return nil, err
+			}
+			var actorReply rpc.Reply
+			err = json.Unmarshal(bytes, &actorReply)
+			if err != nil {
+				logger.Debug("Error gathering actor information: %v", err)
+				return nil, err
+			}
+			if actorReply.StatusCode != 200 {
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err
 			}

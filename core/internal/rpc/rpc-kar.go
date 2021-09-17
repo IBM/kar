@@ -45,9 +45,9 @@ func TellKAR(ctx context.Context, target Target, method string, value []byte) er
 }
 
 // CallKAR makes a call via pubsub to a sidecar and waits for a reply
-func CallKAR(ctx context.Context, target Target, method string, value []byte) (*Reply, error) {
+func CallKAR(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
 	request := uuid.New().String()
-	ch := make(chan *Reply)
+	ch := make(chan *[]byte)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
@@ -56,7 +56,11 @@ func CallKAR(ctx context.Context, target Target, method string, value []byte) (*
 	}
 	select {
 	case r := <-ch:
-		return r, nil
+		if r != nil {
+			return *r, nil
+		} else {
+			return []byte{}, nil
+		}
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -65,7 +69,7 @@ func CallKAR(ctx context.Context, target Target, method string, value []byte) (*
 // CallPromiseKAR makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
 func CallPromiseKAR(ctx context.Context, target Target, method string, value []byte) (string, error) {
 	request := uuid.New().String()
-	ch := make(chan *Reply)
+	ch := make(chan *[]byte)
 	requests.Store(request, ch)
 	// defer requests.Delete(request)
 	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
@@ -76,12 +80,16 @@ func CallPromiseKAR(ctx context.Context, target Target, method string, value []b
 }
 
 // AwaitPromiseKAR awaits the response to an actor or service call
-func AwaitPromiseKAR(ctx context.Context, request string) (*Reply, error) {
+func AwaitPromiseKAR(ctx context.Context, request string) ([]byte, error) {
 	if ch, ok := requests.Load(request); ok {
 		defer requests.Delete(request)
 		select {
-		case r := <-ch.(chan *Reply):
-			return r, nil
+		case r := <-ch.(chan *[]byte):
+			if r != nil {
+				return *r, nil
+			} else {
+				return []byte{}, nil
+			}
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}

@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	// pending requests: map request uuid (string) to channel (chan Reply)
+	// pending requests: map request uuid (string) to channel (chan []byte)
 	requests = sync.Map{}
 	handlers = make(map[string]KarHandler)
 )
@@ -292,12 +292,16 @@ func responseHandler(ctx context.Context, target Target, value []byte) (*Reply, 
 		logger.Error("responseHandler: failed to unmarshal response: %v", err)
 		return nil, err
 	}
+	bytes, err := json.Marshal(response.Value)
+	if err != nil {
+		return nil, err
+	}
 
 	if ch, ok := requests.Load(response.Request); ok {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case ch.(chan *Reply) <- &response.Value:
+		case ch.(chan *[]byte) <- &bytes:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", response.Request)

@@ -64,7 +64,13 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
+		bytes, err = rpc.CallKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
+		if err != nil {
+			return nil, err
+		}
+		var reply rpc.Reply
+		err = json.Unmarshal(bytes, &reply)
+		return &reply, err
 	}
 }
 
@@ -95,7 +101,13 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		bytes, err = rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		if err != nil {
+			return nil, err
+		}
+		var reply rpc.Reply
+		err = json.Unmarshal(bytes, &reply)
+		return &reply, err
 	}
 }
 
@@ -127,7 +139,13 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		return rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		bytes, err = rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		if err != nil {
+			return nil, err
+		}
+		var reply rpc.Reply
+		err = json.Unmarshal(bytes, &reply)
+		return &reply, err
 	}
 }
 

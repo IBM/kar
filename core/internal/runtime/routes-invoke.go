@@ -105,7 +105,7 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	reply, err := rpc.AwaitPromiseKAR(ctx, ReadAll(r))
+	bytes, err := rpc.AwaitPromiseKAR(ctx, ReadAll(r))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
@@ -113,9 +113,15 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 			http.Error(w, fmt.Sprintf("failed to await promise: %v", err), http.StatusInternalServerError)
 		}
 	} else {
-		w.Header().Add("Content-Type", reply.ContentType)
-		w.WriteHeader(reply.StatusCode)
-		fmt.Fprint(w, reply.Payload)
+		var reply rpc.Reply
+		err = json.Unmarshal(bytes, &reply)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to unmarsall reply for promise: %v", err), http.StatusInternalServerError)
+		} else {
+			w.Header().Add("Content-Type", reply.ContentType)
+			w.WriteHeader(reply.StatusCode)
+			fmt.Fprint(w, reply.Payload)
+		}
 	}
 }
 
