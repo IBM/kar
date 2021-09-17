@@ -30,11 +30,10 @@ import (
 
 // Staging types to allow migration to new RPC library
 type KarMsgTarget struct {
-	Protocol  string
-	Name      string
-	ID        string
-	Node      string
-	Partition int32
+	Protocol string
+	Name     string
+	ID       string
+	Node     string
 }
 
 type KarHandler func(context.Context, KarMsgTarget, []byte) (*Reply, error)

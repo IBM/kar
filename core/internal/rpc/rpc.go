@@ -39,11 +39,6 @@ type Node struct {
 	ID string
 }
 
-// Partition implements Target
-type Partition struct {
-	ID int32
-}
-
 // Handler for method
 type Handler func(context.Context, Target, []byte) ([]byte, error)
 

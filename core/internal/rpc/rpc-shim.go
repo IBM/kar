@@ -162,8 +162,6 @@ func send(ctx context.Context, target KarMsgTarget, method string, callback karC
 			logger.Error("failed to route to sidecar %s: %v", target.Node, err)
 			return err
 		}
-	case "partition": // route to partition
-		partition = target.Partition
 	}
 	m, err := json.Marshal(karMsg{Target: target, Method: method, Callback: callback, Body: value})
 	if err != nil {
