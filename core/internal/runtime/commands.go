@@ -209,7 +209,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func call(ctx context.Context, msg map[string]string) (*rpc.Reply, error) {
+func call(ctx context.Context, msg map[string]string) ([]byte, error) {
 	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
@@ -217,29 +217,34 @@ func call(ctx context.Context, msg map[string]string) (*rpc.Reply, error) {
 		}
 		return nil, err
 	}
-	return reply, nil
+
+	if reply == nil {
+		return nil, nil
+	} else {
+		return json.Marshal(*reply)
+	}
 }
 
-func bindingDel(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
-	var reply *rpc.Reply
+func bindingDel(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
+	var reply rpc.Reply
 	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
 	if found == 0 && msg["bindingId"] != "" && msg["nilOnAbsent"] != "true" {
-		reply = &rpc.Reply{StatusCode: http.StatusNotFound}
+		reply = rpc.Reply{StatusCode: http.StatusNotFound}
 	} else {
-		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
+		reply = rpc.Reply{StatusCode: http.StatusOK, Payload: strconv.Itoa(found), ContentType: "text/plain"}
 	}
-	return reply, nil
+	return json.Marshal(reply)
 }
 
-func bindingGet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
-	var reply *rpc.Reply
+func bindingGet(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
+	var reply rpc.Reply
 	found := getBindings(msg["kind"], actor, msg["bindingId"])
 	var responseBody interface{} = found
 	if msg["bindingId"] != "" {
 		if len(found) == 0 {
 			if msg["nilOnAbsent"] != "true" {
-				reply = &rpc.Reply{StatusCode: http.StatusNotFound}
-				return reply, nil
+				reply = rpc.Reply{StatusCode: http.StatusNotFound}
+				return json.Marshal(reply)
 			}
 			responseBody = nil
 		} else {
@@ -248,22 +253,22 @@ func bindingGet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.R
 	}
 	blob, err := json.Marshal(responseBody)
 	if err != nil {
-		reply = &rpc.Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
+		reply = rpc.Reply{StatusCode: http.StatusInternalServerError, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
+		reply = rpc.Reply{StatusCode: http.StatusOK, Payload: string(blob), ContentType: "application/json"}
 	}
-	return reply, nil
+	return json.Marshal(reply)
 }
 
-func bindingSet(ctx context.Context, actor Actor, msg map[string]string) (*rpc.Reply, error) {
-	var reply *rpc.Reply
+func bindingSet(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
+	var reply rpc.Reply
 	code, err := putBinding(ctx, msg["kind"], actor, msg["bindingId"], msg["payload"])
 	if err != nil {
-		reply = &rpc.Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
+		reply = rpc.Reply{StatusCode: code, Payload: err.Error(), ContentType: "text/plain"}
 	} else {
-		reply = &rpc.Reply{StatusCode: code, Payload: "OK", ContentType: "text/plain"}
+		reply = rpc.Reply{StatusCode: code, Payload: "OK", ContentType: "text/plain"}
 	}
-	return reply, nil
+	return json.Marshal(reply)
 }
 
 func bindingLoad(ctx context.Context, actor Actor, msg map[string]string) error {
@@ -313,20 +318,20 @@ func tell(ctx context.Context, msg map[string]string) error {
 }
 
 // Returns information about this sidecar's actors
-func getActorInformation(ctx context.Context, msg map[string]string) (*rpc.Reply, error) {
+func getActorInformation(ctx context.Context, msg map[string]string) ([]byte, error) {
 	actorInfo := getMyActiveActors(msg["actorType"])
 	m, err := json.Marshal(actorInfo)
-	var reply *rpc.Reply
+	var reply rpc.Reply
 	if err != nil {
 		logger.Debug("Error marshaling actor information data: %v", err)
-		reply = &rpc.Reply{StatusCode: http.StatusInternalServerError}
+		reply = rpc.Reply{StatusCode: http.StatusInternalServerError}
 	} else {
-		reply = &rpc.Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
+		reply = rpc.Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
 	}
-	return reply, nil
+	return json.Marshal(reply)
 }
 
-func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+func handlerService(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
 	targetAsService, ok := target.(rpc.Service)
 	if !ok {
 		return nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
@@ -350,7 +355,7 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	}
 }
 
-func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
 	_, ok := target.(rpc.Node)
 	if !ok {
 		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
@@ -369,13 +374,13 @@ func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	}
 }
 
-func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Reply, error) {
+func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
 	targetAsSession, ok := target.(rpc.Session)
 	if !ok {
 		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
 	}
 	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
-	var reply *rpc.Reply = nil
+	var reply []byte = nil
 	var err error = nil
 	var msg map[string]string
 
@@ -408,8 +413,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Re
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
 			logger.Error("%s", payload)
-			reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"}
-			return reply, nil
+			return json.Marshal(rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
 		} else {
 			// An error or cancelation that caused us to fail to acquire the lock.
 			return nil, err
@@ -457,16 +461,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Re
 	}
 
 	if fresh {
-		reply, err = activate(ctx, actor)
+		reply, err = activate(ctx, actor, msg["command"] == "call", msg["path"])
 	}
-	if reply != nil { // activate returned an error, report or log error, do not retry
-		if msg["command"] == "call" {
-			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, msg["path"])
-			err = nil
-		} else {
-			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, msg["path"])
-			err = nil // not to be retried
-		}
+	if reply != nil { // activate returned an application-level error, do not retry
+		err = nil // Disable retry
 		e.release(session, false)
 	} else if err != nil { // failed to invoke activate
 		e.release(session, false)
@@ -496,7 +494,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Re
 // actors
 
 // activate an actor
-func activate(ctx context.Context, actor Actor) (*rpc.Reply, error) {
+func activate(ctx context.Context, actor Actor, isCall bool, causingMethod string) ([]byte, error) {
 	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":activate")
 	if err != nil {
 		if err != ctx.Err() {
@@ -505,7 +503,13 @@ func activate(ctx context.Context, actor Actor) (*rpc.Reply, error) {
 		return nil, err
 	}
 	if reply.StatusCode >= http.StatusBadRequest {
-		return reply, nil
+		if isCall {
+			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, causingMethod)
+		} else {
+			// Log at error level becasue there is no one waiting on the method reponse to notice the failure.
+			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, causingMethod)
+		}
+		return json.Marshal(reply)
 	}
 	logger.Debug("activate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	return nil, nil

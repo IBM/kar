@@ -211,7 +211,6 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 // Process processes one incoming message
 func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
 	var msg karMsg
-	var reply *Reply = nil
 	err := json.Unmarshal(message.Value, &msg)
 	if err != nil {
 		logger.Error("failed to unmarshal message: %v", err)
@@ -261,13 +260,9 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	// If not forwarded elsewhere, actually dispatch up to the handler
 	if !forwarded {
 		if handler, ok := handlers[msg.Method]; ok {
-			reply, err = handler(ctx, target, msg.Body)
-			if reply != nil {
-				bytes, err := json.Marshal(reply)
-				if err != nil {
-					logger.Error("Can't marshall a Reply struct!! ")
-				}
-				err = respond(ctx, msg.Callback, bytes)
+			reply, err := handler(ctx, target, msg.Body)
+			if err == nil && reply != nil {
+				err = respond(ctx, msg.Callback, reply)
 			}
 		} else {
 			logger.Error("Dropping message for unknown handler %v", msg.Method)
@@ -305,7 +300,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 	return err
 }
 
-func responseHandler(ctx context.Context, target Target, value []byte) (*Reply, error) {
+func responseHandler(ctx context.Context, target Target, value []byte) ([]byte, error) {
 	var response callResponse
 	err := json.Unmarshal(value, &response)
 	if err != nil {

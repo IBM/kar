@@ -29,7 +29,7 @@ import (
 )
 
 // Staging types to allow migration to new RPC library
-type KarHandler func(context.Context, Target, []byte) (*Reply, error)
+type KarHandler func(context.Context, Target, []byte) ([]byte, error)
 
 ////////
 // Staging code...these methods are meant to be directly replacable by their corresponding RPC versions once the APIs converge
