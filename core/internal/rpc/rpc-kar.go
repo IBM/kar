@@ -39,33 +39,6 @@ func RegisterKAR(method string, handler KarHandler) {
 	handlers[method] = handler
 }
 
-// TellKAR makes a call via pubsub to a sidecar and returns immediately (result will be discarded)
-func TellKAR(ctx context.Context, target Target, method string, value []byte) error {
-	return send(ctx, target, method, karCallbackInfo{}, value)
-}
-
-// CallKAR makes a call via pubsub to a sidecar and waits for a reply
-func CallKAR(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
-	request := uuid.New().String()
-	ch := make(chan *[]byte)
-	requests.Store(request, ch)
-	defer requests.Delete(request)
-	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
-	if err != nil {
-		return nil, err
-	}
-	select {
-	case r := <-ch:
-		if r != nil {
-			return *r, nil
-		} else {
-			return []byte{}, nil
-		}
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	}
-}
-
 // CallPromiseKAR makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
 func CallPromiseKAR(ctx context.Context, target Target, method string, value []byte) (string, error) {
 	request := uuid.New().String()

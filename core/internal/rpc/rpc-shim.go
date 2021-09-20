@@ -28,6 +28,7 @@ import (
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/google/uuid"
 )
 
 var (
@@ -87,14 +88,29 @@ func connect(ctx context.Context, conf *Config, services ...string) (<-chan stru
 
 // Call method and wait for result
 func call(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil, nil
+	request := uuid.New().String()
+	ch := make(chan *[]byte)
+	requests.Store(request, ch)
+	defer requests.Delete(request)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
+	if err != nil {
+		return nil, err
+	}
+	select {
+	case r := <-ch:
+		if r != nil {
+			return *r, nil
+		} else {
+			return []byte{}, nil
+		}
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // Call method and return immediately (result will be discarded)
 func tell(ctx context.Context, target Target, method string, value []byte) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	return send(ctx, target, method, karCallbackInfo{}, value)
 }
 
 // Call method and return a request id and a result channel
@@ -229,12 +245,12 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	case Service:
 		if t.Name != config.ServiceName {
 			forwarded = true
-			err = TellKAR(ctx, target, msg.Method, msg.Body)
+			err = Tell(ctx, target, msg.Method, msg.Body)
 		}
 	case Node:
 		if t.ID != GetNodeID() {
 			forwarded = true
-			err := TellKAR(ctx, target, msg.Method, msg.Body)
+			err := Tell(ctx, target, msg.Method, msg.Body)
 			if err == pubsub.ErrUnknownSidecar {
 				logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
 				err = nil
@@ -247,7 +263,11 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if handler, ok := handlers[msg.Method]; ok {
 			reply, err = handler(ctx, target, msg.Body)
 			if reply != nil {
-				err = respond(ctx, msg.Callback, reply)
+				bytes, err := json.Marshal(reply)
+				if err != nil {
+					logger.Error("Can't marshall a Reply struct!! ")
+				}
+				err = respond(ctx, msg.Callback, bytes)
 			}
 		} else {
 			logger.Error("Dropping message for unknown handler %v", msg.Method)
@@ -265,18 +285,18 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 
 type callResponse struct {
 	Request string
-	Value   Reply
+	Value   []byte
 }
 
-func respond(ctx context.Context, callback karCallbackInfo, reply *Reply) error {
-	response := callResponse{Request: callback.Request, Value: *reply}
+func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error {
+	response := callResponse{Request: callback.Request, Value: reply}
 	value, err := json.Marshal(response)
 	if err != nil {
 		logger.Error("respond: failed to serialize response: %v", err)
 		return err
 	}
 
-	err = TellKAR(ctx, Node{ID: callback.SendingNode}, responseMethod, value)
+	err = Tell(ctx, Node{ID: callback.SendingNode}, responseMethod, value)
 
 	if err == pubsub.ErrUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
@@ -292,16 +312,12 @@ func responseHandler(ctx context.Context, target Target, value []byte) (*Reply, 
 		logger.Error("responseHandler: failed to unmarshal response: %v", err)
 		return nil, err
 	}
-	bytes, err := json.Marshal(response.Value)
-	if err != nil {
-		return nil, err
-	}
 
 	if ch, ok := requests.Load(response.Request); ok {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case ch.(chan *[]byte) <- &bytes:
+		case ch.(chan *[]byte) <- &response.Value:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", response.Request)

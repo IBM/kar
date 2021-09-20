@@ -230,7 +230,7 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 			if err != nil {
 				logger.Debug("Error marshalling a map[string][string]: %v", err)
 			}
-			bytes, err = rpc.CallKAR(ctx, rpc.Node{ID: sidecar}, sidecarEndpoint, bytes)
+			bytes, err = rpc.Call(ctx, rpc.Node{ID: sidecar}, sidecarEndpoint, bytes)
 			if err != nil {
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err

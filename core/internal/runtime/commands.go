@@ -64,7 +64,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.CallKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
+		bytes, err = rpc.Call(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +139,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.CallKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
+		return rpc.Tell(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 	}
 }
 
@@ -175,7 +175,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -186,7 +186,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -201,7 +201,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.TellKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
 }
 
@@ -403,7 +403,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Re
 	if err != nil {
 		if err == errActorHasMoved {
 			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
-			err = rpc.TellKAR(ctx, target, actorEndpoint, value) // forward
+			err = rpc.Tell(ctx, target, actorEndpoint, value) // forward
 			return nil, nil
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
