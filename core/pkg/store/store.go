@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"strconv"
 	"time"
@@ -81,7 +82,11 @@ type StoreConfig struct {
 func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
 	conn, err := pool.GetContext(ctx)
+	if err == context.Canceled {
+		return nil, err
+	}
 	if err != nil {
+		cancelled := false
 		b := backoff.NewExponentialBackOff()
 		if sc.RequestRetryLimit >= 0 {
 			b.MaxElapsedTime = sc.RequestRetryLimit
@@ -89,20 +94,28 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 		err = backoff.Retry(func() error {
 			conn.Close()
 			conn, err = pool.GetContext(ctx)
-			return err
+			if err == context.Canceled {
+				cancelled = true
+				return nil
+			} else {
+				return err
+			}
 		}, b)
+		if cancelled {
+			return nil, context.Canceled
+		}
 	}
 	defer conn.Close()
 	start := time.Now()
 	reply, err = conn.Do(command, args...)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to send command %v to redis: %v", command, err))
+	}
 	last := time.Now()
 	elapsed := last.Sub(opStart)
 	connElapsed := last.Sub(start)
 	if elapsed > sc.LongOperation {
 		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
-	}
-	if err != nil {
-		logger.Fatal("Failed to send command %v to redis: %v", command, err)
 	}
 	return
 }
