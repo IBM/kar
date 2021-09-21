@@ -136,18 +136,16 @@ func getPartition() int32 {
 }
 
 func getSessionNodeID(ctx context.Context, session Session) (string, error) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return "", nil
+	return pubsub.GetSidecar(ctx, session.Name, session.ID)
 }
 
 func getPartitions() ([]int32, <-chan struct{}) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil, nil
+	return pubsub.Partitions()
 }
 
 func delSession(ctx context.Context, session Session) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	_, err := pubsub.CompareAndSetSidecar(ctx, session.Name, session.ID, getNodeID(), "")
+	return err
 }
 
 func createTopic(conf *Config, topic string, parameters string) error {

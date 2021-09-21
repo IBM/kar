@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
@@ -488,7 +487,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 			logger.Error("deleting persistent state of %v failed with %v", actor, err)
 		}
 		// clear placement data and sidecar's in-memory state
-		err = e.migrate("")
+		err = e.delete()
 		if err != nil {
 			logger.Error("deleting placement date for %v failed with %v", actor, err)
 		}
@@ -604,7 +603,7 @@ func ProcessReminders(ctx context.Context) {
 // ManageBindings reloads bindings on rebalance
 func ManageBindings(ctx context.Context) {
 	for {
-		partitions, rebalance := pubsub.Partitions()
+		partitions, rebalance := rpc.GetPartitions()
 		if err := loadBindings(ctx, partitions); err != nil {
 			// TODO: This should trigger a more orderly shutdown of the sidecar.
 			logger.Fatal("Error when loading bindings: %v", err)

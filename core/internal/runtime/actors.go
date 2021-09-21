@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
@@ -128,7 +127,7 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// no fairness issue trying to reacquire because this entry is dead
 			}
 		} else { // new entry
-			sidecar, err := pubsub.GetSidecar(ctx, actor.Type, actor.ID)
+			sidecar, err := rpc.GetSessionNodeID(ctx, rpc.Session{Name: actor.Type, ID: actor.ID})
 			if err != nil {
 				<-e.lock
 				return nil, false, err
@@ -282,15 +281,15 @@ func formatActorInstanceMap(actorInfo map[string][]string, format string) (strin
 	return str.String(), nil
 }
 
-// migrate releases the actor lock and updates the sidecar for the actor
+// delete releases the actor lock and removes the placement for the actor
 // the lock cannot be held multiple times
-func (e *actorEntry) migrate(sidecar string) error {
+func (e *actorEntry) delete() error {
 	e.lock <- struct{}{}
 	e.depth--
 	e.session = ""
 	e.valid = false
 	actorTable.Delete(e.actor)
-	_, err := pubsub.CompareAndSetSidecar(ctx, e.actor.Type, e.actor.ID, rpc.GetNodeID(), sidecar)
+	err := rpc.DelSession(ctx, rpc.Session{Name: e.actor.Type, ID: e.actor.ID})
 	close(e.busy)
 	<-e.lock
 	return err
