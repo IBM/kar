@@ -41,13 +41,6 @@ const (
 	responseMethod = "response"
 )
 
-// Reply represents the return value of a call  TODO: Move back to runtime (commands.go)
-type Reply struct {
-	StatusCode  int
-	ContentType string
-	Payload     string
-}
-
 func (s Service) target() {}
 func (s Session) target() {}
 func (s Node) target()    {}

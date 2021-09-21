@@ -235,7 +235,7 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err
 			}
-			var actorReply rpc.Reply
+			var actorReply Reply
 			err = json.Unmarshal(bytes, &actorReply)
 			if err != nil {
 				logger.Debug("Error gathering actor information: %v", err)

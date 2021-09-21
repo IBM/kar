@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/prometheus/client_golang/prometheus"
@@ -75,7 +74,7 @@ func ReadAll(r *http.Request) string {
 }
 
 // invoke sends an HTTP request to the service and returns the response
-func invoke(ctx context.Context, method string, msg map[string]string, metricLabel string) (*rpc.Reply, error) {
+func invoke(ctx context.Context, method string, msg map[string]string, metricLabel string) (*Reply, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -106,7 +105,7 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 			req.Header.Set("Accept", msg["accept"])
 		}
 	}
-	var reply *rpc.Reply
+	var reply *Reply
 	b := backoff.NewExponentialBackOff()
 	if config.RequestRetryLimit >= 0 {
 		b.MaxElapsedTime = config.RequestRetryLimit
@@ -128,7 +127,7 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 		}
 		if err != nil {
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
-				reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
 			}
 			logger.Warning("failed to invoke %s: %v", msg["path"], err)
@@ -140,7 +139,7 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 		buf, err := ioutil.ReadAll(res.Body) // TODO size limit?
 		if err != nil {
 			if nerr, ok := err.(net.Error); ok && nerr.Timeout() {
-				reply = &rpc.Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
+				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
 			}
 			logger.Warning("failed to invoke %s: %v", msg["path"], err)
@@ -154,7 +153,7 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 			logger.Warning("failed to invoke %s: unexpected content length (%d != %d)", msg["path"], length, len(buf))
 			return errors.New("unexpected content length")
 		}
-		reply = &rpc.Reply{StatusCode: res.StatusCode, Payload: string(buf), ContentType: res.Header.Get("Content-Type")}
+		reply = &Reply{StatusCode: res.StatusCode, Payload: string(buf), ContentType: res.Header.Get("Content-Type")}
 		return nil
 	}, backoff.WithContext(b, ctx))
 	if ctx.Err() != nil {

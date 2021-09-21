@@ -113,7 +113,7 @@ func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter
 			http.Error(w, fmt.Sprintf("failed to await promise: %v", err), http.StatusInternalServerError)
 		}
 	} else {
-		var reply rpc.Reply
+		var reply Reply
 		err = json.Unmarshal(bytes, &reply)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to unmarsall reply for promise: %v", err), http.StatusInternalServerError)
@@ -306,7 +306,7 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 			return
 		}
 	}
-	var reply *rpc.Reply
+	var reply *Reply
 	var err error
 	if ps.ByName("service") != "" {
 		var m []byte
