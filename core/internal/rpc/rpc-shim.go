@@ -82,7 +82,7 @@ func connect(ctx context.Context, conf *Config, services ...string) (<-chan stru
 // Call method and wait for result
 func call(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
 	request := uuid.New().String()
-	ch := make(chan *[]byte)
+	ch := make(chan Result)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
 	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
@@ -91,11 +91,7 @@ func call(ctx context.Context, target Target, method string, value []byte) ([]by
 	}
 	select {
 	case r := <-ch:
-		if r != nil {
-			return *r, nil
-		} else {
-			return []byte{}, nil
-		}
+		return r.Value, r.Err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -108,13 +104,19 @@ func tell(ctx context.Context, target Target, method string, value []byte) error
 
 // Call method and return a request id and a result channel
 func async(ctx context.Context, target Target, method string, value []byte) (string, <-chan Result, error) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return "", nil, nil
+	request := uuid.New().String()
+	ch := make(chan Result)
+	requests.Store(request, ch)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
+	if err != nil {
+		return "", nil, err
+	}
+	return request, ch, nil
 }
 
 // Reclaim resources associated with async request id
 func reclaim(requestID string) {
-	logger.Fatal("Unimplemented rpc-shim function")
+	requests.Delete(requestID)
 }
 
 // getServices returns the sorted list of services currently available
@@ -305,7 +307,7 @@ func responseHandler(ctx context.Context, target Target, value []byte) ([]byte, 
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case ch.(chan *[]byte) <- &response.Value:
+		case ch.(chan Result) <- Result{Value: response.Value, Err: nil}:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", response.Request)

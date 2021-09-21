@@ -29,7 +29,6 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/pubsub"
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
@@ -105,7 +104,7 @@ func callPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 //       default: responseGenericEndpointError
 //
 func routeImplAwaitPromise(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	bytes, err := rpc.AwaitPromiseKAR(ctx, ReadAll(r))
+	bytes, err := AwaitPromise(ctx, ReadAll(r))
 	if err != nil {
 		if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)

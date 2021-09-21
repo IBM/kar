@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
@@ -32,6 +33,11 @@ import (
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/google/uuid"
+)
+
+var (
+	// pending requests: map request uuid (string) to channel (chan rpc.Result)
+	requests = sync.Map{}
 )
 
 const (
@@ -92,9 +98,12 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return "", err
-	} else {
-		return rpc.CallPromiseKAR(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
 	}
+	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service}, serviceEndpoint, bytes)
+	if err == nil {
+		requests.Store(requestID, ch)
+	}
+	return requestID, err
 }
 
 // CallActor calls an actor and waits for a reply
@@ -127,9 +136,28 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return "", err
-	} else {
-		return rpc.CallPromiseKAR(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
 	}
+
+	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, bytes)
+	if err == nil {
+		requests.Store(requestID, ch)
+	}
+	return requestID, err
+}
+
+// AwaitPromise awaits the response to an actor or service call
+func AwaitPromise(ctx context.Context, requestID string) ([]byte, error) {
+	if ch, ok := requests.Load(requestID); ok {
+		defer requests.Delete(requestID)
+		defer rpc.Reclaim(requestID)
+		select {
+		case r := <-ch.(chan rpc.Result):
+			return r.Value, r.Err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return nil, fmt.Errorf("unexpected request %s", requestID)
 }
 
 // Bindings sends a binding command (cancel, get, schedule) to an actor's assigned sidecar and waits for a reply
