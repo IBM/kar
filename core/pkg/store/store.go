@@ -384,3 +384,14 @@ func Dial(conf *StoreConfig) error {
 func Close() error {
 	return pool.Close()
 }
+
+// CAS sets the key to the desired value if the key has the expected value (expected != "") or is absent (expected == "")
+// Returns the final value (original value if unchanged or desired if set)
+func CAS(ctx context.Context, key string, expected string, desired string) (string, error) {
+	script := "local v=redis.call('GET', KEYS[1]); if v==ARGV[1] or v==false and ARGV[1]=='' then redis.call('SET', KEYS[1], ARGV[2]); return ARGV[2] else return v end"
+	value, err := redis.String(doRaw(ctx, "EVAL", script, 1, sc.MangleKey(key), expected, desired))
+	if err == ErrNil {
+		err = nil
+	}
+	return value, err
+}
