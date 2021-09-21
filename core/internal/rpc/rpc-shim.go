@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	// pending requests: map request uuid (string) to channel (chan []byte)
+	// pending requests: map request uuid (string) to channel (chan Result)
 	requests = sync.Map{}
 	handlers = make(map[string]Handler)
 )
@@ -41,9 +41,8 @@ const (
 	responseMethod = "response"
 )
 
-func (s Service) target() {}
-func (s Session) target() {}
-func (s Node) target()    {}
+type publisher struct {
+}
 
 type karCallbackInfo struct {
 	SendingNode string
@@ -68,18 +67,15 @@ func init() {
 	register(responseMethod, responseHandler)
 }
 
-// Register method handler
 func register(method string, handler Handler) {
 	handlers[method] = handler
 }
 
-// Connect to Kafka
 func connect(ctx context.Context, conf *Config, services ...string) (<-chan struct{}, error) {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil
 }
 
-// Call method and wait for result
 func call(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
@@ -97,12 +93,10 @@ func call(ctx context.Context, target Target, method string, value []byte) ([]by
 	}
 }
 
-// Call method and return immediately (result will be discarded)
 func tell(ctx context.Context, target Target, method string, value []byte) error {
 	return send(ctx, target, method, karCallbackInfo{}, value)
 }
 
-// Call method and return a request id and a result channel
 func async(ctx context.Context, target Target, method string, value []byte) (string, <-chan Result, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
@@ -114,43 +108,76 @@ func async(ctx context.Context, target Target, method string, value []byte) (str
 	return request, ch, nil
 }
 
-// Reclaim resources associated with async request id
 func reclaim(requestID string) {
 	requests.Delete(requestID)
 }
 
-// getServices returns the sorted list of services currently available
 func getServices() ([]string, <-chan struct{}) {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil
 }
 
-// GetNodeID returns the node id for the current node
 func getNodeID() string {
 	return config.ID
 }
 
-// GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
 func getNodeIDs() ([]string, <-chan struct{}) {
 	return pubsub.Sidecars(), nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
-// GetServiceNodeIDs returns the sorted list of live node ids for a given service
-func getServiceNodeIDs(service string) []string {
+func getServiceNodeIDs(service string) ([]string, <-chan struct{}) {
 	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	return nil, nil
 }
 
-// GetPartition returns the partition for the current node
 func getPartition() int32 {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return 0
 }
 
-// GetPartitions returns the sorted list of partitions in use
+func getSessionNodeID(ctx context.Context, session Session) (string, error) {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return "", nil
+}
+
 func getPartitions() ([]int32, <-chan struct{}) {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil
+}
+
+func delSession(ctx context.Context, session Session) error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
+}
+
+func createTopic(conf *Config, topic string, parameters string) error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
+}
+
+func deleteTopic(conf *Config, topic string) error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
+}
+
+func newPublisher(conf *Config) (*Publisher, error) {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil, nil
+}
+
+func (p *Publisher) publish(topic string, value []byte) error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
+}
+
+func (p *Publisher) close() error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
+}
+
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func([]byte)) error {
+	logger.Fatal("Unimplemented rpc-shim function")
+	return nil
 }
 
 ////

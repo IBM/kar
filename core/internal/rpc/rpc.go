@@ -2,8 +2,6 @@ package rpc
 
 import (
 	"context"
-
-	"github.com/IBM/kar/core/pkg/store"
 )
 
 // Config specifies the Kafka configuration
@@ -15,7 +13,6 @@ type Config struct {
 	Password      string // Kafka SASL password
 	EnableTLS     bool
 	TLSSkipVerify bool
-	Store         *store.StoreConfig
 }
 
 // Target of an invocation
@@ -38,6 +35,10 @@ type Session struct {
 type Node struct {
 	ID string
 }
+
+func (s Service) target() {}
+func (s Session) target() {}
+func (s Node) target()    {}
 
 // Handler for method
 type Handler func(context.Context, Target, []byte) ([]byte, error)
@@ -94,7 +95,7 @@ func GetNodeIDs() ([]string, <-chan struct{}) {
 }
 
 // GetServiceNodeIDs returns the sorted list of live node ids for a given service
-func GetServiceNodeIDs(service string) []string {
+func GetServiceNodeIDs(service string) ([]string, <-chan struct{}) {
 	return getServiceNodeIDs(service)
 }
 
@@ -106,4 +107,49 @@ func GetPartition() int32 {
 // GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
 func GetPartitions() ([]int32, <-chan struct{}) {
 	return getPartitions()
+}
+
+// GetSession returns the node responsible for the specified session if defined or "" if not
+func GetSessionNodeID(ctx context.Context, session Session) (string, error) {
+	return getSessionNodeID(ctx, session)
+}
+
+// DelSession forgets the node id responsible for the specified session
+func DelSession(ctx context.Context, session Session) error {
+	return delSession(ctx, session)
+}
+
+// CreateTopic attempts to create the specified topic using the given parameters
+func CreateTopic(conf *Config, topic string, parameters string) error {
+	return createTopic(conf, topic, parameters)
+}
+
+// DeleteTopic attempts to delete the specified topic
+func DeleteTopic(conf *Config, topic string) error {
+	return deleteTopic(conf, topic)
+}
+
+// A Publisher makes it possible to publish events to Kafka
+type Publisher struct {
+	publisher publisher
+}
+
+// NewPublisher returns a new event publisher
+func NewPublisher(conf *Config) (*Publisher, error) {
+	return newPublisher(conf)
+}
+
+// Publish publishes a value to a topic
+func (p *Publisher) Publish(topic string, value []byte) error {
+	return p.publish(topic, value)
+}
+
+// Close publisher
+func (p *Publisher) Close() error {
+	return p.close()
+}
+
+// Subscribe to a topic
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func([]byte)) error {
+	return subscribe(ctx, conf, topic, group, oldest, handler)
 }
