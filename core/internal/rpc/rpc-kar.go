@@ -28,16 +28,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// Staging types to allow migration to new RPC library
-type KarHandler func(context.Context, Target, []byte) ([]byte, error)
 
 ////////
 // Staging code...these methods are meant to be directly replacable by their corresponding RPC versions once the APIs converge
 ////////
-
-func RegisterKAR(method string, handler KarHandler) {
-	handlers[method] = handler
-}
 
 // CallPromiseKAR makes a call via pubsub to a sidecar and returns a promise that may later be used to await the reply
 func CallPromiseKAR(ctx context.Context, target Target, method string, value []byte) (string, error) {

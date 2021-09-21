@@ -34,7 +34,7 @@ import (
 var (
 	// pending requests: map request uuid (string) to channel (chan []byte)
 	requests = sync.Map{}
-	handlers = make(map[string]KarHandler)
+	handlers = make(map[string]Handler)
 )
 
 const (
@@ -65,12 +65,12 @@ type karMsg struct {
 }
 
 func init() {
-	RegisterKAR(responseMethod, responseHandler)
+	register(responseMethod, responseHandler)
 }
 
 // Register method handler
 func register(method string, handler Handler) {
-
+	handlers[method] = handler
 }
 
 // Connect to Kafka
@@ -117,6 +117,7 @@ func reclaim(requestID string) {
 	logger.Fatal("Unimplemented rpc-shim function")
 }
 
+// getServices returns the sorted list of services currently available
 func getServices() ([]string, <-chan struct{}) {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil
@@ -129,7 +130,7 @@ func getNodeID() string {
 
 // GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
 func getNodeIDs() ([]string, <-chan struct{}) {
-	return pubsub.Sidecars(), nil
+	return pubsub.Sidecars(), nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
 // GetServiceNodeIDs returns the sorted list of live node ids for a given service
@@ -222,14 +223,13 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		message.Mark()
 		return
 	}
-	/*
-		 * TODO: restore this functionality
-		         Need to cancel calls (but not tells) that originated from dead sidecars
-		if !pubsub.IsLiveSidecar(msg.Msg["from"]) {
-			logger.Info("Cancelling %s from dead sidecar %s", msg.Msg["method"], msg.Msg["from"])
-			return nil, nil
-		}
-	*/
+
+	// Cancellation of Calls from dead nodes
+	if msg.Callback.Request != "" && !pubsub.IsLiveSidecar(msg.Callback.SendingNode) {
+		logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
+		message.Mark()
+		return
+	}
 
 	// Forwarding
 	forwarded := false

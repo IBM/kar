@@ -43,9 +43,9 @@ const (
 )
 
 func init() {
-	rpc.RegisterKAR(actorEndpoint, handlerActor)
-	rpc.RegisterKAR(serviceEndpoint, handlerService)
-	rpc.RegisterKAR(sidecarEndpoint, handlerSidecar)
+	rpc.Register(actorEndpoint, handlerActor)
+	rpc.Register(serviceEndpoint, handlerService)
+	rpc.Register(sidecarEndpoint, handlerSidecar)
 }
 
 // Reply represents the return value of a call  TODO: Move back to runtime (commands.go)
