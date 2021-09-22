@@ -64,6 +64,14 @@ type Reply struct {
 // Caller (sending) side of RPCs
 ////////////////////
 
+func defaultTimeout() time.Time {
+	if config.MissingComponentTimeout > 0 {
+		return time.Now().Add(config.MissingComponentTimeout)
+	} else {
+		return time.Time{}
+	}
+}
+
 // CallService calls a service and waits for a reply
 func CallService(ctx context.Context, service, path, payload, header, method string) (*Reply, error) {
 	msg := map[string]string{
@@ -76,7 +84,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Service{Name: service}, serviceEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +106,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 	if err != nil {
 		return "", err
 	}
-	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service}, serviceEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -116,7 +124,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +145,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -173,7 +181,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +203,7 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Service{Name: service}, serviceEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		return rpc.Tell(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
 	}
 }
 
@@ -209,7 +217,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
 	}
 }
 
@@ -220,7 +228,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Now().Add(config.MissingComponentTimeout), bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
 	}
 }
 

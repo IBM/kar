@@ -41,7 +41,7 @@ var (
 	id = uuid.New().String()
 
 	// routes
-	topic     = "kar" + config.Separator + config.AppName
+	myTopic   string
 	replicas  map[string][]string // map services to sidecars
 	hosts     map[string][]string // map actor types to sidecars
 	routes    map[string][]int32  // map sidecards to partitions
@@ -51,7 +51,7 @@ var (
 	joined    = tick
 	mu        = &sync.RWMutex{}
 
-	manualPartitioner = sarama.NewManualPartitioner(topic)
+	manualPartitioner = sarama.NewManualPartitioner(myTopic)
 
 	errTooFewPartitions = errors.New("too few partitions")
 
@@ -59,7 +59,7 @@ var (
 )
 
 func partitioner(t string) sarama.Partitioner {
-	if t == topic {
+	if t == myTopic {
 		return manualPartitioner
 	}
 	return sarama.NewRandomPartitioner(t)
@@ -144,9 +144,9 @@ func Join_PS(ctx context.Context, f func(Message_PS), port int) (<-chan struct{}
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return nil, err
 	}
-	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+	err = admin.CreateTopic(myTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 	if err != nil {
-		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
+		err = admin.CreateTopic(myTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 	}
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
@@ -154,7 +154,7 @@ func Join_PS(ctx context.Context, f func(Message_PS), port int) (<-chan struct{}
 			return nil, err
 		}
 	}
-	ch, _, err := Subscribe_PS(ctx, topic, topic, &Options_PS{master: true, OffsetOldest: true}, f)
+	ch, _, err := Subscribe_PS(ctx, myTopic, myTopic, &Options_PS{master: true, OffsetOldest: true}, f)
 	return ch, err
 }
 
@@ -270,7 +270,7 @@ func Purge_PS() error {
 	if err != nil {
 		return err
 	}
-	err = admin.DeleteTopic(topic)
+	err = admin.DeleteTopic(myTopic)
 	if err != sarama.ErrUnknownTopicOrPartition {
 		return err
 	}

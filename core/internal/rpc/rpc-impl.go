@@ -73,7 +73,7 @@ func call(ctx context.Context, target Target, method string, deadline time.Time,
 	ch := make(chan Result)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +86,14 @@ func call(ctx context.Context, target Target, method string, deadline time.Time,
 }
 
 func tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
-	return send(ctx, target, method, karCallbackInfo{}, value)
+	return send(ctx, target, method, karCallbackInfo{}, deadline, value)
 }
 
 func async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
 	requests.Store(request, ch)
-	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, value)
+	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
 	if err != nil {
 		return "", nil, err
 	}
@@ -109,7 +109,7 @@ func reclaim(requestID string) {
 ////
 
 // send sends message to receiver
-func send(ctx context.Context, target Target, method string, callback karCallbackInfo, value []byte) error {
+func send(ctx context.Context, target Target, method string, callback karCallbackInfo, deadline time.Time, value []byte) error {
 	select { // make sure we have joined
 	case <-joined:
 	case <-ctx.Done():
@@ -121,14 +121,14 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 	var err error
 	switch t := target.(type) {
 	case Service: // route to service
-		partition, sidecar, err = routeToService(ctx, t.Name)
+		partition, sidecar, err = routeToService(ctx, t.Name, deadline)
 		kt = karTarget{Type: "service", Name: t.Name}
 		if err != nil {
 			logger.Error("failed to route to service %s: %v", t.Name, err)
 			return err
 		}
 	case Session: // route to actor
-		partition, sidecar, err = routeToActor(ctx, t.Name, t.ID)
+		partition, sidecar, err = routeToActor(ctx, t.Name, t.ID, deadline)
 		kt = karTarget{Type: "session", Name: t.Name, ID: t.ID}
 		if err != nil {
 			logger.Error("failed to route to actor type %s, id %s: %v", t.Name, t.ID, err)

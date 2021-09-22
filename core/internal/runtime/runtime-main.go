@@ -203,23 +203,24 @@ func Main() {
 		defer rpc.Close_PS()
 	}
 
+	var closed <-chan struct{} = nil
+	if requiresPubSub {
+		topic := "kar" + config.Separator + config.AppName
+		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
+		rpc.Connect(ctx, topic, nil, myServices...)
+		// one goroutine, defer close(closed)
+		closed, err = rpc.Join_PS(ctx, process, listener.Addr().(*net.TCPAddr).Port)
+		if err != nil {
+			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
+		}
+	}
+
 	if config.CmdName == config.PurgeCmd {
 		purge("*")
 		return
 	} else if config.CmdName == config.DrainCmd {
 		purge("pubsub" + config.Separator + "*")
 		return
-	}
-
-	var closed <-chan struct{} = nil
-	if requiresPubSub {
-		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
-		rpc.Connect(ctx, "", nil, myServices...)
-		// one goroutine, defer close(closed)
-		closed, err = rpc.Join_PS(ctx, process, listener.Addr().(*net.TCPAddr).Port)
-		if err != nil {
-			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
-		}
 	}
 
 	args := flag.Args()

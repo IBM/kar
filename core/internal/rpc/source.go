@@ -224,7 +224,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	}
 
 	if h.options.master {
-		if err := client.RefreshMetadata(topic); err != nil { // refresh producer
+		if err := client.RefreshMetadata(myTopic); err != nil { // refresh producer
 			logger.Error("failed to refresh topic: %v", err)
 			return err
 		}
@@ -359,7 +359,7 @@ type customStrategy struct{}
 func (s *customStrategy) Name() string { return "custom" }
 
 func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
-	partitions := topics[topic]
+	partitions := topics[myTopic]
 
 	entries := []entry{}
 	for memberID, m := range members {
@@ -384,7 +384,7 @@ func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetad
 		pos := float64(i)
 		min := int(math.Floor(pos*step + 0.5))
 		max := int(math.Floor((pos+1)*step + 0.5))
-		plan.Add(e.memberID, topic, partitions[min:max]...)
+		plan.Add(e.memberID, myTopic, partitions[min:max]...)
 	}
 	return plan, nil
 }

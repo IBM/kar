@@ -18,25 +18,15 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 	"time"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 )
 
-// ErrRouteToActorTimeout_PS indicates a timeout while waiting for a viable route to an Actor type.
-var ErrRouteToActorTimeout_PS = errors.New("timeout occurred while looking for actor type")
-
-// ErrRouteToServiceTimeout_PS indicates a timeout while waiting for a viable route to a Service endpoint.
-var ErrRouteToServiceTimeout_PS = errors.New("timeout occurred while looking for service instance")
-
-// use debug logger for errors returned to caller
-
-// routeToService maps a service to a partition (keep trying) -- only public so rpc can call it
-func routeToService(ctx context.Context, service string) (partition int32, sidecar string, err error) {
+// routeToService maps a service to a partition (keep trying)
+func routeToService(ctx context.Context, service string, deadline time.Time) (partition int32, sidecar string, err error) {
 	for {
 		mu.RLock()
 		sidecars := replicas[service]
@@ -51,14 +41,14 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 		mu.RUnlock()
 		logger.Info("no sidecar for service %s, waiting for new session", service)
 
-		if config.MissingComponentTimeout > 0 {
+		if !deadline.IsZero() {
+			ctx2, cancel2 := context.WithDeadline(ctx, deadline)
 			select {
 			case <-ch:
-			case <-ctx.Done():
-				err = ctx.Err()
-				return
-			case <-time.After(config.MissingComponentTimeout):
-				err = ErrRouteToServiceTimeout_PS
+				cancel2()
+			case <-ctx2.Done():
+				err = ctx2.Err()
+				cancel2()
 				return
 			}
 		} else {
@@ -86,7 +76,7 @@ func routeToSidecar(sidecar string) (int32, error) {
 
 // routeToActor maps an actor to a stable sidecar to a random partition (keep trying)
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
+func routeToActor(ctx context.Context, t, id string, deadline time.Time) (partition int32, sidecar string, err error) {
 	for { // keep trying
 		sidecar, err = getSidecar(ctx, t, id) // retrieve already assigned sidecar if any
 		if err != nil {
@@ -112,14 +102,14 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			ch := tick
 			mu.RUnlock()
 			logger.Info("no sidecar for actor type %s, waiting for new session", t)
-			if config.MissingComponentTimeout > 0 {
+			if !deadline.IsZero() {
+				ctx2, cancel2 := context.WithDeadline(ctx, deadline)
 				select {
 				case <-ch:
-				case <-ctx.Done():
-					err = ctx.Err()
-					return
-				case <-time.After(config.MissingComponentTimeout):
-					err = ErrRouteToActorTimeout_PS
+					cancel2()
+				case <-ctx2.Done():
+					err = ctx2.Err()
+					cancel2()
 					return
 				}
 			} else {
@@ -142,7 +132,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 
 func sendBytes(ctx context.Context, partition int32, m []byte) error {
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
-		Topic:     topic,
+		Topic:     myTopic,
 		Partition: partition,
 		Value:     sarama.ByteEncoder(m),
 	})

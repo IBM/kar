@@ -22,13 +22,13 @@ package runtime
  */
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/textproto"
 	"strings"
 
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
@@ -319,12 +319,10 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), session)
 	}
 	if err != nil {
-		if err == ctx.Err() {
+		if err == context.DeadlineExceeded {
+			http.Error(w, fmt.Sprintf("timeout waiting for %v to be defined", ps.ByName("type")), http.StatusRequestTimeout)
+		} else if err == ctx.Err() {
 			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-		} else if err == rpc.ErrRouteToActorTimeout_PS {
-			http.Error(w, fmt.Sprintf("timeout waiting for Actor type %v to be defined", ps.ByName("type")), http.StatusRequestTimeout)
-		} else if err == rpc.ErrRouteToServiceTimeout_PS {
-			http.Error(w, fmt.Sprintf("timeout waiting for Service %v to be defined", ps.ByName("type")), http.StatusRequestTimeout)
 		} else {
 			http.Error(w, fmt.Sprintf("failed to send message: %v", err), http.StatusInternalServerError)
 		}
