@@ -32,7 +32,7 @@ import (
 
 // store key for topic, partition
 func mangle(topic string, partition int32) string {
-	return "pubsub" + config.Separator + topic + config.Separator + strconv.Itoa(int(partition))
+	return "pubsub" + separator + topic + separator + strconv.Itoa(int(partition))
 }
 
 // data exchanged when setting up consumer group session for application topic
@@ -72,8 +72,8 @@ type handler struct {
 	conf       *sarama.Config // kafka config
 	karContext context.Context
 	topic      string                       // subscribed topic
-	options    *Options_PS                     // options
-	f          func(Message_PS)                // Message handler
+	options    *Options_PS                  // options
+	f          func(Message_PS)             // Message handler
 	ready      chan struct{}                // channel closed when ready to accept events
 	local      map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
 	lock       sync.Mutex                   // mutex to protect local map
@@ -114,8 +114,8 @@ func (h *handler) marshal() {
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
 			Address: address,
 			Sidecar: id,
-			Service: config.ServiceName,
-			Actors:  config.ActorTypes,
+			Service: myServices[0],
+			Actors:  myServices[1:],
 			Offsets: h.local,
 		})
 	} else {

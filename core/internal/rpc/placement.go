@@ -20,16 +20,18 @@ import (
 	"context"
 	"strings"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/store"
 )
 
+// separator character for store keys and topic names
+const separator = "_" // must not be a legal DNS name character; replicated from config to avoid circular dependency
+
 func placementKeyPrefix(t string) string {
-	return "pubsub" + config.Separator + "placement" + config.Separator + t
+	return "pubsub" + separator + "placement" + separator + t
 }
 
 func placementKey(t, id string) string {
-	return "pubsub" + config.Separator + "placement" + config.Separator + t + config.Separator + id
+	return "pubsub" + separator + "placement" + separator + t + separator + id
 }
 
 // getSidecar returns the current sidecar for the given actor type and id or "" if none.
@@ -65,7 +67,7 @@ func GetAllActorInstances_PS(ctx context.Context, actorTypePrefix string) (map[s
 		return nil, err
 	}
 	for _, key := range reply {
-		splitKeys := strings.Split(key, config.Separator)
+		splitKeys := strings.Split(key, separator)
 		actorType := splitKeys[2]
 		instanceID := splitKeys[3]
 		if m[actorType] == nil {
