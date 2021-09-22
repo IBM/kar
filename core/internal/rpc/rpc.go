@@ -6,11 +6,10 @@ import (
 
 // Config specifies the Kafka configuration
 type Config struct {
-	Topic         string // Kafka application topic
-	Version       string // Kafka version
-	Brokers       string // comma-separated list of Kafka brokers
-	User          string // Kafka SASL user
-	Password      string // Kafka SASL password
+	Version       string   // Kafka version
+	Brokers       []string // list of Kafka brokers
+	User          string   // Kafka SASL user
+	Password      string   // Kafka SASL password
 	EnableTLS     bool
 	TLSSkipVerify bool
 }

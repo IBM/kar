@@ -15,7 +15,7 @@
 //
 
 ////////////////////////////////////////////////////
-// pubsub ("legacy") based implementation of rpc library API
+// pubsub-based ("legacy") based implementation of rpc library API
 ////////////////////////////////////////////////////
 
 package rpc
@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
@@ -35,6 +34,8 @@ var (
 	// pending requests: map request uuid (string) to channel (chan Result)
 	requests = sync.Map{}
 	handlers = make(map[string]Handler)
+
+	myServices = []string{}
 )
 
 const (
@@ -72,7 +73,9 @@ func register(method string, handler Handler) {
 }
 
 func connect(ctx context.Context, conf *Config, services ...string) (<-chan struct{}, error) {
-	logger.Fatal("Unimplemented rpc-shim function")
+	myServices = append(myServices, services...)
+
+	// TODO: Actually implement the interesting part of this...
 	return nil, nil
 }
 
@@ -113,12 +116,11 @@ func reclaim(requestID string) {
 }
 
 func getServices() ([]string, <-chan struct{}) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil, nil
+	return myServices, nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
 func getNodeID() string {
-	return config.ID
+	return pubsub.ID
 }
 
 func getNodeIDs() ([]string, <-chan struct{}) {
@@ -262,7 +264,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	forwarded := false
 	switch t := target.(type) {
 	case Service:
-		if t.Name != config.ServiceName {
+		if !servedByMe(t.Name) {
 			forwarded = true
 			err = Tell(ctx, target, msg.Method, msg.Body)
 		}
@@ -292,6 +294,15 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	if err == nil {
 		message.Mark()
 	}
+}
+
+func servedByMe(name string) bool {
+	for _, s := range myServices {
+		if s == name {
+			return true
+		}
+	}
+	return false
 }
 
 ////

@@ -113,7 +113,7 @@ func (h *handler) marshal() {
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
 			Address: address,
-			Sidecar: config.ID,
+			Sidecar: ID,
 			Service: config.ServiceName,
 			Actors:  config.ActorTypes,
 			Offsets: h.local,

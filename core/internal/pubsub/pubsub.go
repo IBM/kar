@@ -31,11 +31,15 @@ import (
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
+	"github.com/google/uuid"
 )
 
 var (
 	client   sarama.Client       // shared client
 	producer sarama.SyncProducer // shared idempotent producer
+
+	// ID is the unique id of this sidecar instance
+	ID = uuid.New().String()
 
 	// routes
 	topic     = "kar" + config.Separator + config.AppName
@@ -129,7 +133,7 @@ func newConfig() (*sarama.Config, error) {
 func Partitions() ([]int32, <-chan struct{}) {
 	mu.RLock()
 	t := tick
-	r := routes[config.ID]
+	r := routes[ID]
 	mu.RUnlock()
 	return r, t
 }
@@ -256,10 +260,10 @@ func GetSidecars(format string) (string, error) {
 // GetSidecarID --
 func GetSidecarID(format string) (string, error) {
 	if format == "json" || format == "application/json" {
-		return fmt.Sprintf("{\"id\":\"%s\"}", config.ID), nil
+		return fmt.Sprintf("{\"id\":\"%s\"}", ID), nil
 	}
 
-	return config.ID + "\n", nil
+	return ID + "\n", nil
 }
 
 // Purge deletes the application topic

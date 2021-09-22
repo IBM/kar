@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/google/uuid"
 )
 
 // Separator character for store keys and topic names
@@ -130,9 +129,6 @@ var (
 
 	// Redis certificate
 	RedisCA *x509.Certificate
-
-	// ID is the unique id of this sidecar instance
-	ID = uuid.New().String()
 
 	// H2C enables h2c to communicate with the app service
 	H2C bool
