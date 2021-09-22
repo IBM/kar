@@ -165,7 +165,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		group = s.ID
 	}
 
-	f := func(msg rpc.Message) {
+	f := func(msg rpc.Message_PS) {
 		arg := string(msg.Value)
 		if !jsonType { // encode event payload as json string
 			buf, err := json.Marshal(string(msg.Value))
@@ -183,5 +183,5 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		}
 	}
 
-	return rpc.Subscribe_PS(ctx, s.Topic, group, &rpc.Options{OffsetOldest: s.OffsetOldest}, f)
+	return rpc.Subscribe_PS(ctx, s.Topic, group, &rpc.Options_PS{OffsetOldest: s.OffsetOldest}, f)
 }

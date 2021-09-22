@@ -185,7 +185,7 @@ func routeImplSubscription(w http.ResponseWriter, r *http.Request, ps httprouter
 //
 func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buf, _ := ioutil.ReadAll(r.Body)
-	code, err := rpc.Publish(ps.ByName("topic"), buf)
+	code, err := rpc.Publish_PS(ps.ByName("topic"), buf)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("publish error: %v", err), code)
 	} else {

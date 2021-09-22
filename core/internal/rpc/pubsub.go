@@ -37,8 +37,8 @@ var (
 	client   sarama.Client       // shared client
 	producer sarama.SyncProducer // shared idempotent producer
 
-	// ID is the unique id of this sidecar instance
-	ID = uuid.New().String()
+	// id is the unique id of this sidecar instance
+	id = uuid.New().String()
 
 	// routes
 	topic     = "kar" + config.Separator + config.AppName
@@ -48,15 +48,14 @@ var (
 	address   string              // host:port of sidecar http server (for peer-to-peer connections)
 	addresses map[string]string   // map sidecards to addresses
 	tick      = make(chan struct{})
-	Joined    = tick // TODO: should not be public; kludge to support rpc package
+	joined    = tick
 	mu        = &sync.RWMutex{}
 
 	manualPartitioner = sarama.NewManualPartitioner(topic)
 
 	errTooFewPartitions = errors.New("too few partitions")
 
-	// ErrUnknownSidecar error
-	ErrUnknownSidecar = errors.New("unknown sidecar")
+	errUnknownSidecar = errors.New("unknown sidecar")
 )
 
 func partitioner(t string) sarama.Partitioner {
@@ -66,8 +65,8 @@ func partitioner(t string) sarama.Partitioner {
 	return sarama.NewRandomPartitioner(t)
 }
 
-// Dial connects Kafka producer
-func Dial() error {
+// Dial_PS connects Kafka producer
+func Dial_PS() error {
 	conf, err := newConfig()
 	if err != nil {
 		return err
@@ -94,8 +93,8 @@ func Dial() error {
 	return nil
 }
 
-// Close closes Kafka producer
-func Close() {
+// Close_PS closes Kafka producer
+func Close_PS() {
 	producer.Close()
 	client.Close()
 }
@@ -128,17 +127,17 @@ func newConfig() (*sarama.Config, error) {
 	return conf, nil
 }
 
-// Partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
-func Partitions() ([]int32, <-chan struct{}) {
+// partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
+func partitions() ([]int32, <-chan struct{}) {
 	mu.RLock()
 	t := tick
-	r := routes[ID]
+	r := routes[id]
 	mu.RUnlock()
 	return r, t
 }
 
-// Join joins the sidecar to the application and returns a channel of incoming messages
-func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, error) {
+// Join_PS joins the sidecar to the application and returns a channel of incoming messages
+func Join_PS(ctx context.Context, f func(Message_PS), port int) (<-chan struct{}, error) {
 	address = net.JoinHostPort(config.Hostname, strconv.Itoa(port))
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
@@ -155,7 +154,7 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 			return nil, err
 		}
 	}
-	ch, _, err := Subscribe_PS(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+	ch, _, err := Subscribe_PS(ctx, topic, topic, &Options_PS{master: true, OffsetOldest: true}, f)
 	return ch, err
 }
 
@@ -215,8 +214,8 @@ type sidecarData struct {
 	Services   []string `json:"services"`
 }
 
-// GetSidecars --
-func GetSidecars(format string) (string, error) {
+// GetSidecars_PS --
+func GetSidecars_PS(format string) (string, error) {
 	information := make(map[string]*sidecarData)
 
 	mu.RLock()
@@ -256,17 +255,17 @@ func GetSidecars(format string) (string, error) {
 	return str.String(), nil
 }
 
-// GetSidecarID --
-func GetSidecarID(format string) (string, error) {
+// GetSidecarID_PS --
+func GetSidecarID_PS(format string) (string, error) {
 	if format == "json" || format == "application/json" {
-		return fmt.Sprintf("{\"id\":\"%s\"}", ID), nil
+		return fmt.Sprintf("{\"id\":\"%s\"}", id), nil
 	}
 
-	return ID + "\n", nil
+	return id + "\n", nil
 }
 
-// Purge deletes the application topic
-func Purge() error {
+// Purge_PS deletes the application topic
+func Purge_PS() error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		return err
@@ -278,8 +277,8 @@ func Purge() error {
 	return nil
 }
 
-// IsLiveSidecar return true if the argument sidecar is currently part of the application mesh
-func IsLiveSidecar(sidecar string) bool {
+// isLiveSidecar return true if the argument sidecar is currently part of the application mesh
+func isLiveSidecar(sidecar string) bool {
 	_, ok := addresses[sidecar]
 	return ok
 }

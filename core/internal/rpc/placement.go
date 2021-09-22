@@ -32,8 +32,8 @@ func placementKey(t, id string) string {
 	return "pubsub" + config.Separator + "placement" + config.Separator + t + config.Separator + id
 }
 
-// GetSidecar returns the current sidecar for the given actor type and id or "" if none.
-func GetSidecar(ctx context.Context, t, id string) (string, error) {
+// getSidecar returns the current sidecar for the given actor type and id or "" if none.
+func getSidecar(ctx context.Context, t, id string) (string, error) {
 	s, err := store.Get(ctx, placementKey(t, id))
 	if err == store.ErrNil {
 		return "", nil
@@ -41,11 +41,11 @@ func GetSidecar(ctx context.Context, t, id string) (string, error) {
 	return s, err
 }
 
-// CompareAndSetSidecar atomically updates the sidecar for the given actor type and id.
+// compareAndSetSidecar atomically updates the sidecar for the given actor type and id.
 // Use old = "" to atomically set the initial placement.
 // Use new = "" to atomically delete the current placement.
 // Returns 0 if unsuccessful, 1 if successful.
-func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, error) {
+func compareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, error) {
 	o := &old
 	if old == "" {
 		o = nil
@@ -57,8 +57,8 @@ func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, err
 	return store.CompareAndSet(ctx, placementKey(t, id), o, n)
 }
 
-// GetAllActorInstances returns a mapping from actor types to instanceIDs
-func GetAllActorInstances(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
+// GetAllActorInstances_PS returns a mapping from actor types to instanceIDs
+func GetAllActorInstances_PS(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
 	m := map[string][]string{}
 	reply, err := store.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
 	if err != nil {

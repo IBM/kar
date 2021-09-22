@@ -89,9 +89,9 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	var err error
 	switch component {
 	case "id":
-		data, err = rpc.GetSidecarID(format)
+		data, err = rpc.GetSidecarID_PS(format)
 	case "sidecars", "Sidecars":
-		data, err = rpc.GetSidecars(format)
+		data, err = rpc.GetSidecars_PS(format)
 	case "actors", "Actors":
 		if actorMap, err := getAllActiveActors(ctx, ""); err == nil {
 			data, err = formatActorInstanceMap(actorMap, format)

@@ -112,7 +112,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err = rpc.GetSidecars(config.GetOutputStyle)
+		str, err = rpc.GetSidecars_PS(config.GetOutputStyle)
 	case "actor", "actors":
 		if config.GetActorInstanceID != "" {
 			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
@@ -132,7 +132,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				} else {
 					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
-				if actorMap, err := rpc.GetAllActorInstances(ctx, config.GetActorType); err == nil {
+				if actorMap, err := rpc.GetAllActorInstances_PS(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {

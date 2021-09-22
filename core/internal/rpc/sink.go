@@ -23,8 +23,8 @@ import (
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
-// Publish publishes a message on a topic
-func Publish(topic string, message []byte) ( /* httpStatusCode */ int, error) {
+// Publish_PS publishes a message on a topic
+func Publish_PS(topic string, message []byte) ( /* httpStatusCode */ int, error) {
 	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(message),

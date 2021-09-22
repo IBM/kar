@@ -44,14 +44,14 @@ type userData struct {
 	Offsets map[int32]map[int64]struct{} // live local offsets
 }
 
-// Options specifies the options for subscribing to a topic
-type Options struct {
+// Options_PS specifies the options for subscribing to a topic
+type Options_PS struct {
 	OffsetOldest bool // should start from oldest available offset if no cursor exists
 	master       bool // internal flag to trigger special handling of application topic
 }
 
-// A Message received on a topic
-type Message struct {
+// A Message_PS received on a topic
+type Message_PS struct {
 	Value     []byte   // expose event payload
 	partition int32    // hidden
 	offset    int64    // hidden
@@ -59,7 +59,7 @@ type Message struct {
 }
 
 // Mark marks a message as consumed if coming from kafka
-func (e *Message) Mark() error {
+func (e *Message_PS) Mark() error {
 	if e.handler != nil {
 		return e.handler.mark(e.partition, e.offset)
 	}
@@ -72,8 +72,8 @@ type handler struct {
 	conf       *sarama.Config // kafka config
 	karContext context.Context
 	topic      string                       // subscribed topic
-	options    *Options                     // options
-	f          func(Message)                // Message handler
+	options    *Options_PS                     // options
+	f          func(Message_PS)                // Message handler
 	ready      chan struct{}                // channel closed when ready to accept events
 	local      map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
 	lock       sync.Mutex                   // mutex to protect local map
@@ -81,7 +81,7 @@ type handler struct {
 	done       map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options, f func(Message)) *handler {
+func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options_PS, f func(Message_PS)) *handler {
 	return &handler{
 		conf:       conf,
 		karContext: karContext,
@@ -113,7 +113,7 @@ func (h *handler) marshal() {
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
 			Address: address,
-			Sidecar: ID,
+			Sidecar: id,
 			Service: config.ServiceName,
 			Actors:  config.ActorTypes,
 			Offsets: h.local,
@@ -281,7 +281,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		h.local[m.Partition][m.Offset] = struct{}{}
 		h.lock.Unlock()
 		logger.Debug("starting work on topic %s, at partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-		h.f(Message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
+		h.f(Message_PS{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
 	}
 	return nil
 }
@@ -289,7 +289,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func Subscribe_PS(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, int, error) {
+func Subscribe_PS(ctx context.Context, topic, group string, options *Options_PS, f func(Message_PS)) (<-chan struct{}, int, error) {
 	if ctx.Err() != nil { // fail fast
 		return nil, http.StatusServiceUnavailable, ctx.Err()
 	}

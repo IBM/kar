@@ -123,11 +123,11 @@ func handler2Handle(h http.Handler) httprouter.Handle {
 
 // process incoming message asynchronously
 // one goroutine, incr and decr WaitGroup
-func process(m rpc.Message) {
+func process(m rpc.Message_PS) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rpc.Process(ctx, cancel, m)
+		rpc.Process_PS(ctx, cancel, m)
 	}()
 }
 
@@ -197,10 +197,10 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		if err = rpc.Dial(); err != nil {
+		if err = rpc.Dial_PS(); err != nil {
 			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
-		defer rpc.Close()
+		defer rpc.Close_PS()
 	}
 
 	if config.CmdName == config.PurgeCmd {
@@ -216,7 +216,7 @@ func Main() {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
 		rpc.Connect(ctx, nil, myServices...)
 		// one goroutine, defer close(closed)
-		closed, err = rpc.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
+		closed, err = rpc.Join_PS(ctx, process, listener.Addr().(*net.TCPAddr).Port)
 		if err != nil {
 			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
 		}
@@ -303,7 +303,7 @@ func Main() {
 }
 
 func purge(pattern string) {
-	if err := rpc.Purge(); err != nil {
+	if err := rpc.Purge_PS(); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
 	if count, err := store.Purge(ctx, pattern); err != nil {
