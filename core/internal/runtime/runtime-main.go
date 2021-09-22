@@ -214,7 +214,7 @@ func Main() {
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
-		rpc.Connect(ctx, nil, myServices...)
+		rpc.Connect(ctx, "", nil, myServices...)
 		// one goroutine, defer close(closed)
 		closed, err = rpc.Join_PS(ctx, process, listener.Addr().(*net.TCPAddr).Port)
 		if err != nil {

@@ -26,10 +26,15 @@ func register(method string, handler Handler) {
 	handlers[method] = handler
 }
 
-func connect(ctx context.Context, conf *Config, services ...string) (<-chan struct{}, error) {
+func connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
 	myServices = append(myServices, services...)
 
 	// TODO: Actually implement the interesting part of this...
+	return nil, nil
+}
+
+func getTopology() (map[string][]string, <-chan struct{}) {
+	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil
 }
 

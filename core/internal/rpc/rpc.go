@@ -2,12 +2,13 @@ package rpc
 
 import (
 	"context"
+	"time"
 )
 
 // Config specifies the Kafka configuration
 type Config struct {
 	Version       string   // Kafka version
-	Brokers       []string // list of Kafka brokers
+	Brokers       []string // Kafka brokers
 	User          string   // Kafka SASL user
 	Password      string   // Kafka SASL password
 	EnableTLS     bool
@@ -54,28 +55,33 @@ func Register(method string, handler Handler) {
 }
 
 // Connect to Kafka
-func Connect(ctx context.Context, conf *Config, services ...string) (<-chan struct{}, error) {
-	return connect(ctx, conf, services...)
+func Connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
+	return connect(ctx, topic, conf, services...)
 }
 
 // Call method and wait for result
-func Call(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
-	return call(ctx, target, method, value)
+func Call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
+	return call(ctx, target, method, deadline, value)
 }
 
 // Call method and return immediately (result will be discarded)
-func Tell(ctx context.Context, target Target, method string, value []byte) error {
-	return tell(ctx, target, method, value)
+func Tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
+	return tell(ctx, target, method, deadline, value)
 }
 
 // Call method and return a request id and a result channel
-func Async(ctx context.Context, target Target, method string, value []byte) (string, <-chan Result, error) {
-	return async(ctx, target, method, value)
+func Async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
+	return async(ctx, target, method, deadline, value)
 }
 
 // Reclaim resources associated with async request id
 func Reclaim(requestID string) {
 	reclaim(requestID)
+}
+
+// GetTopology returns a map from node ids to services
+func GetTopology() (map[string][]string, <-chan struct{}) {
+	return getTopology()
 }
 
 // GetServices returns the sorted list of services currently available

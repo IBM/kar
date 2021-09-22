@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
@@ -67,7 +68,7 @@ func init() {
 	register(responseMethod, responseHandler)
 }
 
-func call(ctx context.Context, target Target, method string, value []byte) ([]byte, error) {
+func call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
 	requests.Store(request, ch)
@@ -84,11 +85,11 @@ func call(ctx context.Context, target Target, method string, value []byte) ([]by
 	}
 }
 
-func tell(ctx context.Context, target Target, method string, value []byte) error {
+func tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
 	return send(ctx, target, method, karCallbackInfo{}, value)
 }
 
-func async(ctx context.Context, target Target, method string, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
 	requests.Store(request, ch)
@@ -189,12 +190,12 @@ func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_
 	case Service:
 		if !servedByMe(t.Name) {
 			forwarded = true
-			err = Tell(ctx, target, msg.Method, msg.Body)
+			err = tell(ctx, target, msg.Method, time.Time{}, msg.Body)
 		}
 	case Node:
 		if t.ID != GetNodeID() {
 			forwarded = true
-			err := Tell(ctx, target, msg.Method, msg.Body)
+			err := tell(ctx, target, msg.Method, time.Time{}, msg.Body)
 			if err == errUnknownSidecar {
 				logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
 				err = nil
@@ -245,7 +246,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 		return err
 	}
 
-	err = Tell(ctx, Node{ID: callback.SendingNode}, responseMethod, value)
+	err = tell(ctx, Node{ID: callback.SendingNode}, responseMethod, time.Time{}, value)
 
 	if err == errUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
