@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
@@ -89,9 +89,9 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	var err error
 	switch component {
 	case "id":
-		data, err = pubsub.GetSidecarID(format)
+		data, err = rpc.GetSidecarID(format)
 	case "sidecars", "Sidecars":
-		data, err = pubsub.GetSidecars(format)
+		data, err = rpc.GetSidecars(format)
 	case "actors", "Actors":
 		if actorMap, err := getAllActiveActors(ctx, ""); err == nil {
 			data, err = formatActorInstanceMap(actorMap, format)

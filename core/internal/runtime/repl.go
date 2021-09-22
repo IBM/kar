@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -112,7 +112,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err = pubsub.GetSidecars(config.GetOutputStyle)
+		str, err = rpc.GetSidecars(config.GetOutputStyle)
 	case "actor", "actors":
 		if config.GetActorInstanceID != "" {
 			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
@@ -132,7 +132,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				} else {
 					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
-				if actorMap, err := pubsub.GetAllActorInstances(ctx, config.GetActorType); err == nil {
+				if actorMap, err := rpc.GetAllActorInstances(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {

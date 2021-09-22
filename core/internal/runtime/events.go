@@ -23,7 +23,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -165,7 +165,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		group = s.ID
 	}
 
-	f := func(msg pubsub.Message) {
+	f := func(msg rpc.Message) {
 		arg := string(msg.Value)
 		if !jsonType { // encode event payload as json string
 			buf, err := json.Marshal(string(msg.Value))
@@ -183,5 +183,5 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		}
 	}
 
-	return pubsub.Subscribe(ctx, s.Topic, group, &pubsub.Options{OffsetOldest: s.OffsetOldest}, f)
+	return rpc.Subscribe_PS(ctx, s.Topic, group, &rpc.Options{OffsetOldest: s.OffsetOldest}, f)
 }

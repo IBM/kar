@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package pubsub
+package rpc
 
 import (
 	"context"
@@ -289,7 +289,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, int, error) {
+func Subscribe_PS(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, int, error) {
 	if ctx.Err() != nil { // fail fast
 		return nil, http.StatusServiceUnavailable, ctx.Err()
 	}

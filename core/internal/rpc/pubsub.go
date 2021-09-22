@@ -14,8 +14,7 @@
 // limitations under the License.
 //
 
-// Package pubsub handles Kafka
-package pubsub
+package rpc
 
 import (
 	"context"
@@ -156,12 +155,12 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 			return nil, err
 		}
 	}
-	ch, _, err := Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+	ch, _, err := Subscribe_PS(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
 	return ch, err
 }
 
 // CreateTopic attempts to create the specified topic using the given parameters
-func CreateTopic(topic string, parameters string) error {
+func CreateTopic_PS(topic string, parameters string) error {
 	var params sarama.TopicDetail
 	var err error
 
@@ -195,7 +194,7 @@ func CreateTopic(topic string, parameters string) error {
 }
 
 // DeleteTopic attempts to delete the specified topic
-func DeleteTopic(topic string) error {
+func DeleteTopic_PS(topic string) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)

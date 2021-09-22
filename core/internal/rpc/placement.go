@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package pubsub
+package rpc
 
 import (
 	"context"

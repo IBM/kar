@@ -38,7 +38,6 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
@@ -124,7 +123,7 @@ func handler2Handle(h http.Handler) httprouter.Handle {
 
 // process incoming message asynchronously
 // one goroutine, incr and decr WaitGroup
-func process(m pubsub.Message) {
+func process(m rpc.Message) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -198,10 +197,10 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		if err = pubsub.Dial(); err != nil {
+		if err = rpc.Dial(); err != nil {
 			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
-		defer pubsub.Close()
+		defer rpc.Close()
 	}
 
 	if config.CmdName == config.PurgeCmd {
@@ -217,7 +216,7 @@ func Main() {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
 		rpc.Connect(ctx, nil, myServices...)
 		// one goroutine, defer close(closed)
-		closed, err = pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
+		closed, err = rpc.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
 		if err != nil {
 			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
 		}
@@ -304,7 +303,7 @@ func Main() {
 }
 
 func purge(pattern string) {
-	if err := pubsub.Purge(); err != nil {
+	if err := rpc.Purge(); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
 	if count, err := store.Purge(ctx, pattern); err != nil {

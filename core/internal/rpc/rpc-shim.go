@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
 )
@@ -120,11 +119,11 @@ func getServices() ([]string, <-chan struct{}) {
 }
 
 func getNodeID() string {
-	return pubsub.ID
+	return ID
 }
 
 func getNodeIDs() ([]string, <-chan struct{}) {
-	return pubsub.Sidecars(), nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
+	return Sidecars(), nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
 func getServiceNodeIDs(service string) ([]string, <-chan struct{}) {
@@ -138,15 +137,15 @@ func getPartition() int32 {
 }
 
 func getSessionNodeID(ctx context.Context, session Session) (string, error) {
-	return pubsub.GetSidecar(ctx, session.Name, session.ID)
+	return GetSidecar(ctx, session.Name, session.ID)
 }
 
 func getPartitions() ([]int32, <-chan struct{}) {
-	return pubsub.Partitions()
+	return Partitions()
 }
 
 func delSession(ctx context.Context, session Session) error {
-	_, err := pubsub.CompareAndSetSidecar(ctx, session.Name, session.ID, getNodeID(), "")
+	_, err := CompareAndSetSidecar(ctx, session.Name, session.ID, getNodeID(), "")
 	return err
 }
 
@@ -187,7 +186,7 @@ func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bo
 // send sends message to receiver
 func send(ctx context.Context, target Target, method string, callback karCallbackInfo, value []byte) error {
 	select { // make sure we have joined
-	case <-pubsub.Joined:
+	case <-Joined:
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -197,21 +196,21 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 	var err error
 	switch t := target.(type) {
 	case Service: // route to service
-		partition, sidecar, err = pubsub.RouteToService(ctx, t.Name)
+		partition, sidecar, err = RouteToService(ctx, t.Name)
 		kt = karTarget{Type: "service", Name: t.Name}
 		if err != nil {
 			logger.Error("failed to route to service %s: %v", t.Name, err)
 			return err
 		}
 	case Session: // route to actor
-		partition, sidecar, err = pubsub.RouteToActor(ctx, t.Name, t.ID)
+		partition, sidecar, err = RouteToActor(ctx, t.Name, t.ID)
 		kt = karTarget{Type: "session", Name: t.Name, ID: t.ID}
 		if err != nil {
 			logger.Error("failed to route to actor type %s, id %s: %v", t.Name, t.ID, err)
 			return err
 		}
 	case Node: // route to sidecar
-		partition, err = pubsub.RouteToSidecar(t.ID)
+		partition, err = RouteToSidecar(t.ID)
 		sidecar = t.ID
 		kt = karTarget{Type: "node", ID: t.ID}
 		if err != nil {
@@ -224,7 +223,7 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 		logger.Error("failed to marshal message: %v", err)
 		return err
 	}
-	return pubsub.SendBytes(ctx, partition, m)
+	return SendBytes(ctx, partition, m)
 }
 
 ////
@@ -232,7 +231,7 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 ////
 
 // Process processes one incoming message
-func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Message) {
+func Process(ctx context.Context, cancel context.CancelFunc, message Message) {
 	var msg karMsg
 	err := json.Unmarshal(message.Value, &msg)
 	if err != nil {
@@ -254,7 +253,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 	}
 
 	// Cancellation of Calls from dead nodes
-	if msg.Callback.Request != "" && !pubsub.IsLiveSidecar(msg.Callback.SendingNode) {
+	if msg.Callback.Request != "" && !IsLiveSidecar(msg.Callback.SendingNode) {
 		logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
 		message.Mark()
 		return
@@ -272,7 +271,7 @@ func Process(ctx context.Context, cancel context.CancelFunc, message pubsub.Mess
 		if t.ID != GetNodeID() {
 			forwarded = true
 			err := Tell(ctx, target, msg.Method, msg.Body)
-			if err == pubsub.ErrUnknownSidecar {
+			if err == ErrUnknownSidecar {
 				logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
 				err = nil
 			}
@@ -324,7 +323,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 
 	err = Tell(ctx, Node{ID: callback.SendingNode}, responseMethod, value)
 
-	if err == pubsub.ErrUnknownSidecar {
+	if err == ErrUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
 		return nil
 	}
