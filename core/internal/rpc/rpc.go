@@ -155,6 +155,6 @@ func (p *Publisher) Close() error {
 }
 
 // Subscribe to a topic
-func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func([]byte)) error {
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func(ctx context.Context, value []byte, markAsDone func())) error {
 	return subscribe(ctx, conf, topic, group, oldest, handler)
 }

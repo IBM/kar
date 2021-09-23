@@ -49,8 +49,8 @@ type Options_PS struct {
 	master       bool // internal flag to trigger special handling of application topic
 }
 
-// A Message_PS received on a topic
-type Message_PS struct {
+// A message received on a topic
+type message struct {
 	Value     []byte   // expose event payload
 	partition int32    // hidden
 	offset    int64    // hidden
@@ -58,7 +58,7 @@ type Message_PS struct {
 }
 
 // Mark marks a message as consumed if coming from kafka
-func (e *Message_PS) Mark() error {
+func (e *message) Mark() error {
 	if e.handler != nil {
 		return e.handler.mark(e.partition, e.offset)
 	}
@@ -70,17 +70,17 @@ type handler struct {
 	client     sarama.Client
 	conf       *sarama.Config // kafka config
 	karContext context.Context
-	topic      string                       // subscribed topic
-	options    *Options_PS                  // options
-	f          func(Message_PS)             // Message handler
-	ready      chan struct{}                // channel closed when ready to accept events
-	local      map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
-	lock       sync.Mutex                   // mutex to protect local map
-	live       map[int32]map[int64]struct{} // offsets in progress at beginning of session (from all sidecars)
-	done       map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
+	topic      string                                                     // subscribed topic
+	options    *Options_PS                                                // options
+	f          func(ctx context.Context, value []byte, markAsDone func()) // Message handler
+	ready      chan struct{}                                              // channel closed when ready to accept events
+	local      map[int32]map[int64]struct{}                               // local progress: offsets currently worked on in this sidecar
+	lock       sync.Mutex                                                 // mutex to protect local map
+	live       map[int32]map[int64]struct{}                               // offsets in progress at beginning of session (from all sidecars)
+	done       map[int32]map[int64]struct{}                               // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options_PS, f func(Message_PS)) *handler {
+func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options_PS, f func(ctx context.Context, value []byte, markAsDone func())) *handler {
 	return &handler{
 		conf:       conf,
 		karContext: karContext,
@@ -280,7 +280,8 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		h.local[m.Partition][m.Offset] = struct{}{}
 		h.lock.Unlock()
 		logger.Debug("starting work on topic %s, at partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-		h.f(Message_PS{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
+		km := message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h}
+		h.f(h.karContext, m.Value, func() { km.Mark() })
 	}
 	return nil
 }
@@ -288,7 +289,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func Subscribe_PS(ctx context.Context, topic, group string, options *Options_PS, f func(Message_PS)) (<-chan struct{}, int, error) {
+func Subscribe_PS(ctx context.Context, topic, group string, options *Options_PS, f func(ctx context.Context, value []byte, markAsDone func())) (<-chan struct{}, int, error) {
 	if ctx.Err() != nil { // fail fast
 		return nil, http.StatusServiceUnavailable, ctx.Err()
 	}
@@ -339,6 +340,10 @@ func Subscribe_PS(ctx context.Context, topic, group string, options *Options_PS,
 		}
 		consumer.Close()
 		handler.client.Close()
+		if options.master {
+			producer.Close()
+			client.Close()
+		}
 	}()
 
 	select {

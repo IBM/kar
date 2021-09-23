@@ -165,10 +165,10 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		group = s.ID
 	}
 
-	f := func(msg rpc.Message_PS) {
-		arg := string(msg.Value)
+	f := func(ctx context.Context, value []byte, markAsDone func()) {
+		arg := string(value)
 		if !jsonType { // encode event payload as json string
-			buf, err := json.Marshal(string(msg.Value))
+			buf, err := json.Marshal(string(value))
 			if err != nil {
 				logger.Error("failed to marshall event from topic %s: %v", s.Topic, err)
 				return
@@ -179,7 +179,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		if err != nil {
 			logger.Error("failed to post event from topic %s: %v", s.Topic, err)
 		} else {
-			msg.Mark()
+			markAsDone()
 		}
 	}
 

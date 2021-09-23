@@ -62,8 +62,8 @@ func partitioner(t string) sarama.Partitioner {
 	return sarama.NewRandomPartitioner(t)
 }
 
-// Dial_PS connects Kafka producer
-func Dial_PS() error {
+// dial connects Kafka producer
+func dial() error {
 	conf, err := newConfig()
 	if err != nil {
 		return err
@@ -88,12 +88,6 @@ func Dial_PS() error {
 	}
 
 	return nil
-}
-
-// Close_PS closes Kafka producer
-func Close_PS() {
-	producer.Close()
-	client.Close()
 }
 
 func newConfig() (*sarama.Config, error) {
@@ -133,8 +127,8 @@ func partitions() ([]int32, <-chan struct{}) {
 	return r, t
 }
 
-// Join_PS joins the sidecar to the application and returns a channel of incoming messages
-func Join_PS(ctx context.Context, f func(Message_PS)) (<-chan struct{}, error) {
+// joinSidecarToMesh joins the sidecar to the application mesh and returns a channel that will be closed when the sidecar leaves the mesh
+func joinSidecarToMesh(ctx context.Context, f func(ctx context.Context, value []byte, markAsDone func())) (<-chan struct{}, error) {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
@@ -258,19 +252,6 @@ func GetSidecarID_PS(format string) (string, error) {
 	}
 
 	return id + "\n", nil
-}
-
-// Purge_PS deletes the application topic
-func Purge_PS() error {
-	admin, err := sarama.NewClusterAdminFromClient(client)
-	if err != nil {
-		return err
-	}
-	err = admin.DeleteTopic(myTopic)
-	if err != sarama.ErrUnknownTopicOrPartition {
-		return err
-	}
-	return nil
 }
 
 // isLiveSidecar return true if the argument sidecar is currently part of the application mesh

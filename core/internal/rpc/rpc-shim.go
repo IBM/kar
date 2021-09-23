@@ -31,8 +31,12 @@ func connect(ctx context.Context, topic string, conf *Config, services ...string
 	myTopic = topic
 	myConfig = conf
 
-	// TODO: Actually implement the interesting part of this...
-	return nil, nil
+	if err := dial(); err != nil {
+		logger.Fatal("failed to connect to Kafka: %v", err)
+		return nil, err
+	}
+
+	return joinSidecarToMesh(ctx, processMsg)
 }
 
 func getTopology() (map[string][]string, <-chan struct{}) {
@@ -90,7 +94,7 @@ func (p *Publisher) close() error {
 	return nil
 }
 
-func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func([]byte)) error {
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func(ctx context.Context, value []byte, markAsDone func())) error {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil
 }

@@ -121,18 +121,6 @@ func handler2Handle(h http.Handler) httprouter.Handle {
 	}
 }
 
-// process incoming message asynchronously
-// one goroutine, incr and decr WaitGroup
-func process(m rpc.Message_PS) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if rpc.Process_PS(ctx, cancel, m.Value) {
-			m.Mark()
-		}
-	}()
-}
-
 // Main is the main entrypoint for the KAR runtime
 func Main() {
 	logger.Warning("starting...")
@@ -194,17 +182,9 @@ func Main() {
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
-		rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
-
-		if err = rpc.Dial_PS(); err != nil {
-			logger.Fatal("failed to connect to Kafka: %v", err)
-		}
-		defer rpc.Close_PS()
-
-		// one goroutine, defer close(closed)
-		closed, err = rpc.Join_PS(ctx, process)
+		closed, err = rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
 		if err != nil {
-			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
+			logger.Fatal("fail to connect to Kafka: %v", err)
 		}
 	}
 
@@ -285,8 +265,8 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		<-closed // wait for closed consumer first since process adds to WaitGroup
-		wg.Wait()
+		<-closed  // first wait for rpc library to shutdown
+		wg.Wait() // next wait for the rest of the runtime to shutdown
 	}
 
 	cancel9()

@@ -156,64 +156,69 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 // lowlevel request support in callee
 ////
 
-// Process_PS processes one incoming message
-func Process_PS(ctx context.Context, cancel context.CancelFunc, value []byte) bool {
-	var msg karMsg
-	err := json.Unmarshal(value, &msg)
-	if err != nil {
-		logger.Error("failed to unmarshal message: %v", err)
-		return true
-	}
-	var target Target
-	if msg.Target.Type == "service" {
-		target = Service{Name: msg.Target.Name}
-	} else if msg.Target.Type == "session" {
-		target = Session{Name: msg.Target.Name, ID: msg.Target.ID}
-	} else if msg.Target.Type == "node" {
-		target = Node{ID: msg.Target.ID}
-	} else {
-		logger.Error("unknown message target type %v", msg.Target.Type)
-		return true
-	}
-
-	// Cancellation of Calls from dead nodes
-	if msg.Callback.Request != "" && !isLiveSidecar(msg.Callback.SendingNode) {
-		logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
-		return true
-	}
-
-	// Forwarding
-	forwarded := false
-	switch t := target.(type) {
-	case Service:
-		if t.Name != myServices[0] {
-			forwarded = true
-			err = tell(ctx, target, msg.Method, time.Time{}, msg.Body)
+// processMsg processes one incoming message
+func processMsg(ctx context.Context, value []byte, markAsDone func()) {
+	go func() {
+		var msg karMsg
+		err := json.Unmarshal(value, &msg)
+		if err != nil {
+			logger.Error("failed to unmarshal message: %v", err)
+			markAsDone()
+			return
 		}
-	case Node:
-		if t.ID != GetNodeID() {
-			forwarded = true
-			err := tell(ctx, target, msg.Method, time.Time{}, msg.Body)
-			if err == errUnknownSidecar {
-				logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
-				err = nil
-			}
-		}
-	}
-
-	// If not forwarded elsewhere, actually dispatch up to the handler
-	if !forwarded {
-		if handler, ok := handlers[msg.Method]; ok {
-			reply, err := handler(ctx, target, msg.Body)
-			if err == nil && reply != nil {
-				err = respond(ctx, msg.Callback, reply)
-			}
+		var target Target
+		if msg.Target.Type == "service" {
+			target = Service{Name: msg.Target.Name}
+		} else if msg.Target.Type == "session" {
+			target = Session{Name: msg.Target.Name, ID: msg.Target.ID}
+		} else if msg.Target.Type == "node" {
+			target = Node{ID: msg.Target.ID}
 		} else {
-			logger.Error("Dropping message for unknown handler %v", msg.Method)
+			logger.Error("unknown message target type %v", msg.Target.Type)
+			markAsDone()
 		}
-	}
 
-	return err == nil
+		// Cancellation of Calls from dead nodes
+		if msg.Callback.Request != "" && !isLiveSidecar(msg.Callback.SendingNode) {
+			logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
+			markAsDone()
+		}
+
+		// Forwarding
+		forwarded := false
+		switch t := target.(type) {
+		case Service:
+			if t.Name != myServices[0] {
+				forwarded = true
+				err = tell(ctx, target, msg.Method, time.Time{}, msg.Body)
+			}
+		case Node:
+			if t.ID != GetNodeID() {
+				forwarded = true
+				err := tell(ctx, target, msg.Method, time.Time{}, msg.Body)
+				if err == errUnknownSidecar {
+					logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
+					err = nil
+				}
+			}
+		}
+
+		// If not forwarded elsewhere, actually dispatch up to the handler
+		if !forwarded {
+			if handler, ok := handlers[msg.Method]; ok {
+				reply, err := handler(ctx, target, msg.Body)
+				if err == nil && reply != nil {
+					err = respond(ctx, msg.Callback, reply)
+				}
+			} else {
+				logger.Error("Dropping message for unknown handler %v", msg.Method)
+			}
+		}
+
+		if err == nil {
+			markAsDone()
+		}
+	}()
 }
 
 ////
