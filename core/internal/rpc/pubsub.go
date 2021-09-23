@@ -21,8 +21,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/IBM/kar/core/pkg/logger"
@@ -197,61 +195,26 @@ func deleteTopic(conf *Config, topic string) error {
 	return nil
 }
 
-type sidecarData struct {
-	Partitions []int32  `json:"partitions"`
-	Address    string   `json:"address"`
-	Actors     []string `json:"actors"`
-	Services   []string `json:"services"`
-}
-
-// GetSidecars_PS --
-func GetSidecars_PS(format string) (string, error) {
-	information := make(map[string]*sidecarData)
+func getTopology() (map[string][]string, <-chan struct{}) {
+	toplogy := make(map[string][]string)
 
 	mu.RLock()
-	for sidecar, partitions := range routes {
-		information[sidecar] = &sidecarData{}
-		information[sidecar].Partitions = append(information[sidecar].Partitions, partitions...)
-	}
-	for actor, sidecars := range hosts {
-		for _, sidecar := range sidecars {
-			information[sidecar].Actors = append(information[sidecar].Actors, actor)
-		}
+	for sidecar, _ := range addresses {
+		toplogy[sidecar] = []string{}
 	}
 	for service, sidecars := range replicas {
 		for _, sidecar := range sidecars {
-			information[sidecar].Services = append(information[sidecar].Services, service)
+			toplogy[sidecar] = append(toplogy[sidecar], service)
 		}
 	}
-	for sidecar, address := range addresses {
-		information[sidecar].Address = address
+	for actor, sidecars := range hosts {
+		for _, sidecar := range sidecars {
+			toplogy[sidecar] = append(toplogy[sidecar], actor)
+		}
 	}
 	mu.RUnlock()
 
-	if format == "json" || format == "application/json" {
-		m, err := json.Marshal(information)
-		if err != nil {
-			logger.Error("failed to marshal sidecar information data: %v", err)
-			return "", err
-		}
-		return string(m), nil
-	}
-
-	var str strings.Builder
-	fmt.Fprint(&str, "\nSidecar\n : Actors\n : Services")
-	for sidecar, sidecarInfo := range information {
-		fmt.Fprintf(&str, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
-	}
-	return str.String(), nil
-}
-
-// GetSidecarID_PS --
-func GetSidecarID_PS(format string) (string, error) {
-	if format == "json" || format == "application/json" {
-		return fmt.Sprintf("{\"id\":\"%s\"}", id), nil
-	}
-
-	return id + "\n", nil
+	return toplogy, nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
 // isLiveSidecar return true if the argument sidecar is currently part of the application mesh

@@ -32,16 +32,9 @@ func connect(ctx context.Context, topic string, conf *Config, services ...string
 	myConfig = conf
 
 	if err := dial(); err != nil {
-		logger.Fatal("failed to connect to Kafka: %v", err)
 		return nil, err
 	}
-
 	return joinSidecarToMesh(ctx, processMsg)
-}
-
-func getTopology() (map[string][]string, <-chan struct{}) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil, nil
 }
 
 func getServices() ([]string, <-chan struct{}) {

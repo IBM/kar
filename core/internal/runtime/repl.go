@@ -112,7 +112,24 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err = rpc.GetSidecars_PS(config.GetOutputStyle)
+		karTopology := make(map[string]sidecarData)
+		topology, _ := rpc.GetTopology()
+		for node, services := range topology {
+			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+		}
+		if config.GetOutputStyle == "json" || config.GetOutputStyle == "application/json" {
+			m, err := json.Marshal(karTopology)
+			if err == nil {
+				str = string(m)
+			}
+		} else {
+			var sb strings.Builder
+			fmt.Fprint(&sb, "\nSidecar\n : Actors\n : Services")
+			for sidecar, sidecarInfo := range karTopology {
+				fmt.Fprintf(&sb, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+			}
+			str, err = sb.String(), nil
+		}
 	case "actor", "actors":
 		if config.GetActorInstanceID != "" {
 			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
