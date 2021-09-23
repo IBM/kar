@@ -192,12 +192,12 @@ func processMsg(ctx context.Context, m message) {
 		case Service:
 			if t.Name != myServices[0] {
 				forwarded = true
-				err = tell(ctx, target, msg.Method, time.Time{}, msg.Body)
+				err = send(ctx, target, msg.Method, msg.Callback, time.Time{}, msg.Body)
 			}
 		case Node:
 			if t.ID != GetNodeID() {
 				forwarded = true
-				err := tell(ctx, target, msg.Method, time.Time{}, msg.Body)
+				err := send(ctx, target, msg.Method, msg.Callback, time.Time{}, msg.Body)
 				if err == errUnknownSidecar {
 					logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
 					err = nil
