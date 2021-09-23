@@ -22,11 +22,12 @@ package runtime
  */
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"strings"
 
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/julienschmidt/httprouter"
 )
@@ -65,16 +66,6 @@ func routeImplHealth(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	fmt.Fprint(w, "OK")
 }
 
-// post handles a direct http request from a peer sidecar
-// TODO swagger
-func routeImplPost(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	value, _ := ioutil.ReadAll(r.Body)
-	m := pubsub.Message{Value: value}
-	process(m)
-	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprint(w, "OK")
-}
-
 // swagger:route GET /v1/system/information/{component} system idSystemInfo
 //
 // information
@@ -100,9 +91,33 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	var err error
 	switch component {
 	case "id":
-		data, err = pubsub.GetSidecarID(format)
+		nodeID := rpc.GetNodeID()
+		if format == "json" || format == "application/json" {
+			data = fmt.Sprintf("{\"id\":\"%s\"}", nodeID)
+		} else {
+			data = nodeID + "\n"
+		}
+		err = nil
 	case "sidecars", "Sidecars":
-		data, err = pubsub.GetSidecars(format)
+		karTopology := make(map[string]sidecarData)
+		topology, _ := rpc.GetTopology()
+		for node, services := range topology {
+			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+		}
+
+		if format == "json" || format == "application/json" {
+			m, err := json.Marshal(karTopology)
+			if err == nil {
+				data = string(m)
+			}
+		} else {
+			var str strings.Builder
+			fmt.Fprint(&str, "\nSidecar\n : Actors\n : Services")
+			for sidecar, sidecarInfo := range karTopology {
+				fmt.Fprintf(&str, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+			}
+			data, err = str.String(), nil
+		}
 	case "actors", "Actors":
 		if actorMap, err := getAllActiveActors(ctx, ""); err == nil {
 			data, err = formatActorInstanceMap(actorMap, format)
@@ -118,4 +133,9 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 		w.Header().Add("Content-Type", format)
 		fmt.Fprint(w, data)
 	}
+}
+
+type sidecarData struct {
+	Actors   []string `json:"actors"`
+	Services []string `json:"services"`
 }

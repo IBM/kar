@@ -38,7 +38,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/julienschmidt/httprouter"
@@ -105,7 +105,6 @@ func server(listener net.Listener) http.Server {
 	// kar system methods
 	router.GET(base+"/system/health", routeImplHealth)
 	router.POST(base+"/system/shutdown", routeImplShutdown)
-	router.POST(base+"/system/post", routeImplPost)
 	router.GET(base+"/system/information/:component", routeImplGetInformation)
 
 	// events
@@ -122,21 +121,11 @@ func handler2Handle(h http.Handler) httprouter.Handle {
 	}
 }
 
-// process incoming message asynchronously
-// one goroutine, incr and decr WaitGroup
-func process(m pubsub.Message) {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		Process(ctx, cancel, m)
-	}()
-}
-
 // Main is the main entrypoint for the KAR runtime
 func Main() {
 	logger.Warning("starting...")
-	logger.Info("redis: %v:%v", config.RedisHost, config.RedisPort)
-	logger.Info("kafka: %v", strings.Join(config.KafkaBrokers, ","))
+	logger.Info("redis: %v:%v", config.RedisConfig.Host, config.RedisConfig.Port)
+	logger.Info("kafka: %v", strings.Join(config.KafkaConfig.Brokers, ","))
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()
 
@@ -165,25 +154,16 @@ func Main() {
 		logger.Fatal("TCP listener failed: %v", err)
 	}
 
-	redisConfig := store.StoreConfig{
-		MangleKey: func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key },
-		UnmangleKey: func(key string) string {
-			parts := strings.Split(key, config.Separator)
-			if parts[0] == "kar" && parts[1] == config.AppName {
-				return strings.Join(parts[2:], config.Separator)
-			}
-			return key
-		},
-		RequestRetryLimit: config.RequestRetryLimit,
-		LongOperation:     config.LongRedisOperation,
-		Host:              config.RedisHost,
-		Port:              config.RedisPort,
-		EnableTLS:         config.RedisEnableTLS,
-		TLSSkipVerify:     config.RedisTLSSkipVerify,
-		Password:          config.RedisPassword,
-		User:              config.RedisUser,
-		CA:                config.RedisCA,
+	redisConfig := config.RedisConfig
+	redisConfig.MangleKey = func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key }
+	redisConfig.UnmangleKey = func(key string) string {
+		parts := strings.Split(key, config.Separator)
+		if parts[0] == "kar" && parts[1] == config.AppName {
+			return strings.Join(parts[2:], config.Separator)
+		}
+		return key
 	}
+	redisConfig.RequestRetryLimit = config.RequestRetryLimit
 
 	if err = store.Dial(&redisConfig); err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
@@ -197,28 +177,28 @@ func Main() {
 		requiresPubSub = false
 	}
 
+	// Connect to Kafka
+	topic := "kar" + config.Separator + config.AppName
+	var closed <-chan struct{} = nil
 	if requiresPubSub {
-		if err = pubsub.Dial(); err != nil {
+		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
+		closed, err = rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
+		if err != nil {
 			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
-		defer pubsub.Close()
+		karPublisher, err = rpc.NewPublisher(&config.KafkaConfig)
+		if err != nil {
+			logger.Fatal("failed to create event publisher: %v", err)
+		}
+		defer karPublisher.Close()
 	}
 
 	if config.CmdName == config.PurgeCmd {
-		purge("*")
+		purge(topic, "*")
 		return
 	} else if config.CmdName == config.DrainCmd {
-		purge("pubsub" + config.Separator + "*")
+		purge(topic, "pubsub"+config.Separator+"*")
 		return
-	}
-
-	var closed <-chan struct{} = nil
-	if requiresPubSub {
-		// one goroutine, defer close(closed)
-		closed, err = pubsub.Join(ctx, process, listener.Addr().(*net.TCPAddr).Port)
-		if err != nil {
-			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
-		}
 	}
 
 	args := flag.Args()
@@ -290,9 +270,9 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		<-closed // wait for closed consumer first since process adds to WaitGroup
-		wg.Wait()
+		<-closed // first wait for rpc library to shutdown
 	}
+	wg.Wait() // next wait for the rest of the runtime to shutdown
 
 	cancel9()
 
@@ -301,8 +281,8 @@ func Main() {
 	logger.Warning("exiting...")
 }
 
-func purge(pattern string) {
-	if err := pubsub.Purge(); err != nil {
+func purge(topic string, pattern string) {
+	if err := rpc.DeleteTopic(&config.KafkaConfig, topic); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
 	if count, err := store.Purge(ctx, pattern); err != nil {

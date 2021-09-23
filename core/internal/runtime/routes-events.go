@@ -26,8 +26,9 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/Shopify/sarama"
-	"github.com/IBM/kar/core/internal/pubsub"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -180,14 +181,13 @@ func routeImplSubscription(w http.ResponseWriter, r *http.Request, ps httprouter
 //     - application/*
 //     Responses:
 //       200: response200
-//       404: response404
-//       500: response500
+//       400: response400
 //
 func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buf, _ := ioutil.ReadAll(r.Body)
-	code, err := pubsub.Publish(ps.ByName("topic"), buf)
+	err := karPublisher.Publish(ps.ByName("topic"), buf)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("publish error: %v", err), code)
+		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusBadRequest)
 	} else {
 		fmt.Fprint(w, "OK")
 	}
@@ -213,7 +213,7 @@ func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	topic := ps.ByName("topic")
 	params := ReadAll(r)
-	err := pubsub.CreateTopic(topic, params)
+	err := rpc.CreateTopic(&config.KafkaConfig, topic, params)
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); ok && e.Err == sarama.ErrTopicAlreadyExists {
 			w.WriteHeader(http.StatusOK)
@@ -243,7 +243,7 @@ func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.
 //       500: response500
 //
 func routeImplDeleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := pubsub.DeleteTopic(ps.ByName("topic"))
+	err := rpc.DeleteTopic(&config.KafkaConfig, ps.ByName("topic"))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
 	} else {

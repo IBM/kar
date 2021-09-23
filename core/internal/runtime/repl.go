@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -46,7 +46,7 @@ func invokeActorMethod(ctx context.Context, args []string) (exitCode int) {
 		exitCode = 1
 		return
 	}
-	reply, err := CallActor(ctx, actor, path, string(payload), "", false)
+	reply, err := CallActor(ctx, actor, path, string(payload), "")
 	if err != nil {
 		logger.Error("error invoking the actor: %v", err)
 		exitCode = 1
@@ -91,7 +91,7 @@ func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
 		body = ""
 	}
 
-	reply, err := CallService(ctx, service, path, body, header, method, false)
+	reply, err := CallService(ctx, service, path, body, header, method)
 	if err != nil {
 		logger.Error("error invoking the service: %v", err)
 		exitCode = 1
@@ -112,7 +112,24 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		str, err = pubsub.GetSidecars(config.GetOutputStyle)
+		karTopology := make(map[string]sidecarData)
+		topology, _ := rpc.GetTopology()
+		for node, services := range topology {
+			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+		}
+		if config.GetOutputStyle == "json" || config.GetOutputStyle == "application/json" {
+			m, err := json.Marshal(karTopology)
+			if err == nil {
+				str = string(m)
+			}
+		} else {
+			var sb strings.Builder
+			fmt.Fprint(&sb, "\nSidecar\n : Actors\n : Services")
+			for sidecar, sidecarInfo := range karTopology {
+				fmt.Fprintf(&sb, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+			}
+			str, err = sb.String(), nil
+		}
 	case "actor", "actors":
 		if config.GetActorInstanceID != "" {
 			if actorState, err := actorGetAllState(config.GetActorType, config.GetActorInstanceID); err == nil {
@@ -132,7 +149,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				} else {
 					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
-				if actorMap, err := pubsub.GetAllActorInstances(ctx, config.GetActorType); err == nil {
+				if actorMap, err := rpc.GetAllSessions(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {

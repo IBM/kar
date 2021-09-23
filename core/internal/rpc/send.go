@@ -14,34 +14,19 @@
 // limitations under the License.
 //
 
-package pubsub
+package rpc
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
-	"io/ioutil"
 	"math/rand"
-	"net/http"
-	"strconv"
 	"time"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 )
 
-// ErrRouteToActorTimeout indicates a timeout while waiting for a viable route to an Actor type.
-var ErrRouteToActorTimeout = errors.New("timeout occurred while looking for actor type")
-
-// ErrRouteToServiceTimeout indicates a timeout while waiting for a viable route to a Service endpoint.
-var ErrRouteToServiceTimeout = errors.New("timeout occurred while looking for service instance")
-
-// use debug logger for errors returned to caller
-
 // routeToService maps a service to a partition (keep trying)
-func routeToService(ctx context.Context, service string) (partition int32, sidecar string, err error) {
+func routeToService(ctx context.Context, service string, deadline time.Time) (partition int32, sidecar string, err error) {
 	for {
 		mu.RLock()
 		sidecars := replicas[service]
@@ -56,14 +41,14 @@ func routeToService(ctx context.Context, service string) (partition int32, sidec
 		mu.RUnlock()
 		logger.Info("no sidecar for service %s, waiting for new session", service)
 
-		if config.MissingComponentTimeout > 0 {
+		if !deadline.IsZero() {
+			ctx2, cancel2 := context.WithDeadline(ctx, deadline)
 			select {
 			case <-ch:
-			case <-ctx.Done():
-				err = ctx.Err()
-				return
-			case <-time.After(config.MissingComponentTimeout):
-				err = ErrRouteToServiceTimeout
+				cancel2()
+			case <-ctx2.Done():
+				err = ctx2.Err()
+				cancel2()
 				return
 			}
 		} else {
@@ -84,16 +69,16 @@ func routeToSidecar(sidecar string) (int32, error) {
 	mu.RUnlock()
 	if len(partitions) == 0 { // no partition matching this sidecar
 		logger.Debug("no partition for sidecar %s", sidecar)
-		return 0, ErrUnknownSidecar
+		return 0, errUnknownSidecar
 	}
 	return partitions[rand.Int31n(int32(len(partitions)))], nil // select random partition from list
 }
 
 // routeToActor maps an actor to a stable sidecar to a random partition (keep trying)
 // only switching to a new sidecar if the existing sidecar has died
-func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar string, err error) {
+func routeToActor(ctx context.Context, t, id string, deadline time.Time) (partition int32, sidecar string, err error) {
 	for { // keep trying
-		sidecar, err = GetSidecar(ctx, t, id) // retrieve already assigned sidecar if any
+		sidecar, err = getSidecar(ctx, t, id) // retrieve already assigned sidecar if any
 		if err != nil {
 			return // store error
 		}
@@ -117,14 +102,14 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			ch := tick
 			mu.RUnlock()
 			logger.Info("no sidecar for actor type %s, waiting for new session", t)
-			if config.MissingComponentTimeout > 0 {
+			if !deadline.IsZero() {
+				ctx2, cancel2 := context.WithDeadline(ctx, deadline)
 				select {
 				case <-ch:
-				case <-ctx.Done():
-					err = ctx.Err()
-					return
-				case <-time.After(config.MissingComponentTimeout):
-					err = ErrRouteToActorTimeout
+					cancel2()
+				case <-ctx2.Done():
+					err = ctx2.Err()
+					cancel2()
 					return
 				}
 			} else {
@@ -137,7 +122,7 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 			}
 		}
 		logger.Debug("trying to save new sidecar %s for actor type %s, id %s", sidecar, t, id)
-		_, err = CompareAndSetSidecar(ctx, t, id, expected, sidecar) // try saving sidecar
+		_, err = compareAndSetSidecar(ctx, t, id, expected, sidecar) // try saving sidecar
 		if err != nil {
 			return // store error
 		}
@@ -145,61 +130,9 @@ func routeToActor(ctx context.Context, t, id string) (partition int32, sidecar s
 	}
 }
 
-// Send sends message to receiver
-func Send(ctx context.Context, direct bool, msg map[string]string) error {
-	select { // make sure we have joined
-	case <-joined:
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-	var partition int32
-	var err error
-	switch msg["protocol"] {
-	case "service": // route to service
-		partition, msg["sidecar"], err = routeToService(ctx, msg["service"])
-		if err != nil {
-			logger.Error("failed to route to service %s: %v", msg["service"], err)
-			return err
-		}
-	case "actor": // route to actor
-		partition, msg["sidecar"], err = routeToActor(ctx, msg["type"], msg["id"])
-		if err != nil {
-			logger.Error("failed to route to actor type %s, id %s: %v", msg["type"], msg["id"], err)
-			return err
-		}
-	case "sidecar": // route to sidecar
-		partition, err = routeToSidecar(msg["sidecar"])
-		if err != nil {
-			logger.Error("failed to route to sidecar %s: %v", msg["sidecar"], err)
-			return err
-		}
-	case "partition": // route to partition
-		p, err := strconv.ParseInt(msg["partition"], 10, 32)
-		if err != nil {
-			logger.Error("failed to route to partition %s: %v", msg["partition"], err)
-			return err
-		}
-		partition = int32(p)
-	}
-	if direct {
-		msg["direct"] = "true"
-	}
-	m, err := json.Marshal(msg)
-	if err != nil {
-		logger.Error("failed to marshal message: %v", err)
-		return err
-	}
-	if direct && msg["sidecar"] != "" {
-		logger.Debug("sending message via direct http connection to sidecar %v", msg["sidecar"])
-		err = httpSend(addresses[msg["sidecar"]], m)
-		if err != nil {
-			logger.Error("failed to send message to sidecar %v: %v", msg["sidecar"], err)
-			return err
-		}
-		return nil
-	}
+func sendBytes(ctx context.Context, partition int32, m []byte) error {
 	_, offset, err := producer.SendMessage(&sarama.ProducerMessage{
-		Topic:     topic,
+		Topic:     myTopic,
 		Partition: partition,
 		Value:     sarama.ByteEncoder(m),
 	})
@@ -211,8 +144,8 @@ func Send(ctx context.Context, direct bool, msg map[string]string) error {
 	return nil
 }
 
-// Sidecars returns all the reachable sidecars
-func Sidecars() []string {
+// sidecars returns all the reachable sidecars
+func sidecars() []string {
 	mu.RLock()
 	sidecars := []string{}
 	for sidecar := range routes {
@@ -220,17 +153,4 @@ func Sidecars() []string {
 	}
 	mu.RUnlock()
 	return sidecars
-}
-
-func httpSend(address string, message []byte) error {
-	res, err := http.Post("http://"+address+"/kar/v1/system/post", "application/octet-stream", bytes.NewReader(message))
-	if err != nil {
-		return err
-	}
-	ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	if res.StatusCode != http.StatusAccepted {
-		return errors.New(res.Status)
-	}
-	return nil
 }

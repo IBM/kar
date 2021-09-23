@@ -25,7 +25,7 @@ import (
 	"sync"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 )
@@ -71,9 +71,13 @@ func bindingPattern(partition string) string {
 }
 
 // binding for redis key
-func keyBinding(key string) (kind string, actor Actor, partition, id string) {
+func keyBinding(key string) (kind string, actor Actor, partition int32, id string) {
 	parts := strings.Split(key, config.Separator)
-	partition = parts[1]
+	p64, err := strconv.ParseInt(parts[1], 10, 32)
+	if err != nil {
+		logger.Fatal("Unable to parse partition as an int: %v", err)
+	}
+	partition = int32(p64)
 	kind = parts[2]
 	actor = Actor{Type: parts[3], ID: parts[4]}
 	id = parts[5]
@@ -144,7 +148,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 		key = keys[0]
 		successCode = http.StatusOK
 	} else { // new key with random partition
-		ps, _ := pubsub.Partitions()
+		ps, _ := rpc.GetPartitions()
 		p := ps[rand.Int31n(int32(len(ps)))]
 		key = bindingKey(kind, actor, strconv.Itoa(int(p)), id)
 		successCode = http.StatusNoContent
@@ -174,7 +178,7 @@ func loadBindings(ctx context.Context, partitions []int32) error {
 		logger.Debug("found %v persisted bindings for partition %v", len(keys), p)
 		for _, key := range keys {
 			kind, actor, partition, id := keyBinding(key)
-			err := tellBinding(ctx, kind, actor, partition, id)
+			err = LoadBinding(ctx, kind, actor, partition, id)
 			if err != nil {
 				if err != ctx.Err() {
 					logger.Error("tell binding failed: %v", err)

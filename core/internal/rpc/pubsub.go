@@ -14,31 +14,29 @@
 // limitations under the License.
 //
 
-// Package pubsub handles Kafka
-package pubsub
+package rpc
 
 import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"net"
-	"strconv"
-	"strings"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
+	"github.com/google/uuid"
 )
 
 var (
 	client   sarama.Client       // shared client
 	producer sarama.SyncProducer // shared idempotent producer
 
+	// id is the unique id of this sidecar instance
+	id = uuid.New().String()
+
 	// routes
-	topic     = "kar" + config.Separator + config.AppName
+	myTopic   string
 	replicas  map[string][]string // map services to sidecars
 	hosts     map[string][]string // map actor types to sidecars
 	routes    map[string][]int32  // map sidecards to partitions
@@ -48,23 +46,22 @@ var (
 	joined    = tick
 	mu        = &sync.RWMutex{}
 
-	manualPartitioner = sarama.NewManualPartitioner(topic)
+	manualPartitioner = sarama.NewManualPartitioner(myTopic)
 
 	errTooFewPartitions = errors.New("too few partitions")
 
-	// ErrUnknownSidecar error
-	ErrUnknownSidecar = errors.New("unknown sidecar")
+	errUnknownSidecar = errors.New("unknown sidecar")
 )
 
 func partitioner(t string) sarama.Partitioner {
-	if t == topic {
+	if t == myTopic {
 		return manualPartitioner
 	}
 	return sarama.NewRandomPartitioner(t)
 }
 
-// Dial connects Kafka producer
-func Dial() error {
+// dial connects Kafka producer
+func dial() error {
 	conf, err := newConfig()
 	if err != nil {
 		return err
@@ -76,7 +73,7 @@ func Dial() error {
 	conf.Producer.Partitioner = partitioner
 	conf.Net.MaxOpenRequests = 1
 
-	client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	client, err = sarama.NewClient(myConfig.Brokers, conf)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka client: %v", err)
 		return err
@@ -91,32 +88,26 @@ func Dial() error {
 	return nil
 }
 
-// Close closes Kafka producer
-func Close() {
-	producer.Close()
-	client.Close()
-}
-
 func newConfig() (*sarama.Config, error) {
 	conf := sarama.NewConfig()
 	var err error
-	conf.Version, err = sarama.ParseKafkaVersion(config.KafkaVersion)
+	conf.Version, err = sarama.ParseKafkaVersion(myConfig.Version)
 	if err != nil {
 		logger.Error("failed to parse Kafka version: %v", err)
 		return nil, err
 	}
 	conf.ClientID = "kar"
-	if config.KafkaPassword != "" {
+	if myConfig.Password != "" {
 		conf.Net.SASL.Enable = true
-		conf.Net.SASL.User = config.KafkaUsername
-		conf.Net.SASL.Password = config.KafkaPassword
+		conf.Net.SASL.User = myConfig.User
+		conf.Net.SASL.Password = myConfig.Password
 		conf.Net.SASL.Handshake = true
 		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 	}
-	if config.KafkaEnableTLS {
+	if myConfig.EnableTLS {
 		conf.Net.TLS.Enable = true
 		// TODO support custom CA certificate
-		if config.KafkaTLSSkipVerify {
+		if myConfig.TLSSkipVerify {
 			conf.Net.TLS.Config = &tls.Config{
 				InsecureSkipVerify: true,
 			}
@@ -125,26 +116,25 @@ func newConfig() (*sarama.Config, error) {
 	return conf, nil
 }
 
-// Partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
-func Partitions() ([]int32, <-chan struct{}) {
+// partitions returns the set of partitions claimed by this sidecar and a channel for change notifications
+func partitions() ([]int32, <-chan struct{}) {
 	mu.RLock()
 	t := tick
-	r := routes[config.ID]
+	r := routes[id]
 	mu.RUnlock()
 	return r, t
 }
 
-// Join joins the sidecar to the application and returns a channel of incoming messages
-func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, error) {
-	address = net.JoinHostPort(config.Hostname, strconv.Itoa(port))
+// joinSidecarToMesh joins the sidecar to the application mesh and returns a channel that will be closed when the sidecar leaves the mesh
+func joinSidecarToMesh(ctx context.Context, f func(ctx context.Context, msg message)) (<-chan struct{}, error) {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
 		return nil, err
 	}
-	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+	err = admin.CreateTopic(myTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
 	if err != nil {
-		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
+		err = admin.CreateTopic(myTopic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
 	}
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
@@ -152,12 +142,12 @@ func Join(ctx context.Context, f func(Message), port int) (<-chan struct{}, erro
 			return nil, err
 		}
 	}
-	ch, _, err := Subscribe(ctx, topic, topic, &Options{master: true, OffsetOldest: true}, f)
+	ch, err := subscribeImpl(ctx, myTopic, myTopic, &subscriptionOptions{master: true, OffsetOldest: true}, f)
 	return ch, err
 }
 
 // CreateTopic attempts to create the specified topic using the given parameters
-func CreateTopic(topic string, parameters string) error {
+func createTopic(conf *Config, topic string, parameters string) error {
 	var params sarama.TopicDetail
 	var err error
 
@@ -191,92 +181,38 @@ func CreateTopic(topic string, parameters string) error {
 }
 
 // DeleteTopic attempts to delete the specified topic
-func DeleteTopic(topic string) error {
+func deleteTopic(conf *Config, topic string) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
-	if err != nil {
-		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
-		return err
+	if err == nil {
+		err = admin.DeleteTopic(topic)
 	}
-	err = admin.DeleteTopic(topic)
-	if err != nil {
-		logger.Error("failed to delete Kafka topic %v: %v", topic, err)
-		return err
-	}
-	return nil
+	return err
 }
 
-type sidecarData struct {
-	Partitions []int32  `json:"partitions"`
-	Address    string   `json:"address"`
-	Actors     []string `json:"actors"`
-	Services   []string `json:"services"`
-}
-
-// GetSidecars --
-func GetSidecars(format string) (string, error) {
-	information := make(map[string]*sidecarData)
+func getTopology() (map[string][]string, <-chan struct{}) {
+	topology := make(map[string][]string)
 
 	mu.RLock()
-	for sidecar, partitions := range routes {
-		information[sidecar] = &sidecarData{}
-		information[sidecar].Partitions = append(information[sidecar].Partitions, partitions...)
-	}
-	for actor, sidecars := range hosts {
-		for _, sidecar := range sidecars {
-			information[sidecar].Actors = append(information[sidecar].Actors, actor)
-		}
+	for sidecar := range addresses {
+		topology[sidecar] = []string{}
 	}
 	for service, sidecars := range replicas {
 		for _, sidecar := range sidecars {
-			information[sidecar].Services = append(information[sidecar].Services, service)
+			topology[sidecar] = append(topology[sidecar], service)
 		}
 	}
-	for sidecar, address := range addresses {
-		information[sidecar].Address = address
+	for actor, sidecars := range hosts {
+		for _, sidecar := range sidecars {
+			topology[sidecar] = append(topology[sidecar], actor)
+		}
 	}
 	mu.RUnlock()
 
-	if format == "json" || format == "application/json" {
-		m, err := json.Marshal(information)
-		if err != nil {
-			logger.Error("failed to marshal sidecar information data: %v", err)
-			return "", err
-		}
-		return string(m), nil
-	}
-
-	var str strings.Builder
-	fmt.Fprint(&str, "\nSidecar\n : Actors\n : Services")
-	for sidecar, sidecarInfo := range information {
-		fmt.Fprintf(&str, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
-	}
-	return str.String(), nil
+	return topology, nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
-// GetSidecarID --
-func GetSidecarID(format string) (string, error) {
-	if format == "json" || format == "application/json" {
-		return fmt.Sprintf("{\"id\":\"%s\"}", config.ID), nil
-	}
-
-	return config.ID + "\n", nil
-}
-
-// Purge deletes the application topic
-func Purge() error {
-	admin, err := sarama.NewClusterAdminFromClient(client)
-	if err != nil {
-		return err
-	}
-	err = admin.DeleteTopic(topic)
-	if err != sarama.ErrUnknownTopicOrPartition {
-		return err
-	}
-	return nil
-}
-
-// IsLiveSidecar return true if the argument sidecar is currently part of the application mesh
-func IsLiveSidecar(sidecar string) bool {
+// isLiveSidecar return true if the argument sidecar is currently part of the application mesh
+func isLiveSidecar(sidecar string) bool {
 	_, ok := addresses[sidecar]
 	return ok
 }

@@ -14,17 +14,15 @@
 // limitations under the License.
 //
 
-package pubsub
+package rpc
 
 import (
 	"context"
 	"encoding/json"
 	"math"
-	"net/http"
 	"strconv"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/Shopify/sarama"
@@ -32,7 +30,7 @@ import (
 
 // store key for topic, partition
 func mangle(topic string, partition int32) string {
-	return "pubsub" + config.Separator + topic + config.Separator + strconv.Itoa(int(partition))
+	return "pubsub" + separator + topic + separator + strconv.Itoa(int(partition))
 }
 
 // data exchanged when setting up consumer group session for application topic
@@ -44,14 +42,14 @@ type userData struct {
 	Offsets map[int32]map[int64]struct{} // live local offsets
 }
 
-// Options specifies the options for subscribing to a topic
-type Options struct {
+// subscriptionOptions specifies the options for subscribing to a topic
+type subscriptionOptions struct {
 	OffsetOldest bool // should start from oldest available offset if no cursor exists
 	master       bool // internal flag to trigger special handling of application topic
 }
 
-// A Message received on a topic
-type Message struct {
+// A message received on a topic
+type message struct {
 	Value     []byte   // expose event payload
 	partition int32    // hidden
 	offset    int64    // hidden
@@ -59,7 +57,7 @@ type Message struct {
 }
 
 // Mark marks a message as consumed if coming from kafka
-func (e *Message) Mark() error {
+func (e *message) Mark() error {
 	if e.handler != nil {
 		return e.handler.mark(e.partition, e.offset)
 	}
@@ -71,17 +69,17 @@ type handler struct {
 	client     sarama.Client
 	conf       *sarama.Config // kafka config
 	karContext context.Context
-	topic      string                       // subscribed topic
-	options    *Options                     // options
-	f          func(Message)                // Message handler
-	ready      chan struct{}                // channel closed when ready to accept events
-	local      map[int32]map[int64]struct{} // local progress: offsets currently worked on in this sidecar
-	lock       sync.Mutex                   // mutex to protect local map
-	live       map[int32]map[int64]struct{} // offsets in progress at beginning of session (from all sidecars)
-	done       map[int32]map[int64]struct{} // offsets completed at beginning of session (from all sidecars)
+	topic      string                                  // subscribed topic
+	options    *subscriptionOptions                    // options
+	f          func(ctx context.Context, mesg message) // Message handler
+	ready      chan struct{}                           // channel closed when ready to accept events
+	local      map[int32]map[int64]struct{}            // local progress: offsets currently worked on in this sidecar
+	lock       sync.Mutex                              // mutex to protect local map
+	live       map[int32]map[int64]struct{}            // offsets in progress at beginning of session (from all sidecars)
+	done       map[int32]map[int64]struct{}            // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *Options, f func(Message)) *handler {
+func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *subscriptionOptions, f func(ctx context.Context, msg message)) *handler {
 	return &handler{
 		conf:       conf,
 		karContext: karContext,
@@ -113,9 +111,9 @@ func (h *handler) marshal() {
 	if h.options.master { // exchange metadata and local progress
 		h.conf.Consumer.Group.Member.UserData, _ = json.Marshal(userData{
 			Address: address,
-			Sidecar: config.ID,
-			Service: config.ServiceName,
-			Actors:  config.ActorTypes,
+			Sidecar: id,
+			Service: myServices[0],
+			Actors:  myServices[1:],
 			Offsets: h.local,
 		})
 	} else {
@@ -224,7 +222,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	}
 
 	if h.options.master {
-		if err := client.RefreshMetadata(topic); err != nil { // refresh producer
+		if err := client.RefreshMetadata(myTopic); err != nil { // refresh producer
 			logger.Error("failed to refresh topic: %v", err)
 			return err
 		}
@@ -281,7 +279,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		h.local[m.Partition][m.Offset] = struct{}{}
 		h.lock.Unlock()
 		logger.Debug("starting work on topic %s, at partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-		h.f(Message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
+		h.f(h.karContext, message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
 	}
 	return nil
 }
@@ -289,13 +287,13 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func Subscribe(ctx context.Context, topic, group string, options *Options, f func(Message)) (<-chan struct{}, int, error) {
+func subscribeImpl(ctx context.Context, topic, group string, options *subscriptionOptions, f func(ctx context.Context, msg message)) (<-chan struct{}, error) {
 	if ctx.Err() != nil { // fail fast
-		return nil, http.StatusServiceUnavailable, ctx.Err()
+		return nil, ctx.Err()
 	}
 	conf, err := newConfig()
 	if err != nil {
-		return nil, http.StatusInternalServerError, err
+		return nil, err
 	}
 	if options.master {
 		conf.Consumer.Group.Rebalance.Strategy = &customStrategy{}
@@ -307,20 +305,20 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	}
 	handler := newHandler(conf, ctx, topic, options, f)
 	handler.marshal()
-	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	handler.client, err = sarama.NewClient(myConfig.Brokers, conf)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka client: %v", err)
-		return nil, http.StatusInternalServerError, err
+		return nil, err
 	}
 	_, err = client.Partitions(topic)
 	if err != nil {
-		return nil, http.StatusNotFound, err
+		return nil, err
 	}
 	consumer, err := sarama.NewConsumerGroupFromClient(group, handler.client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka consumer for topic %s, group %s: %v", topic, group, err)
 		handler.client.Close()
-		return nil, http.StatusInternalServerError, err
+		return nil, err
 	}
 
 	closed := make(chan struct{})
@@ -340,6 +338,10 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 		}
 		consumer.Close()
 		handler.client.Close()
+		if options.master {
+			producer.Close()
+			client.Close()
+		}
 	}()
 
 	select {
@@ -347,7 +349,7 @@ func Subscribe(ctx context.Context, topic, group string, options *Options, f fun
 	case <-closed:
 	}
 
-	return closed, http.StatusOK, nil
+	return closed, nil
 }
 
 type entry struct {
@@ -359,7 +361,7 @@ type customStrategy struct{}
 func (s *customStrategy) Name() string { return "custom" }
 
 func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
-	partitions := topics[topic]
+	partitions := topics[myTopic]
 
 	entries := []entry{}
 	for memberID, m := range members {
@@ -384,7 +386,7 @@ func (s *customStrategy) Plan(members map[string]sarama.ConsumerGroupMemberMetad
 		pos := float64(i)
 		min := int(math.Floor(pos*step + 0.5))
 		max := int(math.Floor((pos+1)*step + 0.5))
-		plan.Add(e.memberID, topic, partitions[min:max]...)
+		plan.Add(e.memberID, myTopic, partitions[min:max]...)
 	}
 	return plan, nil
 }

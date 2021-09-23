@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/pubsub"
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -127,12 +127,12 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 				// no fairness issue trying to reacquire because this entry is dead
 			}
 		} else { // new entry
-			sidecar, err := pubsub.GetSidecar(ctx, actor.Type, actor.ID)
+			sidecar, err := rpc.GetSessionNodeID(ctx, rpc.Session{Name: actor.Type, ID: actor.ID})
 			if err != nil {
 				<-e.lock
 				return nil, false, err
 			}
-			if sidecar == config.ID { // start new session
+			if sidecar == rpc.GetNodeID() { // start new session
 				e.valid = true
 				e.session = session
 				e.depth = 1
@@ -216,18 +216,31 @@ func getMyActiveActors(targetedActorType string) map[string][]string {
 // getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
 func getAllActiveActors(ctx context.Context, targetedActorType string) (map[string][]string, error) {
 	information := make(map[string][]string)
-	for _, sidecar := range pubsub.Sidecars() {
+	sidecars, _ := rpc.GetNodeIDs()
+	for _, sidecar := range sidecars {
 		var actorInformation map[string][]string
-		if sidecar != config.ID {
+		if sidecar != rpc.GetNodeID() {
 			// Make call to another sidecar, returns the result of GetMyActiveActors() there
 			msg := map[string]string{
-				"protocol":  "sidecar",
-				"sidecar":   sidecar,
 				"command":   "getActiveActors",
 				"actorType": targetedActorType,
 			}
-			actorReply, err := callHelper(ctx, msg, false)
-			if err != nil || actorReply.StatusCode != 200 {
+			bytes, err := json.Marshal(msg)
+			if err != nil {
+				logger.Debug("Error marshalling a map[string][string]: %v", err)
+			}
+			bytes, err = rpc.Call(ctx, rpc.Node{ID: sidecar}, sidecarEndpoint, time.Time{}, bytes)
+			if err != nil {
+				logger.Debug("Error gathering actor information: %v", err)
+				return nil, err
+			}
+			var actorReply Reply
+			err = json.Unmarshal(bytes, &actorReply)
+			if err != nil {
+				logger.Debug("Error gathering actor information: %v", err)
+				return nil, err
+			}
+			if actorReply.StatusCode != 200 {
 				logger.Debug("Error gathering actor information: %v", err)
 				return nil, err
 			}
@@ -268,15 +281,15 @@ func formatActorInstanceMap(actorInfo map[string][]string, format string) (strin
 	return str.String(), nil
 }
 
-// migrate releases the actor lock and updates the sidecar for the actor
+// delete releases the actor lock and removes the placement for the actor
 // the lock cannot be held multiple times
-func (e *actorEntry) migrate(sidecar string) error {
+func (e *actorEntry) delete() error {
 	e.lock <- struct{}{}
 	e.depth--
 	e.session = ""
 	e.valid = false
 	actorTable.Delete(e.actor)
-	_, err := pubsub.CompareAndSetSidecar(ctx, e.actor.Type, e.actor.ID, config.ID, sidecar)
+	err := rpc.DelSession(ctx, rpc.Session{Name: e.actor.Type, ID: e.actor.ID})
 	close(e.busy)
 	<-e.lock
 	return err

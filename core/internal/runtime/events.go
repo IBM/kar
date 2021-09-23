@@ -23,8 +23,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/pubsub"
-	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/internal/config"
+	"github.com/IBM/kar/core/internal/rpc"
 )
 
 // source describes an event source (subscription)
@@ -74,6 +74,8 @@ func (s source) k() string {
 
 // a collection of event sources
 type sources map[Actor]map[string]source
+
+var karPublisher *rpc.Publisher
 
 func init() {
 	pairs["subscriptions"] = pair{bindings: sources{}, mu: &sync.Mutex{}}
@@ -165,23 +167,34 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		group = s.ID
 	}
 
-	f := func(msg pubsub.Message) {
-		arg := string(msg.Value)
-		if !jsonType { // encode event payload as json string
-			buf, err := json.Marshal(string(msg.Value))
+	rawEventToActorTellMsg := func(ctx context.Context, value []byte) ([]byte, error) {
+		arg := string(value)
+
+		// If the event is not already encoded as json, encode it as a json string
+		if !jsonType {
+			buf, err := json.Marshal(string(value))
 			if err != nil {
-				logger.Error("failed to marshall event from topic %s: %v", s.Topic, err)
-				return
+				return nil, err
 			}
 			arg = string(buf)
 		}
-		err := TellActor(ctx, s.Actor, s.Path, "["+arg+"]", false)
-		if err != nil {
-			logger.Error("failed to post event from topic %s: %v", s.Topic, err)
-		} else {
-			msg.Mark()
-		}
+
+		// mirror command encoding from TellActor from commands.go
+		msg := map[string]string{
+			"command": "tell", // post with no callback expected
+			"path":    s.Path,
+			"payload": "[" + arg + "]"}
+
+		return json.Marshal(msg)
 	}
 
-	return pubsub.Subscribe(ctx, s.Topic, group, &pubsub.Options{OffsetOldest: s.OffsetOldest}, f)
+	ch, err := rpc.Subscribe(ctx, &config.KafkaConfig, s.Topic, group, s.OffsetOldest, rpc.Session{Name: s.Actor.Type, ID: s.Actor.ID}, actorEndpoint, rawEventToActorTellMsg)
+
+	if err == nil {
+		return ch, http.StatusOK, nil
+	} else if err == context.Canceled {
+		return nil, http.StatusServiceUnavailable, err
+	} else {
+		return nil, http.StatusInternalServerError, err
+	}
 }

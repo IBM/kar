@@ -14,26 +14,28 @@
 // limitations under the License.
 //
 
-package pubsub
+package rpc
 
 import (
 	"context"
 	"strings"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/store"
 )
 
+// separator character for store keys and topic names
+const separator = "_" // must not be a legal DNS name character; private copy to avoid circular dependency
+
 func placementKeyPrefix(t string) string {
-	return "pubsub" + config.Separator + "placement" + config.Separator + t
+	return "pubsub" + separator + "placement" + separator + t
 }
 
 func placementKey(t, id string) string {
-	return "pubsub" + config.Separator + "placement" + config.Separator + t + config.Separator + id
+	return "pubsub" + separator + "placement" + separator + t + separator + id
 }
 
-// GetSidecar returns the current sidecar for the given actor type and id or "" if none.
-func GetSidecar(ctx context.Context, t, id string) (string, error) {
+// getSidecar returns the current sidecar for the given actor type and id or "" if none.
+func getSidecar(ctx context.Context, t, id string) (string, error) {
 	s, err := store.Get(ctx, placementKey(t, id))
 	if err == store.ErrNil {
 		return "", nil
@@ -41,11 +43,11 @@ func GetSidecar(ctx context.Context, t, id string) (string, error) {
 	return s, err
 }
 
-// CompareAndSetSidecar atomically updates the sidecar for the given actor type and id.
+// compareAndSetSidecar atomically updates the sidecar for the given actor type and id.
 // Use old = "" to atomically set the initial placement.
 // Use new = "" to atomically delete the current placement.
 // Returns 0 if unsuccessful, 1 if successful.
-func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, error) {
+func compareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, error) {
 	o := &old
 	if old == "" {
 		o = nil
@@ -57,15 +59,15 @@ func CompareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, err
 	return store.CompareAndSet(ctx, placementKey(t, id), o, n)
 }
 
-// GetAllActorInstances returns a mapping from actor types to instanceIDs
-func GetAllActorInstances(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
+// getAllSessions returns a mapping from actor types to instanceIDs
+func getAllSessions(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
 	m := map[string][]string{}
 	reply, err := store.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
 	if err != nil {
 		return nil, err
 	}
 	for _, key := range reply {
-		splitKeys := strings.Split(key, config.Separator)
+		splitKeys := strings.Split(key, separator)
 		actorType := splitKeys[2]
 		instanceID := splitKeys[3]
 		if m[actorType] == nil {
