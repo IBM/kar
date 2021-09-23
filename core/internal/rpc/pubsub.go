@@ -190,25 +190,25 @@ func deleteTopic(conf *Config, topic string) error {
 }
 
 func getTopology() (map[string][]string, <-chan struct{}) {
-	toplogy := make(map[string][]string)
+	topology := make(map[string][]string)
 
 	mu.RLock()
 	for sidecar := range addresses {
-		toplogy[sidecar] = []string{}
+		topology[sidecar] = []string{}
 	}
 	for service, sidecars := range replicas {
 		for _, sidecar := range sidecars {
-			toplogy[sidecar] = append(toplogy[sidecar], service)
+			topology[sidecar] = append(topology[sidecar], service)
 		}
 	}
 	for actor, sidecars := range hosts {
 		for _, sidecar := range sidecars {
-			toplogy[sidecar] = append(toplogy[sidecar], actor)
+			topology[sidecar] = append(topology[sidecar], actor)
 		}
 	}
 	mu.RUnlock()
 
-	return toplogy, nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
+	return topology, nil // TODO: Kar doesn't use the notification channel, so not bothering to implement it
 }
 
 // isLiveSidecar return true if the argument sidecar is currently part of the application mesh
