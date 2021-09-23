@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
 )
 
@@ -44,6 +45,7 @@ const (
 )
 
 type publisher struct {
+	producer sarama.SyncProducer
 }
 
 type karCallbackInfo struct {

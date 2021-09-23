@@ -184,8 +184,13 @@ func Main() {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
 		closed, err = rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
 		if err != nil {
-			logger.Fatal("fail to connect to Kafka: %v", err)
+			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
+		karPublisher, err = rpc.NewPublisher(&config.KafkaConfig)
+		if err != nil {
+			logger.Fatal("failed to create event publisher: %v", err)
+		}
+		defer karPublisher.Close()
 	}
 
 	if config.CmdName == config.PurgeCmd {

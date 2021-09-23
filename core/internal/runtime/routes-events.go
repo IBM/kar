@@ -181,14 +181,13 @@ func routeImplSubscription(w http.ResponseWriter, r *http.Request, ps httprouter
 //     - application/*
 //     Responses:
 //       200: response200
-//       404: response404
-//       500: response500
+//       400: response400
 //
 func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	buf, _ := ioutil.ReadAll(r.Body)
-	code, err := rpc.Publish_PS(ps.ByName("topic"), buf)
+	err := karPublisher.Publish(ps.ByName("topic"), buf)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("publish error: %v", err), code)
+		http.Error(w, fmt.Sprintf("publish error: %v", err), http.StatusBadRequest)
 	} else {
 		fmt.Fprint(w, "OK")
 	}

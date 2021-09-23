@@ -73,17 +73,12 @@ func delSession(ctx context.Context, session Session) error {
 }
 
 func newPublisher(conf *Config) (*Publisher, error) {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil, nil
-}
-
-func (p *Publisher) publish(topic string, value []byte) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+	// Config completely ignored in legacy impl; one shared Publisher for all events that is created unconditionally during startup
+	return &Publisher{publisher: publisher{producer: producer}}, nil
 }
 
 func (p *Publisher) close() error {
-	logger.Fatal("Unimplemented rpc-shim function")
+	// Nothing to do in legacy implementation; one shared Publisher for all events that is closed during shutdown
 	return nil
 }
 

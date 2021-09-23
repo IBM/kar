@@ -17,25 +17,20 @@
 package rpc
 
 import (
-	"net/http"
-
-	"github.com/Shopify/sarama"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/Shopify/sarama"
 )
 
-// Publish_PS publishes a message on a topic
-func Publish_PS(topic string, message []byte) ( /* httpStatusCode */ int, error) {
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
+// publish publishes a message on a topic
+func (p *Publisher) publish(topic string, value []byte) error {
+	partition, offset, err := p.publisher.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: topic,
-		Value: sarama.ByteEncoder(message),
+		Value: sarama.ByteEncoder(value),
 	})
 	if err != nil {
 		logger.Error("failed to send message on topic %s: %v", topic, err)
-		if err == sarama.ErrUnknownTopicOrPartition {
-			return http.StatusNotFound, err
-		}
-		return http.StatusInternalServerError, err
+	} else {
+		logger.Debug("sent message on topic %s, partition %d, offset %d", topic, partition, offset)
 	}
-	logger.Debug("sent message on topic %s, partition %d, offset %d", topic, partition, offset)
-	return http.StatusOK, nil
+	return err
 }

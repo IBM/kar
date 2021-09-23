@@ -1572,10 +1572,8 @@ paths:
       responses:
         "200":
           $ref: '#/responses/response200'
-        "404":
-          $ref: '#/responses/response404'
-        "500":
-          $ref: '#/responses/response500'
+        "400":
+          $ref: '#/responses/response400'
       schemes:
       - http
       summary: publish
