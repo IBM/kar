@@ -183,23 +183,17 @@ func createTopic(conf *Config, topic string, parameters string) error {
 // DeleteTopic attempts to delete the specified topic
 func deleteTopic(conf *Config, topic string) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
-	if err != nil {
-		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
-		return err
+	if err == nil {
+		err = admin.DeleteTopic(topic)
 	}
-	err = admin.DeleteTopic(topic)
-	if err != nil {
-		logger.Error("failed to delete Kafka topic %v: %v", topic, err)
-		return err
-	}
-	return nil
+	return err
 }
 
 func getTopology() (map[string][]string, <-chan struct{}) {
 	toplogy := make(map[string][]string)
 
 	mu.RLock()
-	for sidecar, _ := range addresses {
+	for sidecar := range addresses {
 		toplogy[sidecar] = []string{}
 	}
 	for service, sidecars := range replicas {
