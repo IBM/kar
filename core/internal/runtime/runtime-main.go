@@ -270,9 +270,9 @@ func Main() {
 	}
 
 	if requiresPubSub {
-		<-closed  // first wait for rpc library to shutdown
-		wg.Wait() // next wait for the rest of the runtime to shutdown
+		<-closed // first wait for rpc library to shutdown
 	}
+	wg.Wait() // next wait for the rest of the runtime to shutdown
 
 	cancel9()
 

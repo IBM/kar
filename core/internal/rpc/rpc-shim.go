@@ -84,8 +84,8 @@ func (p *Publisher) close() error {
 }
 
 func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
-	f := func(ctx context.Context, value []byte, markAsDone func()) {
-		transformed, err := transform(ctx, value)
+	f := func(ctx context.Context, msg message) {
+		transformed, err := transform(ctx, msg.Value)
 		if err != nil {
 			logger.Error("failed to transform event from topic %s: %v", topic, err)
 		}
@@ -93,7 +93,7 @@ func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bo
 		if err != nil {
 			logger.Error("failed to tell target %v of event from topic %s: %v", target, topic, err)
 		} else {
-			markAsDone()
+			msg.Mark()
 		}
 	}
 

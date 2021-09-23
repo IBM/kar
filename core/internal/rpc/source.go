@@ -69,17 +69,17 @@ type handler struct {
 	client     sarama.Client
 	conf       *sarama.Config // kafka config
 	karContext context.Context
-	topic      string                                                     // subscribed topic
-	options    *subscriptionOptions                                       // options
-	f          func(ctx context.Context, value []byte, markAsDone func()) // Message handler
-	ready      chan struct{}                                              // channel closed when ready to accept events
-	local      map[int32]map[int64]struct{}                               // local progress: offsets currently worked on in this sidecar
-	lock       sync.Mutex                                                 // mutex to protect local map
-	live       map[int32]map[int64]struct{}                               // offsets in progress at beginning of session (from all sidecars)
-	done       map[int32]map[int64]struct{}                               // offsets completed at beginning of session (from all sidecars)
+	topic      string                                  // subscribed topic
+	options    *subscriptionOptions                    // options
+	f          func(ctx context.Context, mesg message) // Message handler
+	ready      chan struct{}                           // channel closed when ready to accept events
+	local      map[int32]map[int64]struct{}            // local progress: offsets currently worked on in this sidecar
+	lock       sync.Mutex                              // mutex to protect local map
+	live       map[int32]map[int64]struct{}            // offsets in progress at beginning of session (from all sidecars)
+	done       map[int32]map[int64]struct{}            // offsets completed at beginning of session (from all sidecars)
 }
 
-func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *subscriptionOptions, f func(ctx context.Context, value []byte, markAsDone func())) *handler {
+func newHandler(conf *sarama.Config, karContext context.Context, topic string, options *subscriptionOptions, f func(ctx context.Context, msg message)) *handler {
 	return &handler{
 		conf:       conf,
 		karContext: karContext,
@@ -279,8 +279,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		h.local[m.Partition][m.Offset] = struct{}{}
 		h.lock.Unlock()
 		logger.Debug("starting work on topic %s, at partition %d, offset %d", m.Topic, m.Partition, m.Offset)
-		km := message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h}
-		h.f(h.karContext, m.Value, func() { km.Mark() })
+		h.f(h.karContext, message{Value: m.Value, partition: m.Partition, offset: m.Offset, handler: h})
 	}
 	return nil
 }
@@ -288,7 +287,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 // Subscribe joins a consumer group and consumes messages on a topic
 // f is invoked on each message (serially for each partition)
 // f must return quickly if the context is cancelled
-func subscribeImpl(ctx context.Context, topic, group string, options *subscriptionOptions, f func(ctx context.Context, value []byte, markAsDone func())) (<-chan struct{}, error) {
+func subscribeImpl(ctx context.Context, topic, group string, options *subscriptionOptions, f func(ctx context.Context, msg message)) (<-chan struct{}, error) {
 	if ctx.Err() != nil { // fail fast
 		return nil, ctx.Err()
 	}

@@ -158,14 +158,14 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 // lowlevel request support in callee
 ////
 
-// processMsg processes one incoming message
-func processMsg(ctx context.Context, value []byte, markAsDone func()) {
+// processMsg asynchronously processes an incoming message
+func processMsg(ctx context.Context, m message) {
 	go func() {
 		var msg karMsg
-		err := json.Unmarshal(value, &msg)
+		err := json.Unmarshal(m.Value, &msg)
 		if err != nil {
 			logger.Error("failed to unmarshal message: %v", err)
-			markAsDone()
+			m.Mark()
 			return
 		}
 		var target Target
@@ -177,13 +177,13 @@ func processMsg(ctx context.Context, value []byte, markAsDone func()) {
 			target = Node{ID: msg.Target.ID}
 		} else {
 			logger.Error("unknown message target type %v", msg.Target.Type)
-			markAsDone()
+			m.Mark()
 		}
 
 		// Cancellation of Calls from dead nodes
 		if msg.Callback.Request != "" && !isLiveSidecar(msg.Callback.SendingNode) {
 			logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
-			markAsDone()
+			m.Mark()
 		}
 
 		// Forwarding
@@ -218,7 +218,7 @@ func processMsg(ctx context.Context, value []byte, markAsDone func()) {
 		}
 
 		if err == nil {
-			markAsDone()
+			m.Mark()
 		}
 	}()
 }

@@ -43,6 +43,7 @@ func (s Node) target()    {}
 // Handler for method
 type Handler func(context.Context, Target, []byte) ([]byte, error)
 
+// Data transformer applied to convert external events to Tell payloads
 type Transformer func(context.Context, []byte) ([]byte, error)
 
 // Result of async call

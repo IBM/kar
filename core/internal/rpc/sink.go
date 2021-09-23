@@ -28,7 +28,7 @@ func (p *Publisher) publish(topic string, value []byte) error {
 		Value: sarama.ByteEncoder(value),
 	})
 	if err != nil {
-		logger.Error("failed to send message on topic %s: %v", topic, err)
+		logger.Warning("failed to send message on topic %s: %v", topic, err)
 	} else {
 		logger.Debug("sent message on topic %s, partition %d, offset %d", topic, partition, offset)
 	}

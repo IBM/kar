@@ -126,7 +126,7 @@ func partitions() ([]int32, <-chan struct{}) {
 }
 
 // joinSidecarToMesh joins the sidecar to the application mesh and returns a channel that will be closed when the sidecar leaves the mesh
-func joinSidecarToMesh(ctx context.Context, f func(ctx context.Context, value []byte, markAsDone func())) (<-chan struct{}, error) {
+func joinSidecarToMesh(ctx context.Context, f func(ctx context.Context, msg message)) (<-chan struct{}, error) {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
