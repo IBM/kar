@@ -134,7 +134,7 @@ func process(m rpc.Message_PS) {
 // Main is the main entrypoint for the KAR runtime
 func Main() {
 	logger.Warning("starting...")
-	logger.Info("redis: %v:%v", config.RedisHost, config.RedisPort)
+	logger.Info("redis: %v:%v", config.RedisConfig.Host, config.RedisConfig.Port)
 	logger.Info("kafka: %v", strings.Join(config.KafkaConfig.Brokers, ","))
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()
@@ -164,25 +164,16 @@ func Main() {
 		logger.Fatal("TCP listener failed: %v", err)
 	}
 
-	redisConfig := store.StoreConfig{
-		MangleKey: func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key },
-		UnmangleKey: func(key string) string {
-			parts := strings.Split(key, config.Separator)
-			if parts[0] == "kar" && parts[1] == config.AppName {
-				return strings.Join(parts[2:], config.Separator)
-			}
-			return key
-		},
-		RequestRetryLimit: config.RequestRetryLimit,
-		LongOperation:     config.LongRedisOperation,
-		Host:              config.RedisHost,
-		Port:              config.RedisPort,
-		EnableTLS:         config.RedisEnableTLS,
-		TLSSkipVerify:     config.RedisTLSSkipVerify,
-		Password:          config.RedisPassword,
-		User:              config.RedisUser,
-		CA:                config.RedisCA,
+	redisConfig := config.RedisConfig
+	redisConfig.MangleKey = func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key }
+	redisConfig.UnmangleKey = func(key string) string {
+		parts := strings.Split(key, config.Separator)
+		if parts[0] == "kar" && parts[1] == config.AppName {
+			return strings.Join(parts[2:], config.Separator)
+		}
+		return key
 	}
+	redisConfig.RequestRetryLimit = config.RequestRetryLimit
 
 	if err = store.Dial(&redisConfig); err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)

@@ -32,6 +32,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/store"
 )
 
 // Separator character for store keys and topic names
@@ -80,9 +81,6 @@ var (
 	// ActorReminderAcceptableDelay controls the threshold at which reminders are logged as being late
 	ActorReminderAcceptableDelay time.Duration
 
-	// LongRedisOperation sets a threshold used to report long-running redis operations
-	LongRedisOperation time.Duration
-
 	// AppPort is the HTTP port the application process will be listening on
 	AppPort int
 
@@ -92,28 +90,11 @@ var (
 	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
 	KubernetesMode bool
 
+	// KafkaConfig contains the configuration information to connect with Kafka
 	KafkaConfig rpc.Config
 
-	// RedisHost is the host of the Redis instance
-	RedisHost string
-
-	// RedisPort is the port of the Redis instance
-	RedisPort int
-
-	// RedisEnableTLS is set if the Redis connection requires TLS
-	RedisEnableTLS bool
-
-	// RedisTLSSkipVerify is set to skip server name verification for Redis when connecting over TLS
-	RedisTLSSkipVerify bool
-
-	// RedisPassword the password to use to connect to the Redis instance (required)
-	RedisPassword string
-
-	// RedisUser the user to use to connect to the Redis instance (required)
-	RedisUser string
-
-	// Redis certificate
-	RedisCA *x509.Certificate
+	// RedisConfig contains the configuration information to connect with Redis
+	RedisConfig store.StoreConfig
 
 	// H2C enables h2c to communicate with the app service
 	H2C bool
@@ -165,16 +146,16 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&KafkaConfig.Version, "kafka_version", "", "Kafka cluster version")
 	f.BoolVar(&KafkaConfig.TLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
 
-	f.StringVar(&RedisHost, "redis_host", "", "The Redis host")
-	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
-	f.BoolVar(&RedisEnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
-	f.StringVar(&RedisPassword, "redis_password", "", "The password to use to connect to the Redis server")
-	f.StringVar(&RedisUser, "redis_user", "", "The user to use to connect to the Redis server")
-	f.BoolVar(&RedisTLSSkipVerify, "redis_tls_skip_verify", false, "Skip server name verification for Redis when connecting over TLS")
+	f.StringVar(&RedisConfig.Host, "redis_host", "", "The Redis host")
+	f.IntVar(&RedisConfig.Port, "redis_port", 0, "The Redis port")
+	f.BoolVar(&RedisConfig.EnableTLS, "redis_enable_tls", false, "Use TLS to communicate with Redis")
+	f.StringVar(&RedisConfig.Password, "redis_password", "", "The password to use to connect to the Redis server")
+	f.StringVar(&RedisConfig.User, "redis_user", "", "The user to use to connect to the Redis server")
+	f.BoolVar(&RedisConfig.TLSSkipVerify, "redis_tls_skip_verify", false, "Skip server name verification for Redis when connecting over TLS")
 	f.StringVar(&redisCABase64, "redis_ca_cert", "", "The base64-encoded Redis CA certificate if any")
 
 	f.DurationVar(&RequestRetryLimit, "request_retry_limit", -1*time.Second, "Time limit on retrying failing redis/http connections (<0 is infinite)")
-	f.DurationVar(&LongRedisOperation, "redis_slow_op_threshold", 1*time.Second, "Threshold for reporting long-running redis operations")
+	f.DurationVar(&RedisConfig.LongOperation, "redis_slow_op_threshold", 1*time.Second, "Threshold for reporting long-running redis operations")
 
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
 
@@ -408,33 +389,33 @@ Available commands:
 		}
 	}
 
-	if !RedisEnableTLS {
+	if !RedisConfig.EnableTLS {
 		rtmp := os.Getenv("REDIS_ENABLE_TLS")
 		if rtmp == "" {
 			rtmp = loadStringFromConfig(configDir, "redis_enable_tls")
 		}
 		if rtmp != "" {
-			if RedisEnableTLS, err = strconv.ParseBool(rtmp); err != nil {
+			if RedisConfig.EnableTLS, err = strconv.ParseBool(rtmp); err != nil {
 				logger.Fatal("error parsing REDIS_ENABLE_TLS as boolean")
 			}
 		}
 	}
 
-	if !RedisTLSSkipVerify {
+	if !RedisConfig.TLSSkipVerify {
 		rtmp := os.Getenv("REDIS_TLS_SKIP_VERIFY")
 		if rtmp == "" {
 			rtmp = loadStringFromConfig(configDir, "redis_tls_skip_verify")
 		}
 		if rtmp != "" {
-			if RedisTLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
+			if RedisConfig.TLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
 				logger.Fatal("error parsing REDIS_TLS_SKIP_VERIFY as boolean")
 			}
 		}
 	}
 
-	if RedisHost == "" {
-		if RedisHost = os.Getenv("REDIS_HOST"); RedisHost == "" {
-			if RedisHost = loadStringFromConfig(configDir, "redis_host"); RedisHost == "" {
+	if RedisConfig.Host == "" {
+		if RedisConfig.Host = os.Getenv("REDIS_HOST"); RedisConfig.Host == "" {
+			if RedisConfig.Host = loadStringFromConfig(configDir, "redis_host"); RedisConfig.Host == "" {
 				logger.Fatal("Redis host is required")
 			}
 		}
@@ -453,37 +434,37 @@ Available commands:
 		}
 
 		block, _ := pem.Decode(buf)
-		RedisCA, err = x509.ParseCertificate(block.Bytes)
+		RedisConfig.CA, err = x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			logger.Fatal("error parsing Redis CA certificate: %v", err)
 		}
 	}
 
-	if RedisPort == 0 {
+	if RedisConfig.Port == 0 {
 		if os.Getenv("REDIS_PORT") != "" {
-			if RedisPort, err = strconv.Atoi(os.Getenv("REDIS_PORT")); err != nil {
+			if RedisConfig.Port, err = strconv.Atoi(os.Getenv("REDIS_PORT")); err != nil {
 				logger.Fatal("error parsing environment variable REDIS_PORT")
 			}
 		} else {
 			if rp := loadStringFromConfig(configDir, "redis_port"); rp != "" {
-				if RedisPort, err = strconv.Atoi(rp); err != nil {
+				if RedisConfig.Port, err = strconv.Atoi(rp); err != nil {
 					logger.Fatal("error parsing config value for redis_port: %s", rp)
 				}
 			} else {
-				RedisPort = 6379
+				RedisConfig.Port = 6379
 			}
 		}
 	}
 
-	if RedisPassword == "" {
-		if RedisPassword = os.Getenv("REDIS_PASSWORD"); RedisPassword == "" {
-			RedisPassword = loadStringFromConfig(configDir, "redis_password")
+	if RedisConfig.Password == "" {
+		if RedisConfig.Password = os.Getenv("REDIS_PASSWORD"); RedisConfig.Password == "" {
+			RedisConfig.Password = loadStringFromConfig(configDir, "redis_password")
 		}
 	}
 
-	if RedisUser == "" {
-		if RedisUser = os.Getenv("REDIS_USER"); RedisUser == "" {
-			RedisUser = loadStringFromConfig(configDir, "redis_user")
+	if RedisConfig.User == "" {
+		if RedisConfig.User = os.Getenv("REDIS_USER"); RedisConfig.User == "" {
+			RedisConfig.User = loadStringFromConfig(configDir, "redis_user")
 		}
 	}
 
