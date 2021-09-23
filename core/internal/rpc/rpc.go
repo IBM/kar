@@ -89,6 +89,11 @@ func GetServices() ([]string, <-chan struct{}) {
 	return getServices()
 }
 
+// GetAllSessions returns a map from Session names to all known IDs for each name
+func GetAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string][]string, error) {
+	return getAllSessions(ctx, sessionPrefixFilter)
+}
+
 // GetNodeID returns the node id for the current node
 func GetNodeID() string {
 	return getNodeID()

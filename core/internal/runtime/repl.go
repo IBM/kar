@@ -149,7 +149,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				} else {
 					prefix = fmt.Sprintf("Listing all known actor instances:\n")
 				}
-				if actorMap, err := rpc.GetAllActorInstances_PS(ctx, config.GetActorType); err == nil {
+				if actorMap, err := rpc.GetAllSessions(ctx, config.GetActorType); err == nil {
 					str, err = formatActorInstanceMap(actorMap, config.GetOutputStyle)
 				}
 			} else {

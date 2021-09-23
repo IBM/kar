@@ -59,8 +59,8 @@ func compareAndSetSidecar(ctx context.Context, t, id, old, new string) (int, err
 	return store.CompareAndSet(ctx, placementKey(t, id), o, n)
 }
 
-// GetAllActorInstances_PS returns a mapping from actor types to instanceIDs
-func GetAllActorInstances_PS(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
+// getAllSessions returns a mapping from actor types to instanceIDs
+func getAllSessions(ctx context.Context, actorTypePrefix string) (map[string][]string, error) {
 	m := map[string][]string{}
 	reply, err := store.Keys(ctx, placementKeyPrefix(actorTypePrefix)+"*")
 	if err != nil {
