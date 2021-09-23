@@ -122,7 +122,7 @@ func GetPartitions() ([]int32, <-chan struct{}) {
 	return getPartitions()
 }
 
-// GetSession returns the node responsible for the specified session if defined or "" if not
+// GetSessionNodeId returns the node responsible for the specified session if defined or "" if not
 func GetSessionNodeID(ctx context.Context, session Session) (string, error) {
 	return getSessionNodeID(ctx, session)
 }
