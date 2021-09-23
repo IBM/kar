@@ -157,13 +157,12 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 ////
 
 // Process_PS processes one incoming message
-func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_PS) {
+func Process_PS(ctx context.Context, cancel context.CancelFunc, value []byte) bool {
 	var msg karMsg
-	err := json.Unmarshal(message.Value, &msg)
+	err := json.Unmarshal(value, &msg)
 	if err != nil {
 		logger.Error("failed to unmarshal message: %v", err)
-		message.Mark()
-		return
+		return true
 	}
 	var target Target
 	if msg.Target.Type == "service" {
@@ -174,15 +173,13 @@ func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_
 		target = Node{ID: msg.Target.ID}
 	} else {
 		logger.Error("unknown message target type %v", msg.Target.Type)
-		message.Mark()
-		return
+		return true
 	}
 
 	// Cancellation of Calls from dead nodes
 	if msg.Callback.Request != "" && !isLiveSidecar(msg.Callback.SendingNode) {
 		logger.Info("Cancelling request %v from dead sidecar %s", msg.Callback.Request, msg.Callback.SendingNode)
-		message.Mark()
-		return
+		return true
 	}
 
 	// Forwarding
@@ -216,9 +213,7 @@ func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_
 		}
 	}
 
-	if err == nil {
-		message.Mark()
-	}
+	return err == nil
 }
 
 ////

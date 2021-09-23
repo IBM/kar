@@ -127,7 +127,9 @@ func process(m rpc.Message_PS) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		rpc.Process_PS(ctx, cancel, m)
+		if rpc.Process_PS(ctx, cancel, m.Value) {
+			m.Mark()
+		}
 	}()
 }
 
@@ -210,7 +212,7 @@ func Main() {
 		purge(topic, "*")
 		return
 	} else if config.CmdName == config.DrainCmd {
-		purge(topic, "pubsub" + config.Separator + "*")
+		purge(topic, "pubsub"+config.Separator+"*")
 		return
 	}
 
