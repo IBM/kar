@@ -24,7 +24,7 @@ import (
 )
 
 // separator character for store keys and topic names
-const separator = "_" // must not be a legal DNS name character; replicated from config to avoid circular dependency
+const separator = "_" // must not be a legal DNS name character; private copy to avoid circular dependency
 
 func placementKeyPrefix(t string) string {
 	return "pubsub" + separator + "placement" + separator + t

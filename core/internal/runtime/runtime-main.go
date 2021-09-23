@@ -135,7 +135,7 @@ func process(m rpc.Message_PS) {
 func Main() {
 	logger.Warning("starting...")
 	logger.Info("redis: %v:%v", config.RedisHost, config.RedisPort)
-	logger.Info("kafka: %v", strings.Join(config.KafkaBrokers, ","))
+	logger.Info("kafka: %v", strings.Join(config.KafkaConfig.Brokers, ","))
 	exitCode := 0
 	defer func() { os.Exit(exitCode) }()
 
@@ -196,20 +196,20 @@ func Main() {
 		requiresPubSub = false
 	}
 
-	if requiresPubSub {
-		if err = rpc.Dial_PS(); err != nil {
-			logger.Fatal("failed to connect to Kafka: %v", err)
-		}
-		defer rpc.Close_PS()
-	}
-
+	// Connect to Kafka
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
 		topic := "kar" + config.Separator + config.AppName
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
-		rpc.Connect(ctx, topic, nil, myServices...)
+		rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
+
+		if err = rpc.Dial_PS(); err != nil {
+			logger.Fatal("failed to connect to Kafka: %v", err)
+		}
+		defer rpc.Close_PS()
+
 		// one goroutine, defer close(closed)
-		closed, err = rpc.Join_PS(ctx, process, listener.Addr().(*net.TCPAddr).Port)
+		closed, err = rpc.Join_PS(ctx, process)
 		if err != nil {
 			logger.Fatal("failed to join Kafka consumer group for application: %v", err)
 		}

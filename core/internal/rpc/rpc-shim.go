@@ -29,6 +29,7 @@ func register(method string, handler Handler) {
 func connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
 	myServices = append(myServices, services...)
 	myTopic = topic
+	myConfig = conf
 
 	// TODO: Actually implement the interesting part of this...
 	return nil, nil

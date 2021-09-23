@@ -36,6 +36,7 @@ var (
 	handlers = make(map[string]Handler)
 
 	myServices = []string{}
+	myConfig   *Config
 )
 
 const (
@@ -188,7 +189,7 @@ func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_
 	forwarded := false
 	switch t := target.(type) {
 	case Service:
-		if !servedByMe(t.Name) {
+		if t.Name != myServices[0] {
 			forwarded = true
 			err = tell(ctx, target, msg.Method, time.Time{}, msg.Body)
 		}
@@ -218,15 +219,6 @@ func Process_PS(ctx context.Context, cancel context.CancelFunc, message Message_
 	if err == nil {
 		message.Mark()
 	}
-}
-
-func servedByMe(name string) bool {
-	for _, s := range myServices {
-		if s == name {
-			return true
-		}
-	}
-	return false
 }
 
 ////

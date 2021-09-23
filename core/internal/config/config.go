@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
 )
 
@@ -91,23 +92,7 @@ var (
 	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
 	KubernetesMode bool
 
-	// KafkaBrokers is an array of Kafka brokers
-	KafkaBrokers []string
-
-	// KafkaEnableTLS is set if the Kafka connection requires TLS
-	KafkaEnableTLS bool
-
-	// KafkaUsername is the username for SASL authentication (optional)
-	KafkaUsername string
-
-	// KafkaPassword is the password for SASL authentication (optional)
-	KafkaPassword string
-
-	// KafkaVersion is the expected Kafka version
-	KafkaVersion string
-
-	// KafkaTLSSkipVerify is set to skip server name verification for Kafka when connecting over TLS
-	KafkaTLSSkipVerify bool
+	KafkaConfig rpc.Config
 
 	// RedisHost is the host of the Redis instance
 	RedisHost string
@@ -174,11 +159,11 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&AppName, "app", "", "The name of the application (required)")
 
 	f.StringVar(&kafkaBrokers, "kafka_brokers", "", "The Kafka brokers to connect to, as a comma separated list")
-	f.BoolVar(&KafkaEnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
-	f.StringVar(&KafkaUsername, "kafka_username", "", "The SASL username if any")
-	f.StringVar(&KafkaPassword, "kafka_password", "", "The SASL password if any")
-	f.StringVar(&KafkaVersion, "kafka_version", "", "Kafka cluster version")
-	f.BoolVar(&KafkaTLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
+	f.BoolVar(&KafkaConfig.EnableTLS, "kafka_enable_tls", false, "Use TLS to communicate with Kafka")
+	f.StringVar(&KafkaConfig.User, "kafka_username", "", "The SASL username if any")
+	f.StringVar(&KafkaConfig.Password, "kafka_password", "", "The SASL password if any")
+	f.StringVar(&KafkaConfig.Version, "kafka_version", "", "Kafka cluster version")
+	f.BoolVar(&KafkaConfig.TLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
 
 	f.StringVar(&RedisHost, "redis_host", "", "The Redis host")
 	f.IntVar(&RedisPort, "redis_port", 0, "The Redis port")
@@ -367,13 +352,13 @@ Available commands:
 		}
 	}
 
-	if !KafkaEnableTLS {
+	if !KafkaConfig.EnableTLS {
 		ktmp := os.Getenv("KAFKA_ENABLE_TLS")
 		if ktmp == "" {
 			ktmp = loadStringFromConfig(configDir, "kafka_enable_tls")
 		}
 		if ktmp != "" {
-			if KafkaEnableTLS, err = strconv.ParseBool(ktmp); err != nil {
+			if KafkaConfig.EnableTLS, err = strconv.ParseBool(ktmp); err != nil {
 				logger.Fatal("error parsing KAFKA_ENABLE_TLS as boolean")
 			}
 		}
@@ -387,37 +372,37 @@ Available commands:
 		}
 	}
 
-	KafkaBrokers = strings.Split(kafkaBrokers, ",")
+	KafkaConfig.Brokers = strings.Split(kafkaBrokers, ",")
 
-	if KafkaUsername == "" {
-		if KafkaUsername = os.Getenv("KAFKA_USERNAME"); KafkaUsername == "" {
-			if KafkaUsername = loadStringFromConfig(configDir, "kafka_username"); KafkaUsername == "" {
-				KafkaUsername = "token"
+	if KafkaConfig.User == "" {
+		if KafkaConfig.User = os.Getenv("KAFKA_USERNAME"); KafkaConfig.User == "" {
+			if KafkaConfig.User = loadStringFromConfig(configDir, "kafka_username"); KafkaConfig.User == "" {
+				KafkaConfig.User = "token"
 			}
 		}
 	}
 
-	if KafkaPassword == "" {
-		if KafkaPassword = os.Getenv("KAFKA_PASSWORD"); KafkaPassword == "" {
-			KafkaPassword = loadStringFromConfig(configDir, "kafka_password")
+	if KafkaConfig.Password == "" {
+		if KafkaConfig.Password = os.Getenv("KAFKA_PASSWORD"); KafkaConfig.Password == "" {
+			KafkaConfig.Password = loadStringFromConfig(configDir, "kafka_password")
 		}
 	}
 
-	if KafkaVersion == "" {
-		if KafkaVersion = os.Getenv("KAFKA_VERSION"); KafkaVersion == "" {
-			if KafkaVersion = loadStringFromConfig(configDir, "kafka_version"); KafkaVersion == "" {
-				KafkaVersion = "2.2.0"
+	if KafkaConfig.Version == "" {
+		if KafkaConfig.Version = os.Getenv("KAFKA_VERSION"); KafkaConfig.Version == "" {
+			if KafkaConfig.Version = loadStringFromConfig(configDir, "kafka_version"); KafkaConfig.Version == "" {
+				KafkaConfig.Version = "2.2.0"
 			}
 		}
 	}
 
-	if !KafkaTLSSkipVerify {
+	if !KafkaConfig.TLSSkipVerify {
 		rtmp := os.Getenv("KAFKA_TLS_SKIP_VERIFY")
 		if rtmp == "" {
 			rtmp = loadStringFromConfig(configDir, "kafka_tls_skip_verify")
 		}
 		if rtmp != "" {
-			if KafkaTLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
+			if KafkaConfig.TLSSkipVerify, err = strconv.ParseBool(rtmp); err != nil {
 				logger.Fatal("error parsing KAFKA_TLS_SKIP_VERIFY as boolean")
 			}
 		}

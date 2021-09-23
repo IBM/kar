@@ -24,7 +24,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/Shopify/sarama"
@@ -307,7 +306,7 @@ func Subscribe_PS(ctx context.Context, topic, group string, options *Options_PS,
 	}
 	handler := newHandler(conf, ctx, topic, options, f)
 	handler.marshal()
-	handler.client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	handler.client, err = sarama.NewClient(myConfig.Brokers, conf)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka client: %v", err)
 		return nil, http.StatusInternalServerError, err

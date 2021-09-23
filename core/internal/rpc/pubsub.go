@@ -22,12 +22,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
@@ -78,7 +75,7 @@ func Dial_PS() error {
 	conf.Producer.Partitioner = partitioner
 	conf.Net.MaxOpenRequests = 1
 
-	client, err = sarama.NewClient(config.KafkaBrokers, conf)
+	client, err = sarama.NewClient(myConfig.Brokers, conf)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka client: %v", err)
 		return err
@@ -102,23 +99,23 @@ func Close_PS() {
 func newConfig() (*sarama.Config, error) {
 	conf := sarama.NewConfig()
 	var err error
-	conf.Version, err = sarama.ParseKafkaVersion(config.KafkaVersion)
+	conf.Version, err = sarama.ParseKafkaVersion(myConfig.Version)
 	if err != nil {
 		logger.Error("failed to parse Kafka version: %v", err)
 		return nil, err
 	}
 	conf.ClientID = "kar"
-	if config.KafkaPassword != "" {
+	if myConfig.Password != "" {
 		conf.Net.SASL.Enable = true
-		conf.Net.SASL.User = config.KafkaUsername
-		conf.Net.SASL.Password = config.KafkaPassword
+		conf.Net.SASL.User = myConfig.User
+		conf.Net.SASL.Password = myConfig.Password
 		conf.Net.SASL.Handshake = true
 		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
 	}
-	if config.KafkaEnableTLS {
+	if myConfig.EnableTLS {
 		conf.Net.TLS.Enable = true
 		// TODO support custom CA certificate
-		if config.KafkaTLSSkipVerify {
+		if myConfig.TLSSkipVerify {
 			conf.Net.TLS.Config = &tls.Config{
 				InsecureSkipVerify: true,
 			}
@@ -137,8 +134,7 @@ func partitions() ([]int32, <-chan struct{}) {
 }
 
 // Join_PS joins the sidecar to the application and returns a channel of incoming messages
-func Join_PS(ctx context.Context, f func(Message_PS), port int) (<-chan struct{}, error) {
-	address = net.JoinHostPort(config.Hostname, strconv.Itoa(port))
+func Join_PS(ctx context.Context, f func(Message_PS)) (<-chan struct{}, error) {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
