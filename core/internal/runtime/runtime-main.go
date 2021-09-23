@@ -188,9 +188,9 @@ func Main() {
 	}
 
 	// Connect to Kafka
+	topic := "kar" + config.Separator + config.AppName
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
-		topic := "kar" + config.Separator + config.AppName
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
 		rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
 
@@ -207,10 +207,10 @@ func Main() {
 	}
 
 	if config.CmdName == config.PurgeCmd {
-		purge("*")
+		purge(topic, "*")
 		return
 	} else if config.CmdName == config.DrainCmd {
-		purge("pubsub" + config.Separator + "*")
+		purge(topic, "pubsub" + config.Separator + "*")
 		return
 	}
 
@@ -294,8 +294,8 @@ func Main() {
 	logger.Warning("exiting...")
 }
 
-func purge(pattern string) {
-	if err := rpc.Purge_PS(); err != nil {
+func purge(topic string, pattern string) {
+	if err := rpc.DeleteTopic(&config.KafkaConfig, topic); err != nil {
 		logger.Error("failed to delete Kafka topic: %v", err)
 	}
 	if count, err := store.Purge(ctx, pattern); err != nil {

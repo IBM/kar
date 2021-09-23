@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/Shopify/sarama"
 	"github.com/julienschmidt/httprouter"
@@ -213,7 +214,7 @@ func routeImplPublish(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	topic := ps.ByName("topic")
 	params := ReadAll(r)
-	err := rpc.CreateTopic_PS(topic, params)
+	err := rpc.CreateTopic(&config.KafkaConfig, topic, params)
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); ok && e.Err == sarama.ErrTopicAlreadyExists {
 			w.WriteHeader(http.StatusOK)
@@ -243,7 +244,7 @@ func routeImplCreateTopic(w http.ResponseWriter, r *http.Request, ps httprouter.
 //       500: response500
 //
 func routeImplDeleteTopic(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	err := rpc.DeleteTopic_PS(ps.ByName("topic"))
+	err := rpc.DeleteTopic(&config.KafkaConfig, ps.ByName("topic"))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to delete topic %v: %v", ps.ByName("topic"), err), http.StatusInternalServerError)
 	} else {

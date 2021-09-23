@@ -75,16 +75,6 @@ func delSession(ctx context.Context, session Session) error {
 	return err
 }
 
-func createTopic(conf *Config, topic string, parameters string) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
-}
-
-func deleteTopic(conf *Config, topic string) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
-}
-
 func newPublisher(conf *Config) (*Publisher, error) {
 	logger.Fatal("Unimplemented rpc-shim function")
 	return nil, nil

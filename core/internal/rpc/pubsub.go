@@ -155,7 +155,7 @@ func Join_PS(ctx context.Context, f func(Message_PS)) (<-chan struct{}, error) {
 }
 
 // CreateTopic attempts to create the specified topic using the given parameters
-func CreateTopic_PS(topic string, parameters string) error {
+func createTopic(conf *Config, topic string, parameters string) error {
 	var params sarama.TopicDetail
 	var err error
 
@@ -189,7 +189,7 @@ func CreateTopic_PS(topic string, parameters string) error {
 }
 
 // DeleteTopic attempts to delete the specified topic
-func DeleteTopic_PS(topic string) error {
+func deleteTopic(conf *Config, topic string) error {
 	admin, err := sarama.NewClusterAdminFromClient(client)
 	if err != nil {
 		logger.Error("failed to instantiate Kafka cluster admin: %v", err)
