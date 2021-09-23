@@ -142,7 +142,7 @@ func joinSidecarToMesh(ctx context.Context, f func(ctx context.Context, value []
 			return nil, err
 		}
 	}
-	ch, _, err := Subscribe_PS(ctx, myTopic, myTopic, &Options_PS{master: true, OffsetOldest: true}, f)
+	ch, err := subscribeImpl(ctx, myTopic, myTopic, &subscriptionOptions{master: true, OffsetOldest: true}, f)
 	return ch, err
 }
 

@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
 )
@@ -82,7 +83,20 @@ func (p *Publisher) close() error {
 	return nil
 }
 
-func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func(ctx context.Context, value []byte, markAsDone func())) error {
-	logger.Fatal("Unimplemented rpc-shim function")
-	return nil
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
+	f := func(ctx context.Context, value []byte, markAsDone func()) {
+		transformed, err := transform(ctx, value)
+		if err != nil {
+			logger.Error("failed to transform event from topic %s: %v", topic, err)
+		}
+		err = Tell(ctx, target, method, time.Time{}, transformed)
+		if err != nil {
+			logger.Error("failed to tell target %v of event from topic %s: %v", target, topic, err)
+		} else {
+			markAsDone()
+		}
+	}
+
+	ch, err := subscribeImpl(ctx, topic, group, &subscriptionOptions{OffsetOldest: oldest, master: false}, f)
+	return ch, err
 }

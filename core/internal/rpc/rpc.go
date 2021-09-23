@@ -43,6 +43,8 @@ func (s Node) target()    {}
 // Handler for method
 type Handler func(context.Context, Target, []byte) ([]byte, error)
 
+type Transformer func(context.Context, []byte) ([]byte, error)
+
 // Result of async call
 type Result struct {
 	Value []byte
@@ -160,6 +162,6 @@ func (p *Publisher) Close() error {
 }
 
 // Subscribe to a topic
-func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func(ctx context.Context, value []byte, markAsDone func())) error {
-	return subscribe(ctx, conf, topic, group, oldest, handler)
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
+	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
 }
