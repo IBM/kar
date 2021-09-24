@@ -133,6 +133,9 @@ var (
 
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
+
+	// use rpclib implementation
+	rpcLib bool
 )
 
 // define the flags available on all commands
@@ -160,6 +163,8 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&verbosity, "v", "error", "Logging verbosity")
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
+
+	f.BoolVar(&rpcLib, "rpclib", false, "Use rpclib implementation")
 }
 
 func init() {
@@ -309,6 +314,10 @@ Available commands:
 
 	if ServiceName == "" {
 		ServiceName = "kar.none"
+	}
+
+	if rpcLib {
+		rpc.UseRpcLib()
 	}
 
 	if actorTypes == "" {

@@ -73,12 +73,13 @@ func delSession(ctx context.Context, session Session) error {
 	return err
 }
 
-func newPublisher(conf *Config) (*Publisher, error) {
+func newPublisher(conf *Config) (publisher, error) {
 	// Config completely ignored in legacy impl; one shared Publisher for all events that is created unconditionally during startup
-	return &Publisher{publisher: publisher{producer: producer}}, nil
+	return publisher{producer: producer}, nil
 }
 
-func (p *Publisher) close() error {
+// Close publisher
+func (p publisher) Close() error {
 	// Nothing to do in legacy implementation; one shared Publisher for all events that is closed during shutdown
 	return nil
 }

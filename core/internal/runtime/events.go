@@ -75,7 +75,7 @@ func (s source) k() string {
 // a collection of event sources
 type sources map[Actor]map[string]source
 
-var karPublisher *rpc.Publisher
+var karPublisher rpc.Publisher
 
 func init() {
 	pairs["subscriptions"] = pair{bindings: sources{}, mu: &sync.Mutex{}}
