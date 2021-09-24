@@ -22,8 +22,8 @@ import (
 )
 
 // publish publishes a message on a topic
-func (p *Publisher) publish(topic string, value []byte) error {
-	partition, offset, err := p.publisher.producer.SendMessage(&sarama.ProducerMessage{
+func (p publisher) Publish(topic string, value []byte) error {
+	partition, offset, err := p.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: topic,
 		Value: sarama.ByteEncoder(value),
 	})
