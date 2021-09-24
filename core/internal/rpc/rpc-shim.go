@@ -80,7 +80,8 @@ func newPublisher(conf *Config) (publisher, error) {
 
 // Close publisher
 func (p publisher) Close() error {
-	return p.producer.Close()
+	// Nothing to do in legacy implementation; one shared Publisher for all events that is closed during shutdown
+	return nil
 }
 
 func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
