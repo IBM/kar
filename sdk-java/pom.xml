@@ -35,6 +35,7 @@
     <version.maven-source-plugin>2.2.1</version.maven-source-plugin>
     <version.versions-maven-plugin>2.7</version.versions-maven-plugin>
     <version.nexus-staging-maven-plugin>1.6.7</version.nexus-staging-maven-plugin>
+
     <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
     <version.javaee-api>8.0</version.javaee-api>
   </properties>

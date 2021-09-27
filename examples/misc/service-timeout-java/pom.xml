@@ -22,18 +22,18 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <failOnMissingWebXml>false</failOnMissingWebXml>
-
-    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
-    <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
-    <version.microprofile>3.3</version.microprofile>
-    <version.slf4j>1.7.25</version.slf4j>
-    <jaeger.version>0.34.0</jaeger.version>
-    <!-- Liberty configuration -->
-    <liberty.var.app.context.root>/</liberty.var.app.context.root>
-    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
     <version.java-compiler>11</version.java-compiler>
-    <version.glassfish-json>1.1.4</version.glassfish-json>
-    <version.glassfish-jaxrs>1.1.6</version.glassfish-jaxrs>
+
+    <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+    <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
+
+    <version.javaee-api>8.0</version.javaee-api>
+    <version.microprofile>4.0.1</version.microprofile>
+    <version.openliberty-runtime>21.0.0.7</version.openliberty-runtime>
+    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
+
+    <!-- Liberty app configuration -->
+    <liberty.var.app.context.root>/</liberty.var.app.context.root>
   </properties>
 
   <build>
