@@ -71,9 +71,8 @@ Builds are driven by maven.  The basic commmand is `mvn install`.
 # Using the non-reactive Open Liberty based KAR SDK
 
 Note: the KAR SDK and example code have been tested using MicroProfile
-3.3 and the Open Liberty Plugin 3.2 (which pulls v20.0.0.X of
-openliberty). You should not use v20.0.0.11 because of a known bug in
-the Microprofile Rest Client.
+4.0.1 and the Open Liberty Plugin 3.3 (which pulls v21.0.0.X of
+openliberty).
 
 The following code examples show how to use the non-reactive Kar SDK.
 

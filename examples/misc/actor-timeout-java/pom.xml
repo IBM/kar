@@ -13,10 +13,13 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
+    <version.maven-war-plugin>3.3.1</version.maven-war-plugin>
 
-    <version.microprofile>3.3</version.microprofile>
-    <version.maven-war-plugin>3.3.0</version.maven-war-plugin>
-    <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
+    <version.javaee-api>8.0</version.javaee-api>
+    <version.microprofile>4.0.1</version.microprofile>
+    <version.openliberty-runtime>21.0.0.7</version.openliberty-runtime>
+    <version.liberty-maven-plugin>3.3.4</version.liberty-maven-plugin>
+
     <liberty.var.app.context.root>/</liberty.var.app.context.root>
   </properties>
 
@@ -24,7 +27,7 @@
     <dependency>
       <groupId>javax</groupId>
       <artifactId>javaee-api</artifactId>
-      <version>8.0</version>
+      <version>${version.javaee-api}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -67,7 +70,7 @@
           <runtimeArtifact>
             <groupId>io.openliberty</groupId>
             <artifactId>openliberty-runtime</artifactId>
-            <version>20.0.0.10</version>
+            <version>${version.openliberty-runtime}</version>
             <type>zip</type>
           </runtimeArtifact>
         </configuration>

@@ -36,7 +36,9 @@ COPY --from=builder --chown=default:root /kar/app/target/kar-hello-server.war /o
 COPY --from=builder --chown=default:root /kar/app/src/main/liberty/config/server.xml /opt/ol/wlp/usr/servers/defaultServer
 
 #
-# Run Open Liberty configure script.
-# Doing this now reduces startup time of the final image
+# Steps below based on: https://github.com/OpenLiberty/ci.docker#building-an-application-image
 #
-RUN /opt/ol/helpers/build/configure.sh default
+
+RUN features.sh
+
+RUN configure.sh
