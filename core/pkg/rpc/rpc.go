@@ -176,5 +176,5 @@ func NewPublisher(conf *Config) (Publisher, error) {
 
 // Subscribe to a topic
 func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
-	return nil, nil
+	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
 }
