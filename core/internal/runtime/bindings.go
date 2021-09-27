@@ -18,7 +18,6 @@ package runtime
 
 import (
 	"context"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -148,8 +147,7 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 		key = keys[0]
 		successCode = http.StatusOK
 	} else { // new key with random partition
-		ps, _ := rpc.GetPartitions()
-		p := ps[rand.Int31n(int32(len(ps)))]
+		p := rpc.ChoosePartition()
 		key = bindingKey(kind, actor, strconv.Itoa(int(p)), id)
 		successCode = http.StatusNoContent
 	}
