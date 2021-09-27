@@ -38,7 +38,7 @@ compile and package the application by doing `mvn package`.
 
 Next, run the application by doing:
 ```shell
-kar run -app dp -actors Cafe,Fork,Philosopher,Table mvn quarkus:dev
+kar run -app dp -actors Cafe,Fork,Philosopher,Table java -jar target/quarkus-app/quarkus-run.jar
 ```
 In a second shell window, use the `kar` cli to invite some Philosopers to dinner:
 ```shell
