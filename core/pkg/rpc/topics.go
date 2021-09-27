@@ -19,6 +19,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
@@ -88,10 +89,17 @@ func (p publisher) Publish(topic string, value []byte) error {
 }
 
 type subscriber struct {
-	handler func([]byte)
+	topic     string
+	target    Target
+	method    string
+	ctx       context.Context
+	transform Transformer
+	ready     chan struct{}
 }
 
 func (s *subscriber) Setup(session sarama.ConsumerGroupSession) error {
+	close(s.ready)
+	s.ready = make(chan struct{})
 	return nil
 }
 
@@ -101,25 +109,36 @@ func (*subscriber) Cleanup(session sarama.ConsumerGroupSession) error {
 
 func (s *subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		s.handler(msg.Value)
-		session.MarkMessage(msg, "")
+		transformed, err := s.transform(s.ctx, msg.Value)
+		if err != nil {
+			logger.Error("failed to transform event from topic %s: %v", s.topic, err)
+		}
+		err = Tell(s.ctx, s.target, s.method, time.Time{}, transformed)
+		if err != nil {
+			logger.Error("failed to tell target %v of event from topic %s: %v", s.target, s.topic, err)
+		} else {
+			session.MarkMessage(msg, "")
+		}
 	}
 	return nil
 }
 
-func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, handler func([]byte)) error {
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
 	config := configureClient(conf)
 	if oldest {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
-	cg, err := sarama.NewConsumerGroup(conf.Brokers, group, configureClient(conf))
+	cg, err := sarama.NewConsumerGroup(conf.Brokers, group, config)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	closed := make(chan struct{})
+	ready := make(chan struct{})
 
 	go func() {
 		for {
-			if err1 := cg.Consume(ctx, []string{topic}, &subscriber{handler: handler}); err1 != nil {
+			if err1 := cg.Consume(ctx, []string{topic}, &subscriber{topic: topic, target: target, method: method, ctx: ctx, transform: transform, ready: ready}); err1 != nil {
 				logger.Error("subscriber error: %v", err1)
 				break
 			}
@@ -128,7 +147,13 @@ func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bo
 			}
 		}
 		cg.Close()
+		close(closed)
 	}()
 
-	return nil
+	select {
+	case <-ready:
+	case <-closed:
+	}
+
+	return closed, nil
 }
