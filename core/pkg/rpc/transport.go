@@ -31,10 +31,6 @@ type handler struct {
 
 // Setup consumer group session, assumes W mutex is held on entry
 func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
-	if err := client.RefreshMetadata(appTopic); err != nil { // refresh topic metadata for producer
-		return err
-	}
-
 	if len(session.Claims()[appTopic]) == 0 { // in recovery, but not leader, nothing to do
 		logger.Info("waiting for recovery, generation %d, claims %v", session.GenerationID(), session.Claims()[appTopic])
 		return nil // keep mutex
@@ -62,6 +58,11 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	err := updateRoutes()
 	if err != nil {
 		return err // drop from consumer group if an error occurred
+	}
+
+	// refresh topic metadata for producer
+	if err := client.RefreshMetadata(appTopic); err != nil {
+		return err
 	}
 
 	// signal and release mutex on successful setup to resume producer activity
@@ -165,6 +166,11 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 		if !recovery[p] && p != 0 { // partition 0 may still contain requests for unavailable services
 			offsetsForDeletion[p] = sarama.OffsetNewest
 		}
+	}
+
+	// refresh topic metadata for producer
+	if err := client.RefreshMetadata(appTopic); err != nil {
+		return err
 	}
 
 	// resend requests targetting dead nodes
