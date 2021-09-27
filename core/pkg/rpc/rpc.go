@@ -134,13 +134,9 @@ func GetPartition() int32 {
 }
 
 // GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
+// TODO: fix hack, for now returns the set {0} as this method is only used to reload bindings
 func GetPartitions() ([]int32, <-chan struct{}) {
 	return getPartitions()
-}
-
-// GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
-func GetPartitionsHack() ([]int32, <-chan struct{}) {
-	return getPartitionsHack()
 }
 
 // GetSessionNodeId returns the node responsible for the specified session if defined or "" if not

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	rpclib "github.com/IBM/kar/core/pkg/rpc"
@@ -202,4 +203,12 @@ func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bo
 		return rpclib.Subscribe(ctx, conf, topic, group, oldest, target, method, transform)
 	}
 	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
+}
+
+func ChoosePartition() int32 {
+	if rpcLib {
+		return 0
+	}
+	ps, _ := GetPartitions()
+	return ps[rand.Int31n(int32(len(ps)))]
 }

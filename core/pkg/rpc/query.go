@@ -81,20 +81,17 @@ func getPartition() int32 {
 func getPartitions() ([]int32, <-chan struct{}) {
 	mu.RLock()
 	defer mu.RUnlock()
-	partitions := make([]int32, len(node2partition))
-	i := 0
-	for _, p := range node2partition {
-		partitions[i] = p
-		i++
-	}
-	sort.Slice(partitions, func(i, j int) bool { return partitions[i] < partitions[j] })
-	return partitions, tick
-}
-
-func getPartitionsHack() ([]int32, <-chan struct{}) {
-	mu.RLock()
-	defer mu.RUnlock()
-	return []int32{0}, tick
+	return []int32{0}, tick // TODO: fix hack
+	/*
+		partitions := make([]int32, len(node2partition))
+		i := 0
+		for _, p := range node2partition {
+			partitions[i] = p
+			i++
+		}
+		sort.Slice(partitions, func(i, j int) bool { return partitions[i] < partitions[j] })
+		return partitions, tick
+	*/
 }
 
 func getSessionNodeID(ctx context.Context, session Session) (string, error) {
