@@ -62,7 +62,8 @@ var (
 	max0     int64           // newest partition 0 offset
 
 	// errors
-	ErrUnavailable = errors.New("unavailable")
+	ErrUnavailable      = errors.New("unavailable")
+	errTooFewPartitions = errors.New("too few partitions")
 )
 
 func configureClient(config *Config) *sarama.Config {
@@ -156,9 +157,19 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 		return nil, err
 	}
 
+	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3}, false)
+	if err != nil {
+		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1}, false)
+	}
+	if err != nil {
+		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
+			return nil, err
+		}
+	}
+
 	go func() {
 		for {
-			if err1 := cg.Consume(ctx, []string{appTopic}, new(handler)); err1 != nil {
+			if err1 := cg.Consume(ctx, []string{appTopic}, new(handler)); err1 != nil && err1 != errTooFewPartitions {
 				logger.Fatal("Consumer error: %v", err1)
 			}
 			if ctx.Err() != nil {

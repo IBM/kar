@@ -105,7 +105,16 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 			}
 		}
 		if node2partition[node] == 0 {
-			logger.Fatal("not enough partitions available to continue")
+			missing := int32(0)
+			for node := range node2member {
+				if node2partition[node] == 0 {
+					missing++
+				}
+			}
+			if err := admin.CreatePartitions(appTopic, int32(len(partitions))+missing, nil, false); err != nil {
+				return nil, err
+			}
+			return nil, errTooFewPartitions
 		}
 	}
 
