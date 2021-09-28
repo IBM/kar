@@ -26,6 +26,7 @@ KAR_INJECTOR=$(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
 KAR_JS_SDK=$(DOCKER_IMAGE_PREFIX)kar-sdk-nodejs-v12:$(DOCKER_IMAGE_TAG)
 KAR_JAVA_SDK=$(DOCKER_IMAGE_PREFIX)kar-sdk-java-builder-11:$(DOCKER_IMAGE_TAG)
 KAR_JAVA_RUNTIME=$(DOCKER_IMAGE_PREFIX)kar-sdk-java-runtime-11:$(DOCKER_IMAGE_TAG)
+KAR_JAVA_REACTIVE_RUNTIME=$(DOCKER_IMAGE_PREFIX)kar-sdk-java-reactive-runtime-11:$(DOCKER_IMAGE_TAG)
 
 KAR_EXAMPLE_JS_YKT=$(DOCKER_IMAGE_PREFIX)kar-examples-js-actors-ykt:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-js-actors-dp:$(DOCKER_IMAGE_TAG)
@@ -33,6 +34,7 @@ KAR_EXAMPLE_JS_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-js-service-hello:$(DOCKE
 KAR_EXAMPLE_JS_EVENTS=$(DOCKER_IMAGE_PREFIX)kar-examples-js-actors-events:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JS_TESTS=$(DOCKER_IMAGE_PREFIX)kar-examples-js-unit-tests:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-java-actors-dp:$(DOCKER_IMAGE_TAG)
+KAR_EXAMPLE_JAVA_REACTIVE_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-java-reactive-actors-dp:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(DOCKER_IMAGE_TAG)
 KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
 KAFKA_BENCH=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench:$(DOCKER_IMAGE_TAG)
@@ -48,7 +50,8 @@ dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
 	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .
-	cd sdk-java && docker build -f Dockerfile.runtime -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
+	cd sdk-java && docker build -f Dockerfile.liberty -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
+	cd sdk-java && docker build -f Dockerfile.quarkus -t $(KAR_JAVA_REACTIVE_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 
 dockerBuildExamples:
 	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
@@ -57,6 +60,7 @@ dockerBuildExamples:
 	cd examples/service-hello-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_HELLO) .
 	cd examples/unit-tests && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_TESTS) . 
 	cd examples/actors-dp-java && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_DP) .
+	cd examples/actors-dp-java-reactive && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_REACTIVE_RUNTIME) -t $(KAR_EXAMPLE_JAVA_REACTIVE_DP) .
 	cd examples/service-hello-java/server && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_HELLO) .
 
 dockerBuildBenchmarks:
@@ -70,6 +74,7 @@ dockerPushCore:
 	docker push $(KAR_JS_SDK)
 	docker push $(KAR_JAVA_SDK)
 	docker push $(KAR_JAVA_RUNTIME)
+	docker push $(KAR_JAVA_REACTIVE_RUNTIME)
 
 dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_EVENTS)
@@ -78,6 +83,7 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JS_HELLO)
 	docker push $(KAR_EXAMPLE_JS_TESTS)
 	docker push $(KAR_EXAMPLE_JAVA_DP)
+	docker push $(KAR_EXAMPLE_JAVA_REACTIVE_DP)
 	docker push $(KAR_EXAMPLE_JAVA_HELLO)
 
 dockerPushBenchmarks:
