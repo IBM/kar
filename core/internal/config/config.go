@@ -381,7 +381,7 @@ Available commands:
 	if KafkaConfig.Version == "" {
 		if KafkaConfig.Version = os.Getenv("KAFKA_VERSION"); KafkaConfig.Version == "" {
 			if KafkaConfig.Version = loadStringFromConfig(configDir, "kafka_version"); KafkaConfig.Version == "" {
-				KafkaConfig.Version = "2.2.0"
+				KafkaConfig.Version = "2.7.1"
 			}
 		}
 	}
