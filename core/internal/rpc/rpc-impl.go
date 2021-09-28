@@ -209,7 +209,8 @@ func processMsg(ctx context.Context, m message) {
 		if !forwarded {
 			if handler, ok := handlers[msg.Method]; ok {
 				reply, err := handler(ctx, target, msg.Body)
-				if err == nil && reply != nil {
+				if err == nil && reply != nil && msg.Callback.SendingNode != "" {
+					// Send the response back to the SendingNode
 					err = respond(ctx, msg.Callback, reply)
 				}
 			} else {
