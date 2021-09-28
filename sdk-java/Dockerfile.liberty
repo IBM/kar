@@ -26,5 +26,5 @@ USER default
 COPY --from=kar /kar/bin/kar /kar/bin/kar
 
 # Inject wrapper script that detects local vs. sidecar mode
-COPY runner /kar/bin/runner
+COPY runner.liberty /kar/bin/runner
 CMD /kar/bin/runner

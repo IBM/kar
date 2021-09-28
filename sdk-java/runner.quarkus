@@ -1,0 +1,9 @@
+#!/bin/sh
+
+KAR_RUNNER_JAR=${KAR_RUNNER_JAR:="/kar/app/quarkus-app/quarkus-run.jar"}
+
+if [ -z "$KAR_SIDECAR_IN_CONTAINER" ]; then
+    exec java -jar $KAR_RUNNER_JAR $KAR_QUARKUS_EXTRA_ARGS
+else
+    exec /kar/bin/kar run -app $KAR_APP $KAR_EXTRA_ARGS java -jar $KAR_RUNNER_JAR $KAR_QUARKUS_EXTRA_ARGS
+fi
