@@ -75,11 +75,11 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 	// get newest offsets for non-empty partitions
 	clean := true
 	for _, p := range partitions {
-		min, err := client.GetOffset(appTopic, p, sarama.OffsetOldest)
+		min, err := consumerClient.GetOffset(appTopic, p, sarama.OffsetOldest)
 		if err != nil {
 			return nil, err
 		}
-		max, err := client.GetOffset(appTopic, p, sarama.OffsetNewest)
+		max, err := consumerClient.GetOffset(appTopic, p, sarama.OffsetNewest)
 		if err != nil {
 			return nil, err
 		}

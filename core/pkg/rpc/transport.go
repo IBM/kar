@@ -61,7 +61,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 	}
 
 	// refresh topic metadata for producer
-	if err := client.RefreshMetadata(appTopic); err != nil {
+	if err := producerClient.RefreshMetadata(appTopic); err != nil {
 		return err
 	}
 
@@ -77,7 +77,7 @@ func (*handler) Cleanup(session sarama.ConsumerGroupSession) error {
 	logger.Info("completed generation %d", session.GenerationID())
 
 	// marshal latest info (to share our assigned partition with others if decided)
-	client.Config().Consumer.Group.Member.UserData, _ = json.Marshal(self)
+	consumerClient.Config().Consumer.Group.Member.UserData, _ = json.Marshal(self)
 
 	if recovery == nil && len(session.Claims()[appTopic]) > 0 { // not in recovery
 		mu.Lock() // acquire W mutex to prevent producer from sending
@@ -169,7 +169,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	}
 
 	// refresh topic metadata for producer
-	if err := client.RefreshMetadata(appTopic); err != nil {
+	if err := producerClient.RefreshMetadata(appTopic); err != nil {
 		return err
 	}
 

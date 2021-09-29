@@ -40,9 +40,10 @@ var (
 	appTopic string
 
 	// Kafka clients
-	producer sarama.SyncProducer // the producer used to send messages
-	client   sarama.Client       // the client for the consumer group
-	admin    sarama.ClusterAdmin // the cluster admin
+	producerClient sarama.Client       // the client for the producer
+	producer       sarama.SyncProducer // the producer used to send messages
+	consumerClient sarama.Client       // the client for the consumer group
+	admin          sarama.ClusterAdmin // the cluster admin
 
 	// routing tables (partition 0 is reserved)
 	self           = info{Node: uuid.New().String()} // service, node, partition (initially unknown == 0)
@@ -127,32 +128,38 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 
 	var err error
 
-	// initialize producer
-	producer, err = sarama.NewSyncProducer(conf.Brokers, configureProducer(conf))
+	// initialize producer client
+	producerClient, err = sarama.NewClient(conf.Brokers, configureProducer(conf))
 	if err != nil {
 		return nil, err
 	}
 
-	// initialize client
-	client, err = sarama.NewClient(conf.Brokers, configureConsumer(conf))
+	// initialize producer
+	producer, err = sarama.NewSyncProducerFromClient(producerClient)
+	if err != nil {
+		return nil, err
+	}
+
+	// initialize consumer client
+	consumerClient, err = sarama.NewClient(conf.Brokers, configureConsumer(conf))
 	if err != nil {
 		return nil, err
 	}
 
 	// initialize cluster admin
-	admin, err = sarama.NewClusterAdminFromClient(client)
+	admin, err = sarama.NewClusterAdminFromClient(consumerClient)
 	if err != nil {
 		return nil, err
 	}
 
 	// marshal info
-	client.Config().Consumer.Group.Member.UserData, _ = json.Marshal(self)
+	consumerClient.Config().Consumer.Group.Member.UserData, _ = json.Marshal(self)
 
 	// acquire W mutex
 	mu.Lock()
 
 	// initialize consumer group
-	cg, err := sarama.NewConsumerGroupFromClient(appTopic, client)
+	cg, err := sarama.NewConsumerGroupFromClient(appTopic, consumerClient)
 	if err != nil {
 		return nil, err
 	}
@@ -177,8 +184,9 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 			}
 		}
 		cg.Close()
-		client.Close()
+		consumerClient.Close()
 		producer.Close()
+		producerClient.Close()
 		service2nodes = nil
 		node2partition = nil
 		close(closed)
