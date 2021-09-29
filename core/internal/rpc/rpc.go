@@ -183,10 +183,7 @@ func CreateTopic(conf *Config, topic string, parameters string) error {
 
 // DeleteTopic attempts to delete the specified topic
 func DeleteTopic(conf *Config, topic string) error {
-	if rpcLib {
-		return rpclib.DeleteTopic(conf, topic)
-	}
-	return deleteTopic(conf, topic)
+	return rpclib.DeleteTopic(conf, topic)
 }
 
 // NewPublisher returns a new event publisher

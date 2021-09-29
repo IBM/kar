@@ -177,8 +177,17 @@ func Main() {
 		requiresPubSub = false
 	}
 
-	// Connect to Kafka
 	topic := "kar" + config.Separator + config.AppName
+
+	if config.CmdName == config.PurgeCmd {
+		purge(topic, "*")
+		return
+	} else if config.CmdName == config.DrainCmd {
+		purge(topic, "pubsub"+config.Separator+"*")
+		return
+	}
+
+	// Connect to Kafka
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
@@ -191,14 +200,6 @@ func Main() {
 			logger.Fatal("failed to create event publisher: %v", err)
 		}
 		defer karPublisher.Close()
-	}
-
-	if config.CmdName == config.PurgeCmd {
-		purge(topic, "*")
-		return
-	} else if config.CmdName == config.DrainCmd {
-		purge(topic, "pubsub"+config.Separator+"*")
-		return
 	}
 
 	args := flag.Args()
