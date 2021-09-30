@@ -17,6 +17,7 @@
 package rpc
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/IBM/kar/core/pkg/logger"
@@ -42,7 +43,7 @@ func (h *handler) Setup(session sarama.ConsumerGroupSession) error {
 		// initialize map
 		h.channels = map[int32]chan (<-chan *sarama.ConsumerMessage){}
 		for _, p := range session.Claims()[appTopic] {
-			h.channels[p] = make(chan (<-chan *sarama.ConsumerMessage), 1)
+			h.channels[p] = make(chan (<-chan *sarama.ConsumerMessage), 1) // do not block producer
 		}
 
 		// initialize channel
@@ -134,10 +135,18 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 
 	// iterate over all claimed partitions and all messages
 	for _, p := range session.Claims()[appTopic] {
-		messages := <-h.channels[p]
+		var messages <-chan *sarama.ConsumerMessage
+		select {
+		case messages = <-h.channels[p]:
+		case <-session.Context().Done():
+			return session.Context().Err()
+		}
 		next := int64(0)
 		for next < newest[p] {
 			msg := <-messages
+			if msg == nil { // session has been interrupted
+				return context.Canceled
+			}
 			next = msg.Offset + 1
 			m := decode(msg)
 			switch v := decode(msg).(type) {
