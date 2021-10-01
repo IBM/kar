@@ -34,14 +34,17 @@ ROOTDIR="$SCRIPTDIR/.."
 
 . $ROOTDIR/scripts/kar-env-local.sh
 
+
+KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
+
 # Run unit-tests/test-harness.js locally
 echo "*** Testing examples/unit-tests ***"
 
 cd $ROOTDIR/examples/unit-tests
 npm install --prod
 
-kar run -app myApp -service myService -actors Foo node server.js &
-run $! kar run -app myApp node test-harness.js
+kar run -app myApp -service myService -actors Foo $KAR_EXTRA_ARGS node server.js &
+run $! kar run -app myApp $KAR_EXTRA_ARGS node test-harness.js
 
 # Run actors-dp-java/tester.js locally
 echo "*** Testing examples/actors-dp-js ***"
@@ -49,8 +52,8 @@ echo "*** Testing examples/actors-dp-js ***"
 cd $ROOTDIR/examples/actors-dp-js
 npm install --prod
 
-kar run -app dp -actors Cafe,Table,Fork,Philosopher node philosophers.js &
-run $! kar run -app dp node tester.js
+kar run -app dp -actors Cafe,Table,Fork,Philosopher $KAR_EXTRA_ARGS node philosophers.js &
+run $! kar run -app dp $KAR_EXTRA_ARGS node tester.js
 
 # Run actors-ykt locally
 echo "*** Testing examples/actors-ykt ***"
