@@ -16,7 +16,7 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
-[![Build Status](https://travis-ci.com/IBM/kar.svg?branch=main)](https://travis-ci.com/IBM/kar)
+[![Build Status](https://travis-ci.com/IBM/kar.svg?branch=main)](https://travis-ci.com/github/IBM/kar)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
 
 The KAR runtime makes it easy to _develop_ and _run_ stateful, scalable,
