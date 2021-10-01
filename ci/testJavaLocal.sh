@@ -63,7 +63,7 @@ echo "Launching Java DP Server"
 kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table mvn liberty:run &
 PID=$!
 
-# Sleep 10 seconds to given liberty time to come up
+# Sleep 10 seconds to give liberty time to come up
 sleep 10
 
 echo "Building and launching test harness"
@@ -73,11 +73,31 @@ run $PID kar run -app dp node tester.js
 
 #################
 
+echo "Building Java Reactive Dining Philsopophers against released Java-SDK"
+cd $ROOTDIR/examples/actors-dp-java-reactive
+mvn clean package
+
+echo "Launching Java DPR Server"
+kar run -v info -app dpr -actors Cafe,Fork,Philosopher,Table java -jar target/quarkus-app/quarkus-run.jar &
+PID=$!
+
+# Sleep 5 seconds to give quarkus time to come up
+sleep 5
+
+echo "Building and launching test harness"
+cd $ROOTDIR/examples/actors-dp-js
+npm install --prod
+run $PID kar run -app dpr node tester.js
+
+#################
+
 echo "Building Java KAR SDK locally"
 cd $ROOTDIR/sdk-java
 mvn clean
 mvn versions:set -DnewVersion=99.99.99-SNAPSHOT
 mvn install
+
+#################
 
 echo "Building Java Dining Philsopophers against local Java KAR SDK"
 cd $ROOTDIR/examples/actors-dp-java
@@ -87,10 +107,28 @@ echo "Launching Java DP Server"
 kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table mvn liberty:run -Dversion.kar-java-sdk=99.99.99-SNAPSHOT &
 PID=$!
 
-# Sleep 10 seconds to given liberty time to come up
+# Sleep 10 seconds to give liberty time to come up
 sleep 10
 
 echo "Building and launching test harness"
 cd $ROOTDIR/examples/actors-dp-js
 npm install --prod
 run $PID kar run -app dp-local node tester.js
+
+#################
+
+echo "Building Java Reactive Dining Philsopophers against local Java KAR SDK"
+cd $ROOTDIR/examples/actors-dp-java-reactive
+mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
+
+echo "Launching Java DPR Server"
+kar run -v info -app dpr-local -actors Cafe,Fork,Philosopher,Table java -jar target/quarkus-app/quarkus-run.jar &
+PID=$!
+
+# Sleep 5 seconds to give Quarkus time to come up
+sleep 5
+
+echo "Building and launching test harness"
+cd $ROOTDIR/examples/actors-dp-js
+npm install --prod
+run $PID kar run -app dpr-local node tester.js
