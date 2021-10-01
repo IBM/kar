@@ -34,6 +34,8 @@ echo "Executing Java Hello Service test"
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
+KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
+
 . $ROOTDIR/scripts/kar-env-local.sh
 
 echo "Building Java Hello Service"

@@ -34,6 +34,9 @@ ROOTDIR="$SCRIPTDIR/.."
 
 . $ROOTDIR/scripts/kar-env-local.sh
 
+
+KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
+
 # Run unit-tests/test-harness.js locally
 echo "*** Testing examples/unit-tests ***"
 
