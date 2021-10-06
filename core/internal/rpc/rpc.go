@@ -128,7 +128,7 @@ func GetNodeID() string {
 // GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
 func GetNodeIDs() ([]string, <-chan struct{}) {
 	if rpcLib {
-		return getNodeIDs()
+		return rpclib.GetNodeIDs()
 	}
 	return getNodeIDs()
 }
