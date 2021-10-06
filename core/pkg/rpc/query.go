@@ -19,6 +19,7 @@ package rpc
 import (
 	"context"
 	"sort"
+	"strings"
 
 	"github.com/IBM/kar/core/pkg/store"
 )
@@ -105,4 +106,26 @@ func getSessionNodeID(ctx context.Context, session Session) (string, error) {
 func delSession(ctx context.Context, session Session) error {
 	_, err := store.Del(ctx, session.Name+"_"+session.ID)
 	return err
+}
+
+func getAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string][]string, error) {
+	pattern := "*"
+	if sessionPrefixFilter != "" {
+		pattern = sessionPrefixFilter + "_*"
+	}
+	m := map[string][]string{}
+	reply, err := store.Keys(ctx, pattern)
+	if err != nil {
+		return nil, err
+	}
+	for _, key := range reply {
+		splitKeys := strings.Split(key, "_")
+		actorType := splitKeys[0]
+		instanceID := splitKeys[1]
+		if m[actorType] == nil {
+			m[actorType] = make([]string, 0)
+		}
+		m[actorType] = append(m[actorType], instanceID)
+	}
+	return m, nil
 }
