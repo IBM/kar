@@ -96,7 +96,7 @@ func Reclaim(requestID string) {
 // GetTopology returns a map from node ids to services
 func GetTopology() (map[string][]string, <-chan struct{}) {
 	if rpcLib {
-		rpclib.GetTopology()
+		return rpclib.GetTopology()
 	}
 	return getTopology()
 }
@@ -104,7 +104,7 @@ func GetTopology() (map[string][]string, <-chan struct{}) {
 // GetServices returns the sorted list of services currently available
 func GetServices() ([]string, <-chan struct{}) {
 	if rpcLib {
-		rpclib.GetServices()
+		return rpclib.GetServices()
 	}
 	return getServices()
 }
@@ -112,7 +112,7 @@ func GetServices() ([]string, <-chan struct{}) {
 // GetAllSessions returns a map from Session names to all known IDs for each name
 func GetAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string][]string, error) {
 	if rpcLib {
-		rpclib.GetAllSessions(ctx, sessionPrefixFilter)
+		return rpclib.GetAllSessions(ctx, sessionPrefixFilter)
 	}
 	return getAllSessions(ctx, sessionPrefixFilter)
 }
