@@ -29,7 +29,7 @@
 
     <version.javaee-api>8.0</version.javaee-api>
     <version.microprofile>4.0.1</version.microprofile>
-    <version.openliberty-runtime>21.0.0.7</version.openliberty-runtime>
+    <version.openliberty-runtime>21.0.0.9</version.openliberty-runtime>
     <version.liberty-maven-plugin>3.2.1</version.liberty-maven-plugin>
 
     <!-- Liberty app configuration -->

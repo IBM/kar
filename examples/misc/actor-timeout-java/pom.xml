@@ -17,7 +17,7 @@
 
     <version.javaee-api>8.0</version.javaee-api>
     <version.microprofile>4.0.1</version.microprofile>
-    <version.openliberty-runtime>21.0.0.7</version.openliberty-runtime>
+    <version.openliberty-runtime>21.0.0.9</version.openliberty-runtime>
     <version.liberty-maven-plugin>3.3.4</version.liberty-maven-plugin>
 
     <liberty.var.app.context.root>/</liberty.var.app.context.root>
