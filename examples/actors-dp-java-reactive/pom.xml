@@ -8,7 +8,7 @@
   <packaging>jar</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.0.9</version.kar-java-sdk>
+    <version.kar-java-sdk>1.1.0</version.kar-java-sdk>
     <version.java-compiler>11</version.java-compiler>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
