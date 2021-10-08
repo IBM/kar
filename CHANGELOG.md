@@ -16,6 +16,21 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.1.0 - 2021-10-08
++ Implement an alternative Kafka-only RPC layer
+    + Port KAR runtime to new rpclib APIs
+        + Port KAR to new RPC library abstractions (#170)
+        + Promote internal/store to pkg/store (#171)
+        + Add alternative store.CAS implementation that returns value instead of Boolean (#173)
+    + New Kafka-only RPC library
+        + Initial import of rpclib (#174)
+        + Subsequent fixes (#177), (#178), (#179), (#180), (#184), (#185), (#186)
++ Adding a transactional framework in KAR (#167)
++ Upgrade from Open Liberty 20.0.0.9 to 21.0.0.7 (#181)
++ Upgrade from Quarkus 1.1.13 to 2.2.3 (#176)
++ Upgrade from kafka 2.7.0 to 2.7.1 (#182)
++ Fix bug introduced in 1.0.9 in redis retry logic (#172)
+
 # KAR 1.0.9 - 2021-09-10
 + Implement a Reactive Java SDK using Quarkus
 + Add a retry loop around failed redis connection attempts (#163)
