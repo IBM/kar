@@ -19,10 +19,24 @@ package rpc
 import (
 	"context"
 	"math/rand"
+	"strings"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 )
+
+func place(names ...string) string {
+	key := "rpc"
+	for _, name := range names {
+		key += "_" + name
+	}
+	return key
+}
+
+func instance(key string) (string, string) {
+	parts := strings.Split(key, "_")
+	return parts[1], parts[2]
+}
 
 // Lookup partition offering service
 func routeToService(service string) int32 {
@@ -43,7 +57,7 @@ func routeToSession(ctx context.Context, service, session string) (int32, error)
 	next := nodes[rand.Int31n(int32(len(nodes)))] // select random node
 	for ctx.Err() == nil {
 		var err error
-		node, err = store.CAS(ctx, service+"_"+session, node, next)
+		node, err = store.CAS(ctx, place(service, session), node, next)
 		if err != nil {
 			return 0, err
 		}
