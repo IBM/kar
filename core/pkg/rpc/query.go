@@ -19,7 +19,6 @@ package rpc
 import (
 	"context"
 	"sort"
-	"strings"
 
 	"github.com/IBM/kar/core/pkg/store"
 )
@@ -96,7 +95,7 @@ func getPartitions() ([]int32, <-chan struct{}) {
 }
 
 func getSessionNodeID(ctx context.Context, session Session) (string, error) {
-	node, err := store.Get(ctx, session.Name+"_"+session.ID)
+	node, err := store.Get(ctx, place(session.Name, session.ID))
 	if err == store.ErrNil {
 		err = nil
 	}
@@ -104,14 +103,14 @@ func getSessionNodeID(ctx context.Context, session Session) (string, error) {
 }
 
 func delSession(ctx context.Context, session Session) error {
-	_, err := store.Del(ctx, session.Name+"_"+session.ID)
+	_, err := store.Del(ctx, place(session.Name, session.ID))
 	return err
 }
 
 func getAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string][]string, error) {
-	pattern := "*"
+	pattern := place("*")
 	if sessionPrefixFilter != "" {
-		pattern = sessionPrefixFilter + "_*"
+		pattern = place(sessionPrefixFilter, "*")
 	}
 	m := map[string][]string{}
 	reply, err := store.Keys(ctx, pattern)
@@ -119,9 +118,7 @@ func getAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string
 		return nil, err
 	}
 	for _, key := range reply {
-		splitKeys := strings.Split(key, "_")
-		actorType := splitKeys[0]
-		instanceID := splitKeys[1]
+		actorType, instanceID := instance(key)
 		if m[actorType] == nil {
 			m[actorType] = make([]string, 0)
 		}
