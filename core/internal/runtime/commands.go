@@ -158,7 +158,7 @@ func AwaitPromise(ctx context.Context, requestID string) ([]byte, error) {
 		defer requests.Delete(requestID)
 		defer rpc.Reclaim(requestID)
 		select {
-		case r := <-ch.(chan rpc.Result):
+		case r := <-ch.(<-chan rpc.Result):
 			return r.Value, r.Err
 		case <-ctx.Done():
 			return nil, ctx.Err()
