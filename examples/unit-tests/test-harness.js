@@ -248,6 +248,14 @@ async function actorTests () {
     failure = true
   }
 
+  // asyncCall invocation via the actor
+  const v10 = await actor.asyncCall(a, 'incr', 42)
+  const v11 = await v10()
+  if (v11 !== 43) {
+    console.log(`Failed: unexpected result from asyncCall ${v11}`)
+    failure = true
+  }
+
   return failure
 }
 
