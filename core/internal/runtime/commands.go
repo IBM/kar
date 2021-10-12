@@ -446,14 +446,15 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 	// Acquire the actor instance lock
 	var e *actorEntry
 	var fresh bool
-	e, fresh, err = actor.acquire(ctx, session)
+	var reason map[string]string
+	e, fresh, err, reason = actor.acquire(ctx, session, msg)
 	if err != nil {
 		if err == errActorHasMoved {
 			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
 			err = rpc.Tell(ctx, target, actorEndpoint, time.Time{}, value) // forward
 			return nil, nil
 		} else if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s", actor, msg["command"], msg["path"], session)
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
 			logger.Error("%s", payload)
 			return json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
 		} else {

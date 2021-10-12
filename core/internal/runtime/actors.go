@@ -70,6 +70,7 @@ type actorEntry struct {
 	session string        // current session or "" if none
 	depth   int           // session depth
 	busy    chan struct{} // close to notify end of session
+	msg     map[string]string
 }
 
 var (
@@ -81,7 +82,7 @@ var (
 // acquire locks the actor, session must be not be ""
 // "exclusive" and "reminder" are reserved session names
 // acquire returns true if actor requires activation before invocation
-func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bool, error) {
+func (actor Actor) acquire(ctx context.Context, session string, msg map[string]string) (*actorEntry, bool, error, map[string]string) {
 	e := &actorEntry{actor: actor, lock: make(chan struct{}, 1)}
 	e.lock <- struct{}{} // lock entry
 	for {
@@ -93,13 +94,14 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 					e.session = session
 					e.depth = 1
 					e.busy = make(chan struct{})
+					e.msg = msg
 					<-e.lock
-					return e, false, nil
+					return e, false, nil, nil
 				}
 				if session == "reminder" || session != "exclusive" && session == e.session { // reenter existing session
 					e.depth++
 					<-e.lock
-					return e, false, nil
+					return e, false, nil, nil
 				}
 				// another session is in progress
 				busy := e.busy // read while holding the lock
@@ -108,15 +110,18 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 					select {
 					case <-busy: // wait
 					case <-ctx.Done():
-						return nil, false, ctx.Err()
+						return nil, false, ctx.Err(), nil
 					case <-time.After(config.ActorBusyTimeout):
-						return nil, false, errActorAcquireTimeout
+						e.lock <- struct{}{}
+						reason := e.msg
+						<-e.lock
+						return nil, false, errActorAcquireTimeout, reason
 					}
 				} else {
 					select {
 					case <-busy: // wait
 					case <-ctx.Done():
-						return nil, false, ctx.Err()
+						return nil, false, ctx.Err(), nil
 					}
 				}
 				// loop around
@@ -130,19 +135,20 @@ func (actor Actor) acquire(ctx context.Context, session string) (*actorEntry, bo
 			sidecar, err := rpc.GetSessionNodeID(ctx, rpc.Session{Name: actor.Type, ID: actor.ID})
 			if err != nil {
 				<-e.lock
-				return nil, false, err
+				return nil, false, err, nil
 			}
 			if sidecar == rpc.GetNodeID() { // start new session
 				e.valid = true
 				e.session = session
 				e.depth = 1
+				e.msg = msg
 				e.busy = make(chan struct{})
 				<-e.lock
-				return e, true, nil
+				return e, true, nil, nil
 			}
 			actorTable.Delete(actor)
 			<-e.lock // actor has moved
-			return nil, false, errActorHasMoved
+			return nil, false, errActorHasMoved, nil
 		}
 	}
 }
