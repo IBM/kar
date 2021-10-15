@@ -32,13 +32,13 @@ var (
 	handlers = map[string]Handler{} // registered method handlers
 )
 
-func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) ([]byte, string) {
+func eval(ctx context.Context, target Target, deadline time.Time, value []byte) ([]byte, string) {
 	if !deadline.IsZero() && deadline.Before(time.Now()) {
 		return nil, "deadline expired"
 	}
-	f := handlers[method]
+	f := handlers[target.method()]
 	if f == nil {
-		return nil, "undefined method " + method
+		return nil, "undefined method " + target.method()
 	} else {
 		result, err := f(ctx, target, value)
 		if err != nil {
@@ -64,13 +64,13 @@ func accept(ctx context.Context, msg Message) {
 		}
 		ch <- result
 	case CallRequest:
-		value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		value, errMsg := eval(ctx, m.target(), m.deadline(), m.value())
 		err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
 		if err != nil && err != ctx.Err() && err != ErrUnavailable {
 			logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
 		}
 	case TellRequest:
-		_, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		_, errMsg := eval(ctx, m.target(), m.deadline(), m.value())
 		if errMsg != "" {
 			logger.Warning("tell %s returned an error: %s", m.requestID(), errMsg)
 		}
@@ -84,8 +84,8 @@ func accept(ctx context.Context, msg Message) {
 }
 
 // Call method and wait for result
-func call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
-	requestID, ch, err := async(ctx, target, method, deadline, value)
+func call(ctx context.Context, target Target, deadline time.Time, value []byte) ([]byte, error) {
+	requestID, ch, err := async(ctx, target, deadline, value)
 	if err != nil {
 		return nil, err
 	}
@@ -99,17 +99,17 @@ func call(ctx context.Context, target Target, method string, deadline time.Time,
 }
 
 // Call method and return immediately (result will be discarded)
-func tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
+func tell(ctx context.Context, target Target, deadline time.Time, value []byte) error {
 	requestID := uuid.New().String()
-	return Send(ctx, TellRequest{RequestID: requestID, Target: target, Method: method, Deadline: deadline, Value: value})
+	return Send(ctx, TellRequest{RequestID: requestID, Target: target, Deadline: deadline, Value: value})
 }
 
 // Call method and return a request id and a result channel
-func async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, target Target, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	requestID := uuid.New().String()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
-	err := Send(ctx, CallRequest{RequestID: requestID, Target: target, Method: method, Deadline: deadline, Value: value})
+	err := Send(ctx, CallRequest{RequestID: requestID, Target: target, Deadline: deadline, Value: value})
 	if err != nil {
 		requests.Delete(requestID)
 		return "", nil, err

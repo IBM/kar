@@ -84,7 +84,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Service{Name: service, Method: serviceEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +106,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 	if err != nil {
 		return "", err
 	}
-	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service, Method: serviceEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -124,7 +124,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +145,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -181,7 +181,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,7 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Service{Name: service, Method: serviceEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -217,7 +217,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -228,7 +228,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -243,7 +243,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Time{}, bytes)
+		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID, Method: actorEndpoint}, time.Time{}, bytes)
 	}
 }
 
@@ -451,7 +451,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 	if err != nil {
 		if err == errActorHasMoved {
 			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
-			err = rpc.Tell(ctx, target, actorEndpoint, time.Time{}, value) // forward
+			err = rpc.Tell(ctx, target, time.Time{}, value) // forward
 			return nil, nil
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)

@@ -32,7 +32,6 @@ type Message interface {
 type Request interface {
 	Message
 	target() Target
-	method() string
 }
 
 type CallRequest struct {
@@ -40,7 +39,6 @@ type CallRequest struct {
 	Value     []byte    // payload
 	Deadline  time.Time // deadline to start executing request
 	Target    Target    // target
-	Method    string    // method
 	Caller    string    // source node
 }
 
@@ -48,21 +46,18 @@ func (m CallRequest) requestID() string   { return m.RequestID }
 func (m CallRequest) value() []byte       { return m.Value }
 func (m CallRequest) deadline() time.Time { return m.Deadline }
 func (m CallRequest) target() Target      { return m.Target }
-func (m CallRequest) method() string      { return m.Method }
 
 type TellRequest struct {
 	RequestID string    // request id
 	Value     []byte    // payload
 	Deadline  time.Time // deadline to start executing request
 	Target    Target    // target
-	Method    string    // target method
 }
 
 func (m TellRequest) requestID() string   { return m.RequestID }
 func (m TellRequest) value() []byte       { return m.Value }
 func (m TellRequest) deadline() time.Time { return m.Deadline }
 func (m TellRequest) target() Target      { return m.Target }
-func (m TellRequest) method() string      { return m.Method }
 
 type Response struct {
 	RequestID string    // request id
@@ -92,10 +87,10 @@ func encode(topic string, partition int32, msg Message) *sarama.ProducerMessage 
 		if m.Caller == "" {
 			m.Caller = self.Node
 		}
-		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Method": m.Method, "Caller": m.Caller}
+		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Caller": m.Caller}
 		encodeTarget(m.Target, meta)
 	case TellRequest:
-		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method}
+		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID}
 		encodeTarget(m.Target, meta)
 	case Response:
 		meta = map[string]string{"Type": "Response", "RequestID": m.RequestID, "ErrMsg": m.ErrMsg}
@@ -131,9 +126,9 @@ func decode(msg *sarama.ConsumerMessage) Message {
 	}
 	switch meta["Type"] {
 	case "Call":
-		return CallRequest{RequestID: meta["RequestID"], Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Caller: meta["Caller"], Value: msg.Value}
+		return CallRequest{RequestID: meta["RequestID"], Deadline: deadline, Target: decodeTarget(meta), Caller: meta["Caller"], Value: msg.Value}
 	case "Tell":
-		return TellRequest{RequestID: meta["RequestID"], Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Value: msg.Value}
+		return TellRequest{RequestID: meta["RequestID"], Deadline: deadline, Target: decodeTarget(meta), Value: msg.Value}
 	case "Response":
 		return Response{RequestID: meta["RequestID"], Deadline: deadline, ErrMsg: meta["ErrMsg"], Value: msg.Value}
 	}
@@ -141,6 +136,7 @@ func decode(msg *sarama.ConsumerMessage) Message {
 }
 
 func encodeTarget(target Target, meta map[string]string) {
+	meta["Method"] = target.method()
 	switch t := target.(type) {
 	case Session:
 		meta["Service"] = t.Name
@@ -154,9 +150,9 @@ func encodeTarget(target Target, meta map[string]string) {
 
 func decodeTarget(meta map[string]string) Target {
 	if session, ok := meta["Session"]; ok {
-		return Session{Name: meta["Service"], ID: session}
+		return Session{Method: meta["Method"], Name: meta["Service"], ID: session}
 	} else if service, ok1 := meta["Service"]; ok1 {
-		return Service{Name: service}
+		return Service{Method: meta["Method"], Name: service}
 	}
-	return Node{ID: meta["Node"]}
+	return Node{Method: meta["Method"], ID: meta["Node"]}
 }

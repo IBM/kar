@@ -84,13 +84,13 @@ func (p publisher) Close() error {
 	return nil
 }
 
-func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, transform Transformer) (<-chan struct{}, error) {
 	f := func(ctx context.Context, msg message) {
 		transformed, err := transform(ctx, msg.Value)
 		if err != nil {
 			logger.Error("failed to transform event from topic %s: %v", topic, err)
 		}
-		err = Tell(ctx, target, method, time.Time{}, transformed)
+		err = Tell(ctx, target, time.Time{}, transformed)
 		if err != nil {
 			logger.Error("failed to tell target %v of event from topic %s: %v", target, topic, err)
 		} else {

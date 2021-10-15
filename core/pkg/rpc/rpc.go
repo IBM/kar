@@ -33,28 +33,31 @@ type Config struct {
 
 // Target of an invocation
 type Target interface {
-	target() // private marker
+	method() string
 }
 
 // Service implements Target
 type Service struct {
-	Name string
+	Method string
+	Name   string
 }
 
 // Session implements Target
 type Session struct {
-	Name string
-	ID   string
+	Method string
+	Name   string
+	ID     string
 }
 
 // Node implements Target
 type Node struct {
-	ID string
+	Method string
+	ID     string
 }
 
-func (s Service) target() {}
-func (s Session) target() {}
-func (s Node) target()    {}
+func (s Service) method() string { return s.Method }
+func (s Session) method() string { return s.Method }
+func (s Node) method() string    { return s.Method }
 
 // Handler for method
 type Handler func(context.Context, Target, []byte) ([]byte, error)
@@ -79,18 +82,18 @@ func Connect(ctx context.Context, topic string, conf *Config, services ...string
 }
 
 // Call method and wait for result
-func Call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
-	return call(ctx, target, method, deadline, value)
+func Call(ctx context.Context, target Target, deadline time.Time, value []byte) ([]byte, error) {
+	return call(ctx, target, deadline, value)
 }
 
 // Call method and return immediately (result will be discarded)
-func Tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
-	return tell(ctx, target, method, deadline, value)
+func Tell(ctx context.Context, target Target, deadline time.Time, value []byte) error {
+	return tell(ctx, target, deadline, value)
 }
 
 // Call method and return a request id and a result channel
-func Async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
-	return async(ctx, target, method, deadline, value)
+func Async(ctx context.Context, target Target, deadline time.Time, value []byte) (string, <-chan Result, error) {
+	return async(ctx, target, deadline, value)
 }
 
 // Reclaim resources associated with async request id
@@ -171,6 +174,6 @@ func NewPublisher(conf *Config) (Publisher, error) {
 }
 
 // Subscribe to a topic
-func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
-	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, transform Transformer) (<-chan struct{}, error) {
+	return subscribe(ctx, conf, topic, group, oldest, target, transform)
 }

@@ -188,7 +188,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		return json.Marshal(msg)
 	}
 
-	ch, err := rpc.Subscribe(ctx, &config.KafkaConfig, s.Topic, group, s.OffsetOldest, rpc.Session{Name: s.Actor.Type, ID: s.Actor.ID}, actorEndpoint, rawEventToActorTellMsg)
+	ch, err := rpc.Subscribe(ctx, &config.KafkaConfig, s.Topic, group, s.OffsetOldest, rpc.Session{Name: s.Actor.Type, ID: s.Actor.ID, Method: actorEndpoint}, rawEventToActorTellMsg)
 
 	if err == nil {
 		return ch, http.StatusOK, nil
