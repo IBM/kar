@@ -208,10 +208,15 @@ func processMsg(ctx context.Context, m message) {
 		// If not forwarded elsewhere, actually dispatch up to the handler
 		if !forwarded {
 			if handler, ok := handlers[msg.Method]; ok {
-				reply, err := handler(ctx, target, msg.Body)
-				if err == nil && reply != nil && msg.Callback.SendingNode != "" {
-					// Send the response back to the SendingNode
-					err = respond(ctx, msg.Callback, reply)
+				dest, reply, err := handler(ctx, target, msg.Body)
+				if err == nil && reply != nil {
+					if dest != nil {
+						// TODO: Send response to destination
+						logger.Fatal("Destination functionality not yet implemented")
+					} else if msg.Callback.SendingNode != "" {
+						// Send the response back to the SendingNode
+						err = respond(ctx, msg.Callback, reply)
+					}
 				}
 			} else {
 				logger.Error("Dropping message for unknown handler %v", msg.Method)
@@ -241,7 +246,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 		return err
 	}
 
-	err = tell(ctx, Destination{ Target: Node{ID: callback.SendingNode}, Method: responseMethod}, time.Time{}, value)
+	err = tell(ctx, Destination{Target: Node{ID: callback.SendingNode}, Method: responseMethod}, time.Time{}, value)
 
 	if err == errUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
@@ -250,22 +255,22 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 	return err
 }
 
-func responseHandler(ctx context.Context, target Target, value []byte) ([]byte, error) {
+func responseHandler(ctx context.Context, target Target, value []byte) (*Destination, []byte, error) {
 	var response callResponse
 	err := json.Unmarshal(value, &response)
 	if err != nil {
 		logger.Error("responseHandler: failed to unmarshal response: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ch, ok := requests.Load(response.Request); ok {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		case ch.(chan Result) <- Result{Value: response.Value, Err: nil}:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", response.Request)
 	}
-	return nil, nil
+	return nil, nil, nil
 }

@@ -40,7 +40,7 @@ func eval(ctx context.Context, method string, target Target, deadline time.Time,
 	if f == nil {
 		return nil, "undefined method " + method
 	} else {
-		result, err := f(ctx, target, value)
+		_, result, err := f(ctx, target, value)
 		if err != nil {
 			b, _ := json.Marshal(err.Error) // attempt to serialize error object, ignore errors
 			return b, err.Error()
