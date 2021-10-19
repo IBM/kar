@@ -84,7 +84,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +106,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 	if err != nil {
 		return "", err
 	}
-	requestID, ch, err := rpc.Async(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -124,7 +124,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, session string) 
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +145,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -181,7 +181,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,7 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Service{Name: service}, serviceEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -217,7 +217,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -228,7 +228,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -243,7 +243,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Session{Name: actor.Type, ID: actor.ID}, actorEndpoint, time.Time{}, bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, time.Time{}, bytes)
 	}
 }
 
@@ -251,19 +251,20 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func call(ctx context.Context, msg map[string]string) ([]byte, error) {
+func call(ctx context.Context, msg map[string]string) (*rpc.Destination, []byte, error) {
 	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
 	if reply == nil {
-		return nil, nil
+		return nil, nil, nil
 	} else {
-		return json.Marshal(*reply)
+		replyBytes, replyErr := json.Marshal(*reply)
+		return nil, replyBytes, replyErr
 	}
 }
 
@@ -323,13 +324,13 @@ func bindingLoad(ctx context.Context, actor Actor, msg map[string]string) error 
 	return nil
 }
 
-func tell(ctx context.Context, msg map[string]string) error {
+func tell(ctx context.Context, msg map[string]string) (*rpc.Destination, []byte, error) {
 	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
 		}
-		return err
+		return nil, nil, err
 	}
 
 	// Examine the reply and log any that represent appliction-level errors.
@@ -356,7 +357,7 @@ func tell(ctx context.Context, msg map[string]string) error {
 		logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], reply.StatusCode, reply.Payload)
 	}
 
-	return nil
+	return nil, nil, nil
 }
 
 // Returns information about this sidecar's actors
@@ -373,15 +374,15 @@ func getActorInformation(ctx context.Context, msg map[string]string) ([]byte, er
 	return json.Marshal(reply)
 }
 
-func handlerService(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
+func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsService, ok := target.(rpc.Service)
 	if !ok {
-		return nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
+		return nil, nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
 	}
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	msg["metricLabel"] = targetAsService.Name + ":" + msg["path"]
@@ -390,36 +391,37 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) ([]byt
 	case "call":
 		return call(ctx, msg)
 	case "tell":
-		return nil, tell(ctx, msg)
+		return tell(ctx, msg)
 	default:
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
-		return nil, nil
+		return nil, nil, nil
 	}
 }
 
-func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
+func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
 	_, ok := target.(rpc.Node)
 	if !ok {
-		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
+		return nil, nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
 	}
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if msg["command"] == "getActiveActors" {
-		return getActorInformation(ctx, msg)
+		replyBytes, replyErr := getActorInformation(ctx, msg)
+		return nil, replyBytes, replyErr
 	} else {
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
-		return nil, nil
+		return nil, nil, nil
 	}
 }
 
-func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte, error) {
+func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsSession, ok := target.(rpc.Session)
 	if !ok {
-		return nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
+		return nil, nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
 	}
 	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
 	var reply []byte = nil
@@ -428,7 +430,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 
 	err = json.Unmarshal(value, &msg)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// Determine session to use when acquiring actor instance lock
@@ -451,15 +453,16 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 	if err != nil {
 		if err == errActorHasMoved {
 			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
-			err = rpc.Tell(ctx, target, actorEndpoint, time.Time{}, value) // forward
-			return nil, nil
+			err = rpc.Tell(ctx, rpc.Destination{Target: target, Method: actorEndpoint}, time.Time{}, value) // forward
+			return nil, nil, nil
 		} else if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
 			logger.Error("%s", payload)
-			return json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
+			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
+			return nil, replyBytes, replyErr
 		} else {
 			// An error or cancelation that caused us to fail to acquire the lock.
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -483,7 +486,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 			err = nil
 		}
 		e.release(session, false)
-		return reply, err
+		return nil, reply, err
 	}
 
 	if msg["command"] == "delete" {
@@ -500,9 +503,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 		if err != nil {
 			logger.Error("deleting placement date for %v failed with %v", actor, err)
 		}
-		return reply, err
+		return nil, reply, err
 	}
 
+	var dest *rpc.Destination = nil
 	if fresh {
 		reply, err = activate(ctx, actor, msg["command"] == "call", msg["path"])
 	}
@@ -518,10 +522,9 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 		msg["method"] = "POST"
 
 		if msg["command"] == "call" {
-			reply, err = call(ctx, msg)
+			dest, reply, err = call(ctx, msg)
 		} else if msg["command"] == "tell" {
-			reply = nil
-			err = tell(ctx, msg)
+			dest, reply, err = tell(ctx, msg)
 		} else {
 			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
@@ -531,7 +534,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) ([]byte,
 		e.release(session, true)
 	}
 
-	return reply, err
+	return dest, reply, err
 }
 
 // actors

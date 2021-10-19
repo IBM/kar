@@ -71,12 +71,12 @@ func init() {
 	register(responseMethod, responseHandler)
 }
 
-func call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
+func call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
 	requests.Store(request, ch)
 	defer requests.Delete(request)
-	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
+	err := send(ctx, dest, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
 	if err != nil {
 		return nil, err
 	}
@@ -88,15 +88,15 @@ func call(ctx context.Context, target Target, method string, deadline time.Time,
 	}
 }
 
-func tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
-	return send(ctx, target, method, karCallbackInfo{}, deadline, value)
+func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
+	return send(ctx, dest, karCallbackInfo{}, deadline, value)
 }
 
-func async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	request := uuid.New().String()
 	ch := make(chan Result)
 	requests.Store(request, ch)
-	err := send(ctx, target, method, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
+	err := send(ctx, dest, karCallbackInfo{SendingNode: getNodeID(), Request: request}, deadline, value)
 	if err != nil {
 		return "", nil, err
 	}
@@ -112,7 +112,7 @@ func reclaim(requestID string) {
 ////
 
 // send sends message to receiver
-func send(ctx context.Context, target Target, method string, callback karCallbackInfo, deadline time.Time, value []byte) error {
+func send(ctx context.Context, dest Destination, callback karCallbackInfo, deadline time.Time, value []byte) error {
 	select { // make sure we have joined
 	case <-joined:
 	case <-ctx.Done():
@@ -122,7 +122,7 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 	var partition int32
 	var sidecar string
 	var err error
-	switch t := target.(type) {
+	switch t := dest.Target.(type) {
 	case Service: // route to service
 		partition, sidecar, err = routeToService(ctx, t.Name, deadline)
 		kt = karTarget{Type: "service", Name: t.Name}
@@ -146,7 +146,7 @@ func send(ctx context.Context, target Target, method string, callback karCallbac
 			return err
 		}
 	}
-	m, err := json.Marshal(karMsg{Target: kt, Sidecar: sidecar, Method: method, Callback: callback, Body: value})
+	m, err := json.Marshal(karMsg{Target: kt, Sidecar: sidecar, Method: dest.Method, Callback: callback, Body: value})
 	if err != nil {
 		logger.Error("failed to marshal message: %v", err)
 		return err
@@ -192,12 +192,12 @@ func processMsg(ctx context.Context, m message) {
 		case Service:
 			if t.Name != myServices[0] {
 				forwarded = true
-				err = send(ctx, target, msg.Method, msg.Callback, time.Time{}, msg.Body)
+				err = send(ctx, Destination{Target: target, Method: msg.Method}, msg.Callback, time.Time{}, msg.Body)
 			}
 		case Node:
 			if t.ID != GetNodeID() {
 				forwarded = true
-				err := send(ctx, target, msg.Method, msg.Callback, time.Time{}, msg.Body)
+				err := send(ctx, Destination{Target: target, Method: msg.Method}, msg.Callback, time.Time{}, msg.Body)
 				if err == errUnknownSidecar {
 					logger.Debug("dropping message to dead sidecar %s: %v", t.ID, err)
 					err = nil
@@ -208,10 +208,15 @@ func processMsg(ctx context.Context, m message) {
 		// If not forwarded elsewhere, actually dispatch up to the handler
 		if !forwarded {
 			if handler, ok := handlers[msg.Method]; ok {
-				reply, err := handler(ctx, target, msg.Body)
-				if err == nil && reply != nil && msg.Callback.SendingNode != "" {
-					// Send the response back to the SendingNode
-					err = respond(ctx, msg.Callback, reply)
+				dest, reply, err := handler(ctx, target, msg.Body)
+				if err == nil && reply != nil {
+					if dest != nil {
+						// TODO: Send response to destination
+						logger.Fatal("Destination functionality not yet implemented")
+					} else if msg.Callback.SendingNode != "" {
+						// Send the response back to the SendingNode
+						err = respond(ctx, msg.Callback, reply)
+					}
 				}
 			} else {
 				logger.Error("Dropping message for unknown handler %v", msg.Method)
@@ -241,7 +246,7 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 		return err
 	}
 
-	err = tell(ctx, Node{ID: callback.SendingNode}, responseMethod, time.Time{}, value)
+	err = tell(ctx, Destination{Target: Node{ID: callback.SendingNode}, Method: responseMethod}, time.Time{}, value)
 
 	if err == errUnknownSidecar {
 		logger.Debug("dropping answer to request %s from dead sidecar %s: %v", callback.Request, callback.SendingNode, err)
@@ -250,22 +255,22 @@ func respond(ctx context.Context, callback karCallbackInfo, reply []byte) error 
 	return err
 }
 
-func responseHandler(ctx context.Context, target Target, value []byte) ([]byte, error) {
+func responseHandler(ctx context.Context, target Target, value []byte) (*Destination, []byte, error) {
 	var response callResponse
 	err := json.Unmarshal(value, &response)
 	if err != nil {
 		logger.Error("responseHandler: failed to unmarshal response: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if ch, ok := requests.Load(response.Request); ok {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, nil, ctx.Err()
 		case ch.(chan Result) <- Result{Value: response.Value, Err: nil}:
 		}
 	} else {
 		logger.Error("unexpected request in callback %s", response.Request)
 	}
-	return nil, nil
+	return nil, nil, nil
 }

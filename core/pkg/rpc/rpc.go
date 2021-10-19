@@ -56,8 +56,13 @@ func (s Service) target() {}
 func (s Session) target() {}
 func (s Node) target()    {}
 
+type Destination struct {
+	Target Target
+	Method string
+}
+
 // Handler for method
-type Handler func(context.Context, Target, []byte) ([]byte, error)
+type Handler func(context.Context, Target, []byte) (*Destination, []byte, error)
 
 // Data transformer applied to convert external events to Tell payloads
 type Transformer func(context.Context, []byte) ([]byte, error)
@@ -79,18 +84,18 @@ func Connect(ctx context.Context, topic string, conf *Config, services ...string
 }
 
 // Call method and wait for result
-func Call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
-	return call(ctx, target, method, deadline, value)
+func Call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
+	return call(ctx, dest, deadline, value)
 }
 
 // Call method and return immediately (result will be discarded)
-func Tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
-	return tell(ctx, target, method, deadline, value)
+func Tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
+	return tell(ctx, dest, deadline, value)
 }
 
 // Call method and return a request id and a result channel
-func Async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
-	return async(ctx, target, method, deadline, value)
+func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
+	return async(ctx, dest, deadline, value)
 }
 
 // Reclaim resources associated with async request id
@@ -171,6 +176,6 @@ func NewPublisher(conf *Config) (Publisher, error) {
 }
 
 // Subscribe to a topic
-func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
-	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, dest Destination, transform Transformer) (<-chan struct{}, error) {
+	return subscribe(ctx, conf, topic, group, oldest, dest, transform)
 }

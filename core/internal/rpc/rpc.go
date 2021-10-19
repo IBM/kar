@@ -23,6 +23,9 @@ type Session = rpclib.Session
 // Node implements Target
 type Node = rpclib.Node
 
+// Destination is a Target and a method
+type Destination = rpclib.Destination
+
 // Handler for method
 type Handler = rpclib.Handler
 
@@ -61,27 +64,27 @@ func Connect(ctx context.Context, topic string, conf *Config, services ...string
 }
 
 // Call method and wait for result
-func Call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
+func Call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
 	if rpcLib {
-		return rpclib.Call(ctx, target, method, deadline, value)
+		return rpclib.Call(ctx, dest, deadline, value)
 	}
-	return call(ctx, target, method, deadline, value)
+	return call(ctx, dest, deadline, value)
 }
 
 // Call method and return immediately (result will be discarded)
-func Tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
+func Tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
 	if rpcLib {
-		return rpclib.Tell(ctx, target, method, deadline, value)
+		return rpclib.Tell(ctx, dest, deadline, value)
 	}
-	return tell(ctx, target, method, deadline, value)
+	return tell(ctx, dest, deadline, value)
 }
 
 // Call method and return a request id and a result channel
-func Async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	if rpcLib {
-		return rpclib.Async(ctx, target, method, deadline, value)
+		return rpclib.Async(ctx, dest, deadline, value)
 	}
-	return async(ctx, target, method, deadline, value)
+	return async(ctx, dest, deadline, value)
 }
 
 // Reclaim resources associated with async request id
@@ -195,11 +198,11 @@ func NewPublisher(conf *Config) (Publisher, error) {
 }
 
 // Subscribe to a topic
-func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
+func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, dest Destination, transform Transformer) (<-chan struct{}, error) {
 	if rpcLib {
-		return rpclib.Subscribe(ctx, conf, topic, group, oldest, target, method, transform)
+		return rpclib.Subscribe(ctx, conf, topic, group, oldest, dest, transform)
 	}
-	return subscribe(ctx, conf, topic, group, oldest, target, method, transform)
+	return subscribe(ctx, conf, topic, group, oldest, dest, transform)
 }
 
 func ChoosePartition() int32 {
