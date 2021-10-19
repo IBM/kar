@@ -84,8 +84,8 @@ func accept(ctx context.Context, msg Message) {
 }
 
 // Call method and wait for result
-func call(ctx context.Context, target Target, method string, deadline time.Time, value []byte) ([]byte, error) {
-	requestID, ch, err := async(ctx, target, method, deadline, value)
+func call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
+	requestID, ch, err := async(ctx, dest, deadline, value)
 	if err != nil {
 		return nil, err
 	}
@@ -99,17 +99,17 @@ func call(ctx context.Context, target Target, method string, deadline time.Time,
 }
 
 // Call method and return immediately (result will be discarded)
-func tell(ctx context.Context, target Target, method string, deadline time.Time, value []byte) error {
+func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
 	requestID := uuid.New().String()
-	return Send(ctx, TellRequest{RequestID: requestID, Target: target, Method: method, Deadline: deadline, Value: value})
+	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
 }
 
 // Call method and return a request id and a result channel
-func async(ctx context.Context, target Target, method string, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	requestID := uuid.New().String()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
-	err := Send(ctx, CallRequest{RequestID: requestID, Target: target, Method: method, Deadline: deadline, Value: value})
+	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
 	if err != nil {
 		requests.Delete(requestID)
 		return "", nil, err

@@ -113,7 +113,7 @@ func (s *subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 		if err != nil {
 			logger.Error("failed to transform event from topic %s: %v", s.topic, err)
 		}
-		err = Tell(s.ctx, s.target, s.method, time.Time{}, transformed)
+		err = Tell(s.ctx, Destination{Target: s.target, Method: s.method}, time.Time{}, transformed)
 		if err != nil {
 			logger.Error("failed to tell target %v of event from topic %s: %v", s.target, s.topic, err)
 		} else {
@@ -123,7 +123,7 @@ func (s *subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 	return nil
 }
 
-func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, target Target, method string, transform Transformer) (<-chan struct{}, error) {
+func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, dest Destination, transform Transformer) (<-chan struct{}, error) {
 	config := configureClient(conf)
 	if oldest {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
@@ -138,7 +138,7 @@ func subscribe(ctx context.Context, conf *Config, topic, group string, oldest bo
 
 	go func() {
 		for {
-			if err1 := cg.Consume(ctx, []string{topic}, &subscriber{topic: topic, target: target, method: method, ctx: ctx, transform: transform, ready: ready}); err1 != nil {
+			if err1 := cg.Consume(ctx, []string{topic}, &subscriber{topic: topic, target: dest.Target, method: dest.Method, ctx: ctx, transform: transform, ready: ready}); err1 != nil {
 				logger.Error("subscriber error: %v", err1)
 				break
 			}
