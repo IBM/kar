@@ -251,23 +251,6 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func call(ctx context.Context, msg map[string]string) (*rpc.Destination, []byte, error) {
-	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
-	if err != nil {
-		if err != ctx.Err() {
-			logger.Debug("call failed to invoke %s: %v", msg["path"], err)
-		}
-		return nil, nil, err
-	}
-
-	if reply == nil {
-		return nil, nil, nil
-	} else {
-		replyBytes, replyErr := json.Marshal(*reply)
-		return nil, replyBytes, replyErr
-	}
-}
-
 func bindingDel(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
 	var reply Reply
 	found := deleteBindings(ctx, msg["kind"], actor, msg["bindingId"])
@@ -324,40 +307,30 @@ func bindingLoad(ctx context.Context, actor Actor, msg map[string]string) error 
 	return nil
 }
 
-func tell(ctx context.Context, msg map[string]string) (*rpc.Destination, []byte, error) {
-	reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
-	if err != nil {
-		if err != ctx.Err() {
-			logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
-		}
-		return nil, nil, err
-	}
-
-	// Examine the reply and log any that represent appliction-level errors.
-	// We do this because a tell does not have a caller to which such reporting can be delegated.
+// Examine the "successful" reply to a tell and log those that represent appliction-level errors.
+// We do this because a tell does not have a caller to which such reporting can be delegated.
+func logTellReply(reply *Reply, path string) {
 	if reply.StatusCode == http.StatusNoContent {
-		logger.Debug("Asynchronous invoke of %s returned void", msg["path"])
+		logger.Debug("Asynchronous invoke of %s returned void", path)
 	} else if reply.StatusCode == http.StatusOK {
 		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
 			var result actorCallResult
 			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
-				logger.Error("Asynchronous invoke of %s had malformed result. %v", msg["path"], err)
+				logger.Error("Asynchronous invoke of %s had malformed result. %v", path, err)
 			} else {
 				if result.Error {
-					logger.Error("Asynchronous invoke of %s raised error %s", msg["path"], result.Message)
+					logger.Error("Asynchronous invoke of %s raised error %s", path, result.Message)
 					logger.Error("Stacktrace: %v", result.Stack)
 				} else {
-					logger.Debug("Asynchronous invoke of %s returned %v", msg["path"], result.Value)
+					logger.Debug("Asynchronous invoke of %s returned %v", path, result.Value)
 				}
 			}
 		} else {
-			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", msg["path"], reply.ContentType)
+			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", path, reply.ContentType)
 		}
 	} else {
-		logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], reply.StatusCode, reply.Payload)
+		logger.Error("Asynchronous invoke of %s returned status %v with body %s", path, reply.StatusCode, reply.Payload)
 	}
-
-	return nil, nil, nil
 }
 
 // Returns information about this sidecar's actors
@@ -389,9 +362,34 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 
 	switch msg["command"] {
 	case "call":
-		return call(ctx, msg)
+		{
+			reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
+			if err != nil {
+				if err != ctx.Err() {
+					logger.Debug("call failed to invoke %s: %v", msg["path"], err)
+				}
+				return nil, nil, err
+			}
+
+			if reply == nil {
+				return nil, nil, nil
+			} else {
+				replyBytes, replyErr := json.Marshal(*reply)
+				return nil, replyBytes, replyErr
+			}
+		}
 	case "tell":
-		return tell(ctx, msg)
+		{
+			reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
+			if err != nil {
+				if err != ctx.Err() {
+					logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
+				}
+			} else {
+				logTellReply(reply, msg["path"])
+			}
+			return nil, nil, err // reply is intentionally dropped; no one waiting for a response.
+		}
 	default:
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil, nil
@@ -522,9 +520,25 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		msg["method"] = "POST"
 
 		if msg["command"] == "call" {
-			dest, reply, err = call(ctx, msg)
+			replyStruct, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
+			if err != nil {
+				reply = nil
+				if err != ctx.Err() {
+					logger.Debug("call failed to invoke %s: %v", msg["path"], err)
+				}
+			} else if replyStruct != nil {
+				reply, err = json.Marshal(*replyStruct)
+			}
 		} else if msg["command"] == "tell" {
-			dest, reply, err = tell(ctx, msg)
+			replyStruct, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
+			if err != nil {
+				if err != ctx.Err() {
+					logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
+				}
+			} else {
+				logTellReply(replyStruct, msg["path"])
+			}
+			reply = nil // drop any result from a tell; nobody is listening for it.
 		} else {
 			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
