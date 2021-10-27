@@ -358,42 +358,31 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		return nil, nil, err
 	}
 
-	msg["metricLabel"] = targetAsService.Name + ":" + msg["path"]
-
-	switch msg["command"] {
-	case "call":
-		{
-			reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
-			if err != nil {
-				if err != ctx.Err() {
-					logger.Debug("call failed to invoke %s: %v", msg["path"], err)
-				}
-				return nil, nil, err
-			}
-
-			if reply == nil {
-				return nil, nil, nil
-			} else {
-				replyBytes, replyErr := json.Marshal(*reply)
-				return nil, replyBytes, replyErr
-			}
-		}
-	case "tell":
-		{
-			reply, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
-			if err != nil {
-				if err != ctx.Err() {
-					logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
-				}
-			} else {
-				logTellReply(reply, msg["path"])
-			}
-			return nil, nil, err // reply is intentionally dropped; no one waiting for a response.
-		}
-	default:
-		logger.Error("unexpected command %s", msg["command"]) // dropping message
-		return nil, nil, nil
+	command := msg["command"]
+	if !(command == "call" || command == "tell") {
+		logger.Error("unexpected command %s", command)
+		return nil, nil, nil // returning `nil` error indicates that message processing is complete (ie, drop unknown commands)
 	}
+
+	reply, err := invoke(ctx, msg["method"], msg, targetAsService.Name+":"+msg["path"])
+	if err != nil {
+		if err != ctx.Err() {
+			logger.Debug("%s failed to invoke %s: %v", command, msg["path"], err)
+		}
+		return nil, nil, err
+	}
+
+	var replyBytes []byte = nil
+	if reply != nil {
+		if command == "tell" {
+			// reply is intentionally dropped after logging; no one is waiting for it.
+			logTellReply(reply, msg["path"])
+		} else {
+			replyBytes, err = json.Marshal(*reply)
+		}
+	}
+
+	return nil, replyBytes, err
 }
 
 func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
@@ -514,31 +503,26 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	} else if err != nil { // failed to invoke activate
 		e.release(session, false)
 	} else { // invoke actor method
-		msg["metricLabel"] = actor.Type + ":" + msg["path"]
 		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
-		if msg["command"] == "call" {
-			replyStruct, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
+		command := msg["command"]
+		if command == "call" || command == "tell" {
+			reply = nil
+			replyStruct, err := invoke(ctx, msg["method"], msg, actor.Type+":"+msg["path"])
 			if err != nil {
-				reply = nil
 				if err != ctx.Err() {
-					logger.Debug("call failed to invoke %s: %v", msg["path"], err)
+					logger.Debug("%s failed to invoke %s: %v", command, msg["path"], err)
 				}
 			} else if replyStruct != nil {
-				reply, err = json.Marshal(*replyStruct)
-			}
-		} else if msg["command"] == "tell" {
-			replyStruct, err := invoke(ctx, msg["method"], msg, msg["metricLabel"])
-			if err != nil {
-				if err != ctx.Err() {
-					logger.Debug("tell failed to invoke %s: %v", msg["path"], err)
+				if command == "tell" {
+					// replyStruct is intentionally dropped after logging; no one is waiting for it.
+					logTellReply(replyStruct, msg["path"])
+				} else {
+					reply, err = json.Marshal(*replyStruct)
 				}
-			} else {
-				logTellReply(replyStruct, msg["path"])
 			}
-			reply = nil // drop any result from a tell; nobody is listening for it.
 		} else {
 			logger.Error("unexpected command %s", msg["command"]) // dropping message
 			reply = nil
