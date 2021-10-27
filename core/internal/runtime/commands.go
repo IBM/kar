@@ -53,7 +53,7 @@ func init() {
 	rpc.Register(sidecarEndpoint, handlerSidecar)
 }
 
-// Reply represents the return value of a call  TODO: Move back to runtime (commands.go)
+// Reply contains the subset of an http.Response that are relevant to higher levels of the runtime
 type Reply struct {
 	StatusCode  int
 	ContentType string
