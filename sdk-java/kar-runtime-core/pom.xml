@@ -15,9 +15,6 @@
   <name>kar-runtime-core</name>
   <description>KAR Java core actor runtime</description>
 
-  <dependencies>
-  </dependencies>
-
   <build>
     <plugins>
       <plugin>

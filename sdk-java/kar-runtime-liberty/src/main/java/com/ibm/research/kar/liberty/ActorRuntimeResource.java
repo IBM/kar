@@ -21,6 +21,7 @@ import java.util.Map;
 
 import javax.json.Json;
 import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonBuilderFactory;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
@@ -37,6 +38,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import com.ibm.research.kar.Kar;
+import com.ibm.research.kar.Kar.Actors.TellContinueResult;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
@@ -172,7 +174,24 @@ public class ActorRuntimeResource implements KarHttpConstants {
 				return Response.status(NO_CONTENT).build();
 			} else {
 				JsonObjectBuilder jb = factory.createObjectBuilder();
-				jb.add("value", (JsonValue)result);
+				if (result instanceof TellContinueResult) {
+					TellContinueResult tcr = (TellContinueResult)result;
+					JsonObjectBuilder crb = factory.createObjectBuilder();
+					JsonArrayBuilder argb = factory.createArrayBuilder();
+					for (JsonValue arg: tcr.args) {
+						argb.add(arg);
+					}
+					crb.add("args", argb.build());
+					crb.add("actorType", tcr.actor.getType());
+					crb.add("actorId", tcr.actor.getId());
+					crb.add("path", tcr.path);
+					if (tcr.targetTime != null) {
+						crb.add("targetTime", tcr.targetTime.toString());
+					}
+					jb.add("continue", crb.build());
+				} else {
+					jb.add("value", (JsonValue)result);
+				}
 				return Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
 			}
 		} catch (Throwable t) {
