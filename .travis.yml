@@ -31,6 +31,7 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
+        - make installJavaSDK || travis_terminate 1
         - ./ci/testLocal.sh
         - ./ci/testJavaLocal.sh
     - name: local-rpclib
@@ -38,6 +39,7 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
+        - make installJavaSDK || travis_terminate 1
         - KAR_EXTRA_ARGS=-rpclib ./ci/testLocal.sh
         - KAR_EXTRA_ARGS=-rpclib ./ci/testJavaLocal.sh
     - name: in-cluster
