@@ -64,6 +64,10 @@ definitions:
     x-go-package: github.com/IBM/kar/core/internal/runtime
   actorCallResult:
     properties:
+      continue:
+        description: If true, indicates that the Value represents a continuation
+        type: boolean
+        x-go-name: Continuation
       error:
         description: If true, indicates that the method execution resulted in an error/exception
         type: boolean
