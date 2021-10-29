@@ -211,8 +211,7 @@ func processMsg(ctx context.Context, m message) {
 				dest, reply, err := handler(ctx, target, msg.Body)
 				if err == nil && reply != nil {
 					if dest != nil {
-						// TODO: Send response to destination
-						logger.Fatal("Destination functionality not yet implemented")
+						err = tell(ctx, *dest, time.Time{}, reply) // TODO: Plumb through a real deadline??
 					} else if msg.Callback.SendingNode != "" {
 						// Send the response back to the SendingNode
 						err = respond(ctx, msg.Callback, reply)
