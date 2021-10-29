@@ -614,6 +614,23 @@ public class Kar {
 		}
 
 		/**
+		 * An actor method may return a TellContinueResult to indicate that the "result"
+		 * of the method is to schedule a new tell (either to itself or to another actor
+		 * instance).
+		 */
+		public static final class TellContinueResult {
+			public final ActorRef actor;
+			public final String path;
+			public final JsonValue[] args;
+
+			public TellContinueResult(ActorRef actor, String path, JsonValue... args) {
+				this.actor = actor;
+				this.path = path;
+				this.args = args;
+			}
+		}
+
+		/**
 		 * KAR API methods for Actor Reminders
 		 */
 		public static class Reminders {

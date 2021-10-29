@@ -2236,6 +2236,11 @@
       "type": "object",
       "title": "actorCallResult encodes the result of invoking an actor method.",
       "properties": {
+        "continue": {
+          "description": "If true, indicates that the Value represents a continuation",
+          "type": "boolean",
+          "x-go-name": "Continuation"
+        },
         "error": {
           "description": "If true, indicates that the method execution resulted in an error/exception",
           "type": "boolean",

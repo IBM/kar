@@ -109,12 +109,12 @@ public class Table extends ActorSkeleton {
       JsonString who = Json.createValue(philosopher(i));
       JsonString fork1 = Json.createValue(fork(i));
       JsonString fork2 = Json.createValue(fork(i + 1));
-      Actors.call(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
+      Actors.tell(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings);
     }
     JsonString who = Json.createValue(philosopher(n.intValue() - 1));
     JsonString fork1 = Json.createValue(fork(0));
     JsonString fork2 = Json.createValue(fork(n.intValue() - 1));
-    Actors.call(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings, who);
+    Actors.tell(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings);
     this.step = step;
     Actors.State.set(this, "step", step);
   }

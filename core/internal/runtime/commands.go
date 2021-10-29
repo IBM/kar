@@ -299,8 +299,10 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	var replyBytes []byte = nil
 	if reply != nil {
 		if command == "tell" {
-			// reply is intentionally dropped after logging; no one is waiting for it.
-			logTellReply(reply, msg["path"])
+			// reply is dropped after logging non-200 status code; no one is waiting for it.
+			if reply.StatusCode >= 300 || reply.StatusCode < 200 {
+				logger.Error("Asynchronous %s of %s returned status %v with body %s", msg["method"], msg["path"], reply.StatusCode, reply.Payload)
+			}
 		} else {
 			replyBytes, err = json.Marshal(*reply)
 		}
@@ -421,9 +423,32 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 				}
 			} else if replyStruct != nil {
 				if command == "tell" {
-					// replyStruct is intentionally dropped after logging; no one is waiting for it.
-					logTellReply(replyStruct, msg["path"])
+					// TELL: no waiting caller, so we have to inspect here and figure out if the method returned void, a result, a continuation, or an error
+					if replyStruct.StatusCode == http.StatusNoContent {
+						// Void return from a tell; nothing further to do.
+					} else if replyStruct.StatusCode == http.StatusOK {
+						var result actorCallResult
+						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err != nil {
+							logger.Error("Asynchronous invoke of %s had malformed result. %v", msg["path"], err)
+							err = nil // don't try to rexecute; this is a KAR runtime-level protocol error that should never happen
+						} else {
+							if result.Error {
+								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
+							} else if result.Continuation {
+								cr := result.Value.(map[string]interface{})
+								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
+								msg := map[string]string{
+									"command": "tell",
+									"path":    cr["path"].(string),
+									"payload": cr["payload"].(string)}
+								reply, err = json.Marshal(msg)
+							}
+						}
+					} else {
+						logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], replyStruct.StatusCode, replyStruct.Payload)
+					}
 				} else {
+					// CALL: just pass through the replyStruct to the caller and let it decode/handle the various cases
 					reply, err = json.Marshal(*replyStruct)
 				}
 			}
@@ -437,32 +462,6 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 
 	return dest, reply, err
-}
-
-// Examine the "successful" reply to a tell and log those that represent appliction-level errors.
-// We do this because a tell does not have a caller to which such reporting can be delegated.
-func logTellReply(reply *Reply, path string) {
-	if reply.StatusCode == http.StatusNoContent {
-		logger.Debug("Asynchronous invoke of %s returned void", path)
-	} else if reply.StatusCode == http.StatusOK {
-		if strings.HasPrefix(reply.ContentType, "application/kar+json") {
-			var result actorCallResult
-			if err := json.Unmarshal([]byte(reply.Payload), &result); err != nil {
-				logger.Error("Asynchronous invoke of %s had malformed result. %v", path, err)
-			} else {
-				if result.Error {
-					logger.Error("Asynchronous invoke of %s raised error %s", path, result.Message)
-					logger.Error("Stacktrace: %v", result.Stack)
-				} else {
-					logger.Debug("Asynchronous invoke of %s returned %v", path, result.Value)
-				}
-			}
-		} else {
-			logger.Error("Asynchronous invoke of %s returned unexpected Content-Type %v", path, reply.ContentType)
-		}
-	} else {
-		logger.Error("Asynchronous invoke of %s returned status %v with body %s", path, reply.StatusCode, reply.Payload)
-	}
 }
 
 func bindingDel(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
