@@ -74,9 +74,11 @@ public class Philosopher extends ActorSkeleton {
 		Actors.State.set(this, state);
 	}
 
-	private Instant nextStepTime() {
-		int thinkTime = (int)(Math.random() * 1000); // random 0...999ms
-		return Instant.now().plusMillis(thinkTime);
+	private void think() {
+		long thinkTime = (long)(Math.random() * 1000); // random 0...999ms
+		try {
+			Thread.sleep(thinkTime);
+		} catch (InterruptedException e) {}
 	}
 
 	@Remote
@@ -87,7 +89,8 @@ public class Philosopher extends ActorSkeleton {
 		this.servingsEaten = Json.createValue(0);
 		this.targetServings = targetServings;
 		checkpointState();
-		return new TellContinueResult(this, "getFirstFork", nextStepTime(), Json.createValue(1));
+		think();
+		return new TellContinueResult(this, "getFirstFork", Json.createValue(1));
 	}
 
 	@Remote
@@ -98,7 +101,8 @@ public class Philosopher extends ActorSkeleton {
 			if (attempt.intValue() > 5) {
 				System.out.println("Warning: "+this.getId()+" has failed to acquire his first Fork "+attempt+" times");
 			}
-			return new TellContinueResult(this, "getFirstFork", nextStepTime(), Json.createValue(attempt.intValue()+1));
+			think();
+			return new TellContinueResult(this, "getFirstFork", Json.createValue(attempt.intValue()+1));
 		}
 	}
 
@@ -110,20 +114,22 @@ public class Philosopher extends ActorSkeleton {
 			if (attempt.intValue() > 5) {
 				System.out.println("Warning: "+this.getId()+" has failed to acquire his second Fork "+attempt+" times");
 			}
-			return new TellContinueResult(this, "getSecondFork", nextStepTime(), Json.createValue(attempt.intValue()+1));
+			think();
+			return new TellContinueResult(this, "getSecondFork", Json.createValue(attempt.intValue()+1));
 		}
 	}
 
 	@Remote
 	public TellContinueResult eat(JsonNumber serving) {
-		if (serving != this.servingsEaten) return null; // squash re-execution (must have failed after State.set below, but before TCR was committed)
+		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before TCR was committed)
 		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+this.servingsEaten);
 		Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
 		Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
 		this.servingsEaten = Json.createValue(serving.intValue() + 1);
 		Actors.State.set(this, "servingsEaten", this.servingsEaten);
 		if (serving.intValue() < this.targetServings.intValue()) {
-			return new TellContinueResult(this, "getFirstFork", nextStepTime(), Json.createValue(1));
+			think();
+			return new TellContinueResult(this, "getFirstFork", Json.createValue(1));
 		} else {
 			return new TellContinueResult(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
 		}
