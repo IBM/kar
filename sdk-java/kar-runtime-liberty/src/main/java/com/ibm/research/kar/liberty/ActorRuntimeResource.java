@@ -181,7 +181,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 					for (JsonValue arg: tcr.args) {
 						argb.add(arg);
 					}
-					crb.add("args", argb.build());
+					crb.add("payload", argb.build().toString());
 					crb.add("actorType", tcr.actor.getType());
 					crb.add("actorId", tcr.actor.getId());
 					crb.add("path", "/"+tcr.path);

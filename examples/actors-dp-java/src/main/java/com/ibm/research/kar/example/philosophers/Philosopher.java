@@ -16,7 +16,6 @@
 
 package com.ibm.research.kar.example.philosophers;
 
-import java.time.Instant;
 import java.util.Map;
 
 import javax.json.Json;

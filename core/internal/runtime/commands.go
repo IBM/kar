@@ -430,24 +430,18 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err != nil {
 							logger.Error("Asynchronous invoke of %s had malformed result. %v", msg["path"], err)
-							err = nil // don't try to rexecute; this is KAR runtime-level protocol error that should never happen
+							err = nil // don't try to rexecute; this is a KAR runtime-level protocol error that should never happen
 						} else {
 							if result.Error {
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.Continuation {
-								if cr, ok := result.Value.(map[string]interface{}); ok {
-									dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
-									msg := map[string]string{"command": "tell", "path": cr["path"].(string)}
-									payload, argErr := json.Marshal(cr["args"])
-									if argErr != nil {
-										logger.Error("Malformed continuation arguments: %v", argErr)
-									} else {
-										msg["payload"] = string(payload)
-									}
-									reply, err = json.Marshal(msg)
-								} else {
-									logger.Error("Malformed continuation result: %T %v", result.Value, result.Value)
-								}
+								cr := result.Value.(map[string]interface{})
+								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
+								msg := map[string]string{
+									"command": "tell",
+									"path":    cr["path"].(string),
+									"payload": cr["payload"].(string)}
+								reply, err = json.Marshal(msg)
 							}
 						}
 					} else {
