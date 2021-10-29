@@ -83,6 +83,17 @@ spec:
 {{- if .Values.global.openshift }}
       serviceAccountName: sa-with-anyuid
 {{- end }}
+{{- if .Values.global.affinity }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kar-type
+                operator: In
+                values:
+                - system
+{{- end }}
 {{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
       volumes:
         - name: kar-kafka-pvc

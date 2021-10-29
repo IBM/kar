@@ -47,3 +47,4 @@ global:
   redisNodePort: 31379
   clusterSubDomain: cluster.local
   openshift: false
+  affinity: false

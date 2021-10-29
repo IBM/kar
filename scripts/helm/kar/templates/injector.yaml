@@ -33,6 +33,17 @@ spec:
         {{- include "kar.labels" . | nindent 8 }}
         name: kar-injector
     spec:
+{{- if .Values.global.affinity }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kar-type
+                operator: In
+                values:
+                - system
+{{- end }}
       imagePullSecrets:
       - name: kar.ibm.com.image-pull
       containers:
