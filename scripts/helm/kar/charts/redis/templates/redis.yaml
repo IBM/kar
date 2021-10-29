@@ -69,6 +69,17 @@ spec:
         {{- include "kar.selectorLabels" . | nindent 8 }}
         name: kar-redis
     spec:
+{{- if .Values.global.affinity }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kar-type
+                operator: In
+                values:
+                - system
+{{- end }}
 {{- if .Values.global.persistence }}
       volumes:
         - name: kar-redis-pvc
