@@ -41,7 +41,8 @@ jobs:
         - make cli || travis_terminate 1
         - make installJavaSDK || travis_terminate 1
         - KAR_EXTRA_ARGS=-rpclib ./ci/testLocal.sh
-        - KAR_EXTRA_ARGS=-rpclib ./ci/testJavaLocal.sh
+        # Disabled until rpclib implements continuations
+        # - KAR_EXTRA_ARGS=-rpclib ./ci/testJavaLocal.sh
     - name: in-cluster
       script:
         - ./scripts/kind-start.sh || travis_terminate 1
