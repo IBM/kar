@@ -42,9 +42,10 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
+        # TODO: Temporary hack to install -SNAPSHOT for TCR
+        - make installJavaSDK || travis_terminate 1
         - ./ci/testJSLocal.sh
-        # TODO: Disabled until rpcLib implements continuations
-        # - ./ci/testJavaLocal.sh
+        - ./ci/testJavaLocal.sh
     - name: local-rpclib
       env:
         - KAR_EXTRA_ARGS=-rpclib
@@ -52,7 +53,8 @@ jobs:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - ./ci/testJSLocal.sh
-        - ./ci/testJavaLocal.sh
+        # TODO: Disabled until rpcLib implements continuations
+        # - ./ci/testJavaLocal.sh
     - name: in-cluster
       script:
         - ./scripts/kind-start.sh || travis_terminate 1
