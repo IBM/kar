@@ -14,12 +14,13 @@
 # limitations under the License.
 #
 
+dist: bionic
 language: go
 services:
   - docker
 
 go:
-  - 1.15.x
+  - 1.16.x
 
 before_install:
   - ./ci/setup.sh
@@ -28,21 +29,32 @@ jobs:
   include:
     - stage: test
       name: local
+      env:
+        - KAR_JAVA_SDK_OVERRIDE=-Dversion.kar-java-sdk=99.99.99-SNAPSHOT
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
+        - pushd sdk-java && mvn versions:set -DnewVersion=99.99.99-SNAPSHOT && mvn install && popd || travis_terminate 1
+        - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
+        - ./ci/testJSLocal.sh
+        - ./ci/testJavaLocal.sh
+    - name: local-released
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
+        # TODO: Temporary hack to install -SNAPSHOT for TCR
         - make installJavaSDK || travis_terminate 1
-        - ./ci/testLocal.sh
+        - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
     - name: local-rpclib
       env:
+        - KAR_EXTRA_ARGS=-rpclib
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
-        - make installJavaSDK || travis_terminate 1
-        - KAR_EXTRA_ARGS=-rpclib ./ci/testLocal.sh
-        # Disabled until rpclib implements continuations
-        # - KAR_EXTRA_ARGS=-rpclib ./ci/testJavaLocal.sh
+        - ./ci/testJSLocal.sh
+        # TODO: Disabled until rpcLib implements continuations
+        # - ./ci/testJavaLocal.sh
     - name: in-cluster
       script:
         - ./scripts/kind-start.sh || travis_terminate 1

@@ -35,16 +35,17 @@ SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
 KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
+KAR_JAVA_SDK_OVERRIDE=${KAR_JAVA_SDK_OVERRIDE:=""}
 
 . $ROOTDIR/scripts/kar-env-local.sh
 
 echo "Building Java Hello Service"
 cd $ROOTDIR/examples/service-hello-java
-mvn clean package
+mvn $KAR_JAVA_SDK_OVERRIDE clean package
 
 echo "Launching Java Hello Server"
 cd $ROOTDIR/examples/service-hello-java/server
-kar run -v info -app java-hello -service greeter $KAR_EXTRA_ARGS mvn liberty:run &
+kar run -v info -app java-hello -service greeter $KAR_EXTRA_ARGS mvn $KAR_JAVA_SDK_OVERRIDE liberty:run &
 PID=$!
 
 # Sleep 10 seconds to given liberty time to come up
@@ -57,12 +58,12 @@ run $PID kar run -app java-hello $KAR_EXTRA_ARGS java -jar target/kar-hello-clie
 
 #################
 
-echo "Building Java Dining Philsopophers against released Java-SDK"
+echo "Building Java Dining Philsopophers"
 cd $ROOTDIR/examples/actors-dp-java
-mvn clean package
+mvn $KAR_JAVA_SDK_OVERRIDE clean package
 
 echo "Launching Java DP Server"
-kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table $KAR_EXTRA_ARGS mvn liberty:run &
+kar run -v info -app dp -actors Cafe,Fork,Philosopher,Table $KAR_EXTRA_ARGS mvn $KAR_JAVA_SDK_OVERRIDE liberty:run &
 PID=$!
 
 # Sleep 10 seconds to give liberty time to come up
@@ -75,9 +76,9 @@ run $PID kar run -app dp $KAR_EXTRA_ARGS node tester.js
 
 #################
 
-echo "Building Java Reactive Dining Philsopophers against released Java-SDK"
+echo "Building Java Reactive Dining Philsophers"
 cd $ROOTDIR/examples/actors-dp-java-reactive
-mvn clean package
+mvn $KAR_JAVA_SDK_OVERRIDE clean package
 
 echo "Launching Java DPR Server"
 kar run -v info -app dpr -actors Cafe,Fork,Philosopher,Table $KAR_EXTRA_ARGS java -jar target/quarkus-app/quarkus-run.jar &
@@ -91,46 +92,3 @@ cd $ROOTDIR/examples/actors-dp-js
 npm install --prod
 run $PID kar run -app dpr $KAR_EXTRA_ARGS node tester.js
 
-#################
-
-echo "Building Java KAR SDK locally"
-cd $ROOTDIR/sdk-java
-mvn clean
-mvn versions:set -DnewVersion=99.99.99-SNAPSHOT
-mvn install
-
-#################
-
-echo "Building Java Dining Philsopophers against local Java KAR SDK"
-cd $ROOTDIR/examples/actors-dp-java
-mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
-
-echo "Launching Java DP Server"
-kar run -v info -app dp-local -actors Cafe,Fork,Philosopher,Table $KAR_EXTRA_ARGS mvn liberty:run -Dversion.kar-java-sdk=99.99.99-SNAPSHOT &
-PID=$!
-
-# Sleep 10 seconds to give liberty time to come up
-sleep 10
-
-echo "Building and launching test harness"
-cd $ROOTDIR/examples/actors-dp-js
-npm install --prod
-run $PID kar run -app dp-local $KAR_EXTRA_ARGS node tester.js
-
-#################
-
-echo "Building Java Reactive Dining Philsopophers against local Java KAR SDK"
-cd $ROOTDIR/examples/actors-dp-java-reactive
-mvn -Dversion.kar-java-sdk=99.99.99-SNAPSHOT clean package
-
-echo "Launching Java DPR Server"
-kar run -v info -app dpr-local -actors Cafe,Fork,Philosopher,Table $KAR_EXTRA_ARGS java -jar target/quarkus-app/quarkus-run.jar &
-PID=$!
-
-# Sleep 5 seconds to give Quarkus time to come up
-sleep 5
-
-echo "Building and launching test harness"
-cd $ROOTDIR/examples/actors-dp-js
-npm install --prod
-run $PID kar run -app dpr-local $KAR_EXTRA_ARGS node tester.js
