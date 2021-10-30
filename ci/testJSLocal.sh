@@ -46,7 +46,7 @@ npm install --prod
 kar run -app myApp -service myService -actors Foo $KAR_EXTRA_ARGS node server.js &
 run $! kar run -app myApp $KAR_EXTRA_ARGS node test-harness.js
 
-# Run actors-dp-java/tester.js locally
+# Run actors-dp-js/tester.js locally
 echo "*** Testing examples/actors-dp-js ***"
 
 cd $ROOTDIR/examples/actors-dp-js
