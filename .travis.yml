@@ -23,7 +23,7 @@ go:
 
 before_install:
   - ./ci/setup.sh
-  - nvm use --lts
+  - nvm install && nvm use --lts
 
 jobs:
   include:
