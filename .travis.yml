@@ -23,6 +23,7 @@ go:
 
 before_install:
   - ./ci/setup.sh
+  - nvm use --lts
 
 jobs:
   include:
@@ -38,6 +39,15 @@ jobs:
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
     - name: local-released
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
+        - ./ci/testJSLocal.sh
+        # TODO: Disabled until rpcLib implements continuations
+        # - ./ci/testJavaLocal.sh
+    - name: local-rpclib
+      env:
+        - KAR_EXTRA_ARGS=-rpclib
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
