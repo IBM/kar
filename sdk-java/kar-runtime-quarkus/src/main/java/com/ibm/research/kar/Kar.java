@@ -437,6 +437,34 @@ public class Kar implements KarHttpConstants {
 		}
 
 		/**
+		 * Continue execution by performing the specified actor method invocation.
+		 * @param actor The actor instance
+		 * @param path The method to invoke
+		 * @param args The arguments to the invoked method
+		 * @return a Uni that represents the desired continuation.
+		 */
+		public static Uni<TellContinueResult> continuation(ActorRef actor, String path, JsonValue... args) {
+			return Uni.createFrom().item(new TellContinueResult(actor, path, args));
+		}
+
+		/**
+		 * An actor method may return a TellContinueResult to indicate that the "result"
+		 * of the method is to schedule a new tell (either to itself or to another actor
+		 * instance).
+		 */
+		public static final class TellContinueResult {
+			public final ActorRef actor;
+			public final String path;
+			public final JsonValue[] args;
+
+			public TellContinueResult(ActorRef actor, String path, JsonValue... args) {
+				this.actor = actor;
+				this.path = path;
+				this.args = args;
+			}
+		}
+
+		/**
 		 * KAR API methods for Actor Reminders
 		 */
 		public static class Reminders {

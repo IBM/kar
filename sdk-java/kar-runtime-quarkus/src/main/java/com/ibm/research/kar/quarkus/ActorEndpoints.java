@@ -21,8 +21,10 @@ import java.util.Map;
 
 import javax.json.Json;
 import javax.json.JsonArray;
+import javax.json.JsonArrayBuilder;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonBuilderFactory;
+import javax.json.JsonObject;
 import javax.json.JsonValue;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -35,6 +37,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import com.ibm.research.kar.Kar.Actors.TellContinueResult;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
@@ -191,22 +194,41 @@ public class ActorEndpoints implements KarHttpConstants {
 						if (res == null) {
 							return Uni.createFrom().item(Response.status(NO_CONTENT).build());
 						} else {
-							JsonObjectBuilder jb = factory.createObjectBuilder();
-							jb.add("value", (JsonValue)res);
-							Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+							JsonObject response = encodeInvocationResult(res);
+							Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(response.toString()).build();
 							return Uni.createFrom().item(resp);
 						}
 					})
 					.onFailure().recoverWithItem(t -> encodeInvocationError(t));
 			} else {
-				JsonObjectBuilder jb = factory.createObjectBuilder();
-				jb.add("value", (JsonValue)result);
-				Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+				JsonObject response = encodeInvocationResult(result);
+				Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(response.toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
 			return Uni.createFrom().item(encodeInvocationError(t));
 		}
+	}
+
+	private static JsonObject encodeInvocationResult(Object result) {
+		JsonObjectBuilder jb = factory.createObjectBuilder();
+		if (result instanceof TellContinueResult) {
+			TellContinueResult tcr = (TellContinueResult)result;
+			JsonObjectBuilder crb = factory.createObjectBuilder();
+			JsonArrayBuilder argb = factory.createArrayBuilder();
+			for (JsonValue arg: tcr.args) {
+				argb.add(arg);
+			}
+			crb.add("payload", argb.build().toString());
+			crb.add("actorType", tcr.actor.getType());
+			crb.add("actorId", tcr.actor.getId());
+			crb.add("path", "/"+tcr.path);
+			jb.add("continue", true);
+			jb.add("value", crb.build());
+		} else {
+			jb.add("value", (JsonValue)result);
+		}
+		return jb.build();
 	}
 
 	private static Response encodeInvocationError(Throwable t) {

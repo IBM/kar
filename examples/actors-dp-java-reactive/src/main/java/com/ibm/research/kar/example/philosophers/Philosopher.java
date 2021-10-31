@@ -16,8 +16,7 @@
 
 package com.ibm.research.kar.example.philosophers;
 
-import java.time.Instant;
-import java.util.UUID;
+import java.time.Duration;
 
 import javax.json.Json;
 import javax.json.JsonNumber;
@@ -27,6 +26,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
+import com.ibm.research.kar.Kar.Actors.TellContinueResult;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -41,7 +41,6 @@ public class Philosopher extends ActorSkeleton {
 	private JsonString secondFork;
 	private JsonNumber servingsEaten;
 	private JsonNumber targetServings;
-	private JsonString step;
 
 	static final boolean VERBOSE = Boolean.parseBoolean(System.getenv("VERBOSE"));
 
@@ -63,12 +62,6 @@ public class Philosopher extends ActorSkeleton {
 			if (state.containsKey("targetServings")) {
 				this.targetServings = ((JsonNumber) state.get("targetServings"));
 			}
-			if (state.containsKey("step")) {
-				this.step = ((JsonString) state.get("step"));
-			} else {
-				// Initial step for an uninitialized Philosopher is its id
-				this.step = Json.createValue(this.getId());
-			}
 			return Uni.createFrom().nullItem();
 		});
 	}
@@ -80,100 +73,74 @@ public class Philosopher extends ActorSkeleton {
 		jb.add("secondFork", this.secondFork);
 		jb.add("servingsEaten", this.servingsEaten);
 		jb.add("targetServings", this.targetServings);
-		jb.add("step", this.step);
 		JsonObject state = jb.build();
 		return Actors.State.setV(this, state);
 	}
 
-	private Instant nextStepTime() {
-		int thinkTime = (int) (Math.random() * 1000); // random 0...999ms
-		return Instant.now().plusMillis(thinkTime);
+	private Duration thinkTime() {
+		return Duration.ofMillis(1 + (long)(Math.random() * 1000)); // random 1...1000ms
 	}
 
 	@Remote
-	public Uni<Void> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings, JsonString currentStep) {
-		if (!this.step.equals(currentStep)) {
-			return Uni.createFrom().failure(new RuntimeException("unexpected step"));
-		}
-		final JsonString step = Json.createValue(UUID.randomUUID().toString());
+	public Uni<TellContinueResult> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
 		this.table = table;
 		this.firstFork = firstFork;
 		this.secondFork = secondFork;
 		this.servingsEaten = Json.createValue(0);
 		this.targetServings = targetServings;
-		return Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step)
-			.chain(() -> {
-				this.step = step;
-				return checkpointState();
-			});
+		return checkpointState()
+			.onItem().delayIt().by(thinkTime())
+			.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(1)));
 	}
 
 	@Remote
-	public Uni<Void> getFirstFork(JsonNumber attempt, JsonString currentStep) {
-		if (!this.step.equals(currentStep)) {
-			return Uni.createFrom().failure(new RuntimeException("unexpected step"));
-		}
-		final JsonString step = Json.createValue(UUID.randomUUID().toString());
+	public Uni<TellContinueResult> getFirstFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
-					return Actors.tell(this, "getSecondFork", Json.createValue(1), step);
+					return Actors.continuation(this, "getSecondFork", Json.createValue(1));
 				} else {
 					if (attempt.intValue() > 5) {
 						System.out.println("Warning: " + this.getId() + " has failed to acquire his first Fork " + attempt + " times");
 					}
-					return Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue() + 1), step);
+					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
+						.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(attempt.intValue() + 1)));
 				}
-			})
-			.chain(() -> {
-				this.step = step;
-				return Actors.State.setV(this, "step", step);
 			});
 	}
 
 	@Remote
-	public Uni<Void> getSecondFork(JsonNumber attempt, JsonString currentStep) {
-		if (!this.step.equals(currentStep)) {
-			return Uni.createFrom().failure(new RuntimeException("unexpected step"));
-		}
-		final JsonString step = Json.createValue(UUID.randomUUID().toString());
+	public Uni<TellContinueResult> getSecondFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
-					return Actors.tell(this, "eat", step);
+					return Actors.continuation(this, "eat", this.servingsEaten);
 				} else {
 					if (attempt.intValue() > 5) {
 						System.out.println("Warning: " + this.getId() + " has failed to acquire his second Fork " + attempt + " times");
 					}
-					return Actors.Reminders.schedule(this, "getSecondFork", "step", nextStepTime(), null, Json.createValue(attempt.intValue() + 1), step);
+					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
+						.chain(() -> Actors.continuation(this, "getSecondFork", Json.createValue(attempt.intValue() + 1)));
 				}
-			})
-			.chain(() -> {
-				this.step = step;
-				return Actors.State.setV(this, "step", step);
 			});
 	}
 
 	@Remote
-	public Uni<Void> eat(JsonString currentStep) {
-		if (!this.step.equals(currentStep)) {
-			return Uni.createFrom().failure(new RuntimeException("unexpected step"));
-		}
-		final JsonString step = Json.createValue(UUID.randomUUID().toString());
+	public Uni<TellContinueResult> eat(JsonNumber serving) {
+		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before TCR was committed)
 		if (VERBOSE) System.out.println(this.getId() + " ate serving number " + this.servingsEaten);
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()))
 			.chain(() -> Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId())))
 			.chain(() -> {
+				this.servingsEaten = Json.createValue(serving.intValue() + 1);
+				return Actors.State.set(this, "servingsEaten", this.servingsEaten);
+			}).chain(() -> {
 				if (this.servingsEaten.intValue() < this.targetServings.intValue()) {
-					return Actors.Reminders.schedule(this, "getFirstFork", "step", nextStepTime(), null, Json.createValue(1), step);
+					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
+						.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(1)));
 				} else {
-					return Actors.call(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
+					return Actors.continuation(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
 				}
-			})
-			.chain(() -> {
-				this.servingsEaten = Json.createValue(this.servingsEaten.intValue() + 1);
-				this.step = step;
-				return checkpointState();
 			});
 	}
 }
