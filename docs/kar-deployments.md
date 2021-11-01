@@ -264,18 +264,13 @@ this in a script.
 ```shell
 ./scripts/kind-start.sh
 ```
-#### Rancher K3s
+#### Rancher K3D
 
-Follow the directions to install [K3s](https://rancher.com/docs/k3s/latest/en/quick-start/).
-
-To enable a separately installed kubectl to access this cluster:
+Similar to Kind, K3D uses Docker to create a local kubernetes cluster.
+Follow the [directions to install K3D](https://k3d.io/v5.0.0/)
+and then start a K3D cluster with:
 ```shell
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-```
-
-Although K3s must be started and stopped by root, it is possible to enable kubectl access from a specific non-root `userID` by doing:
-```shell
-sudo chown userID /etc/rancher/k3s/k3s.yaml
+./scripts/k3d-start.sh
 ```
 
 ### Start local docker registry
