@@ -448,8 +448,25 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], replyStruct.StatusCode, replyStruct.Payload)
 					}
 				} else {
-					// CALL: just pass through the replyStruct to the caller and let it decode/handle the various cases
-					reply, err = json.Marshal(*replyStruct)
+					// CALL: there is a waiting caller, so after handling continuations, anything else (normal or error) is simply passed through.
+					if replyStruct.StatusCode == http.StatusOK {
+						var result actorCallResult
+						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.Continuation {
+							cr := result.Value.(map[string]interface{})
+							dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
+							msg := map[string]string{
+								"command": "call",
+								"path":    cr["path"].(string),
+								"payload": cr["payload"].(string)}
+							reply, err = json.Marshal(msg)
+						}
+					}
+					if reply == nil {
+						// If it wasn't a well-formed continuation then the result of a call is always the replyStruct.
+						// We intentionally discard any errors that might have happened while inspecting replyStruct
+						// (if there were errors, the caller is better positioned to propagate/report them).
+						reply, err = json.Marshal(*replyStruct)
+					}
 				}
 			}
 		} else {

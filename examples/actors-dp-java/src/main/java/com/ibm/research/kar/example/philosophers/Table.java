@@ -17,7 +17,6 @@
 package com.ibm.research.kar.example.philosophers;
 
 import java.util.Map;
-import java.util.UUID;
 
 import javax.json.Json;
 import javax.json.JsonArray;
@@ -29,6 +28,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
+import com.ibm.research.kar.Kar.Actors.ContinueResult;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -39,7 +39,6 @@ public class Table extends ActorSkeleton {
   JsonString cafe;
   JsonNumber n;
   JsonArray diners;
-  JsonString step;
 
   @Activate
   public void activate() {
@@ -53,12 +52,6 @@ public class Table extends ActorSkeleton {
     if (state.containsKey("diners")) {
       this.diners = ((JsonArray) state.get("diners"));
     }
-    if (state.containsKey("step")) {
-      this.step = ((JsonString) state.get("step"));
-    } else {
-      // Initial step for an uninitialized Table is its id
-      this.step = Json.createValue(this.getId());
-    }
   }
 
   private void checkpointState() {
@@ -66,7 +59,6 @@ public class Table extends ActorSkeleton {
     jb.add("cafe", this.cafe);
     jb.add("n", this.n);
     jb.add("diners", this.diners);
-    jb.add("step", this.step);
     JsonObject state = jb.build();
     Actors.State.set(this, state);
   }
@@ -85,9 +77,7 @@ public class Table extends ActorSkeleton {
   }
 
   @Remote
-  public void prepare(JsonString cafe, JsonNumber n, JsonNumber servings, JsonString step) {
-    if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
-    step = Json.createValue(UUID.randomUUID().toString());
+  public ContinueResult prepare(JsonString cafe, JsonNumber n, JsonNumber servings) {
     this.cafe = cafe;
     this.n = n;
     JsonArrayBuilder jba = Json.createArrayBuilder();
@@ -95,16 +85,13 @@ public class Table extends ActorSkeleton {
       jba.add(Json.createValue(this.philosopher(i)));
     }
     this.diners = jba.build();
-    System.out.println("Cafe "+this.cafe+" is seating table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
-    Actors.tell(this, "serve", servings, step);
-    this.step = step;
     this.checkpointState();
+    System.out.println("Cafe "+this.cafe+" is seating table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
+    return new ContinueResult(this, "serve", servings);
   }
 
   @Remote
-  public void serve(JsonNumber servings, JsonString step) {
-    if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
-    step = Json.createValue(UUID.randomUUID().toString());
+  public void serve(JsonNumber servings) {
     for (int i = 0; i < n.intValue() - 1; i++) {
       JsonString who = Json.createValue(philosopher(i));
       JsonString fork1 = Json.createValue(fork(i));
@@ -115,40 +102,36 @@ public class Table extends ActorSkeleton {
     JsonString fork1 = Json.createValue(fork(0));
     JsonString fork2 = Json.createValue(fork(n.intValue() - 1));
     Actors.tell(Actors.ref("Philosopher", who.getString()), "joinTable", Json.createValue(this.getId()), fork1, fork2, servings);
-    this.step = step;
-    Actors.State.set(this, "step", step);
   }
 
   @Remote
   public void doneEating(JsonString philosopher) {
+    boolean stateChanged = false;
     JsonArrayBuilder jba = Json.createArrayBuilder();
     for (JsonValue diner : this.diners) {
-      if (!philosopher.equals(diner)) {
+      if (philosopher.equals(diner)) {
+        stateChanged = true;
+      } else {
         jba.add(diner);
       }
     }
-    this.diners = jba.build();
-    this.checkpointState();
-    System.out.println("Philosopher "+philosopher.getString()+" is done eating; there are now "+this.diners.size()+" present at the table");
-    if (this.diners.size() == 0) {
-      System.out.println("Table " + this.getId() + " is now empty!");
-      JsonString step = Json.createValue(UUID.randomUUID().toString());
-      Actors.tell(this, "busTable", step);
-      this.step = step;
-      Actors.State.set(this, "step", step);
+    if (stateChanged) {
+      this.diners = jba.build();
+      this.checkpointState();
+      System.out.println("Philosopher " + philosopher.getString() + " is done eating; there are now " + this.diners.size() + " present at the table");
+      if (this.diners.size() == 0) {
+        System.out.println("Table " + this.getId() + " is now empty!");
+        Actors.tell(this, "busTable");
+      }
     }
   }
 
   @Remote
-  public void busTable(JsonString step) {
-    if (!this.step.equals(step)) throw new RuntimeException("unexpected step");
-    step = Json.createValue(UUID.randomUUID().toString());
+  public void busTable() {
     for (int i = 0; i<n.intValue(); i++) {
       Actors.remove(Actors.ref("Philosopher", philosopher(i)));
       Actors.remove(Actors.ref("Fork", fork(i)));
     }
     Actors.remove(this);
-    this.step = step;
-    Actors.State.set(this, "step", step);
   }
 }
