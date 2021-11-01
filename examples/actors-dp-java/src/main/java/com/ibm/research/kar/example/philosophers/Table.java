@@ -86,7 +86,7 @@ public class Table extends ActorSkeleton {
     }
     this.diners = jba.build();
     this.checkpointState();
-    System.out.println("Cafe "+this.cafe+" is seating table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
+    System.out.println("Cafe "+this.cafe+" has seated table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
     return new ContinueResult(this, "serve", servings);
   }
 
