@@ -26,7 +26,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
-import com.ibm.research.kar.Kar.Actors.TellContinueResult;
+import com.ibm.research.kar.Kar.Actors.ContinueResult;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -82,7 +82,7 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public Uni<TellContinueResult> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
+	public Uni<ContinueResult> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
 		this.table = table;
 		this.firstFork = firstFork;
 		this.secondFork = secondFork;
@@ -94,7 +94,7 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public Uni<TellContinueResult> getFirstFork(JsonNumber attempt) {
+	public Uni<ContinueResult> getFirstFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
@@ -110,7 +110,7 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public Uni<TellContinueResult> getSecondFork(JsonNumber attempt) {
+	public Uni<ContinueResult> getSecondFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
@@ -126,7 +126,7 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public Uni<TellContinueResult> eat(JsonNumber serving) {
+	public Uni<ContinueResult> eat(JsonNumber serving) {
 		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before TCR was committed)
 		if (VERBOSE) System.out.println(this.getId() + " ate serving number " + this.servingsEaten);
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()))

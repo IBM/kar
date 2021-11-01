@@ -50,7 +50,7 @@ public class Cafe extends ActorSkeleton {
 
 	@Remote
 	public Uni<JsonString> seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		return Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings, requestId)
+		return Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings)
 			.chain(() -> Uni.createFrom().item(requestId));
 	}
 }
