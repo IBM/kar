@@ -26,7 +26,7 @@ ROOTDIR="$SCRIPTDIR/.."
 version=$(kar version)
 case "$version" in
   unofficial)
-    helmargs="$helmargs --set-string kar.injector.imageName=localhost:5000/kar/kar-injector --set-string kar.injector.sidecarImageName=localhost:5000/kar/kar-sidecar"
+    helmargs="$helmargs --set-string kar.injector.imageName=registry:5000/kar/kar-injector --set-string kar.injector.sidecarImageName=registry:5000/kar/kar-sidecar"
     kartag="latest";;
   *)
     helmargs="$helmargs --set-string kar.injector.imageName=quay.io/ibm/kar-injector --set-string kar.injector.sidecarImageName=quay.io/ibm/kar-sidecar"
