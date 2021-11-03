@@ -111,34 +111,27 @@ public class Table extends ActorSkeleton {
   }
 
   @Remote
-  public Uni<Void> doneEating(JsonString philosopher) {
+  public Uni<?> doneEating(JsonString philosopher) {
     JsonArrayBuilder jba = Json.createArrayBuilder();
-    boolean stateChanged = false;
     for (JsonValue diner : this.diners) {
-      if (philosopher.equals(diner)) {
-        stateChanged = true;
-      } else {
+      if (!philosopher.equals(diner)) {
         jba.add(diner);
       }
     }
-    if (stateChanged) {
-      this.diners = jba.build();
-      return this.checkpointState().chain(() -> {
-        System.out.println("Philosopher " + philosopher.getString() + " is done eating; there are now " + this.diners.size() + " present at the table");
-        if (this.diners.size() == 0) {
-          System.out.println("Table " + this.getId() + " is now empty!");
-          return Actors.tell(this, "busTable");
-        } else {
-          return Uni.createFrom().nullItem();
-        }
-      });
-    } else {
-      return Uni.createFrom().nullItem();
-    }
+    this.diners = jba.build();
+    return this.checkpointState().chain(() -> {
+      System.out.println("Philosopher " + philosopher.getString() + " is done eating; there are now " + this.diners.size() + " present at the table");
+      if (this.diners.size() == 0) {
+        return Actors.tailCall(this, "busTable");
+      } else {
+        return Uni.createFrom().nullItem();
+      }
+    });
   }
 
   @Remote
   public Uni<Void> busTable() {
+    System.out.println("Table " + this.getId() + " is now empty!");
     Uni<Void> k = Uni.createFrom().nullItem();
     for (int i = 0; i<n.intValue(); i++) {
       final int captureI = i;

@@ -105,29 +105,26 @@ public class Table extends ActorSkeleton {
   }
 
   @Remote
-  public void doneEating(JsonString philosopher) {
-    boolean stateChanged = false;
+  public TailCall doneEating(JsonString philosopher) {
     JsonArrayBuilder jba = Json.createArrayBuilder();
     for (JsonValue diner : this.diners) {
-      if (philosopher.equals(diner)) {
-        stateChanged = true;
-      } else {
+      if (!philosopher.equals(diner)) {
         jba.add(diner);
       }
     }
-    if (stateChanged) {
-      this.diners = jba.build();
-      this.checkpointState();
-      System.out.println("Philosopher " + philosopher.getString() + " is done eating; there are now " + this.diners.size() + " present at the table");
-      if (this.diners.size() == 0) {
-        System.out.println("Table " + this.getId() + " is now empty!");
-        Actors.tell(this, "busTable");
-      }
+    this.diners = jba.build();
+    this.checkpointState();
+    System.out.println("Philosopher " + philosopher.getString() + " is done eating; there are now " + this.diners.size() + " present at the table");
+    if (this.diners.size() == 0) {
+      return new TailCall(this, "busTable");
+    } else {
+      return null;
     }
   }
 
   @Remote
   public void busTable() {
+    System.out.println("Table " + this.getId() + " is now empty!");
     for (int i = 0; i<n.intValue(); i++) {
       Actors.remove(Actors.ref("Philosopher", philosopher(i)));
       Actors.remove(Actors.ref("Fork", fork(i)));
