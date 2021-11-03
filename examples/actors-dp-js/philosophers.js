@@ -49,71 +49,60 @@ class Fork {
 class Philosopher {
   async activate () {
     Object.assign(this, await actor.state.getAll(this))
-    this.step = this.step || this.kar.id // use actor id as initial step
   }
 
-  nextStepTime () {
-    const thinkTime = Math.floor(Math.random() * 1000) // random 0...999ms
-    return new Date(Date.now() + thinkTime)
+  think () {
+    return new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 1000))) // random 0...999ms
   }
 
-  async joinTable (table, firstFork, secondFork, targetServings, step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async joinTable (table, firstFork, secondFork, targetServings) {
     this.table = table
     this.firstFork = firstFork
     this.secondFork = secondFork
     this.servingsEaten = 0
     this.targetServings = targetServings
-    await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1, step)
-    this.step = step
-    await actor.state.setMultiple(this, { step, table, firstFork, secondFork, servingsEaten: this.servingsEaten, targetServings })
+    await actor.state.setMultiple(this, { table, firstFork, secondFork, servingsEaten: this.servingsEaten, targetServings })
+    await this.think()
+    return actor.tailCall(this, 'getFirstFork', 1)
   }
 
-  async getFirstFork (attempt, step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async getFirstFork (attempt) {
     if (await actor.call(actor.proxy('Fork', this.firstFork), 'pickUp', this.kar.id)) {
-      await actor.tell(this, 'getSecondFork', 1, step)
+      return actor.tailCall(this, 'getSecondFork', 1)
     } else {
       if (attempt > 5) {
         console.log(`Warning: Philosopher ${this.kar.id} has failed to acquire his first Fork ${attempt} times`)
       }
-      await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, attempt + 1, step)
+      await this.think()
+      return actor.tailCall(this, 'getFirstFork', attempt + 1)
     }
-    this.step = step
-    await actor.state.set(this, 'step', step)
   }
 
-  async getSecondFork (attempt, step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async getSecondFork (attempt) {
     if (await actor.call(actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id)) {
-      await actor.tell(this, 'eat', step)
+      return actor.tailCall(this, 'eat', this.servingsEaten)
     } else {
       if (attempt > 5) {
         console.log(`Warning: Philosopher ${this.kar.id} has failed to acquire his second Fork ${attempt} times`)
       }
-      await actor.reminders.schedule(this, 'getSecondFork', { id: 'step', targetTime: this.nextStepTime() }, attempt + 1, step)
+      await this.think()
+      return actor.tailCall(this, 'getSecondFork', attempt + 1)
     }
-    this.step = step
-    await actor.state.set(this, 'step', step)
   }
 
-  async eat (step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
-    if (verbose) console.log(`${this.kar.id} ate serving number ${this.servingsEaten}`)
+  async eat (serving) {
+    if (this.servingsEaten !== serving) return // squash re-execution (must have failed after state.setMultiple below, but before tail call was committed)
+    if (verbose) console.log(`${this.kar.id} ate serving number ${serving}`)
     await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
     await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
-    if (this.servingsEaten < this.targetServings) {
-      await actor.reminders.schedule(this, 'getFirstFork', { id: 'step', targetTime: this.nextStepTime() }, 1, step)
-    } else {
-      await actor.call(actor.proxy('Table', this.table), 'doneEating', this.kar.id)
-    }
     this.servingsEaten = this.servingsEaten + 1
-    this.step = step
-    await actor.state.setMultiple(this, { step, servingsEaten: this.servingsEaten })
+    await actor.state.set(this, 'servingsEaten', this.servingsEaten)
+    if (this.servingsEaten < this.targetServings) {
+      await this.think()
+      return actor.tailCall(this, 'getFirstFork', 1)
+    } else {
+      return actor.tailCall(actor.proxy('Table', this.table), 'doneEating', this.kar.id)
+    }
   }
 }
 
@@ -123,7 +112,6 @@ class Table {
     this.cafe = that.cafe
     this.n = that.n
     this.diners = that.diners || [] // initial state is an empty table
-    this.step = that.step || this.kar.id // use actor id as initial step
   }
 
   occupancy () { return this.diners.length }
@@ -132,35 +120,28 @@ class Table {
 
   fork (f) { return `${this.cafe}-${this.kar.id}-fork-${f}` }
 
-  async prepare (cafe, n, servings, step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async prepare (cafe, n, servings) {
     this.cafe = cafe
     this.n = n
     for (var i = 0; i < n; i++) {
       this.diners[i] = this.philosopher(i)
     }
-    console.log(`Cafe ${cafe} is seating table ${this.kar.id} with ${n} hungry philosophers for ${servings} servings`)
-    await actor.tell(this, 'serve', servings, step)
-    this.step = step
-    await actor.state.setMultiple(this, { step, cafe, n, diners: this.diners })
+    await actor.state.setMultiple(this, { cafe, n, diners: this.diners })
+    console.log(`Cafe ${cafe} has seated table ${this.kar.id} with ${n} hungry philosophers for ${servings} servings`)
+    return actor.tailCall(this, 'serve', servings)
   }
 
-  async serve (servings, step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async serve (servings) {
     for (var i = 0; i < this.n - 1; i++) {
       const who = this.philosopher(i)
       const fork1 = this.fork(i)
       const fork2 = this.fork(i + 1)
-      await actor.call(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings, who)
+      await actor.tell(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings)
     }
     const who = this.philosopher(this.n - 1)
     const fork1 = this.fork(0)
     const fork2 = this.fork(this.n - 1)
-    await actor.call(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings, who)
-    this.step = step
-    await actor.state.set(this, 'step', step)
+    await actor.tell(actor.proxy('Philosopher', who), 'joinTable', this.kar.id, fork1, fork2, servings)
   }
 
   async doneEating (philosopher) {
@@ -168,24 +149,17 @@ class Table {
     await actor.state.set(this, 'diners', this.diners)
     console.log(`Philosopher ${philosopher} is done eating; there are now ${this.diners.length} present at the table`)
     if (this.diners.length === 0) {
-      console.log(`Table ${this.kar.id} is now empty!`)
-      const step = uuidv4()
-      await actor.tell(this, 'busTable', step)
-      this.step = step
-      await actor.state.set(this, 'step', step)
+      return actor.tailCall(this, 'busTable')
     }
   }
 
-  async busTable (step) {
-    if (this.step !== step) throw new Error('unexpected step')
-    step = uuidv4()
+  async busTable () {
+    console.log(`Table ${this.kar.id} is now empty!`)
     for (var i = 0; i < this.n; i++) {
       await actor.remove(actor.proxy('Philosopher', this.philosopher(i)))
       await actor.remove(actor.proxy('Fork', this.fork(i)))
     }
     await actor.remove(this)
-    this.step = step
-    await actor.state.set(this, 'step', step)
   }
 }
 
