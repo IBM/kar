@@ -26,7 +26,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
-import com.ibm.research.kar.Kar.Actors.ContinueResult;
+import com.ibm.research.kar.Kar.Actors.TailCall;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -81,44 +81,44 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public ContinueResult joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
+	public TailCall joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
 		this.table = table;
 		this.firstFork = firstFork;
 		this.secondFork = secondFork;
 		this.servingsEaten = Json.createValue(0);
 		this.targetServings = targetServings;
 		checkpointState();
-		return new ContinueResult(this, "getFirstFork", Json.createValue(1));
+		return new TailCall(this, "getFirstFork", Json.createValue(1));
 	}
 
 	@Remote
-	public ContinueResult getFirstFork(JsonNumber attempt) {
+	public TailCall getFirstFork(JsonNumber attempt) {
 		if (Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
-			return new ContinueResult(this, "getSecondFork", Json.createValue(1));
+			return new TailCall(this, "getSecondFork", Json.createValue(1));
 		} else {
 			if (attempt.intValue() > 5) {
 				System.out.println("Warning: "+this.getId()+" has failed to acquire his first Fork "+attempt+" times");
 			}
 			think();
-			return new ContinueResult(this, "getFirstFork", Json.createValue(attempt.intValue()+1));
+			return new TailCall(this, "getFirstFork", Json.createValue(attempt.intValue()+1));
 		}
 	}
 
 	@Remote
-	public ContinueResult getSecondFork(JsonNumber attempt) {
+	public TailCall getSecondFork(JsonNumber attempt) {
 		if (Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
-			return new ContinueResult(this, "eat", this.servingsEaten);
+			return new TailCall(this, "eat", this.servingsEaten);
 		} else {
 			if (attempt.intValue() > 5) {
 				System.out.println("Warning: "+this.getId()+" has failed to acquire his second Fork "+attempt+" times");
 			}
 			think();
-			return new ContinueResult(this, "getSecondFork", Json.createValue(attempt.intValue()+1));
+			return new TailCall(this, "getSecondFork", Json.createValue(attempt.intValue()+1));
 		}
 	}
 
 	@Remote
-	public ContinueResult eat(JsonNumber serving) {
+	public TailCall eat(JsonNumber serving) {
 		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before CR was committed)
 		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+this.servingsEaten);
 		Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
@@ -127,9 +127,9 @@ public class Philosopher extends ActorSkeleton {
 		Actors.State.set(this, "servingsEaten", this.servingsEaten);
 		if (serving.intValue() < this.targetServings.intValue()) {
 			think();
-			return new ContinueResult(this, "getFirstFork", Json.createValue(1));
+			return new TailCall(this, "getFirstFork", Json.createValue(1));
 		} else {
-			return new ContinueResult(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
+			return new TailCall(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
 		}
 	}
 }

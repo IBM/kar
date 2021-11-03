@@ -423,7 +423,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 				}
 			} else if replyStruct != nil {
 				if command == "tell" {
-					// TELL: no waiting caller, so we have to inspect here and figure out if the method returned void, a result, a continuation, or an error
+					// TELL: no waiting caller, so we have to inspect here and figure out if the method returned void, a result, a tail call, or an error
 					if replyStruct.StatusCode == http.StatusNoContent {
 						// Void return from a tell; nothing further to do.
 					} else if replyStruct.StatusCode == http.StatusOK {
@@ -434,7 +434,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						} else {
 							if result.Error {
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
-							} else if result.Continuation {
+							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
 								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
 								msg := map[string]string{
@@ -448,10 +448,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						logger.Error("Asynchronous invoke of %s returned status %v with body %s", msg["path"], replyStruct.StatusCode, replyStruct.Payload)
 					}
 				} else {
-					// CALL: there is a waiting caller, so after handling continuations, anything else (normal or error) is simply passed through.
+					// CALL: there is a waiting caller, so after handling tail calls, anything else (normal or error) is simply passed through.
 					if replyStruct.StatusCode == http.StatusOK {
 						var result actorCallResult
-						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.Continuation {
+						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
 							dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
 							msg := map[string]string{

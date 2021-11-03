@@ -614,16 +614,16 @@ public class Kar {
 		}
 
 		/**
-		 * An actor method may return a ContinueResult to indicate that the "result"
+		 * An actor method may return a TailCall to indicate that the "result"
 		 * of the method is to schedule a subsequent invocation (either to itself or
 		 * to another actor instance).
 		 */
-		public static final class ContinueResult {
+		public static final class TailCall {
 			public final ActorRef actor;
 			public final String path;
 			public final JsonValue[] args;
 
-			public ContinueResult(ActorRef actor, String path, JsonValue... args) {
+			public TailCall(ActorRef actor, String path, JsonValue... args) {
 				this.actor = actor;
 				this.path = path;
 				this.args = args;

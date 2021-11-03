@@ -42,7 +42,7 @@ type actorCallResult struct {
 	// The value being returned as the result of the method
 	Value interface{} `json:"value,omitempty"`
 	// If true, indicates that the Value represents a continuation
-	Continuation bool `json:"continue,omitempty"`
+	TailCall bool `json:"tailCall,omitempty"`
 	// If true, indicates that the method execution resulted in an error/exception
 	Error bool `json:"error,omitempty"`
 	// When error is true, the error message

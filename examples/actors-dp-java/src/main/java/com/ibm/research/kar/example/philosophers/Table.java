@@ -28,7 +28,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
-import com.ibm.research.kar.Kar.Actors.ContinueResult;
+import com.ibm.research.kar.Kar.Actors.TailCall;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -77,7 +77,7 @@ public class Table extends ActorSkeleton {
   }
 
   @Remote
-  public ContinueResult prepare(JsonString cafe, JsonNumber n, JsonNumber servings) {
+  public TailCall prepare(JsonString cafe, JsonNumber n, JsonNumber servings) {
     this.cafe = cafe;
     this.n = n;
     JsonArrayBuilder jba = Json.createArrayBuilder();
@@ -87,7 +87,7 @@ public class Table extends ActorSkeleton {
     this.diners = jba.build();
     this.checkpointState();
     System.out.println("Cafe "+this.cafe+" has seated table "+this.getId()+" with "+n+" hungry philosophers for "+servings+" servings");
-    return new ContinueResult(this, "serve", servings);
+    return new TailCall(this, "serve", servings);
   }
 
   @Remote

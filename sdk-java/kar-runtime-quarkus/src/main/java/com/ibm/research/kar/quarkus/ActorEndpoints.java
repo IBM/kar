@@ -37,7 +37,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import com.ibm.research.kar.Kar.Actors.ContinueResult;
+import com.ibm.research.kar.Kar.Actors.TailCall;
 import com.ibm.research.kar.actor.ActorInstance;
 import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
@@ -212,8 +212,8 @@ public class ActorEndpoints implements KarHttpConstants {
 
 	private static JsonObject encodeInvocationResult(Object result) {
 		JsonObjectBuilder jb = factory.createObjectBuilder();
-		if (result instanceof ContinueResult) {
-			ContinueResult cr = (ContinueResult)result;
+		if (result instanceof TailCall) {
+			TailCall cr = (TailCall)result;
 			JsonObjectBuilder crb = factory.createObjectBuilder();
 			JsonArrayBuilder argb = factory.createArrayBuilder();
 			for (JsonValue arg: cr.args) {
@@ -223,7 +223,7 @@ public class ActorEndpoints implements KarHttpConstants {
 			crb.add("actorType", cr.actor.getType());
 			crb.add("actorId", cr.actor.getId());
 			crb.add("path", "/"+cr.path);
-			jb.add("continue", true);
+			jb.add("tailCall", true);
 			jb.add("value", crb.build());
 		} else {
 			jb.add("value", (JsonValue)result);
