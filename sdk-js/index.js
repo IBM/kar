@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+const { triggerAsyncId } = require('async_hooks')
 const express = require('express')
 const http2 = require('http2')
 const morgan = require('morgan') // for logging http requests and responses
@@ -172,6 +173,13 @@ function actorAsyncCall (...args) {
   }
 }
 
+function actorEncodeTailCall (...args) {
+  const ta = args.shift()
+  const path = args.shift()
+  const payload = JSON.stringify(args)
+  return { tailCall: true, value: { actorType: ta.kar.type, actorId: ta.kar.id, path: '/' + path, payload } }
+}
+
 const actorDelete = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}`)
 
 const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
@@ -326,7 +334,11 @@ function actorRuntime (actors) {
         if (value === undefined) {
           return res.status(204).send()
         } else {
-          return res.status(200).type('application/kar+json').send({ value })
+          if (value.tailCall) {
+            return res.status(200).type('application/kar+json').send(value)
+          } else {
+            return res.status(200).type('application/kar+json').send({ value })
+          }
         }
       })
       .catch(next)
@@ -365,6 +377,7 @@ module.exports = {
     call: actorCall,
     asyncCall: actorAsyncCall,
     remove: actorDelete,
+    tailCall: actorEncodeTailCall,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,

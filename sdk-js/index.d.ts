@@ -167,6 +167,14 @@ export namespace actor {
    */
   export function remove (target: Actor): Promise<any>;
 
+  /**
+   * Construct a result object that encodes a tail call to another actor method
+   * @param callee The target Actor.
+   * @param path The actor method to invoke.
+   * @param args The arguments with which to invoke the actor method.
+   */
+  export function tailCall(callee: Actor, path: string, ...args: any[]): any;
+
   namespace reminders {
     /**
      * Cancel matching reminders for an Actor instance.
