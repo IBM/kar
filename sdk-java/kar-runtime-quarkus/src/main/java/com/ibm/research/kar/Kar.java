@@ -437,27 +437,27 @@ public class Kar implements KarHttpConstants {
 		}
 
 		/**
-		 * Continue execution by performing the specified actor method invocation.
+		 * Continue execution by doing a tail call to the specified actor method.
 		 * @param actor The actor instance
 		 * @param path The method to invoke
 		 * @param args The arguments to the invoked method
 		 * @return a Uni that represents the desired continuation.
 		 */
-		public static Uni<ContinueResult> continuation(ActorRef actor, String path, JsonValue... args) {
-			return Uni.createFrom().item(new ContinueResult(actor, path, args));
+		public static Uni<TailCall> tailCall(ActorRef actor, String path, JsonValue... args) {
+			return Uni.createFrom().item(new TailCall(actor, path, args));
 		}
 
 		/**
-		 * An actor method may return a ContinueResult to indicate that the "result"
+		 * An actor method may return a TailCall to indicate that the "result"
 		 * of the method is to schedule a subsequent invocation (either to itself or
 		 * to another actor instance).
 		 */
-		public static final class ContinueResult {
+		public static final class TailCall {
 			public final ActorRef actor;
 			public final String path;
 			public final JsonValue[] args;
 
-			public ContinueResult(ActorRef actor, String path, JsonValue... args) {
+			public TailCall(ActorRef actor, String path, JsonValue... args) {
 				this.actor = actor;
 				this.path = path;
 				this.args = args;

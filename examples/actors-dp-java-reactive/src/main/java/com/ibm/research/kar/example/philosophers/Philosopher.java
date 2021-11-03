@@ -26,7 +26,7 @@ import javax.json.JsonString;
 import javax.json.JsonValue;
 
 import com.ibm.research.kar.Kar.Actors;
-import com.ibm.research.kar.Kar.Actors.ContinueResult;
+import com.ibm.research.kar.Kar.Actors.TailCall;
 import com.ibm.research.kar.actor.ActorSkeleton;
 import com.ibm.research.kar.actor.annotations.Activate;
 import com.ibm.research.kar.actor.annotations.Actor;
@@ -82,7 +82,7 @@ public class Philosopher extends ActorSkeleton {
 	}
 
 	@Remote
-	public Uni<ContinueResult> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
+	public Uni<TailCall> joinTable(JsonString table, JsonString firstFork, JsonString secondFork, JsonNumber targetServings) {
 		this.table = table;
 		this.firstFork = firstFork;
 		this.secondFork = secondFork;
@@ -90,43 +90,43 @@ public class Philosopher extends ActorSkeleton {
 		this.targetServings = targetServings;
 		return checkpointState()
 			.onItem().delayIt().by(thinkTime())
-			.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(1)));
+			.chain(() -> Actors.tailCall(this, "getFirstFork", Json.createValue(1)));
 	}
 
 	@Remote
-	public Uni<ContinueResult> getFirstFork(JsonNumber attempt) {
+	public Uni<TailCall> getFirstFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
-					return Actors.continuation(this, "getSecondFork", Json.createValue(1));
+					return Actors.tailCall(this, "getSecondFork", Json.createValue(1));
 				} else {
 					if (attempt.intValue() > 5) {
 						System.out.println("Warning: " + this.getId() + " has failed to acquire his first Fork " + attempt + " times");
 					}
 					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
-						.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(attempt.intValue() + 1)));
+						.chain(() -> Actors.tailCall(this, "getFirstFork", Json.createValue(attempt.intValue() + 1)));
 				}
 			});
 	}
 
 	@Remote
-	public Uni<ContinueResult> getSecondFork(JsonNumber attempt) {
+	public Uni<TailCall> getSecondFork(JsonNumber attempt) {
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
-					return Actors.continuation(this, "eat", this.servingsEaten);
+					return Actors.tailCall(this, "eat", this.servingsEaten);
 				} else {
 					if (attempt.intValue() > 5) {
 						System.out.println("Warning: " + this.getId() + " has failed to acquire his second Fork " + attempt + " times");
 					}
 					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
-						.chain(() -> Actors.continuation(this, "getSecondFork", Json.createValue(attempt.intValue() + 1)));
+						.chain(() -> Actors.tailCall(this, "getSecondFork", Json.createValue(attempt.intValue() + 1)));
 				}
 			});
 	}
 
 	@Remote
-	public Uni<ContinueResult> eat(JsonNumber serving) {
+	public Uni<TailCall> eat(JsonNumber serving) {
 		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before TCR was committed)
 		if (VERBOSE) System.out.println(this.getId() + " ate serving number " + this.servingsEaten);
 		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()))
@@ -137,9 +137,9 @@ public class Philosopher extends ActorSkeleton {
 			}).chain(() -> {
 				if (this.servingsEaten.intValue() < this.targetServings.intValue()) {
 					return Uni.createFrom().nullItem().onItem().delayIt().by(thinkTime())
-						.chain(() -> Actors.continuation(this, "getFirstFork", Json.createValue(1)));
+						.chain(() -> Actors.tailCall(this, "getFirstFork", Json.createValue(1)));
 				} else {
-					return Actors.continuation(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
+					return Actors.tailCall(Actors.ref("Table", this.table.getString()), "doneEating", Json.createValue(this.getId()));
 				}
 			});
 	}
