@@ -22,11 +22,8 @@ The Philosophers and their Forks are all actors and interact via actor
 method invocations to implement the distributed protocol that ensures
 no Philosopher starves.
 
-Philosophers use actor reminders (time triggered callbacks) to trigger
-their actions.
-
-Fault tolerance is provided by checkpointing actor state and the
-at-least-once invocation semantics provided by KAR.
+Philosophers use a tail call pattern to move from one
+state to the next and achieve fault tolerance.
 
 A Cafe may contain an arbitrary number of tables of Philosophers. Each
 Cafe tracks its occupancy and generates messages when it seats new
