@@ -2236,11 +2236,6 @@
       "type": "object",
       "title": "actorCallResult encodes the result of invoking an actor method.",
       "properties": {
-        "continue": {
-          "description": "If true, indicates that the Value represents a continuation",
-          "type": "boolean",
-          "x-go-name": "Continuation"
-        },
         "error": {
           "description": "If true, indicates that the method execution resulted in an error/exception",
           "type": "boolean",
@@ -2255,6 +2250,11 @@
           "description": "When error is true, the stack trace for the error",
           "type": "string",
           "x-go-name": "Stack"
+        },
+        "tailCall": {
+          "description": "If true, indicates that the Value represents a continuation",
+          "type": "boolean",
+          "x-go-name": "TailCall"
         },
         "value": {
           "description": "The value being returned as the result of the method",
