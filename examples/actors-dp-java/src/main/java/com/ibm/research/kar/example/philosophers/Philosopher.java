@@ -119,8 +119,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public TailCall eat(JsonNumber serving) {
-		if (!serving.equals(this.servingsEaten)) return null; // squash re-execution (must have failed after State.set below, but before CR was committed)
-		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+this.servingsEaten);
+		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+serving);
 		Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
 		Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
 		this.servingsEaten = Json.createValue(serving.intValue() + 1);
