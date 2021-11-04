@@ -32,20 +32,20 @@ var (
 	handlers = map[string]Handler{} // registered method handlers
 )
 
-func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) ([]byte, string) {
+func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) (*Destination, []byte, string) {
 	if !deadline.IsZero() && deadline.Before(time.Now()) {
-		return nil, "deadline expired"
+		return nil, nil, "deadline expired"
 	}
 	f := handlers[method]
 	if f == nil {
-		return nil, "undefined method " + method
+		return nil, nil, "undefined method " + method
 	} else {
-		_, result, err := f(ctx, target, value)
+		dest, result, err := f(ctx, target, value)
 		if err != nil {
 			b, _ := json.Marshal(err.Error) // attempt to serialize error object, ignore errors
-			return b, err.Error()
+			return nil, b, err.Error()
 		} else {
-			return result, ""
+			return dest, result, ""
 		}
 	}
 }
@@ -64,20 +64,34 @@ func accept(ctx context.Context, msg Message) {
 		}
 		ch <- result
 	case CallRequest:
-		value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
-		err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
-		if err != nil && err != ctx.Err() && err != ErrUnavailable {
-			logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		if dest == nil {
+			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
+			if err != nil && err != ctx.Err() && err != ErrUnavailable {
+				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
+			}
+		} else {
+			err := Send(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method})
+			if err != nil && err != ctx.Err() && err != ErrUnavailable {
+				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
+			}
 		}
 	case TellRequest:
-		_, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
 		if errMsg != "" {
 			logger.Warning("tell %s returned an error: %s", m.requestID(), errMsg)
 		}
-		if _, ok := m.target().(Node); !ok {
-			err := Send(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+		if dest == nil {
+			if _, ok := m.target().(Node); !ok {
+				err := Send(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+				if err != nil && err != ctx.Err() && err != ErrUnavailable {
+					logger.Fatal("Producer error: cannot record completion for tell %s: %v", m.requestID(), err)
+				}
+			}
+		} else {
+			err := Send(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
-				logger.Fatal("Producer error: cannot record completion for tell %s: %v", m.requestID(), err)
+				logger.Fatal("Producer error: cannot make tail tell %s: %v", m.requestID(), err)
 			}
 		}
 	}
