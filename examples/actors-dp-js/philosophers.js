@@ -91,11 +91,10 @@ class Philosopher {
   }
 
   async eat (serving) {
-    if (this.servingsEaten !== serving) return // squash re-execution (must have failed after state.setMultiple below, but before tail call was committed)
     if (verbose) console.log(`${this.kar.id} ate serving number ${serving}`)
     await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
     await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
-    this.servingsEaten = this.servingsEaten + 1
+    this.servingsEaten = serving + 1
     await actor.state.set(this, 'servingsEaten', this.servingsEaten)
     if (this.servingsEaten < this.targetServings) {
       await this.think()
