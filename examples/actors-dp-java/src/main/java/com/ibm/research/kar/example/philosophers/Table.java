@@ -129,6 +129,5 @@ public class Table extends ActorSkeleton {
       Actors.remove(Actors.ref("Philosopher", philosopher(i)));
       Actors.remove(Actors.ref("Fork", fork(i)));
     }
-    Actors.remove(this);
   }
 }
