@@ -138,6 +138,6 @@ public class Table extends ActorSkeleton {
       k = k.chain(() -> Actors.remove(Actors.ref("Philosopher", philosopher(captureI))));
       k = k.chain(() -> Actors.remove(Actors.ref("Fork", fork(captureI))));
     }
-    return k.chain(() -> Actors.remove(this));
+    return k;
   }
 }

@@ -158,7 +158,6 @@ class Table {
       await actor.remove(actor.proxy('Philosopher', this.philosopher(i)))
       await actor.remove(actor.proxy('Fork', this.fork(i)))
     }
-    await actor.remove(this)
   }
 }
 
