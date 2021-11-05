@@ -26,6 +26,7 @@ import (
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 // The info provided by each live node when rebalancing
@@ -46,11 +47,12 @@ var (
 	admin          sarama.ClusterAdmin // the cluster admin
 
 	// routing tables (partition 0 is reserved)
-	self           = info{Node: uuid.New().String()} // service, node, partition (initially unknown == 0)
-	service2nodes  map[string][]string               // the map from services to nodes providing these services
-	node2partition = map[string]int32{}              // the map from nodes to their assigned partitions
-	mu             = new(sync.RWMutex)               // a RW mutex held when rebalancing (W) and sending messages (R)
-	tick           = make(chan struct{})             // a channel closed at replaced at the end of rebalance
+	self              = info{Node: uuid.New().String()} // service, node, partition (initially unknown == 0)
+	service2nodes     map[string][]string               // the map from services to nodes providing these services
+	node2partition    = map[string]int32{}              // the map from nodes to their assigned partitions
+	session2NodeCache *lru.ARCCache                     // a cache of the mapping from sessions to their assigned Node
+	mu                = new(sync.RWMutex)               // a RW mutex held when rebalancing (W) and sending messages (R)
+	tick              = make(chan struct{})             // a channel closed at replaced at the end of rebalance
 
 	head      int64                 // the next offset to read
 	processor func(Message)         // the function to invoke on each incoming message
@@ -66,6 +68,10 @@ var (
 	ErrUnavailable      = errors.New("unavailable")
 	errTooFewPartitions = errors.New("too few partitions")
 )
+
+func init() {
+	session2NodeCache, _ = lru.NewARC(4096)
+}
 
 func configureClient(config *Config) *sarama.Config {
 	conf := sarama.NewConfig()
@@ -189,6 +195,7 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 		producerClient.Close()
 		service2nodes = nil
 		node2partition = nil
+		session2NodeCache = nil
 		close(closed)
 		mu.Unlock()
 	}()
