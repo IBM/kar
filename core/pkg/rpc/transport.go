@@ -19,7 +19,6 @@ package rpc
 import (
 	"context"
 	"encoding/json"
-	"math"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
@@ -185,7 +184,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 					handled[m.requestID()] = v.Sequence // requests targetting live nodes
 				}
 			default:
-				handled[m.requestID()] = math.MaxInt // responses
+				handled[m.requestID()] = 1 << 30 // responses
 			}
 		}
 		if !recovery[p] && p != 0 { // partition 0 may still contain requests for unavailable services
