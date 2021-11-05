@@ -32,3 +32,5 @@ spec:
         env:
         - name: MAIN
           value: client.js
+        - name: SERVER_IP
+          value: http-bench-server-service.default.svc.cluster.local

@@ -3,6 +3,9 @@ Kafka end-to-end micro benchmarking using the Sarama Kafka library.
 
 This project measures the Kafka end-to-end time and the time to perform the initial request.
 
+Note that when running with the default parameters of 10,000 timed messages
+with a 50ms pause between each message, this test should run in about 9 minutes.
+It doesn't produce any output while it is running, so you have to be patient.
 
 Build the producer and consumer executables.
 ```
