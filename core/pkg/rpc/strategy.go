@@ -30,7 +30,8 @@ func (s *strategy) Name() string { return "custom" }
 
 // Assign partitions to group members
 func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
-	partitions := topics[appTopic]     // topic partitions
+	partitions := topics[appTopic] // topic partitions
+	logger.Error("%s: %v", self.Node, partitions)
 	node2member := map[string]string{} // a map from node id to sarama member id
 	recovery = map[int32]bool{}
 
@@ -111,6 +112,7 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 					missing++
 				}
 			}
+			logger.Error("%s: admin.CreatePartitions(%s, %d + %d)", self.Node, appTopic, len(partitions), missing)
 			if err := admin.CreatePartitions(appTopic, int32(len(partitions))+missing, nil, false); err != nil {
 				return nil, err
 			}
