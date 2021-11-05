@@ -168,7 +168,8 @@ spec:
         - ReadWriteOnce
       resources:
         requests:
-          storage: 1Gi
+          storage: 100Gi
+      storageClassName: ibmc-file-gold
 {{- end }}
 
 {{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
