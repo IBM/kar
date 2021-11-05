@@ -37,6 +37,7 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 	// reset the routing tables
 	service2nodes = map[string][]string{}
 	// node2partition = map[string]int32{} // keep the info we already have
+	session2NodeCache.Purge()
 	liveNodes := map[string]struct{}{}
 
 	// reset partition message counts
@@ -157,6 +158,7 @@ func updateRoutes() error {
 	// reset routing tables
 	service2nodes = map[string][]string{}
 	node2partition = map[string]int32{}
+	session2NodeCache.Purge()
 
 	// rebuild tables
 	for _, member := range members {

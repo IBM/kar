@@ -53,16 +53,24 @@ func routeToSession(ctx context.Context, service, session string) (int32, error)
 	if len(nodes) == 0 {
 		return 0, nil // no matching service
 	}
+
+	key := place(service, session)
+	if node, ok := session2NodeCache.Get(key); ok {
+		return node2partition[node.(string)], nil
+	}
+
+	// Attempt to place (will discover global placement if already placed by someone else)
 	node := ""
 	next := nodes[rand.Int31n(int32(len(nodes)))] // select random node
 	for ctx.Err() == nil {
 		var err error
-		node, err = store.CAS(ctx, place(service, session), node, next)
+		node, err = store.CAS(ctx, key, node, next)
 		if err != nil {
 			return 0, err
 		}
 		partition := node2partition[node]
 		if partition != 0 {
+			session2NodeCache.Add(key, node)
 			return partition, nil
 		}
 	}
