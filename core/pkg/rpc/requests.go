@@ -71,7 +71,7 @@ func accept(ctx context.Context, msg Message) {
 				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
 			}
 		} else {
-			err := Send(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method})
+			err := Send(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
 				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
 			}
@@ -89,7 +89,7 @@ func accept(ctx context.Context, msg Message) {
 				}
 			}
 		} else {
-			err := Send(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method})
+			err := Send(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
 				logger.Fatal("Producer error: cannot make tail tell %s: %v", m.requestID(), err)
 			}

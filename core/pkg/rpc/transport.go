@@ -19,6 +19,7 @@ package rpc
 import (
 	"context"
 	"encoding/json"
+	"math"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
@@ -129,8 +130,8 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	defer close(h.finished)
 
 	requests := map[string]Request{}        // all the non-cancelled requests in disconnected partitions
-	requests0 := map[string]struct{}{}      // all the non-cancelled request ids in partition zero
-	handled := map[string]struct{}{}        // all the request ids that have a matching response or appear in partitions connected to live nodes
+	requests0 := map[string]int{}           // all the non-cancelled request ids in partition zero
+	handled := map[string]int{}             // all the request ids that have a matching response or appear in partitions connected to live nodes
 	offsetsForDeletion := map[int32]int64{} // a map from partition to the first offset to preserve in the partition
 
 	// iterate over all claimed partitions and all messages
@@ -155,22 +156,37 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 					continue // ignore calls from dead nodes, they are cancelled
 				}
 				if !recovery[p] { // collect requests targetting dead nodes
-					requests[v.requestID()] = v
+					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
+						requests[v.requestID()] = v
+					}
 					if p == 0 {
-						requests0[v.requestID()] = struct{}{}
+						if v.Sequence >= requests0[m.requestID()] {
+							requests0[m.requestID()] = v.Sequence
+						}
 					}
 					continue
+				}
+				if v.Sequence >= handled[m.requestID()] {
+					handled[m.requestID()] = v.Sequence // requests targetting live nodes
 				}
 			case TellRequest:
 				if !recovery[p] { // collect requests targetting dead nodes
-					requests[v.requestID()] = v
+					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
+						requests[v.requestID()] = v
+					}
 					if p == 0 {
-						requests0[v.requestID()] = struct{}{}
+						if v.Sequence >= requests0[m.requestID()] {
+							requests0[m.requestID()] = v.Sequence // requests targetting live nodes
+						}
 					}
 					continue
 				}
+				if v.Sequence >= handled[m.requestID()] {
+					handled[m.requestID()] = v.Sequence // requests targetting live nodes
+				}
+			default:
+				handled[m.requestID()] = math.MaxInt // responses
 			}
-			handled[m.requestID()] = struct{}{} // requests targetting live nodes and responses
 		}
 		if !recovery[p] && p != 0 { // partition 0 may still contain requests for unavailable services
 			offsetsForDeletion[p] = sarama.OffsetNewest
@@ -185,10 +201,10 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	// resend requests targetting dead nodes
 	for k, v := range requests {
 		// skip requests that are already handled
-		if _, ok := handled[k]; !ok {
+		if s, ok := handled[k]; !ok || s < v.sequence() {
 			// do not send to partition 0 if already in partition 0
-			_, ok0 := requests0[k]
-			err := resend(session.Context(), v, ok0)
+			s0, ok0 := requests0[k]
+			err := resend(session.Context(), v, ok0 && s0 >= v.sequence())
 			if err != nil {
 				if err != session.Context().Err() {
 					logger.Error("resend error during recovery: %v", err)
