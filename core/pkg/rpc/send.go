@@ -55,8 +55,10 @@ func routeToSession(ctx context.Context, service, session string) (int32, error)
 	}
 
 	key := place(service, session)
-	if node, ok := session2NodeCache.Get(key); ok {
-		return node2partition[node.(string)], nil
+	if PlacementCache {
+		if node, ok := session2NodeCache.Get(key); ok {
+			return node2partition[node.(string)], nil
+		}
 	}
 
 	// Attempt to place (will discover global placement if already placed by someone else)
@@ -70,7 +72,9 @@ func routeToSession(ctx context.Context, service, session string) (int32, error)
 		}
 		partition := node2partition[node]
 		if partition != 0 {
-			session2NodeCache.Add(key, node)
+			if PlacementCache {
+				session2NodeCache.Add(key, node)
+			}
 			return partition, nil
 		}
 	}

@@ -67,6 +67,9 @@ var (
 	// errors
 	ErrUnavailable      = errors.New("unavailable")
 	errTooFewPartitions = errors.New("too few partitions")
+
+	// Temp staging for experiments
+	PlacementCache = true
 )
 
 func init() {

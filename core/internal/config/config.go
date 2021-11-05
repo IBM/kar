@@ -136,6 +136,9 @@ var (
 
 	// use rpclib implementation
 	rpcLib bool
+
+	// enable cache for actor placement
+	placementCache bool
 )
 
 // define the flags available on all commands
@@ -165,6 +168,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
 	f.BoolVar(&rpcLib, "rpclib", false, "Use rpclib implementation")
+	f.BoolVar(&placementCache, "placement_cache", true, "Enable actor placement cache")
 }
 
 func init() {
@@ -317,7 +321,7 @@ Available commands:
 	}
 
 	if rpcLib {
-		rpc.UseRpcLib()
+		rpc.UseRpcLib(placementCache)
 	}
 
 	if actorTypes == "" {

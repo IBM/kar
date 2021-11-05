@@ -42,8 +42,9 @@ type Publisher = rpclib.Publisher
 var rpcLib = false
 
 // use new implementation
-func UseRpcLib() {
+func UseRpcLib(placementCache bool) {
 	rpcLib = true
+	rpclib.PlacementCache = placementCache
 }
 
 // Register method handler
