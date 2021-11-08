@@ -35,5 +35,3 @@ spec:
         env:
         - name: MAIN
           value: client.js
-        - name: KAR_EXTRA_ARGS
-          value: -h2c
