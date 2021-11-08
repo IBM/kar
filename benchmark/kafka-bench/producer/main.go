@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -264,6 +265,17 @@ func average(data []float64) float64 {
 	return sum / float64(len(data))
 }
 
+func orderStats(data []float64) (float64, float64, float64) {
+	sort.Float64s(data)
+	if len(data) > 99 {
+		return data[len(data)/2], data[len(data)*9/10], data[len(data)*99/100]
+	} else if len(data) >= 10 {
+		return data[len(data)/2], data[len(data)*9/10], data[len(data)-1]
+	} else {
+		return data[len(data)/2], data[len(data)-1], data[len(data)-1]
+	}
+}
+
 func printTimingReport(data []float64) {
 	// Assumption: input is a list of ms durations.
 	avg := average(data)
@@ -277,7 +289,8 @@ func printTimingReport(data []float64) {
 	standardDeviation := math.Sqrt(average(deviations))
 
 	// Print report:
-	logger.Info(`Kafka: end-to-end: samples = %v; mean = %v; stddev = %v`, len(data), avg, standardDeviation)
+	median, nine, ninetynine := orderStats(data)
+	logger.Info(`Kafka: end-to-end: samples = %v; mean = %v; median = %v; 90th = %v; 99th= %v; stddev = %v`, len(data), avg, median, nine, ninetynine, standardDeviation)
 }
 
 func main() {
