@@ -34,3 +34,8 @@ Check the logs of the client job for the measurement results:
 ```
 kubectl logs jobs/http-bench-client -c client
 ```
+
+NOTE: you often get lower latency if you bypass the DNS lookup and
+instead use the numeric Cluster IP of the server service.  This can be
+done by doing a `kubectl get svc` and then editing SERVER_IP's value
+in client.yaml.
