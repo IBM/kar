@@ -36,4 +36,4 @@ spec:
         - name: MAIN
           value: client.js
         - name: KAR_EXTRA_ARGS
-          value: -rpclib true -placement_cache false
+          value: -rpclib true -placement_cache_blat true
