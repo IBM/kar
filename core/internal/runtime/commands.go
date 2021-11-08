@@ -409,6 +409,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	} else if err != nil { // failed to invoke activate
 		e.release(session, false)
 	} else { // invoke actor method
+		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+session
 		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
@@ -416,7 +417,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		command := msg["command"]
 		if command == "call" || command == "tell" {
 			reply = nil
-			replyStruct, err := invoke(ctx, msg["method"], msg, actor.Type+":"+msg["path"])
+			replyStruct, err := invoke(ctx, msg["method"], msg, metricLabel)
 			if err != nil {
 				if err != ctx.Err() {
 					logger.Debug("%s failed to invoke %s: %v", command, msg["path"], err)
