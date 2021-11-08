@@ -72,6 +72,7 @@ func populateValues() {
 			fmt.Printf("error parsing KAFKA_TLS_SKIP_VERIFY as boolean")
 		}
 	}
+	logger.Info("Kafka brokers is %v", kafkaBrokers)
 }
 
 func newConfig() (*sarama.Config, error) {
@@ -279,7 +280,6 @@ func createProducer() sarama.SyncProducer {
 func main() {
 	logger.SetVerbosity("Info")
 	logger.Info("Starting consumer...")
-	logger.Info("Kafka brokers is %v", kafkaBrokers)
 	// Create the event producer.
 	// Set producer to nil if return message is not desired.
 	producer := createProducer()

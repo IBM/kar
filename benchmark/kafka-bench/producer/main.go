@@ -75,6 +75,7 @@ func populateValues() {
 			logger.Fatal("error parsing KAFKA_TLS_SKIP_VERIFY as boolean")
 		}
 	}
+	logger.Info("Kafka brokers is %v", kafkaBrokers)
 }
 
 func newConfig() (*sarama.Config, error) {
