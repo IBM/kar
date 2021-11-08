@@ -31,18 +31,20 @@ spec:
         secretKeyRef:
           name: kar.ibm.com.runtime-config
           key: kafka_brokers
-    - name: KAFKA_ENABLE_TLS
-      valueFrom:
-        secretKeyRef:
-          name: kar.ibm.com.runtime-config
-          key: kafka_enable_tls
-    - name: KAFKA_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: kar.ibm.com.runtime-config
-          key: kafka_password
     - name: KAFKA_VERSION
       valueFrom:
         secretKeyRef:
           name: kar.ibm.com.runtime-config
           key: kafka_version
+    - name: KAFKA_ENABLE_TLS
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_enable_tls
+          optional: true
+    - name: KAFKA_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: kar.ibm.com.runtime-config
+          key: kafka_password
+          optional: true

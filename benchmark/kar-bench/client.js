@@ -56,11 +56,15 @@ function clearStats () {
 }
 
 function reportMetrics (data, tag) {
+  data.sort((a, b) => a - b);
   const mean = data.reduce((a, b) => a + b, 0) / data.length
   const squareDiffs = data.map(x => (x - mean) * (x - mean))
   const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length
   const stdDev = Math.sqrt(avgSquareDiff)
-  console.log(`${tag}: samples = ${data.length}; mean = ${mean.toFixed(3)}; stddev = ${stdDev.toFixed(3)}`)
+  const median = data[data.length/2]
+  const nine = data[data.length * 9 / 10]
+  const nineNine = data[data.length * 99 / 100]
+  console.log(`${tag}: samples = ${data.length}; mean = ${mean.toFixed(3)}; median = ${median}; 90th = ${nine}; 99th= ${nineNine}; stddev = ${stdDev.toFixed(3)}`)
 }
 
 function reportStats () {

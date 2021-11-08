@@ -30,4 +30,4 @@ spec:
     image: quay.io/ibm/kar-bench-js-image
     env:
     - name: KAR_EXTRA_ARGS
-      value: -actors BenchActor
+      value: -actors BenchActor -rpclib true -placement_cache true
