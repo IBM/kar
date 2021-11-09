@@ -242,6 +242,8 @@ func createProducer() sarama.SyncProducer {
 	}
 
 	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Net.MaxOpenRequests = 1
+	config.Producer.Idempotent = true
 	config.Producer.Retry.Max = 5
 	config.Producer.Return.Successes = true
 
