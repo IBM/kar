@@ -83,7 +83,7 @@ console.log('Starting server...')
 app.use(sys.actorRuntime({ BenchActor }))
 
 // HTTP:
-// const server = app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+const server = app.listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
 
 // HTTP2:
-const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+// const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
