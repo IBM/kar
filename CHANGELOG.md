@@ -16,6 +16,12 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.2.0 - 2021-11-09
++ Add tail call support to rpclib, SDKs, and use in actors-dp-* examples
++ Document deploying on k3d (supplanting k3s)
++ Improve microbenchmarks
++ Implement a cache of actor placement info for rpclib
+
 # KAR 1.1.0 - 2021-10-08
 + Implement an alternative Kafka-only RPC layer
     + Port KAR runtime to new rpclib APIs
