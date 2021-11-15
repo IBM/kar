@@ -133,6 +133,7 @@ var (
 
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
+	messageRetention                                              time.Duration
 
 	// use rpclib implementation
 	rpcLib bool
@@ -151,6 +152,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&KafkaConfig.Password, "kafka_password", "", "The SASL password if any")
 	f.StringVar(&KafkaConfig.Version, "kafka_version", "", "Kafka cluster version")
 	f.BoolVar(&KafkaConfig.TLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
+	f.DurationVar(&KafkaConfig.Retention, "kafka_message_retention", 60*time.Minute, "Message retention time (<0 means use kafka default)")
 
 	f.StringVar(&RedisConfig.Host, "redis_host", "", "The Redis host")
 	f.IntVar(&RedisConfig.Port, "redis_port", 0, "The Redis port")
