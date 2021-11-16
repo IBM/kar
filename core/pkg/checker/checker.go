@@ -30,11 +30,13 @@ type Check struct {
 	checkServerOrdered []string
 }
 
-func (c *Check) checkClient(checkString string) {
+// CheckClient --
+func (c *Check) CheckClient(checkString string) {
 	c.checkClientOrdered = append(c.checkClientOrdered, checkString)
 }
 
-func (c *Check) checkServer(checkString string) {
+// CheckServer --
+func (c *Check) CheckServer(checkString string) {
 	c.checkServerOrdered = append(c.checkServerOrdered, checkString)
 }
 
@@ -55,7 +57,9 @@ func (c *Check) runOrderedCheck(t *testing.T, standardOut io.Reader, fileChecks 
 	}
 }
 
-func (c *Check) runCheck(t *testing.T, testDirectoryName string) {
+
+// RunCheck --
+func (c *Check) RunCheck(t *testing.T, testDirectoryName string) {
 	// Run server:
 	server := exec.Command("go", "run", testDirectoryName+"/server.go")
 	serverOutput, err := server.StderrPipe()

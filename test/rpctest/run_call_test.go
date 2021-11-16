@@ -18,12 +18,6 @@ package rpctest
 
 import (
 	"testing"
-	"os/exec"
-	"regexp"
-	"bytes"
-	"bufio"
-	"strings"
-	"io"
 	"fmt"
 
 	"github.com/IBM/kar/core/pkg/checker"
@@ -35,15 +29,15 @@ func TestIncrement(t *testing.T) {
 	var c checker.Check
 
 	// Client checks:
-	c.checkClient("incr test")
-	c.checkClient("result: 43")
-	c.checkClient("kill server")
-	c.checkClient("success")
+	c.CheckClient("incr test")
+	c.CheckClient("result: 43")
+	c.CheckClient("kill server")
+	c.CheckClient("success")
 
 	// Server checks:
-	c.checkServer("processing messages")
-	c.checkServer("goodbye")
+	c.CheckServer("processing messages")
+	c.CheckServer("goodbye")
 
 	// Run tests
-	c.runCheck(t, "test-call")
+	c.RunCheck(t, "test-call")
 }

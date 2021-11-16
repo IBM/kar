@@ -15,3 +15,5 @@ require (
 	k8s.io/api v0.21.3 // indirect
 	k8s.io/apimachinery v0.21.3 // indirect
 )
+
+replace github.com/IBM/kar/core => ../../core/
