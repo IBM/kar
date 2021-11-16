@@ -19,8 +19,6 @@ package checker
 import (
 	"testing"
 	"os/exec"
-	"regexp"
-	"bytes"
 	"bufio"
 	"strings"
 	"io"
@@ -89,11 +87,4 @@ func (c *Check) runCheck(t *testing.T, testDirectoryName string) {
 	// Wait for subprocesses to finish:
 	client.Wait()
 	server.Wait()	
-}
-
-func check(t *testing.T, matchString string, rawOutput bytes.Buffer) {
-	expected := regexp.MustCompile(`\b`+matchString+`\b`)
-	if !expected.MatchString(rawOutput.String()) {
-        t.Fatalf(`Expected string %s not found`, matchString)
-    }
 }
