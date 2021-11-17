@@ -29,7 +29,7 @@ type Config struct {
 	Password      string   // Kafka SASL password
 	EnableTLS     bool
 	TLSSkipVerify bool
-	Retention     time.Duration // Message retention time
+	TopicConfig   map[string]*string
 }
 
 // Target of an invocation

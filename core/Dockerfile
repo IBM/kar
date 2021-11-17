@@ -15,7 +15,7 @@
 #
 
 # Build KAR
-FROM golang:1.15 as builder
+FROM golang:1.16 as builder
 
 WORKDIR /kar/core
 
