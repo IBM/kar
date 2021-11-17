@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"sync"
 
 	"github.com/IBM/kar/core/pkg/logger"
@@ -174,14 +173,9 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 		return nil, err
 	}
 
-	topicConfig := map[string]*string{}
-	if conf.Retention.Milliseconds() > 0 {
-		time := strconv.FormatInt(conf.Retention.Milliseconds(), 10)
-		topicConfig["retention.ms"] = &time
-	}
-	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3, ConfigEntries: topicConfig}, false)
+	err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 3, ConfigEntries: conf.TopicConfig}, false)
 	if err != nil {
-		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1, ConfigEntries: topicConfig}, false)
+		err = admin.CreateTopic(topic, &sarama.TopicDetail{NumPartitions: 1, ReplicationFactor: 1, ConfigEntries: conf.TopicConfig}, false)
 	}
 	if err != nil {
 		if e, ok := err.(*sarama.TopicError); !ok || e.Err != sarama.ErrTopicAlreadyExists { // ignore ErrTopicAlreadyExists
