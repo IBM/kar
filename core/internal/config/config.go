@@ -180,7 +180,7 @@ func globalOptions(f *flag.FlagSet) {
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
-	f.BoolVar(&rpcLib, "rpclib", false, "Use rpclib implementation")
+	f.BoolVar(&rpcLib, "rpclib", true, "Use rpclib implementation")
 	f.BoolVar(&placementCache, "placement_cache", false, "Use actor placement cache")
 }
 
