@@ -111,7 +111,7 @@ func readAppLog() {
 			}
 			failures = append(failures, failureRecord{rawStartTime: tmp, startTime: ts})
 			if len(failures) > 1 {
-				failures[len(failures)-1].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
+				failures[len(failures)-2].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
 			}
 			maxOrderLatency = 0
 		} else if strings.Contains(line, "child message:") {
@@ -140,9 +140,11 @@ func correlateLogs() {
 }
 
 func printSummary() {
-	fmt.Printf("Failure Number, Start Time, Detection(ms), Rebalance(ms), Max Order Latency(ms)\n")
+	fmt.Printf("Start Time, Failure Number, Kafka Detection Threshold, KAR Detection, KAR Recovery, Total Outage, Max Order Latency\n")
+	kafkaMin := 10.0
 	for i, f := range failures {
-		fmt.Printf("%v, %v, %v, %v, %v\n", i, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), f.maximumOrder.Milliseconds())
+		fmt.Printf("%v, %v, %v, %v, %v, %v, %v\n", f.startTime, i+1, kafkaMin, f.detection.Seconds()-kafkaMin,
+			f.rebalance.Seconds(), f.detection.Seconds()+f.rebalance.Seconds(), f.maximumOrder.Seconds())
 	}
 }
 
