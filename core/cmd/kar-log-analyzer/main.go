@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -73,7 +74,7 @@ func readKarLog() {
 			if err != nil {
 				panic(fmt.Errorf("Can't parse time %v: %v", msg[0], err))
 			}
-			if strings.Contains(msg[1], "completed generation") {
+			if !recovering && strings.Contains(msg[1], "completed generation") {
 				startTime = ts
 				rawStartTime = strings.TrimSpace(msg[0])
 				recovering = true
@@ -97,6 +98,7 @@ func readAppLog() {
 	}
 	defer file.Close()
 
+	maxOrderLatency := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -108,6 +110,15 @@ func readAppLog() {
 				panic(fmt.Errorf("Can't parse time %v: %v", tmp, err))
 			}
 			failures = append(failures, failureRecord{rawStartTime: tmp, startTime: ts})
+			maxOrderLatency = 0
+		} else if strings.Contains(line, "child message:") {
+			o := strings.Split(line, "]")
+			fmt.Printf("%v", o[1])
+			orderLatency, err := strconv.Atoi(strings.TrimSpace(o[1]))
+			if err == nil && orderLatency > maxOrderLatency {
+				fmt.Printf("max order latency %v", orderLatency)
+				maxOrderLatency = orderLatency
+			}
 		}
 	}
 	fmt.Printf("Parsed %v failure events\n", len(failures))
@@ -129,7 +140,7 @@ func correlateLogs() {
 func printSummary() {
 	fmt.Printf("Failure Number, Start Time, Detection(ms), Rebalance(ms), Max Order Latency(ms)")
 	for i, f := range failures {
-		fmt.Printf("%v, %v, %v, %v, %v\n", i+1, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), "TODO")
+		fmt.Printf("%v, %v, %v, %v, %v\n", i+1, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), f.maximumOrder.Milliseconds())
 	}
 }
 
