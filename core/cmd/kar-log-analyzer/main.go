@@ -110,17 +110,19 @@ func readAppLog() {
 				panic(fmt.Errorf("Can't parse time %v: %v", tmp, err))
 			}
 			failures = append(failures, failureRecord{rawStartTime: tmp, startTime: ts})
+			if len(failures) > 1 {
+				failures[len(failures)-1].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
+			}
 			maxOrderLatency = 0
 		} else if strings.Contains(line, "child message:") {
 			o := strings.Split(line, "]")
-			fmt.Printf("%v", o[1])
 			orderLatency, err := strconv.Atoi(strings.TrimSpace(o[1]))
 			if err == nil && orderLatency > maxOrderLatency {
-				fmt.Printf("max order latency %v", orderLatency)
 				maxOrderLatency = orderLatency
 			}
 		}
 	}
+	failures[len(failures)-1].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
 	fmt.Printf("Parsed %v failure events\n", len(failures))
 }
 
@@ -138,9 +140,9 @@ func correlateLogs() {
 }
 
 func printSummary() {
-	fmt.Printf("Failure Number, Start Time, Detection(ms), Rebalance(ms), Max Order Latency(ms)")
+	fmt.Printf("Failure Number, Start Time, Detection(ms), Rebalance(ms), Max Order Latency(ms)\n")
 	for i, f := range failures {
-		fmt.Printf("%v, %v, %v, %v, %v\n", i+1, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), f.maximumOrder.Milliseconds())
+		fmt.Printf("%v, %v, %v, %v, %v\n", i, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), f.maximumOrder.Milliseconds())
 	}
 }
 
