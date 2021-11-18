@@ -94,10 +94,16 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		return h.recover(session, claim)
 	}
 
+	oldMessages := 0
 	// not in recovery (nodes other than the leader are not assigned partitions during recovery)
 	for msg := range claim.Messages() {
 		if msg.Offset < head {
+			oldMessages++
 			continue // skip messages we have already processed
+		}
+		if oldMessages > 0 {
+			logger.Info("skipped %d old messages for generation %d", oldMessages, session.GenerationID())
+			oldMessages = 0
 		}
 		switch m := decode(msg).(type) {
 		case CallRequest:
