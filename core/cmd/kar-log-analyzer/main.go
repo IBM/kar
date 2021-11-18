@@ -42,6 +42,8 @@ type failureRecord struct {
 	rawStartTime string
 	startTime    time.Time
 	maximumOrder time.Duration
+	detection    time.Duration
+	rebalance    time.Duration
 }
 
 func init() {
@@ -111,9 +113,32 @@ func readAppLog() {
 	fmt.Printf("Parsed %v failure events\n", len(failures))
 }
 
+func correlateLogs() {
+	rebalanceIdx := 0
+	for i, f := range failures {
+		for rebalances[rebalanceIdx].startTime.Before(f.startTime) {
+			rebalanceIdx += 1
+		}
+		r := rebalances[rebalanceIdx]
+		// fmt.Printf("Matching: %v %v\n", f, r)
+		failures[i].detection = r.startTime.Sub(f.startTime)
+		failures[i].rebalance = r.duration
+	}
+}
+
+func printSummary() {
+	fmt.Printf("Failure Number, Start Time, Detection(ms), Rebalance(ms), Max Order Latency(ms)")
+	for i, f := range failures {
+		fmt.Printf("%v, %v, %v, %v, %v\n", i+1, f.startTime, f.detection.Milliseconds(), f.rebalance.Milliseconds(), "TODO")
+	}
+}
+
 func main() {
 	fmt.Printf("input kar log: %v\n", karlog)
 	fmt.Printf("input app log: %v\n", applog)
 	readKarLog()
 	readAppLog()
+	correlateLogs()
+	printSummary()
+
 }
