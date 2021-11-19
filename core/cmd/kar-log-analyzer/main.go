@@ -34,13 +34,11 @@ var (
 )
 
 type rebalanceRecord struct {
-	rawStartTime string
-	startTime    time.Time
-	duration     time.Duration
+	startTime time.Time
+	duration  time.Duration
 }
 
 type failureRecord struct {
-	rawStartTime string
 	startTime    time.Time
 	maximumOrder time.Duration
 	detection    time.Duration
@@ -62,7 +60,6 @@ func readKarLog() {
 	defer file.Close()
 
 	startTime := time.Time{}
-	rawStartTime := ""
 	recovering := false
 
 	scanner := bufio.NewScanner(file)
@@ -76,12 +73,11 @@ func readKarLog() {
 			}
 			if !recovering && strings.Contains(msg[1], "completed generation") {
 				startTime = ts
-				rawStartTime = strings.TrimSpace(msg[0])
 				recovering = true
 			} else if strings.Contains(msg[1], "processing messages") {
 				if recovering {
 					outage := ts.Sub(startTime)
-					rebalances = append(rebalances, rebalanceRecord{rawStartTime: rawStartTime, startTime: ts, duration: outage})
+					rebalances = append(rebalances, rebalanceRecord{startTime: ts, duration: outage})
 					startTime = time.Time{}
 					recovering = false
 				}
@@ -109,7 +105,7 @@ func readAppLog() {
 			if err != nil {
 				panic(fmt.Errorf("Can't parse time %v: %v", tmp, err))
 			}
-			failures = append(failures, failureRecord{rawStartTime: tmp, startTime: ts})
+			failures = append(failures, failureRecord{startTime: ts})
 			if len(failures) > 1 {
 				failures[len(failures)-2].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
 			}
@@ -155,5 +151,4 @@ func main() {
 	readAppLog()
 	correlateLogs()
 	printSummary()
-
 }
