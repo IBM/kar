@@ -29,20 +29,29 @@ import (
 var (
 	karlog     string
 	applog     string
-	rebalances []rebalanceRecord = []rebalanceRecord{}
-	failures   []failureRecord   = []failureRecord{}
+	rebalances []rebalanceEvent = []rebalanceEvent{}
+	failures   []failureEvent   = []failureEvent{}
+	summaries  []summary        = []summary{}
 )
 
-type rebalanceRecord struct {
+type rebalanceEvent struct {
 	startTime time.Time
 	duration  time.Duration
 }
 
-type failureRecord struct {
+type failureEvent struct {
 	startTime    time.Time
 	maximumOrder time.Duration
-	detection    time.Duration
-	rebalance    time.Duration
+}
+
+type summary struct {
+	startTime          time.Time
+	totalDuration      time.Duration
+	maximumOrder       time.Duration
+	kafkaDetection     time.Duration
+	karDetection       time.Duration
+	karReconcilliation time.Duration
+	failureCount       int
 }
 
 func init() {
@@ -77,7 +86,7 @@ func readKarLog() {
 			} else if strings.Contains(msg[1], "processing messages") {
 				if recovering {
 					outage := ts.Sub(startTime)
-					rebalances = append(rebalances, rebalanceRecord{startTime: ts, duration: outage})
+					rebalances = append(rebalances, rebalanceEvent{startTime: ts, duration: outage})
 					startTime = time.Time{}
 					recovering = false
 				}
@@ -105,7 +114,7 @@ func readAppLog() {
 			if err != nil {
 				panic(fmt.Errorf("Can't parse time %v: %v", tmp, err))
 			}
-			failures = append(failures, failureRecord{startTime: ts})
+			failures = append(failures, failureEvent{startTime: ts})
 			if len(failures) > 1 {
 				failures[len(failures)-2].maximumOrder = time.Duration(maxOrderLatency) * time.Millisecond
 			}
@@ -123,24 +132,26 @@ func readAppLog() {
 }
 
 func correlateLogs() {
+	kafkaDetect := 10 * time.Second
 	rebalanceIdx := 0
-	for i, f := range failures {
+	for _, f := range failures {
 		for rebalances[rebalanceIdx].startTime.Before(f.startTime) {
 			rebalanceIdx += 1
 		}
 		r := rebalances[rebalanceIdx]
 		// fmt.Printf("Matching: %v %v\n", f, r)
-		failures[i].detection = r.startTime.Sub(f.startTime)
-		failures[i].rebalance = r.duration
+		outage := r.startTime.Sub(f.startTime) + r.duration
+		detect := r.startTime.Sub(f.startTime)
+		summaries = append(summaries, summary{startTime: f.startTime, failureCount: 1, totalDuration: outage, kafkaDetection: kafkaDetect,
+			karDetection: detect - kafkaDetect, karReconcilliation: r.duration, maximumOrder: f.maximumOrder})
 	}
 }
 
 func printSummary() {
 	fmt.Printf("Start Time, Failure Number, Kafka Detection Threshold, KAR Detection, KAR Recovery, Total Outage, Max Order Latency\n")
-	kafkaMin := 10.0
-	for i, f := range failures {
-		fmt.Printf("%v, %v, %v, %v, %v, %v, %v\n", f.startTime, i+1, kafkaMin, f.detection.Seconds()-kafkaMin,
-			f.rebalance.Seconds(), f.detection.Seconds()+f.rebalance.Seconds(), f.maximumOrder.Seconds())
+	for i, f := range summaries {
+		fmt.Printf("%v, %v, %.6v, %.6v, %.6v, %.6v, %.6v\n", f.startTime, i+1, f.kafkaDetection.Seconds(), f.karDetection.Seconds(),
+			f.karReconcilliation.Seconds(), f.totalDuration.Seconds(), f.maximumOrder.Seconds())
 	}
 }
 
