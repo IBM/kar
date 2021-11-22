@@ -138,6 +138,20 @@ func CallSequentialActor(t *testing.T) {
 	client.RunClientCheck(t, "test-call-sequential-actor")
 }
 
+func CallParallel(t *testing.T) {
+	t.Parallel()
+	var client checker.Check
+
+	fmt.Println(testTag, "Check parallel method call.")
+
+	// Client checks:
+	client.CheckClient("incr parallel test")
+	client.CheckClient("result: 28500")
+
+	// Run tests
+	client.RunClientCheck(t, "test-call-parallel")
+}
+
 func TestRPCCall(t *testing.T) {
 	t.Run("Regular method call", CallMethod)
 	t.Run("Deadline expired call", CallDeadlineExpired)
@@ -146,6 +160,7 @@ func TestRPCCall(t *testing.T) {
 	t.Run("Async call", CallAsync)
 	t.Run("Sequential call", CallSequential)
 	t.Run("Sequential actor call", CallSequentialActor)
+	t.Run("Parallel method call", CallParallel)
 }
 
 // ---------------------------------------------------------------------------
