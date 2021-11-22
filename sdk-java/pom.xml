@@ -23,7 +23,7 @@
   <url>https://github.com/IBM/kar/</url>
 
   <properties>
-    <version.java-compiler>11</version.java-compiler>
+    <version.java-release>11</version.java-release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
@@ -140,7 +140,7 @@
 	  <artifactId>maven-compiler-plugin</artifactId>
 	  <version>${version.maven-compiler-plugin}</version>
 	  <configuration>
-	    <release>${version.java-compiler}</release>
+	    <release>${version.java-release}</release>
 	  </configuration>
         </plugin>
 
@@ -172,7 +172,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${version.maven-javadoc-plugin}</version>
             <configuration>
-              <source>8</source>
+              <source>${version.java-release}</source>
               <detectJavaApiLink>false</detectJavaApiLink>
             </configuration>
             <executions>
