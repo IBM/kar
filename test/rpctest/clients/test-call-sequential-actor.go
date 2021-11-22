@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
@@ -36,7 +37,9 @@ func main() {
 	log.Print("sequential actor test")
 	n := byte(0)
 	for i := 0; i < 1; i++ {
+		fmt.Println("Before Call")
 		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
+		fmt.Println("After Call")
 		if err != nil {
 			log.Print(err)
 			os.Exit(1)

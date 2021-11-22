@@ -22,16 +22,18 @@ import (
 	"log"
 	"os"
 	"time"
+	"fmt"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/IBM/kar/core/pkg/rpc"
-	rpclib "github.com/IBM/kar/core/pkg/rpc"
+	// rpclib "github.com/IBM/kar/core/pkg/rpc"
 )
 
 var ctx, cancel = context.WithCancel(context.Background())
 
 func incr(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+	fmt.Println("BLA")
 	return nil, []byte{v[0] + 1}, nil
 }
 
@@ -68,7 +70,7 @@ func main() {
 		Brokers: []string{"localhost:31093"},
 	}
 
-	rpclib.PlacementCache = false
+	// rpclib.PlacementCache = false
 
 	// register function on this service
 	rpc.Register("incr", incr)
