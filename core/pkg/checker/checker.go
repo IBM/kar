@@ -17,20 +17,20 @@
 package checker
 
 import (
-	"testing"
-	"os/exec"
 	"bufio"
-	"strings"
 	"io"
+	"os/exec"
+	"strings"
+	"testing"
 )
 
 // Check type
-type Check struct {  
+type Check struct {
 	checkClientOrdered []string
 	checkServerOrdered []string
-	serverOutput io.Reader
-	server *exec.Cmd
-	serverName string
+	serverOutput       io.Reader
+	server             *exec.Cmd
+	serverName         string
 }
 
 // CheckClient --
@@ -65,7 +65,7 @@ func (c *Check) RunServer(t *testing.T, serverName string) {
 	c.serverName = serverName
 
 	// Run server:
-	server := exec.Command("go", "run", "servers/"+serverName+".go")
+	server := exec.Command("go", "run", serverName+"/"+serverName+".go")
 	serverOutput, err := server.StderrPipe()
 	if err != nil {
 		t.Fatalf(`Error running stdout server pipe %v`, err)
@@ -89,7 +89,7 @@ func (c *Check) RunServerCheck(t *testing.T) {
 // RunClientCheck --
 func (c *Check) RunClientCheck(t *testing.T, testClientName string) {
 	// Run client:
-	client := exec.Command("go", "run", "clients/"+testClientName+".go")
+	client := exec.Command("go", "run", testClientName+"/"+testClientName+".go")
 	clientOutput, err := client.StderrPipe()
 	if err != nil {
 		t.Fatalf(`Error running stdout server pipe %v`, err)

@@ -46,7 +46,7 @@ cli:
 	cd core && go install -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$(KAR_VERSION)" ./...
 
 rpc-test:
-	cd test/rpc && $(MAKE)
+	cd core/testrpc && go test
 
 dockerBuildCore:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .

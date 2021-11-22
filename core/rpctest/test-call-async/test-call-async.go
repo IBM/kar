@@ -21,30 +21,36 @@ import (
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
 	var c checker.Connection
 	c.ConnectClient("test-rpc")
 
-	// The remote method to be called on the server:
+	// The remote method to be called on the server.
 	destinationIncr := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
 
-	// Send requests sequentially:
-	log.Print("sequential test")
-	n := byte(42)
-	for i := 0; i < 200; i++ {
-		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
-		if err != nil {
-			log.Print(err)
-			os.Exit(1)
-		}
-		n = x[0]
+	// Send an async request:
+	log.Print("async test")
+	_, rp, err := rpc.Async(c.ClientCtx, destinationIncr, time.Time{}, []byte{42})
+	if err != nil {
+		log.Print(err)
+		os.Exit(1)
 	}
 
-	log.Print("result: ", n)
+	// Response from async method:
+	response := <-rp
+	if response.Err != nil {
+		log.Print("async await test failed")
+		os.Exit(1)
+	} else {
+		log.Print("async await successful")
+	}
+
+	// Check value is correct:
+	log.Print("async result: ", response.Value[0])
 
 	c.CloseClient()
 }

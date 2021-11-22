@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
@@ -30,11 +30,11 @@ func main() {
 	c.ConnectClient("test-rpc")
 
 	// The remote method to be called on the server.
-	destinationFoo := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "foo"}
+	destinationFail := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "fail"}
 
-	// Send a request to a non-existent method:
-	log.Print("undefined method test")
-	_, err := rpc.Call(c.ClientCtx, destinationFoo, time.Time{}, nil)
+	// Test failure of method on server:
+	log.Print("error result test")
+	_, err := rpc.Call(c.ClientCtx, destinationFail, time.Time{}, nil)
 	if err == nil {
 		log.Print("test failed")
 		os.Exit(1)

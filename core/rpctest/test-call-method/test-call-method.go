@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {

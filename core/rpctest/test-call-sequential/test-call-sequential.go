@@ -18,22 +18,33 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
 	var c checker.Connection
 	c.ConnectClient("test-rpc")
 
-	log.Print("kill server")
-	nodes, _ := rpc.GetServiceNodeIDs("server")
-	for _, node := range nodes {
-		destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"} 
-		rpc.Tell(c.ClientCtx, destination, time.Time{}, []byte("goodbye"))
+	// The remote method to be called on the server:
+	destinationIncr := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
+
+	// Send requests sequentially:
+	log.Print("sequential test")
+	n := byte(42)
+	for i := 0; i < 200; i++ {
+		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
+		if err != nil {
+			log.Print(err)
+			os.Exit(1)
+		}
+		n = x[0]
 	}
+
+	log.Print("result: ", n)
 
 	c.CloseClient()
 }

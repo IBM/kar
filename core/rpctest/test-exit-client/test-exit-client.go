@@ -18,28 +18,21 @@ package main
 
 import (
 	"log"
-	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
 	var c checker.Connection
 	c.ConnectClient("test-rpc")
 
-	// The remote method to be called on the server.
-	destinationFail := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "fail"}
-
-	// Test failure of method on server:
-	log.Print("error result test")
-	_, err := rpc.Call(c.ClientCtx, destinationFail, time.Time{}, nil)
-	if err == nil {
-		log.Print("test failed")
-		os.Exit(1)
-	} else {
-		log.Print("test succeeded with error: ", err)
+	log.Print("kill server")
+	nodes, _ := rpc.GetServiceNodeIDs("server")
+	for _, node := range nodes {
+		destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"}
+		rpc.Tell(c.ClientCtx, destination, time.Time{}, []byte("goodbye"))
 	}
 
 	c.CloseClient()

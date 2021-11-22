@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
@@ -30,11 +30,11 @@ func main() {
 	c.ConnectClient("test-rpc")
 
 	// The remote method to be called on the server.
-	destinationIncr := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
+	destinationFoo := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "foo"}
 
-	// Send a request with expired deadline, expect error `deadline expired`
-	log.Print("deadline test")
-	_, err := rpc.Call(c.ClientCtx, destinationIncr, time.Now().Add(-time.Hour), []byte{42})
+	// Send a request to a non-existent method:
+	log.Print("undefined method test")
+	_, err := rpc.Call(c.ClientCtx, destinationFoo, time.Time{}, nil)
 	if err == nil {
 		log.Print("test failed")
 		os.Exit(1)

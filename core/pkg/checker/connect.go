@@ -23,16 +23,16 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/store"
 	"github.com/IBM/kar/core/pkg/rpc"
+	"github.com/IBM/kar/core/pkg/store"
 )
 
 // Connection type
 type Connection struct {
-	ClientCtx context.Context
+	ClientCtx    context.Context
 	ClientCancel context.CancelFunc
-	ClientClosed <-chan struct {}
-	appName string
+	ClientClosed <-chan struct{}
+	appName      string
 }
 
 // ConnectClient --
@@ -55,7 +55,6 @@ func (c *Connection) ConnectClient(appName string) {
 		log.Printf("failed to connect to Reddis: %v", err)
 		os.Exit(1)
 	}
-	defer store.Close()
 
 	conf := &rpc.Config{
 		Version: "2.8.0",
@@ -74,6 +73,7 @@ func (c *Connection) ConnectClient(appName string) {
 // CloseClient --
 func (c *Connection) CloseClient() {
 	log.Print("success")
+	defer store.Close()
 	c.ClientCancel()
 	<-c.ClientClosed
 }

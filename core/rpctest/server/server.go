@@ -19,14 +19,14 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
-	"fmt"
 
 	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/store"
 	"github.com/IBM/kar/core/pkg/rpc"
+	"github.com/IBM/kar/core/pkg/store"
 	// rpclib "github.com/IBM/kar/core/pkg/rpc"
 )
 
@@ -63,7 +63,7 @@ func main() {
 		log.Printf("failed to connect to Reddis: %v", err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	// defer store.Close()
 
 	conf := &rpc.Config{
 		Version: "2.8.0",

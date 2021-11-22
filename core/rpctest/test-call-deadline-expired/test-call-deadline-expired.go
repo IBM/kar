@@ -21,8 +21,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
@@ -32,25 +32,15 @@ func main() {
 	// The remote method to be called on the server.
 	destinationIncr := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
 
-	// Send an async request:
-	log.Print("async test")
-	_, rp, err := rpc.Async(c.ClientCtx, destinationIncr, time.Time{}, []byte{42})
-	if err != nil {
-		log.Print(err)
-		os.Exit(1)
-	}
-
-	// Response from async method:
-	response := <-rp
-	if response.Err != nil {
-		log.Print("async await test failed")
+	// Send a request with expired deadline, expect error `deadline expired`
+	log.Print("deadline test")
+	_, err := rpc.Call(c.ClientCtx, destinationIncr, time.Now().Add(-time.Hour), []byte{42})
+	if err == nil {
+		log.Print("test failed")
 		os.Exit(1)
 	} else {
-		log.Print("async await successful")
+		log.Print("test succeeded with error: ", err)
 	}
-
-	// Check value is correct:
-	log.Print("async result: ", response.Value[0])
 
 	c.CloseClient()
 }

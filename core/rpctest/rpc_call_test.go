@@ -17,17 +17,16 @@
 package rpctest
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 
 	"github.com/IBM/kar/core/pkg/checker"
 )
 
 var (
-	server checker.Check
+	server  checker.Check
 	testTag string = "[RPC Call]"
 )
-
 
 // Mandatory step: start the server responsible for this test.
 func TestStartServer(t *testing.T) {
@@ -40,7 +39,8 @@ func TestStartServer(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Starting to test Call method
 // ---------------------------------------------------------------------------
-func TestCallMethod(t *testing.T) {
+func CallMethod(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Remote call to increment.")
@@ -53,7 +53,8 @@ func TestCallMethod(t *testing.T) {
 	client.RunClientCheck(t, "test-call-method")
 }
 
-func TestCallDeadlineExpired(t *testing.T) {
+func CallDeadlineExpired(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check expired deadline error.")
@@ -66,7 +67,8 @@ func TestCallDeadlineExpired(t *testing.T) {
 	client.RunClientCheck(t, "test-call-deadline-expired")
 }
 
-func TestCallUndefinedMethod(t *testing.T) {
+func CallUndefinedMethod(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check undefined method error.")
@@ -79,7 +81,8 @@ func TestCallUndefinedMethod(t *testing.T) {
 	client.RunClientCheck(t, "test-call-undefined-method")
 }
 
-func TestCallErrorResult(t *testing.T) {
+func CallErrorResult(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check error result.")
@@ -92,7 +95,8 @@ func TestCallErrorResult(t *testing.T) {
 	client.RunClientCheck(t, "test-call-error-result")
 }
 
-func TestCallAsync(t *testing.T) {
+func CallAsync(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check async.")
@@ -106,7 +110,8 @@ func TestCallAsync(t *testing.T) {
 	client.RunClientCheck(t, "test-call-async")
 }
 
-func TestCallSequential(t *testing.T) {
+func CallSequential(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check sequential method calls.")
@@ -119,7 +124,8 @@ func TestCallSequential(t *testing.T) {
 	client.RunClientCheck(t, "test-call-sequential")
 }
 
-func TestCallSequentialActor(t *testing.T) {
+func CallSequentialActor(t *testing.T) {
+	t.Parallel()
 	var client checker.Check
 
 	fmt.Println(testTag, "Check session method call.")
@@ -130,6 +136,16 @@ func TestCallSequentialActor(t *testing.T) {
 
 	// Run tests
 	client.RunClientCheck(t, "test-call-sequential-actor")
+}
+
+func TestRPCCall(t *testing.T) {
+	t.Run("Regular method call", CallMethod)
+	t.Run("Deadline expired call", CallDeadlineExpired)
+	t.Run("Undefined method call", CallUndefinedMethod)
+	t.Run("Error result call", CallErrorResult)
+	t.Run("Async call", CallAsync)
+	t.Run("Sequential call", CallSequential)
+	t.Run("Sequential actor call", CallSequentialActor)
 }
 
 // ---------------------------------------------------------------------------

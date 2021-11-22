@@ -17,13 +17,13 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"time"
-	"fmt"
 
-	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 func main() {
@@ -36,7 +36,7 @@ func main() {
 	// Send requests sequentially to actor method:
 	log.Print("sequential actor test")
 	n := byte(0)
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 10; i++ {
 		fmt.Println("Before Call")
 		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
 		fmt.Println("After Call")
