@@ -28,6 +28,9 @@ import (
 type Check struct {  
 	checkClientOrdered []string
 	checkServerOrdered []string
+	serverOutput io.Reader
+	server *exec.Cmd
+	serverName string
 }
 
 // CheckClient --
@@ -57,11 +60,12 @@ func (c *Check) runOrderedCheck(t *testing.T, standardOut io.Reader, fileChecks 
 	}
 }
 
+// RunServer --
+func (c *Check) RunServer(t *testing.T, serverName string) {
+	c.serverName = serverName
 
-// RunCheck --
-func (c *Check) RunCheck(t *testing.T, testDirectoryName string) {
 	// Run server:
-	server := exec.Command("go", "run", testDirectoryName+"/server.go")
+	server := exec.Command("go", "run", "servers/"+serverName+".go")
 	serverOutput, err := server.StderrPipe()
 	if err != nil {
 		t.Fatalf(`Error running stdout server pipe %v`, err)
@@ -71,8 +75,21 @@ func (c *Check) RunCheck(t *testing.T, testDirectoryName string) {
 		t.Fatalf(`Error running server %v`, err)
 	}
 
+	c.serverOutput = serverOutput
+	c.server = server
+}
+
+// RunServerCheck --
+func (c *Check) RunServerCheck(t *testing.T) {
+	// Perform checks on the server side:
+	c.runOrderedCheck(t, c.serverOutput, c.checkServerOrdered)
+	c.server.Wait()
+}
+
+// RunClientCheck --
+func (c *Check) RunClientCheck(t *testing.T, testClientName string) {
 	// Run client:
-	client := exec.Command("go", "run", testDirectoryName+"/client.go")
+	client := exec.Command("go", "run", "clients/"+testClientName+".go")
 	clientOutput, err := client.StderrPipe()
 	if err != nil {
 		t.Fatalf(`Error running stdout server pipe %v`, err)
@@ -85,10 +102,6 @@ func (c *Check) RunCheck(t *testing.T, testDirectoryName string) {
 	// Perform checks on the client side:
 	c.runOrderedCheck(t, clientOutput, c.checkClientOrdered)
 
-	// Perform checks on the server side:
-	c.runOrderedCheck(t, serverOutput, c.checkServerOrdered)
-
 	// Wait for subprocesses to finish:
 	client.Wait()
-	server.Wait()	
 }

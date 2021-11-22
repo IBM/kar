@@ -14,11 +14,7 @@
 # limitations under the License.
 #
 
-all: build run
-
-build:
-	go build -o bin/call-server test-call/server.go
-	go build -o bin/call-client test-call/client.go
+all: run
 
 run:
-	go run run-tests.go
+	go test

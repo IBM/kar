@@ -20,13 +20,13 @@ import (
 	"context"
 	"errors"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/IBM/kar/core/pkg/rpc"
+	rpclib "github.com/IBM/kar/core/pkg/rpc"
 )
 
 var ctx, cancel = context.WithCancel(context.Background())
@@ -46,7 +46,6 @@ func exit(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte
 }
 
 func main() {
-	rand.Seed(4)
 	logger.SetVerbosity("INFO")
 
 	sc := &store.StoreConfig{
@@ -69,13 +68,15 @@ func main() {
 		Brokers: []string{"localhost:31093"},
 	}
 
+	rpclib.PlacementCache = false
+
 	// register function on this service
 	rpc.Register("incr", incr)
 	rpc.Register("fail", fail)
 	rpc.Register("exit", exit)
 
 	// start service
-	closed, err := rpc.Connect(ctx, "foo", conf, "server", "actor")
+	closed, err := rpc.Connect(ctx, "test-rpc", conf, "server", "actor")
 	if err != nil {
 		log.Printf("failed to connect to Kafka: %v", err)
 		os.Exit(1)

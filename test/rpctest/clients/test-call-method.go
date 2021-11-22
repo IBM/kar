@@ -17,67 +17,42 @@
 package main
 
 import (
-	"context"
 	"log"
-	"math/rand"
 	"os"
 	"time"
 
-	"github.com/IBM/kar/core/pkg/logger"
-	"github.com/IBM/kar/core/pkg/store"
 	"github.com/IBM/kar/core/pkg/rpc"
+	"github.com/IBM/kar/core/pkg/checker"
 )
 
 func main() {
-	rand.Seed(3)
-	logger.SetVerbosity("INFO")
+	var c checker.Connection
+	c.ConnectClient("test-rpc")
 
-	ctx, cancel := context.WithCancel(context.Background())
+	// The remote method to be called on the server.
+	destinationIncr := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
 
-	sc := &store.StoreConfig{
-		MangleKey:         func(s string) string { return s },
-		UnmangleKey:       func(s string) string { return s },
-		RequestRetryLimit: -1 * time.Second,
-		LongOperation:     60 * time.Second,
-		Host:              "localhost",
-		Port:              31379,
-	}
-
-	if err := store.Dial(sc); err != nil {
-		log.Printf("failed to connect to Reddis: %v", err)
-		os.Exit(1)
-	}
-	defer store.Close()
-
-	conf := &rpc.Config{
-		Version: "2.8.0",
-		Brokers: []string{"localhost:31093"},
-	}
-
-	// start service providing the name of the service
-	closed, err := rpc.Connect(ctx, "foo", conf, "client")
-	if err != nil {
-		log.Printf("failed to connect to Kafka: %v", err)
-		os.Exit(1)
-	}
-
+	// Send request to server to increment passed in value of 42.
 	log.Print("incr test")
-	destination := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
-	result, err := rpc.Call(ctx, destination, time.Time{}, []byte{42})
+	result, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{42})
 	if err != nil {
 		log.Print("incr test failed")
 		os.Exit(1)
+	} else {
+		log.Print("result: ", result[0])
 	}
-	log.Print("result: ", result[0])
 
+	c.CloseClient()
+
+	// // Send a request with expired deadline, expect error `deadline expired`
 	// log.Print("deadline test")
-	// destination := rpc.Destination{Target: rpc.Service{Name: "server"}, Method: "incr"}
-	// _, err = rpc.Call(ctx, destination, time.Now().Add(-time.Hour), []byte{42})
+	// _, err = rpc.Call(c.clientCtx, destinationIncr, time.Now().Add(-time.Hour), []byte{42})
 	// if err == nil {
 	// 	log.Print("test failed")
 	// 	os.Exit(1)
+	// } else {
+	// 	log.Print("test succeeded with error: ", err)
 	// }
-	// log.Print("error: ", err)
 
 	// log.Print("undefined method test")
 	// _, err = rpc.Call(ctx, rpc.Service{Name: "server"}, "foo", time.Time{}, nil)
@@ -167,15 +142,15 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	log.Print("kill server")
-	nodes, _ := rpc.GetServiceNodeIDs("server")
-	for _, node := range nodes {
-		destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"} 
-		rpc.Tell(ctx, destination, time.Time{}, []byte("goodbye"))
-	}
+	// log.Print("kill server")
+	// nodes, _ := rpc.GetServiceNodeIDs("server")
+	// for _, node := range nodes {
+	// 	destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"} 
+	// 	rpc.Tell(ctx, destination, time.Time{}, []byte("goodbye"))
+	// }
 
-	log.Print("success")
+	// log.Print("success")
 
-	cancel()
-	<-closed
+	// cancel()
+	// <-closed
 }

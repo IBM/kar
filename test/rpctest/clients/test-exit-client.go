@@ -14,30 +14,26 @@
 // limitations under the License.
 //
 
-package rpctest
+package main
 
 import (
-	"testing"
-	"fmt"
+	"log"
+	"time"
 
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/checker"
 )
 
-// TestIncrement -- test the remote call to the increment function
-func TestIncrement(t *testing.T) {
-	fmt.Println("Check increment.")
-	var c checker.Check
+func main() {
+	var c checker.Connection
+	c.ConnectClient("test-rpc")
 
-	// Client checks:
-	c.CheckClient("incr test")
-	c.CheckClient("result: 43")
-	c.CheckClient("kill server")
-	c.CheckClient("success")
+	log.Print("kill server")
+	nodes, _ := rpc.GetServiceNodeIDs("server")
+	for _, node := range nodes {
+		destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"} 
+		rpc.Tell(c.ClientCtx, destination, time.Time{}, []byte("goodbye"))
+	}
 
-	// Server checks:
-	c.CheckServer("processing messages")
-	c.CheckServer("goodbye")
-
-	// Run tests
-	c.RunCheck(t, "test-call")
+	c.CloseClient()
 }
