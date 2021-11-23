@@ -133,7 +133,7 @@ var (
 
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
-	topicConfig                                                   = map[string]*string{"retention.ms": strptr("600000"), "segment.ms": strptr("300000")}
+	topicConfig                                                   = map[string]*string{"retention.ms": strptr("900000"), "segment.ms": strptr("300000")}
 
 	// use rpclib implementation
 	rpcLib bool
