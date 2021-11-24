@@ -153,6 +153,8 @@ idempotent.
 KAR strives to achieve such guarantees in a dynamic, distributed system with
 minimal overheads.
 
+For a detailed technical description, see [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
+
 # Quick Links
 
 + See [Getting Started](docs/getting-started.md) for hands-on instructions for
@@ -161,6 +163,7 @@ minimal overheads.
   for deploying KAR-based applications on a wide range of platforms.
 + Check out our [examples](examples/README.md).
 + Read about the KAR [Programming Model](docs/KAR.md).
++ Read a technical description about KAR's approach to fault tolerance: [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
 + Check out some larger [applications](https://github.com/IBM/kar-apps) that use KAR.
 + Browse the Swagger specification of the [KAR API](https://ibm.github.io/kar/api/redoc/).
 + See [Notes for KAR Developers](docs/kar-dev-hints.md) for detailed
