@@ -133,6 +133,7 @@ var (
 
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
+	topicConfig                                                   = map[string]*string{"retention.ms": strptr("900000"), "segment.ms": strptr("300000")}
 
 	// use rpclib implementation
 	rpcLib bool
@@ -140,6 +141,8 @@ var (
 	// enable cache for actor placement
 	placementCache bool
 )
+
+func strptr(x string) *string { return &x }
 
 // define the flags available on all commands
 func globalOptions(f *flag.FlagSet) {
@@ -151,6 +154,16 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&KafkaConfig.Password, "kafka_password", "", "The SASL password if any")
 	f.StringVar(&KafkaConfig.Version, "kafka_version", "", "Kafka cluster version")
 	f.BoolVar(&KafkaConfig.TLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
+	f.Func("kafka_topic_config", "Kafka topic config: k1=v1,k2=v2,...", func(arg string) error {
+		for _, x := range strings.Split(arg, ",") {
+			kv := strings.Split(x, "=")
+			if len(kv) != 2 {
+				return fmt.Errorf("kafka_topic_config: ill-formed argument: %v", kv)
+			}
+			topicConfig[kv[0]] = strptr(kv[1])
+		}
+		return nil
+	})
 
 	f.StringVar(&RedisConfig.Host, "redis_host", "", "The Redis host")
 	f.IntVar(&RedisConfig.Port, "redis_port", 0, "The Redis port")
@@ -167,8 +180,8 @@ func globalOptions(f *flag.FlagSet) {
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
-	f.BoolVar(&rpcLib, "rpclib", false, "Use rpclib implementation")
-	f.BoolVar(&placementCache, "placement_cache", true, "Enable actor placement cache")
+	f.BoolVar(&rpcLib, "rpclib", true, "Use rpclib implementation")
+	f.BoolVar(&placementCache, "placement_cache", false, "Use actor placement cache")
 }
 
 func init() {
@@ -401,6 +414,8 @@ Available commands:
 			}
 		}
 	}
+
+	KafkaConfig.TopicConfig = topicConfig
 
 	if !RedisConfig.EnableTLS {
 		rtmp := os.Getenv("REDIS_ENABLE_TLS")

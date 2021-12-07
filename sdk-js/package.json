@@ -2,7 +2,7 @@
   "name": "kar-sdk",
   "main": "index.js",
   "types": "index.d.ts",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "KAR SDK for JavaScript and TypeScript",
   "homepage": "https://github.com/IBM/kar",
   "scripts": {
@@ -11,13 +11,13 @@
   "dependencies": {
     "express": "^4.17.1",
     "fetch-retry": "^3.1.0",
-    "morgan": "^1.9.1",
-    "spdy": "^4.0.1"
+    "morgan": "^1.10.0",
+    "spdy": "^4.0.2"
   },
   "devDependencies": {
-    "mocha": "^7.1.1",
+    "mocha": "^9.1.3",
     "pre-commit": "^1.2.2",
-    "standard": "^14.3.3"
+    "standard": "^16.0.4"
   },
   "files": [
     "index.js",

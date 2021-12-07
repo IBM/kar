@@ -8,16 +8,16 @@
   <packaging>jar</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.2.0</version.kar-java-sdk>
+    <version.kar-java-sdk>1.2.1</version.kar-java-sdk>
     <version.java-compiler>11</version.java-compiler>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
 
-    <quarkus-plugin.version>2.2.3.Final</quarkus-plugin.version>
+    <quarkus-plugin.version>2.4.2.Final</quarkus-plugin.version>
     <quarkus.platform.artifact-id>quarkus-universe-bom</quarkus.platform.artifact-id>
     <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
-    <quarkus.platform.version>2.2.3.Final</quarkus.platform.version>
+    <quarkus.platform.version>2.4.2.Final</quarkus.platform.version>
     <surefire-plugin.version>3.0.0-M5</surefire-plugin.version>
   </properties>
 
