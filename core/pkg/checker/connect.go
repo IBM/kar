@@ -44,19 +44,19 @@ func (c *Connection) ConnectClient(appName string) {
 
 	c.ClientCtx, c.ClientCancel = context.WithCancel(context.Background())
 
-	redis_port, is_present := os.LookupEnv("REDIS_PORT")
-	if !is_present {
+	redisPort, isPresent := os.LookupEnv("REDIS_PORT")
+	if !isPresent {
 		log.Print("REDIS_PORT var not set")
 	}
 
-	redis_port_integer, err := strconv.Atoi(redis_port)
+	redisPortInteger, err := strconv.Atoi(redisPort)
 	if err != nil {
 		log.Printf("failed to convert Redis port to an integer value: %v", err)
 		os.Exit(1)
 	}
 
-	redis_host, is_present := os.LookupEnv("REDIS_HOST")
-	if !is_present {
+	redisHost, isPresent := os.LookupEnv("REDIS_HOST")
+	if !isPresent {
 		log.Print("REDIS_HOST var not set")
 	}
 
@@ -65,8 +65,8 @@ func (c *Connection) ConnectClient(appName string) {
 		UnmangleKey:       func(s string) string { return s },
 		RequestRetryLimit: -1 * time.Second,
 		LongOperation:     60 * time.Second,
-		Host:              redis_host,
-		Port:              redis_port_integer,
+		Host:              redisHost,
+		Port:              redisPortInteger,
 	}
 
 	if err := store.Dial(sc); err != nil {
@@ -74,19 +74,19 @@ func (c *Connection) ConnectClient(appName string) {
 		os.Exit(1)
 	}
 
-	kafka_version, is_present := os.LookupEnv("KAFKA_VERSION")
-	if !is_present {
+	kafkaVersion, isPresent := os.LookupEnv("KAFKA_VERSION")
+	if !isPresent {
 		log.Print("KAFKA_VERSION var not set")
 	}
 
-	kafka_brokers, is_present := os.LookupEnv("KAFKA_BROKERS")
-	if !is_present {
+	kafkaBrokers, isPresent := os.LookupEnv("KAFKA_BROKERS")
+	if !isPresent {
 		log.Print("KAFKA_BROKERS var not set")
 	}
 
 	conf := &rpc.Config{
-		Version: kafka_version,
-		Brokers: strings.Split(kafka_brokers, ","),
+		Version: kafkaVersion,
+		Brokers: strings.Split(kafkaBrokers, ","),
 	}
 
 	// start service providing the name of the service
