@@ -38,6 +38,9 @@ jobs:
         - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
+    - name: rpclib-unit-tests
+      script:
+        - make check-rpc
     - name: local-rpclib
       env:
         - KAR_EXTRA_ARGS=-rpclib KAR_JAVA_SDK_OVERRIDE=-Dversion.kar-java-sdk=99.99.99-SNAPSHOT

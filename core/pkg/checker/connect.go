@@ -20,6 +20,8 @@ import (
 	"context"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
@@ -42,23 +44,49 @@ func (c *Connection) ConnectClient(appName string) {
 
 	c.ClientCtx, c.ClientCancel = context.WithCancel(context.Background())
 
+	redis_port, is_present := os.LookupEnv("REDIS_PORT")
+	if !is_present {
+		log.Print("REDIS_PORT var not set")
+	}
+
+	redis_port_integer, err := strconv.Atoi(redis_port)
+	if err != nil {
+		log.Printf("failed to convert Redis port to an integer value: %v", err)
+		os.Exit(1)
+	}
+
+	redis_host, is_present := os.LookupEnv("REDIS_HOST")
+	if !is_present {
+		log.Print("REDIS_HOST var not set")
+	}
+
 	sc := &store.StoreConfig{
 		MangleKey:         func(s string) string { return s },
 		UnmangleKey:       func(s string) string { return s },
 		RequestRetryLimit: -1 * time.Second,
 		LongOperation:     60 * time.Second,
-		Host:              "localhost",
-		Port:              31379,
+		Host:              redis_host,
+		Port:              redis_port_integer,
 	}
 
 	if err := store.Dial(sc); err != nil {
-		log.Printf("failed to connect to Reddis: %v", err)
+		log.Printf("failed to connect to Redis: %v", err)
 		os.Exit(1)
 	}
 
+	kafka_version, is_present := os.LookupEnv("KAFKA_VERSION")
+	if !is_present {
+		log.Print("KAFKA_VERSION var not set")
+	}
+
+	kafka_brokers, is_present := os.LookupEnv("KAFKA_BROKERS")
+	if !is_present {
+		log.Print("KAFKA_BROKERS var not set")
+	}
+
 	conf := &rpc.Config{
-		Version: "2.8.0",
-		Brokers: []string{"localhost:31093"},
+		Version: kafka_version,
+		Brokers: strings.Split(kafka_brokers, ","),
 	}
 
 	// start service providing the name of the service
