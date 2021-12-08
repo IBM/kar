@@ -38,6 +38,11 @@ jobs:
         - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
+    - name: local-rpclib-unit-tests
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - . ./scripts/kar-env-local.sh
+        - make check-rpc
     - name: local-legacy
       env:
         - KAR_EXTRA_ARGS=-rpclib=false KAR_JAVA_SDK_OVERRIDE=-Dversion.kar-java-sdk=99.99.99-SNAPSHOT
