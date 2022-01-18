@@ -16,6 +16,10 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.2.1 - 2021-11-23
++ Use rpclib by default (#218)
++ Add ability to control topic-level message retention (#216, #217)
+
 # KAR 1.2.0 - 2021-11-09
 + Add tail call support to rpclib, SDKs, and use in actors-dp-* examples
 + Document deploying on k3d (supplanting k3s)

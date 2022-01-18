@@ -8,7 +8,7 @@
 
   <groupId>com.ibm.research.kar</groupId>
   <artifactId>kar-java</artifactId>
-  <version>1.2.1-SNAPSHOT</version>
+  <version>1.2.2-SNAPSHOT</version>
 
   <name>kar-java</name>
   <packaging>pom</packaging>
@@ -23,7 +23,7 @@
   <url>https://github.com/IBM/kar/</url>
 
   <properties>
-    <version.java-compiler>11</version.java-compiler>
+    <version.java-release>11</version.java-release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <version.maven-compiler-plugin>3.8.1</version.maven-compiler-plugin>
@@ -34,7 +34,7 @@
     <version.maven-javadoc-plugin>2.9.1</version.maven-javadoc-plugin>
     <version.maven-source-plugin>2.2.1</version.maven-source-plugin>
     <version.versions-maven-plugin>2.7</version.versions-maven-plugin>
-    <version.nexus-staging-maven-plugin>1.6.7</version.nexus-staging-maven-plugin>
+    <version.nexus-staging-maven-plugin>1.6.8</version.nexus-staging-maven-plugin>
 
     <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
     <version.javaee-api>8.0</version.javaee-api>
@@ -140,7 +140,7 @@
 	  <artifactId>maven-compiler-plugin</artifactId>
 	  <version>${version.maven-compiler-plugin}</version>
 	  <configuration>
-	    <release>${version.java-compiler}</release>
+	    <release>${version.java-release}</release>
 	  </configuration>
         </plugin>
 
@@ -172,7 +172,7 @@
             <artifactId>maven-javadoc-plugin</artifactId>
             <version>${version.maven-javadoc-plugin}</version>
             <configuration>
-              <source>8</source>
+              <source>${version.java-release}</source>
               <detectJavaApiLink>false</detectJavaApiLink>
             </configuration>
             <executions>

@@ -29,6 +29,7 @@ type Config struct {
 	Password      string   // Kafka SASL password
 	EnableTLS     bool
 	TLSSkipVerify bool
+	TopicConfig   map[string]*string
 }
 
 // Target of an invocation

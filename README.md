@@ -113,20 +113,47 @@ without having to worry about exhausting the resources of a single process or
 mapping actor instances to processes. In that sense, KAR supports a "serverless"
 experience.
 
-## Exactly-once completion semantics
+## Retry Orchestration
 
-KAR not only facilitate persisting the state of actors, but it also
-transparently persists requests and events until fully processed. More
-precisely, KAR combines three guarantees:
-- an _at-least-once-delivery_ guarantee,
-- an _at-most-one-attempt-at-a-time_ guarantee,
-- a _no-reexecution-upon-success_ guarantee.
+KAR automatically retries failed (i.e., interrupted) actor method invocations.
+Retries are necessary but dangerous. Many other systems
+proactively retry a task when its success is in
+doubt, for
+instance if it has not completed by a deadline. As a result, multiple executions
+of a task may happen concurrently. Worse, two tasks in a sequence may end up
+running concurrently as a spurious retry of the first one overlaps with the
+second. The tasks therefore have to be carefully engineered to be resilient not
+only to sequential retries, but also concurrent retries, and possible
+reordering. By contrast, KAR is designed to better orchestrate retries---retries
+are more constrained---so as to unburden developers from complex non-local
+reasoning.
+
+To start with, KAR guarantees that:
+- a failed invocation is retried
+- retries of this invocation happen one after the other
+- a successful invocation is not retried.
 
 In other words, KAR will try as many times as necessary, making one attempt
 after the other, but not once more than necessary.
+KAR goes beyond individual invocations to offer guarantees about nested
+invocations and chains of invocations.
+- KAR guarantees that a pending
+synchronous invocation is prevented from running if the caller has failed. This
+is because a retry of the caller will repeat the invocation so preserving the
+initial invocation would be problematic.
+- KAR introduces a tail call
+mechanism that makes it possible to transactionally transfer control from one
+actor method to another (of the same or a different actor) so that in a chain of
+invocations, only the last invocation in the chain will be retried even if both
+the caller and callee actors have failed. Developers still have to worry about
+retries typically by making individual actor methods idempotent, but, using tail
+calls, complex code can be broken into smaller pieces that are easier to make
+idempotent.
 
 KAR strives to achieve such guarantees in a dynamic, distributed system with
 minimal overheads.
+
+For a detailed technical description, see [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
 
 # Quick Links
 
@@ -136,6 +163,7 @@ minimal overheads.
   for deploying KAR-based applications on a wide range of platforms.
 + Check out our [examples](examples/README.md).
 + Read about the KAR [Programming Model](docs/KAR.md).
++ Read a technical description about KAR's approach to fault tolerance: [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
 + Check out some larger [applications](https://github.com/IBM/kar-apps) that use KAR.
 + Browse the Swagger specification of the [KAR API](https://ibm.github.io/kar/api/redoc/).
 + See [Notes for KAR Developers](docs/kar-dev-hints.md) for detailed
