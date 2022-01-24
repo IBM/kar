@@ -10,8 +10,6 @@
     "kar-sdk": "^1.2.1"
   },
   "devDependencies": {
-    "mocha": "^7.1.1",
-    "pre-commit": "^1.2.2",
-    "standard": "^14.3.3"
+    "standard": "^16.0.4"
   }
 }
