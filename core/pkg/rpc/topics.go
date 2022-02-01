@@ -47,6 +47,10 @@ func createTopic(conf *Config, topic string, parameters string) error {
 		}
 	} else {
 		err = admin.CreateTopic(topic, &params, false)
+		if err != nil {
+			params.ReplicationFactor = 3
+			err = admin.CreateTopic(topic, &params, false)
+		}
 	}
 	return err
 }
