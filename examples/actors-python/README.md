@@ -19,11 +19,11 @@ This example uses KAR's Actor Programming Model to implement a simple use for ac
 Launch the server:
 
 ```
-kar run -app hello-actor -actors FamousActor python3 server.py
+kar run -app famous-actor -actors FamousActor python3 server.py
 ```
 
 In another terminal launch the client code:
 
 ```
-kar run -app hello-actor python3 client.py
+kar run -app famous-actor python3 client.py
 ```
