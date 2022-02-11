@@ -32,8 +32,7 @@ def main():
     # Send plain text message
     data = "John Doe"
     headers = {'Content-Type': 'text/plain'}
-    response = requests.post(kar_endpoint("call", "python-greeter",
-                                          "helloText"),
+    response = requests.post(kar_endpoint("call", "greeter", "helloText"),
                              data=data,
                              headers=headers)
     print(response.content.decode("utf8"))
@@ -41,15 +40,14 @@ def main():
     # Send JSON message
     data = json.dumps({"name": "John Doe"})
     headers = {'Content-Type': 'application/json'}
-    response = requests.post(kar_endpoint("call", "python-greeter",
-                                          "helloJson"),
+    response = requests.post(kar_endpoint("call", "greeter", "helloJson"),
                              data=data,
                              headers=headers)
     json_content = json.loads(response.content.decode("utf8"))
     print(json_content["greetings"])
 
     # Send health check via GET request
-    response = requests.get(kar_endpoint("call", "python-greeter", "health"))
+    response = requests.get(kar_endpoint("call", "greeter", "health"))
     print(response.content.decode("utf8"))
 
 
