@@ -278,9 +278,13 @@ def actor_runtime(actors):
         if hasattr(actor_type, "activate") and \
            callable(getattr(actor_type, "activate")):
             actor_instance.activate()
-            return (jsonify("activated"), 201)
+            response = make_response("activated", 201)
         else:
-            return (jsonify("created"), 201)
+            response = make_response("created", 201)
+
+        # Send back response:
+        response.headers["Content-Type"] = "plain/text"
+        return response
 
     # Method automatically called by KAR to deactivate an actor instance.
     @actor_server.route(f"{kar_url}/<string:type>/<int:id>",
