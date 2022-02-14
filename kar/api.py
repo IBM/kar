@@ -15,10 +15,13 @@
 
 import aiohttp
 import os
+import sys
+import traceback
 import json
 from flask import Flask, make_response
 from flask import request
 from flask import jsonify
+from werkzeug.exceptions import HTTPException
 
 # -----------------------------------------------------------------------------
 # KAR constants
@@ -108,7 +111,12 @@ async def _actor_request(request, api, body, headers):
             if response.headers['content-type'] != 'application/kar+json':
                 raise RuntimeError(
                     "Response type is not of 'application/kar+json type")
-            return await response.json()
+            response = await response.json()
+            if "error" in response and response["error"]:
+                print(response["stack"], file=sys.stderr)
+                # TODO: is this appropriate?
+                return
+            return response["value"]
 
     raise RuntimeError("Number of retries exceeded")
 
@@ -252,6 +260,20 @@ def actor_runtime(actors):
     # TODO: remove this in final version:
     actor_server.env = "dev"
 
+    @actor_server.errorhandler(Exception)
+    def handle_exception(exception):
+        # HTTP error (TODO):
+        if isinstance(exception, HTTPException):
+            return exception
+
+        # non-HTTP error:
+        body = {}
+        body["error"] = True
+        body["stack"] = traceback.format_exc()
+        response = make_response(jsonify(body), 200)
+        response.headers["Content-Type"] = "application/kar+json"
+        return response
+
     # This method checks if the actor is already active and invokes the
     # activate method if one is provided. This method is automatically invoked
     # by KAR to activate an actor instance.
@@ -393,7 +415,7 @@ def actor_runtime(actors):
             return response
 
         # Return value as JSON and OK code.
-        response = make_response(jsonify(result), 200)
+        response = make_response(jsonify({"value": result}), 200)
         response.headers["Content-Type"] = "application/kar+json"
         return response
 
