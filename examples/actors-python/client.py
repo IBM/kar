@@ -20,7 +20,7 @@ async def test_actor_call():
     famous_actor = actor_proxy("FamousActor", "56868876")
 
     # Set a field value:
-    await actor_call(famous_actor, "set_name", "Meryl Streep")
+    await actor_call(famous_actor, "set_name", "John Smith")
 
     # Get actor name value:
     response = await actor_call(famous_actor, "get_name")

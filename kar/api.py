@@ -52,6 +52,10 @@ max_retries = 10
 # Retry codes:
 retry_codes = [503]
 
+# Constants:
+actor_type_attribute = "type"
+actor_id_attribute = "id"
+
 # -----------------------------------------------------------------------------
 # Constant URLs
 # -----------------------------------------------------------------------------
@@ -245,6 +249,7 @@ def actor_runtime(actors):
         actor_name_to_type[actor_type.__name__] = actor_type
 
     actor_server = Flask(__name__)
+    # TODO: remove this in final version:
     actor_server.env = "dev"
 
     # This method checks if the actor is already active and invokes the
@@ -275,11 +280,10 @@ def actor_runtime(actors):
         _actor_instances[type][id] = actor_instance
 
         # Call an activate method if one is provided:
-        if hasattr(actor_type, "activate") and \
-           callable(getattr(actor_type, "activate")):
+        try:
             actor_instance.activate()
             response = make_response("activated", 201)
-        else:
+        except AttributeError:
             response = make_response("created", 201)
 
         # Send back response:
@@ -296,9 +300,6 @@ def actor_runtime(actors):
             response = make_response(f"no actor type {type}", 404)
             response.headers["Content-Type"] = "plain/text"
             return response
-
-        # Fetch the actual actor type.
-        actor_type = actor_name_to_type[type]
 
         # Check if any instances of this actor exist.
         if type not in _actor_instances:
@@ -317,21 +318,18 @@ def actor_runtime(actors):
         actor_instance = _actor_instances[type][id]
 
         # Get deactivate method by name and check if the method is callable.
-        if hasattr(actor_type, "deactivate"):
-            deactivate_method = getattr(actor_type, "deactivate")
-            if not callable(deactivate_method):
-                response = make_response(
-                    f"no callable deactivate method for actor ({type}, {id})",
-                    404)
-                response.headers["Content-Type"] = "plain/text"
-                return response
-            deactivate_method(actor_instance)
+        # This is an optional method so if the method does not exist do not
+        # error.
+        try:
+            actor_instance.deactivate()
+        except AttributeError:
+            pass
 
         # Remove instance from the list of active actor instances:
         del _actor_instances[type][id]
 
         # Return OK code.
-        return (jsonify("deleted"), 200)
+        return ("deleted", 200)
 
     # Method to call actor methods.
     @actor_server.route(
@@ -368,19 +366,17 @@ def actor_runtime(actors):
         # Fetch the actual actor type.
         actor_type = actor_name_to_type[type]
 
-        # Check the actor type has the requested method.
-        if not hasattr(actor_type, method):
+        # Get actor method by name and check if the method is callable
+        try:
+            actor_method = getattr(actor_type, method)
+            if not callable(actor_method):
+                response = make_response(
+                    f"no method {method} found for actor ({type}, {id})", 404)
+                response.headers["Content-Type"] = "plain/text"
+                return response
+        except AttributeError:
             response = make_response(
                 f"no {method} in actor with type {type} and id {id}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
-
-        # Get actor method by name and check if the method is callable
-        actor_method = getattr(actor_type, method)
-        if not callable(actor_method):
-            response = make_response(
-                f"no callable method {method} found for actor ({type}, {id})",
-                404)
             response.headers["Content-Type"] = "plain/text"
             return response
 
