@@ -74,7 +74,7 @@ sidecar_url_prefix = '/kar/v1'
 # Helper methods
 # -----------------------------------------------------------------------------
 # TODO: Implement backoff strategy for retries
-async def _request(request, api, body, headers):
+async def _request(request, api, body=None, headers=None):
     for i in range(max_retries):
         async with request(api, data=body, headers=headers) as response:
             if response.status >= 200 and response.status < 300:
@@ -151,6 +151,12 @@ async def _get(api, body, headers):
     async with aiohttp.ClientSession(base_url=base_url,
                                      timeout=kar_request_timeout) as client:
         return await _request(client.get, api, body, headers)
+
+
+async def _delete(api):
+    async with aiohttp.ClientSession(base_url=base_url,
+                                     timeout=kar_request_timeout) as client:
+        return await _request(client.delete, api)
 
 
 class KarActor(object):
@@ -236,6 +242,10 @@ async def actor_call(*args, **kwargs):
     return await _actor_post(
         f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}",
         body, {'Content-Type': 'application/kar+json'})
+
+
+async def remove(actor):
+    return await _delete(f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}")
 
 
 def actor_proxy(actor_type, actor_id):
