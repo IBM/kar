@@ -159,12 +159,6 @@ async def _delete(api):
         return await _request(client.delete, api)
 
 
-class KarActor(object):
-    def __init__(self):
-        self.type = None
-        self.id = None
-
-
 async def _actor_post(api, body, headers):
     async with aiohttp.ClientSession(base_url=base_url,
                                      timeout=kar_request_timeout) as client:
@@ -176,7 +170,9 @@ async def _actor_post(api, body, headers):
 # -----------------------------------------------------------------------------
 
 
+#
 # KAR invoke
+#
 # Create a request of the specified `options["method"]` type with an optional
 # body given by `options["body"]` and with content type specified in
 # `options["headers"]` along with other options. The KAR invoke method requires
@@ -196,7 +192,9 @@ async def invoke(service, endpoint, options):
         f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', options)
 
 
+#
 # KAR tell
+#
 # Create an asynchronous call request that does not expect a response back. The
 # method requires the name of the service and that of a service endpoint to be
 # passed along with the request body.
@@ -211,7 +209,9 @@ async def tell(service, endpoint, body):
         })
 
 
+#
 # KAR call
+#
 # Create an asynchronous call request. The method requires the name of the
 # service and that of a service endpoint to be passed along with the request
 # body.
@@ -229,6 +229,99 @@ async def call(service, endpoint, body):
 # -----------------------------------------------------------------------------
 
 
+#
+# Class which represents the generic class of a KAR actor. This class is
+# used in two situations: server side and client side.
+#
+#
+# 1. Server-side usage:
+# On the server side, the class is used as a base class for a user-created KAR
+# actor:
+#
+#   class MyFirstActor(KarActor):
+#       def __init__(self):
+#           pass
+#
+# The KarActor class provides the inheriting class with two attributes: type
+# and id which are used by KAR to uniquely identify an actor. To create a valid
+# actor, it is actually not required to subclass KarActor. A valid KAR actor is
+# a class which has the attributes that the KarActor class defines, currently
+# these are represented by `type` and `id`. To be future-proof to changes to
+# the KarActor class, we recommend using KarActor as a base class for your
+# actors.
+#
+#
+# 2. Client-side:
+# On the client side, the KarActor class is used to represent an client-side
+# instance of the actor. To create a client-side instance:
+#
+#   client_side_actor = proxy_actor("MyFirstActor", 123)
+#
+# The `proxy_actor` is defined below.
+#
+class KarActor(object):
+    def __init__(self):
+        self.type = None
+        self.id = None
+
+
+#
+# Client-side actor instance. The actor instance on the client side is just an
+# instance of the KarActor class which contains two attributes:
+#  - type : an attribute which contains the string name of the actor class.
+#  - id : an attribute which contains the actor ID which is a unique identifier
+#         for the actor. It is the user's responsibility to provide a random,
+#         unique ID which does not clash with other instances of this actor
+#         type.
+# TODO: find a way to provide non-clashing IDs for actors with the same name.
+#
+# For example for the following Python class:
+#
+#   class MyFirstActor(KarActor):
+#
+# create a client-side actor instance:
+#
+#   client_side_actor = proxy_actor("MyFirstActor", 123)
+#
+def actor_proxy(actor_type, actor_id):
+    actor_proxy = KarActor()
+    actor_proxy.type = actor_type
+    actor_proxy.id = actor_id
+    return actor_proxy
+
+
+#
+# This method is used to remotely call actor methods. The methods can be
+# passed arguments and keyword arguments in typical Python style.
+#
+# To call an actor method several steps are required. This is code which
+# typically is written on the client side:
+#
+#
+# 1. Create a client-side actor instance:
+#
+#   client_side_actor = proxy_actor("MyFirstActor", 123)
+#
+# This instance can be created anywhere in the user code including in the
+# same function which calls the actor method. In this example we will call
+# actor creation outside the context of the actor method call itself (see
+# below).
+#
+#
+# 2. Call the desired method actor method ensuring `await` is used. This
+# requires the actor call to occur in an `async` function.
+#
+#   async def call_actor_method(client_side_actor):
+#       return await actor_call(actor, "method_name", arg1, arg2, kwarg1=value)
+#
+#
+# 3. Calling the async function can happen from anywhere in the user code:
+#
+#   asyncio.run(call_actor_method(client_side_actor))
+#
+# Note that `client_side_actor` is passed as argument so create the
+# client-side actor before invoking the `call_actor_method`.
+#
 async def actor_call(*args, **kwargs):
     # Local actor instance which is nothing but a plain KarActor class
     actor = args[0]
@@ -244,15 +337,16 @@ async def actor_call(*args, **kwargs):
         body, {'Content-Type': 'application/kar+json'})
 
 
-async def remove(actor):
+#
+# Request an actor be explicitely removed from the server side. This method is
+# to be called by passing in the client-side actor instance:
+#
+#  await actor_remove(client_side_actor)
+#
+# Note this method must be called from a function marked as `async`.
+#
+async def actor_remove(actor):
     return await _delete(f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}")
-
-
-def actor_proxy(actor_type, actor_id):
-    actor_proxy = KarActor()
-    actor_proxy.type = actor_type
-    actor_proxy.id = actor_id
-    return actor_proxy
 
 
 # -----------------------------------------------------------------------------

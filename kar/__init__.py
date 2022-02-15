@@ -7,12 +7,12 @@ from kar.api import call
 from kar.api import actor_runtime
 from kar.api import actor_proxy
 from kar.api import actor_call
-from kar.api import remove
+from kar.api import actor_remove
 
 # Base actor type
 from kar.api import KarActor
 
 __all__ = [
     'invoke', 'tell', 'call', 'actor_proxy', 'actor_call', 'actor_runtime',
-    'KarActor', 'remove'
+    'KarActor', 'actor_remove'
 ]
