@@ -35,13 +35,24 @@ class FamousActor(KarActor):
     # to update actor state.
     def __init__(self):
         self.name = None
+        self.surname = None
+        self.suffix = None
         self.movies = 0
 
-    def set_name(self, name):
+    def set_name(self, name, surname=None, suffix=None):
         self.name = name
+        if surname:
+            self.surname = surname
+        if suffix:
+            self.suffix = suffix
 
     def get_name(self):
-        return self.name
+        full_name = [self.name]
+        if self.surname:
+            full_name.append(self.surname)
+        if self.suffix:
+            full_name.append(self.suffix)
+        return " ".join(full_name)
 
     def add_movie(self):
         self.movies += 1

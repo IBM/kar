@@ -227,9 +227,12 @@ async def actor_call(*args, **kwargs):
     # Local actor instance which is nothing but a plain KarActor class
     actor = args[0]
     path = args[1]
-    body = json.dumps([])
+    body = {"args": [], "kwargs": {}}
     if len(args) > 2:
-        body = json.dumps(list(args[2:]))
+        body["args"] = list(args[2:])
+    if len(kwargs) > 0:
+        body["kwargs"] = kwargs
+    body = json.dumps(body)
     return await _actor_post(
         f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}",
         body, {'Content-Type': 'application/kar+json'})
@@ -404,7 +407,8 @@ def actor_runtime(actors):
 
         # Call actor method:
         if data:
-            result = actor_method(actor_instance, *data)
+            result = actor_method(actor_instance, *data["args"],
+                                  **data["kwargs"])
         else:
             result = actor_method(actor_instance)
 
