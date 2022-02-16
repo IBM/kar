@@ -18,14 +18,25 @@ package com.ibm.research.kar.example.timeout;
 
 import static com.ibm.research.kar.Kar.Actors.call;
 import static com.ibm.research.kar.Kar.Actors.tell;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+
 import static com.ibm.research.kar.Kar.Actors.ref;
 
+import javax.json.Json;
+import javax.json.JsonNumber;
 import javax.json.JsonString;
+import javax.json.JsonValue;
 
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.ActorSkeleton;
+import com.ibm.research.kar.actor.Reminder;
 import com.ibm.research.kar.actor.annotations.Actor;
 import com.ibm.research.kar.actor.annotations.Remote;
+
+import com.ibm.research.kar.Kar;
 
 @Actor
 public class Test extends ActorSkeleton {
@@ -49,5 +60,26 @@ public class Test extends ActorSkeleton {
   @Remote public void externalA(JsonString target) {
     ActorRef other = ref("Test", target.getString());
     call(other, "A");
+  }
+
+  @Remote public void echo(JsonString msg, JsonNumber count) {
+    int n = count.intValue();
+    for (int i=0; i<n; i++) {
+      System.out.println(getId() + " says "+ msg.getString());
+    }
+  }
+
+  @Remote public void schedule(JsonString a, JsonString b) {
+    Kar.Actors.Reminders.schedule(this, "echo", "12345", Instant.now().plus(2, ChronoUnit.MINUTES), Duration.ofMillis(1000), Json.createValue("hello"), Json.createValue(3));
+    Reminder[] reminders = Kar.Actors.Reminders.get(this, "12345");
+    if ( reminders != null && reminders.length > 0) {
+        System.out.println("Reminder registered with data:"+reminders[0].data());
+    } else {
+        if ( reminders == null) {
+            System.out.println("reminders not defined (null) ");
+        } else {
+            System.out.println("reminders.get() returned empty array for id:"+"12345");
+        }
+    }
   }
 }
