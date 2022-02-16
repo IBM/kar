@@ -101,58 +101,85 @@ public class Kar implements KarHttpConstants {
 		return result;
 	}
 
-	private static Reminder[] toReminderArray(HttpResponse<Buffer> resp) {
+	private static Reminder toReminder(JsonObject jo) {
 		try {
+			String actorType = jo.getJsonObject("Actor").getString("Type");
+			String actorId = jo.getJsonObject("Actor").getString("ID");
+			String id = jo.getString("id");
+			String path = jo.getString("path");
+			String targetTimeString = jo.getString("targetTime");
+			Instant targetTime = Instant.parse(targetTimeString);
+			Duration period = null;
+			if (jo.get("period") != null) {
+				long nanos = ((JsonNumber) jo.get("period")).longValueExact();
+				period = Duration.ofNanos(nanos);
+			}
+			String encodedData = jo.getString("encodedData");
+			return new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, encodedData);
+		} catch (ClassCastException e) {
+			logger.warning("toReminder: Error parsing value as a reminder: " + jo);
+			return null;
+		}
+	}
+
+	private static Reminder[] toReminderArray(HttpResponse<Buffer> resp) {
+		JsonValue val = toJsonValue(resp);
+		if (val instanceof JsonObject) {
+			Reminder r = toReminder((JsonObject)val);
+			return r == null ? new Reminder[0] : new Reminder[] { r };
+		} else if (val instanceof JsonArray) {
 			ArrayList<Reminder> res = new ArrayList<Reminder>();
-			JsonArray ja = toJsonValue(resp).asJsonArray();
-			for (JsonValue jv : ja) {
-				try {
-					JsonObject jo = jv.asJsonObject();
-					String actorType = jo.getJsonObject("Actor").getString("Type");
-					String actorId = jo.getJsonObject("Actor").getString("ID");
-					String id = jo.getString("id");
-					String path = jo.getString("path");
-					String targetTimeString = jo.getString("targetTime");
-					Instant targetTime = Instant.parse(targetTimeString);
-					Duration period = null;
-					if (jo.get("period") != null) {
-						long nanos = ((JsonNumber) jo.get("period")).longValueExact();
-						period = Duration.ofNanos(nanos);
+			for (JsonValue jv : (JsonArray)val) {
+				if (jv instanceof JsonObject) {
+					Reminder r = toReminder((JsonObject)jv);
+					if (r != null) {
+						res.add(r);
 					}
-					String encodedData = jo.getString("encodedData");
-					Reminder r = new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, encodedData);
-					res.add(r);
-				} catch (ClassCastException e) {
-					logger.warning("toReminderArray: Dropping unexpected element " + jv);
+				} else {
+					logger.warning("toReminderArray: Skipping array element value: "+jv);
 				}
 			}
 			return res.toArray(new Reminder[res.size()]);
-		} catch (ClassCastException e) {
+		} else {
+			logger.warning("toReminderArray: Unexpected response: "+val);
 			return new Reminder[0];
 		}
 	}
 
-	@SuppressWarnings("unused")
-	private static Subscription[] toSubscriptionArray(HttpResponse<Buffer> resp) {
+	private static Subscription toSubscription(JsonObject jo) {
 		try {
+			String actorType = jo.getJsonObject("Actor").getString("Type");
+			String actorId = jo.getJsonObject("Actor").getString("ID");
+			String id = jo.getString("id");
+			String path = jo.getString("path");
+			String topic = jo.getString("topic");
+			return new Subscription(Actors.ref(actorType, actorId), id, path, topic);
+		} catch (ClassCastException e) {
+			logger.warning("toSubscription: Error parsing value as a Subscription" + jo);
+			return null;
+		}
+	}
+
+	private static Subscription[] toSubscriptionArray(HttpResponse<Buffer> resp) {
+		JsonValue val = toJsonValue(resp);
+		if (val instanceof JsonObject) {
+			Subscription s = toSubscription((JsonObject)val);
+			return s == null ? new Subscription[0] : new Subscription[] { s };
+		} else if (val instanceof JsonArray) {
 			ArrayList<Subscription> res = new ArrayList<Subscription>();
-			JsonArray ja = toJsonValue(resp).asJsonArray();
-			for (JsonValue jv : ja) {
-				try {
-					JsonObject jo = jv.asJsonObject();
-					String actorType = jo.getJsonObject("Actor").getString("Type");
-					String actorId = jo.getJsonObject("Actor").getString("ID");
-					String id = jo.getString("id");
-					String path = jo.getString("path");
-					String topic = jo.getString("topic");
-					Subscription s = new Subscription(Actors.ref(actorType, actorId), id, path, topic);
-					res.add(s);
-				} catch (ClassCastException e) {
-					logger.warning("toReminderArray: Dropping unexpected element " + jv);
+			for (JsonValue jv : (JsonArray)val) {
+				if (jv instanceof JsonObject) {
+					Subscription s = toSubscription((JsonObject)jv);
+					if (s != null) {
+						res.add(s);
+					}
+				} else {
+					logger.warning("toSubscriptionArray: Skipping array element value: "+jv);
 				}
 			}
 			return res.toArray(new Subscription[res.size()]);
-		} catch (ClassCastException e) {
+		} else {
+			logger.warning("toSubscriptionArray: Unexpected response: "+val);
 			return new Subscription[0];
 		}
 	}
