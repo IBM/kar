@@ -58,6 +58,7 @@ jobs:
       python: 3.8
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
         - . ./scripts/kar-env-local.sh
         - sh ./ci/testPythonLocal.sh
     - name: containerized-python
