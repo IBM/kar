@@ -115,7 +115,8 @@ public class Kar implements KarHttpConstants {
 				period = Duration.ofNanos(nanos);
 			}
 			String encodedData = jo.getString("encodedData");
-			return new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, encodedData);
+			JsonArray args = readerFactory.createReader(new StringReader(encodedData)).readArray();
+			return new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, args.toArray());
 		} catch (ClassCastException e) {
 			logger.warning("toReminder: Error parsing value as a reminder: " + jo);
 			return null;
