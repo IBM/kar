@@ -63,7 +63,7 @@ dockerBuildCore: docker-python-sdk
 	cd sdk-java && docker build -f Dockerfile.liberty -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.quarkus -t $(KAR_JAVA_REACTIVE_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 
-docker-python-examples:
+docker-python-examples: docker-python-sdk
 	cd examples/actors-python && docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED) .
 
 dockerBuildExamples: docker-python-examples
