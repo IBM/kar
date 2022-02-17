@@ -57,9 +57,7 @@ jobs:
       script:
         - sudo apt-get update
         - sudo apt-get install python3.8
-        - which python
-        - which pip
-        - whereis python3.8
+        - python --version
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - make python-sdk || travis_terminate 1
