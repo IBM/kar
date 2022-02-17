@@ -53,6 +53,13 @@ jobs:
         - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
+    - name: local-python
+      language: python
+      python: 3.8
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - . ./scripts/kar-env-local.sh
+        - ./ci/testPythonLocal.sh
     - name: containerized-python
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
