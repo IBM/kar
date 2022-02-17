@@ -110,7 +110,7 @@ dockerPushBenchmarks:
 	docker push $(KAFKA_BENCH)
 	docker push $(KAR_HTTP_BENCH_JS_IMAGE)
 
-docker-run-python-examples: docker-python-examples
+docker-run-containerized-python-examples: docker-python-examples
 	docker run --network kar-bus --add-host=host.docker.internal:host-gateway $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
 
 docker:
