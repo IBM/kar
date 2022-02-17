@@ -54,8 +54,6 @@ jobs:
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
     - name: local-python
-      language: python
-      python: 3.8
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
