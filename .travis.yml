@@ -55,6 +55,8 @@ jobs:
         - ./ci/testJavaLocal.sh
     - name: local-python
       script:
+        - sudo apt-get update
+        - sudo apt-get install python3
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - make python-sdk || travis_terminate 1
