@@ -59,7 +59,7 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - . ./scripts/kar-env-local.sh
-        - ./ci/testPythonLocal.sh
+        - sh ./ci/testPythonLocal.sh
     - name: containerized-python
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
