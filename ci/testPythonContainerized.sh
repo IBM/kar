@@ -19,8 +19,19 @@
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
+KAR_PYTHON_SDK=${DOCKER_IMAGE_PREFIX}kar-sdk-python-v1:${DOCKER_IMAGE_TAG}
+KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED=
+
+
 # Run containerized version of actors-python. Inside the container
 # the example runs locally.
 echo "*** Testing examples/actors-python ***"
 
-docker run --network kar-bus --add-host=host.docker.internal:host-gateway kar-examples-actors-python-containerized
+# Move into the example directory:
+cd examples/actors-python
+
+# Build the example image for the containerized example:
+docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$KAR_PYTHON_SDK -t $KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED .
+
+# Run the example inside a docker container:
+docker run --network kar-bus --add-host=host.docker.internal:host-gateway $KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED

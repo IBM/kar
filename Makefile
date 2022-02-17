@@ -50,16 +50,23 @@ cli:
 check-rpc:
 	cd core/rpctest && go test
 
-dockerBuildCore:
+docker-kar-base:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
+
+docker-python-sdk: docker-kar-base
+	cd python && docker build -t $(KAR_PYTHON_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
+
+dockerBuildCore: docker-python-sdk
 	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.builder -t $(KAR_JAVA_SDK) .
 	cd sdk-java && docker build -f Dockerfile.liberty -t $(KAR_JAVA_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
 	cd sdk-java && docker build -f Dockerfile.quarkus -t $(KAR_JAVA_REACTIVE_RUNTIME) --build-arg KAR_BASE=$(KAR_BASE) .
-    cd python && docker build -t $(KAR_PYTHON_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 
-dockerBuildExamples:
+docker-python-examples:
+	cd examples/actors-python && docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED) .
+
+dockerBuildExamples: docker-python-examples
 	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
 	cd examples/actors-events && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_EVENTS) .
 	cd examples/actors-ykt && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_YKT) .
@@ -68,23 +75,27 @@ dockerBuildExamples:
 	cd examples/actors-dp-java && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_DP) .
 	cd examples/actors-dp-java-reactive && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_REACTIVE_RUNTIME) -t $(KAR_EXAMPLE_JAVA_REACTIVE_DP) .
 	cd examples/service-hello-java/server && docker build --build-arg JAVA_BUILDER=$(KAR_JAVA_SDK) --build-arg JAVA_RUNTIME=$(KAR_JAVA_RUNTIME) -t $(KAR_EXAMPLE_JAVA_HELLO) .
-    cd examples/actors-python && docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED) .
 
 dockerBuildBenchmarks:
 	cd benchmark/kar-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_BENCH_JS_IMAGE) .
 	cd benchmark/kafka-bench && docker build -t $(KAFKA_BENCH) .
 	cd benchmark/http-bench && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_HTTP_BENCH_JS_IMAGE) .
 
-dockerPushCore:
+docker-push-python-sdk:
+	docker push $(KAR_PYTHON_SDK)
+
+dockerPushCore: docker-push-python-sdk
 	docker push $(KAR_BASE)
 	docker push $(KAR_INJECTOR)
 	docker push $(KAR_JS_SDK)
 	docker push $(KAR_JAVA_SDK)
 	docker push $(KAR_JAVA_RUNTIME)
 	docker push $(KAR_JAVA_REACTIVE_RUNTIME)
-	docker push $(KAR_PYTHON_SDK)
 
-dockerPushExamples:
+docker-push-python-examples:
+	docker push $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
+
+dockerPushExamples: docker-push-python-examples
 	docker push $(KAR_EXAMPLE_JS_EVENTS)
 	docker push $(KAR_EXAMPLE_JS_DP)
 	docker push $(KAR_EXAMPLE_JS_YKT)
@@ -93,12 +104,14 @@ dockerPushExamples:
 	docker push $(KAR_EXAMPLE_JAVA_DP)
 	docker push $(KAR_EXAMPLE_JAVA_REACTIVE_DP)
 	docker push $(KAR_EXAMPLE_JAVA_HELLO)
-	docker push $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
 
 dockerPushBenchmarks:
 	docker push $(KAR_BENCH_JS_IMAGE)
 	docker push $(KAFKA_BENCH)
 	docker push $(KAR_HTTP_BENCH_JS_IMAGE)
+
+docker-run-python-examples: docker-python-examples
+	docker run --network kar-bus --add-host=host.docker.internal:host-gateway $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
 
 docker:
 	make dockerBuildCore
