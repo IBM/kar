@@ -53,6 +53,10 @@ jobs:
         - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
+    - name: containerized-python
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - ./ci/testPythonContainerized.sh
     - name: local-released
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kar import actor_call, actor_proxy, actor_remove
+from kar import actor_call, actor_proxy, call
 import asyncio
 
 
@@ -38,7 +38,8 @@ async def test_actor_call():
     response = await actor_call(famous_actor, "get_movies")
     print("Movies:", response)
 
-    await actor_remove(famous_actor)
+    # await actor_call(famous_actor, "exit")
+    await call("actor-server", "shutdown", None)
 
 
 def main():

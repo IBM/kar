@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from kar import actor_runtime, KarActor
+from flask import request
 import os
 
 # KAR app port
@@ -60,10 +61,20 @@ class FamousActor(KarActor):
     def get_movies(self):
         return self.movies
 
+    def exit(self):
+        pass
+
 
 if __name__ == '__main__':
     # Register actor type with the KAR runtime.
     app = actor_runtime([FamousActor])
+
+    @app.post('/shutdown')
+    def shutdown():
+        shutdown_function = request.environ.get('werkzeug.server.shutdown')
+        if shutdown_function is not None:
+            shutdown_function()
+        return 'disconnected.', 200
 
     # Run the actor server.
     app.run(host=kar_app_host, port=kar_app_port)

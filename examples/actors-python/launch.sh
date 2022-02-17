@@ -1,4 +1,7 @@
-# Copyright IBM Corporation 2020,2021,2022
+#!/bin/bash
+
+#
+# Copyright IBM Corporation 2020,2021
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,22 +14,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
 
-from setuptools import setup
+set -e
 
-setup(
-    name='kar',
-    long_description="KAR Python SDK.",
-    packages=['kar'],
-    install_requires=['flask>=2.0.2', 'aiohttp>=3.8.0', 'asyncio>=3.4.3'],
-    version="1.2.1",
-    python_requires='>=3.6',
-    description='KAR Python SDK.',
-    license='Apache 2.0',
-    author='KAR authors',
-    url='https://github.com/IBM/kar',
-    project_urls={
-        'Bug Reports': 'https://github.com/IBM/kar/issues',
-        'Source': 'https://github.com/IBM/kar',
-    },
-)
+# Run the server:
+( kar run -app hello-actor -actors FamousActor -service actor-server python3 server/server.py ) &
+
+# Run the client:
+kar run -app hello-actor python3 client/client.py
