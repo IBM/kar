@@ -55,10 +55,10 @@ jobs:
         - ./ci/testJavaLocal.sh
     - name: local-python
       script:
-        - sudo apt-get update
-        - sudo apt-get install python3.8
-        - pyenv global 3.8
-        - python --version
+        - sudo apt-get update || travis_terminate 1
+        - sudo apt-get install python3.8 || travis_terminate 1
+        - pyenv global 3.8 || travis_terminate 1
+        - python --version || travis_terminate 1
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
         - make python-sdk || travis_terminate 1
