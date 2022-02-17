@@ -16,6 +16,7 @@
 
 package com.ibm.research.kar;
 
+import java.io.StringReader;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -36,6 +37,7 @@ import javax.json.JsonBuilderFactory;
 import javax.json.JsonNumber;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.JsonReaderFactory;
 import javax.json.JsonValue;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
@@ -64,6 +66,7 @@ public class Kar {
 	private static final KarSidecar sidecar = instantiateSidecar();
 
 	private static final JsonBuilderFactory factory = Json.createBuilderFactory(Map.of());
+	private static final JsonReaderFactory readerFactory = Json.createReaderFactory(Map.of());
 
 	private Kar() {
 	}
@@ -145,7 +148,8 @@ public class Kar {
 				period = Duration.ofNanos(nanos);
 			}
 			String encodedData = jo.getString("encodedData");
-			return new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, encodedData);
+			JsonArray args = readerFactory.createReader(new StringReader(encodedData)).readArray();
+			return new Reminder(Actors.ref(actorType, actorId), id, path, targetTime, period, args.toArray());
 		} catch (ClassCastException e) {
 			logger.warning("toReminder: Error parsing value as a reminder: " + jo);
 			return null;

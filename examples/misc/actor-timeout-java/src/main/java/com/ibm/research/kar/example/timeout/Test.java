@@ -73,7 +73,7 @@ public class Test extends ActorSkeleton {
     Kar.Actors.Reminders.schedule(this, "echo", "12345", Instant.now().plus(2, ChronoUnit.MINUTES), Duration.ofMillis(1000), Json.createValue("hello"), Json.createValue(3));
     Reminder[] reminders = Kar.Actors.Reminders.get(this, "12345");
     if ( reminders != null && reminders.length > 0) {
-        System.out.println("Reminder registered with data:"+reminders[0].data());
+        System.out.println("Reminder registered with arguments:"+reminders[0].getArgument(0) + " " + reminders[0].getArgument(1));
     } else {
         if ( reminders == null) {
             System.out.println("reminders not defined (null) ");

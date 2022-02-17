@@ -25,15 +25,15 @@ public final class Reminder {
   private final String path;
   private final Instant targetTime;
   private final Duration period;
-  private final String data;
+  private final Object[] arguments;
 
-  public Reminder(ActorRef actor, String ID, String path, Instant targetTime, Duration period, String data) {
+  public Reminder(ActorRef actor, String ID, String path, Instant targetTime, Duration period, Object[] arguments) {
     this.actor = actor;
     this.ID = ID;
     this.path = path;
     this.targetTime = targetTime;
     this.period = period;
-    this.data = data;
+    this.arguments = arguments;
   }
 
   public ActorRef getActor() {
@@ -56,12 +56,16 @@ public final class Reminder {
     return this.period;
   }
 
-  public String data() {
-    return this.data;
+  public Object[] getArguments() {
+    return this.arguments;
+  }
+
+  public Object getArgument(int n) {
+    return this.arguments[n];
   }
 
   public String toString() {
     return "{" + " ActorType: " + this.actor.getType() + ", ActorId: " + this.actor.getId() + ", ID: " + this.ID
-        + ", targetTime: " + this.targetTime + ", period: " + this.period.toString() + ", data: " + this.data + "}";
+        + ", targetTime: " + this.targetTime + ", period: " + this.period.toString() + ", args: " + this.arguments + "}";
   }
 }
