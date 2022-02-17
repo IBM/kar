@@ -50,6 +50,9 @@ cli:
 check-rpc:
 	cd core/rpctest && go test
 
+python-sdk:
+	cd python && pip3 install -e .
+
 docker-kar-base:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
