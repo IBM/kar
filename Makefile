@@ -92,7 +92,7 @@ dockerPushCore: docker-push-python-sdk
 	docker push $(KAR_JAVA_RUNTIME)
 	docker push $(KAR_JAVA_REACTIVE_RUNTIME)
 
-docker-push-python-examples:
+docker-push-python-examples: docker-python-examples
 	docker push $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
 
 dockerPushExamples: docker-push-python-examples

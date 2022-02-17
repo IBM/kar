@@ -56,7 +56,7 @@ jobs:
     - name: containerized-python
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
-        - make docker-run-python-examples
+        - make docker-run-containerized-python-examples
     - name: local-released
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
