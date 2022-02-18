@@ -16,6 +16,15 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.2.2 - 2022-02-18
++ Updated npm and maven packages to resolve CVEs (various)
++ Update Kafka version to 2.8.1 (#240)
++ Bump Quarkus from 2.2.3.Final to 2.4.2.Final (#232)
++ Improvements in Java SDKs for getReminders (#238, #245, #246, #247)
++ Improve log message for dropped tells (#249)
++ Fix for default replication factor for Event Streams (#237)
++ Add unit testing infrastructure and RPC library testing (#222)
+
 # KAR 1.2.1 - 2021-11-23
 + Use rpclib by default (#218)
 + Add ability to control topic-level message retention (#216, #217)
