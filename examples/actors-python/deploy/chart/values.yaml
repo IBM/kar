@@ -16,5 +16,4 @@
 
 image: localhost:5000/kar/kar-examples-actors-python-cluster
 verbose: info
-replicas: 4
-noSidecar: false
+replicas: 1
