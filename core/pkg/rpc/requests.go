@@ -65,6 +65,9 @@ func accept(ctx context.Context, msg Message) {
 		ch <- result
 	case CallRequest:
 		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		if ctx.Err() == context.Canceled {
+			return
+		}
 		if dest == nil {
 			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
@@ -78,6 +81,9 @@ func accept(ctx context.Context, msg Message) {
 		}
 	case TellRequest:
 		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		if ctx.Err() == context.Canceled {
+			return
+		}
 		if errMsg != "" {
 			logger.Warning("tell %s returned an error: %s", m.requestID(), errMsg)
 		}
