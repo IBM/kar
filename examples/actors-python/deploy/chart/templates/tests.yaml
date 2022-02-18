@@ -17,9 +17,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: actors-python-client
+  name: actor-client
   labels:
-    name: actors-python-client
+    name: actors-client
   annotations:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded

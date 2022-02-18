@@ -17,18 +17,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: actors-python-server
+  name: actor-server
   labels:
-    name: actors-python-server
+    name: actor-server
 spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
-      name: actors-python-server
+      name: actor-server
   template:
     metadata:
       labels:
-        name: actors-python-server
+        name: actor-server
       annotations:
         kar.ibm.com/app: actors-py
         kar.ibm.com/actors: FamousActor
