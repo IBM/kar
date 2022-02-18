@@ -78,8 +78,8 @@ if helm test actors-py; then
     helm delete actors-py
 else
     echo "FAILED: In cluster actors-python failed."
-    kubectl logs actors-python-client -c client
-    kubectl logs actors-python-client -c kar
+    kubectl logs actor-client -c client
+    kubectl logs actor-client -c kar
     kubectl delete pod actors-python-client
     helm delete actors-py
     exit 1

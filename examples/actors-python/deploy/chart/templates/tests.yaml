@@ -19,7 +19,7 @@ kind: Pod
 metadata:
   name: actor-client
   labels:
-    name: actors-client
+    name: actor-client
   annotations:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded
