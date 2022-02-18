@@ -44,9 +44,11 @@ kar_app_port = os.getenv("KAR_APP_PORT")
 
 # KAR request timeout in seconds
 kar_request_timeout = 10
-request_timeout = int(os.getenv("KAR_REQUEST_TIMEOUT"))
-if request_timeout >= 0:
-    kar_request_timeout = request_timeout
+request_timeout = os.getenv("KAR_REQUEST_TIMEOUT")
+if request_timeout is not None:
+    request_timeout = int(os.getenv("KAR_REQUEST_TIMEOUT"))
+    if request_timeout >= 0:
+        kar_request_timeout = request_timeout
 kar_request_timeout = aiohttp.ClientTimeout(total=kar_request_timeout)
 
 # Number of retries:
