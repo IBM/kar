@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright IBM Corporation 2020,2021
+# Copyright IBM Corporation 2020,2021,2022
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +16,7 @@
 # limitations under the License.
 #
 
-set -e
+SCRIPTDIR=$(cd $(dirname "$0") && pwd)
+CODEDIR="$SCRIPTDIR/.."
 
-# Run the server:
-( kar run -app hello-actor -actors FamousActor -service actor-server python3 server/server.py ) &
-
-# Wait for server to start:
-sleep 2
-
-# Run the client:
-kar run -app hello-actor python3 client/client.py
+kar run -app actors-python -actors FamousActor -service actor-server python3 $CODEDIR/server/server.py

@@ -68,3 +68,19 @@ else
     helm delete ykt-sc
     exit 1
 fi
+
+echo "*** Running in-cluster actors-python ***"
+
+helm install actors-py $ROOTDIR/examples/actors-python/deploy/chart --set image=localhost:5000/kar/kar-examples-actors-python-cluster
+
+if helm test actors-py; then
+    echo "PASSED! In cluster actors-python passed."
+    helm delete actors-py
+else
+    echo "FAILED: In cluster actors-python failed."
+    kubectl logs actors-python-client -c client
+    kubectl logs actors-python-client -c kar
+    kubectl delete pod actors-python-client
+    helm delete actors-py
+    exit 1
+fi

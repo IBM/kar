@@ -1,7 +1,5 @@
-#!/bin/bash
-
 #
-# Copyright IBM Corporation 2020,2021
+# Copyright IBM Corporation 2020,2021,2022
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,13 +14,21 @@
 # limitations under the License.
 #
 
-set -e
-
-# Run the server:
-( kar run -app hello-actor -actors FamousActor -service actor-server python3 server/server.py ) &
-
-# Wait for server to start:
-sleep 2
-
-# Run the client:
-kar run -app hello-actor python3 client/client.py
+apiVersion: v1
+kind: Pod
+metadata:
+  name: actors-python-client
+  labels:
+    name: actors-python-client
+  annotations:
+    helm.sh/hook: test-success
+    helm.sh/hook-delete-policy: hook-succeeded
+    kar.ibm.com/app: actors-py
+    kar.ibm.com/verbose: {{ .Values.verbose }}
+spec:
+  restartPolicy: Never
+  containers:
+  - name: client
+    image: {{ .Values.image }}
+    command: ["python3"]
+    args: ["client/client.py"]
