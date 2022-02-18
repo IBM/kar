@@ -80,7 +80,7 @@ else
     echo "FAILED: In cluster actors-python failed."
     kubectl logs actor-client -c client
     kubectl logs actor-client -c kar
-    kubectl delete pod actors-python-client
+    kubectl delete pod actor-client
     helm delete actors-py
     exit 1
 fi
