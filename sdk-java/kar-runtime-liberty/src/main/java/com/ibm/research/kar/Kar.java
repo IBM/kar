@@ -175,7 +175,9 @@ public class Kar {
 			}
 			return res.toArray(new Reminder[res.size()]);
 		} else {
-			logger.warning("toReminderArray: Unexpected response: "+val);
+			if (!val.equals(JsonValue.NULL)) {
+				logger.warning("toReminderArray: Unexpected response: "+val);
+			}
 			return new Reminder[0];
 		}
 	}
@@ -213,7 +215,9 @@ public class Kar {
 			}
 			return res.toArray(new Subscription[res.size()]);
 		} else {
-			logger.warning("toSubscriptionArray: Unexpected response: "+val);
+			if (!val.equals(JsonValue.NULL)) {
+				logger.warning("toSubscriptionArray: Unexpected response: "+val);
+			}
 			return new Subscription[0];
 		}
 	}
