@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ var (
 
 func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) (*Destination, []byte, string) {
 	if !deadline.IsZero() && deadline.Before(time.Now()) {
-		return nil, nil, "deadline expired"
+		return nil, nil, fmt.Sprintf("deadline expired: deadline was %v and it is now %v", deadline, time.Now())
 	}
 	f := handlers[method]
 	if f == nil {
@@ -85,7 +86,7 @@ func accept(ctx context.Context, msg Message) {
 			return
 		}
 		if errMsg != "" {
-			logger.Warning("tell %s returned an error: %s", m.requestID(), errMsg)
+			logger.Warning("tell %s to %v returned an error: %s", m.requestID(), m.target(), errMsg)
 		}
 		if dest == nil {
 			if _, ok := m.target().(Node); !ok {
