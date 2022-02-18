@@ -71,6 +71,7 @@ npm notice total files:   5
 5. copy in kar-x.y.z.tgz
 5. `helm repo index charts --url https://ibm.github.io/kar/charts`
 6. Commit updated index.yaml and new kar-x.y.z.tgz to gh-pages
+7. switch back to release-prep branch
 
 ### Update examples to use new SDKs
 
@@ -101,7 +102,7 @@ npm notice total files:   5
 ### Cleanup
 
 1. Change Java-SDK pom to x.y.(z+1)-SNAPSHOT
-`mvn versions:set -DnewVersion=x.y.(+1)-SNAPSHOT`
+`mvn versions:set -DnewVersion=x.y.(z+1)-SNAPSHOT`
 
 2. PR version changes to main.
 
