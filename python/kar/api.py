@@ -370,14 +370,15 @@ _actor_instances = {}
 kar_url = "/kar/impl/v1/actor"
 
 
-def actor_runtime(actors):
+def actor_runtime(actors, actor_server=None):
     actor_name_to_type = {}
     for actor_type in actors:
         actor_name_to_type[actor_type.__name__] = actor_type
 
-    actor_server = Flask(__name__)
-    # TODO: remove this in final version:
-    actor_server.env = "dev"
+    if actor_server is None:
+        actor_server = Flask(__name__)
+        # TODO: remove this in final version:
+        actor_server.env = "dev"
 
     @actor_server.errorhandler(Exception)
     def handle_exception(exception):
