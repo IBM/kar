@@ -354,6 +354,13 @@ async def actor_remove(actor):
     return await _delete(f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}")
 
 
+#
+# Shutdown the sidecar associated with the current context.
+#
+async def shutdown():
+    return await _post(f"{sidecar_url_prefix}/system/shutdown", None, None)
+
+
 # -----------------------------------------------------------------------------
 # Server actor methods
 # -----------------------------------------------------------------------------

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kar import actor_call, actor_proxy, call
+from kar import actor_call, actor_proxy, tell, shutdown
 import asyncio
 
 
@@ -39,11 +39,17 @@ async def test_actor_call():
     print("Movies:", response)
 
     # await actor_call(famous_actor, "exit")
-    await call("actor-server", "shutdown", None)
+    await tell("actor-server-service", "shutdown", None)
+
+    print("SUCCESS")
+
+    # Shutdown the sidecar:
+    await shutdown()
 
 
 def main():
     asyncio.run(test_actor_call())
+    return 0
 
 
 if __name__ == "__main__":

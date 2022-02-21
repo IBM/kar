@@ -31,7 +31,7 @@ spec:
         name: actor-server
       annotations:
         kar.ibm.com/app: actors-py
-        kar.ibm.com/service: actor-server
+        kar.ibm.com/service: actor-server-service
         kar.ibm.com/actors: FamousActor
         kar.ibm.com/verbose: {{ .Values.verbose }}
     spec:
