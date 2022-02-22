@@ -53,6 +53,21 @@ jobs:
         - npm i -g yalc && ./scripts/setup-yalc.sh || travis_terminate 1
         - ./ci/testJSLocal.sh
         - ./ci/testJavaLocal.sh
+    - name: local-python
+      script:
+        - sudo apt-get update || travis_terminate 1
+        - sudo apt-get install python3.8 || travis_terminate 1
+        - pyenv global 3.8 || travis_terminate 1
+        - python --version || travis_terminate 1
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
+        - make python-sdk || travis_terminate 1
+        - . ./scripts/kar-env-local.sh
+        - sh ./ci/testPythonLocal.sh
+    - name: containerized-python
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make docker-run-containerized-python-examples
     - name: local-released
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
@@ -63,7 +78,8 @@ jobs:
       script:
         - ./scripts/kind-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
-        - make docker || travis_terminate 1
+        - make docker-js || travis_terminate 1
+        - make docker-python || travis_terminate 1
         - ./scripts/kar-k8s-deploy.sh || travis_terminate 1
         - ./ci/testInCluster.sh
     - stage: deploy
