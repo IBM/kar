@@ -78,7 +78,8 @@ jobs:
       script:
         - ./scripts/kind-start.sh || travis_terminate 1
         - make cli || travis_terminate 1
-        - make docker || travis_terminate 1
+        - make docker-js || travis_terminate 1
+        - make docker-python || travis_terminate 1
         - ./scripts/kar-k8s-deploy.sh || travis_terminate 1
         - ./ci/testInCluster.sh
     - stage: deploy
