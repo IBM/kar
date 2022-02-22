@@ -131,7 +131,6 @@ dockerPushCore:
 
 # PUSH EXAMPLES images
 docker-push-python-examples: docker-python-examples
-	docker push $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
 	docker push $(KAR_EXAMPLE_ACTORS_PYTHON_CLUSTER)
 
 docker-push-js-examples: docker-js-examples
