@@ -14,6 +14,7 @@
 #
 
 import aiohttp
+import asyncio
 import os
 import sys
 import traceback
@@ -377,8 +378,7 @@ def actor_runtime(actors, actor_server=None):
 
     if actor_server is None:
         actor_server = Flask(__name__)
-        # TODO: remove this in final version:
-        actor_server.env = "dev"
+        # actor_server.env = "dev"
 
     @actor_server.errorhandler(Exception)
     def handle_exception(exception):
@@ -477,7 +477,7 @@ def actor_runtime(actors, actor_server=None):
     @actor_server.route(
         f"{kar_url}/<string:type>/<int:id>/<string:session>/<string:method>",
         methods=['POST'])
-    def post(type, id, session, method):
+    async def post(type, id, session, method):
         # Check that the message has JSON type.
         if not request.is_json:
             response = make_response("message data not in JSON format", 404)
@@ -525,12 +525,22 @@ def actor_runtime(actors, actor_server=None):
         # Call actor method:
         if data:
             if isinstance(data, list):
-                result = actor_method(actor_instance, *data)
+                if asyncio.iscoroutinefunction(actor_method):
+                    result = await actor_method(actor_instance, *data)
+                else:
+                    result = actor_method(actor_instance, *data)
             else:
-                result = actor_method(actor_instance, *data["args"],
-                                      **data["kwargs"])
+                if asyncio.iscoroutinefunction(actor_method):
+                    result = await actor_method(actor_instance, *data["args"],
+                                                **data["kwargs"])
+                else:
+                    result = actor_method(actor_instance, *data["args"],
+                                          **data["kwargs"])
         else:
-            result = actor_method(actor_instance)
+            if asyncio.iscoroutinefunction(actor_method):
+                result = await actor_method(actor_instance)
+            else:
+                result = actor_method(actor_instance)
 
         # If no result was returned, return undefined.
         if result is None:
