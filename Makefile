@@ -52,7 +52,7 @@ check-rpc:
 	cd core/rpctest && go test
 
 python-sdk:
-	cd python && pip install .
+	cd sdk-python && pip install .
 
 
 # BUILD BASE images
@@ -63,7 +63,7 @@ docker-kar-base:
 
 # BUILD SDK images
 docker-python-sdk: docker-kar-base
-	cd python && docker build -t $(KAR_PYTHON_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
+	cd sdk-python && docker build -t $(KAR_PYTHON_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
 
 docker-js-sdk: docker-kar-base
 	cd sdk-js && docker build -t $(KAR_JS_SDK) --build-arg KAR_BASE=$(KAR_BASE) .
