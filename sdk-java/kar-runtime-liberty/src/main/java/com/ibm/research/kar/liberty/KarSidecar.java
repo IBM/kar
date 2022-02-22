@@ -60,28 +60,24 @@ public interface KarSidecar {
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Produces(MediaType.TEXT_PLAIN)
 	public Response tellDelete(@PathParam("service") String service, @PathParam("path") String path);
 
 	@PATCH
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Produces(MediaType.TEXT_PLAIN)
 	public Response tellPatch(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@POST
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Produces(MediaType.TEXT_PLAIN)
 	public Response tellPost(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	@PUT
 	@Path("service/{service}/call/{path}")
 	@ClientHeaderParam(name = "Pragma", value = "async")
 	@Retry(maxRetries = KarConfig.MAX_RETRY)
-	@Produces(MediaType.TEXT_PLAIN)
 	public Response tellPut(@PathParam("service") String service, @PathParam("path") String path, JsonValue params);
 
 	// synchronous service invocation, returns invocation result
