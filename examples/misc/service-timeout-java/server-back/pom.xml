@@ -4,13 +4,13 @@
 
   <groupId>com.ibm.research.kar.example</groupId>
   <artifactId>kar-timeout-server-back</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
   <packaging>war</packaging>
 
   <parent>
     <groupId>com.ibm.research.kar.example</groupId>
     <artifactId>kar-service-timeout</artifactId>
-    <version>1.2.2</version>
+    <version>1.2.3</version>
   </parent>
 
   <dependencies>

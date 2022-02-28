@@ -5,7 +5,7 @@
 
   <groupId>com.ibm.research.kar.example</groupId>
   <artifactId>kar-hello-service</artifactId>
-  <version>1.2.2</version>
+  <version>1.2.3</version>
   <packaging>pom</packaging>
 
   <modules>
