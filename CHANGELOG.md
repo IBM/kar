@@ -16,6 +16,9 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.2.3 - 2022-02-28
++ JavaSDK: fix @Produces annotation on Service.tell* routes in OpenLiberty sidecar (#254)
+
 # KAR 1.2.2 - 2022-02-18
 + Updated npm and maven packages to resolve CVEs (various)
 + Update Kafka version to 2.8.1 (#240)
