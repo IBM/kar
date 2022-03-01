@@ -14,9 +14,7 @@
 # limitations under the License.
 #
 
-ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v12
-
-FROM $JS_RUNTIME
+FROM node:12-alpine
 
 WORKDIR /kar/app
 
@@ -29,3 +27,5 @@ RUN npm install --prod
 
 # Copy in application source
 COPY *.js ./
+
+CMD cd /kar/app && node $MAIN
