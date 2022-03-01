@@ -24,8 +24,8 @@ import (
 	"sync"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/store"
 )
 
@@ -146,8 +146,8 @@ func putBinding(ctx context.Context, kind string, actor Actor, id, payload strin
 	if len(keys) > 0 { // reuse existing key
 		key = keys[0]
 		successCode = http.StatusOK
-	} else { // new key with random partition
-		p := rpc.ChoosePartition()
+	} else { // new key using partition assigned to handle bindings
+		p := rpc.BindingPartition()
 		key = bindingKey(kind, actor, strconv.Itoa(int(p)), id)
 		successCode = http.StatusNoContent
 	}

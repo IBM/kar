@@ -27,7 +27,7 @@ import (
 	"net/http"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/Shopify/sarama"
 	"github.com/julienschmidt/httprouter"
 )

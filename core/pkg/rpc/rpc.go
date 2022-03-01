@@ -139,6 +139,11 @@ func GetPartition() int32 {
 	return getPartition()
 }
 
+// BindingPartition
+func BindingPartition() int32 {
+	return 0
+}
+
 // GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
 // TODO: fix hack, for now returns the set {0} as this method is only used to reload bindings
 func GetPartitions() ([]int32, <-chan struct{}) {
