@@ -30,8 +30,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/store"
 )
 
@@ -329,7 +329,7 @@ Available commands:
 		ServiceName = "kar.none"
 	}
 
-	rpc.UsePlacementCache(placementCache)
+	rpc.PlacementCache = placementCache
 
 	if actorTypes == "" {
 		ActorTypes = make([]string, 0)

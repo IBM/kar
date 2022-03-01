@@ -27,8 +27,8 @@ import (
 	"time"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 // Actor uniquely identifies an actor instance.

@@ -24,7 +24,7 @@ import (
 	"sync"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
+	"github.com/IBM/kar/core/pkg/rpc"
 )
 
 // source describes an event source (subscription)

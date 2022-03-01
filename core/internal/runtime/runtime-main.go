@@ -38,8 +38,8 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/IBM/kar/core/internal/config"
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/julienschmidt/httprouter"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

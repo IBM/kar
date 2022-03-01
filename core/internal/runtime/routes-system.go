@@ -27,8 +27,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBM/kar/core/internal/rpc"
 	"github.com/IBM/kar/core/pkg/logger"
+	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/julienschmidt/httprouter"
 )
 
