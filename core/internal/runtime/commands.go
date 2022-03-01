@@ -344,11 +344,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	var reason map[string]string
 	e, fresh, err, reason = actor.acquire(ctx, session, msg)
 	if err != nil {
-		if err == errActorHasMoved {
-			// TODO: This code path will not possible with the new rpc library; eventually delete this branch
-			err = rpc.Tell(ctx, rpc.Destination{Target: target, Method: actorEndpoint}, time.Time{}, value) // forward
-			return nil, nil, nil
-		} else if err == errActorAcquireTimeout {
+		if err == errActorAcquireTimeout {
 			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
 			logger.Error("%s", payload)
 			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
