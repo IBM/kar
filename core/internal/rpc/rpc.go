@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"math/rand"
 	"time"
 
 	rpclib "github.com/IBM/kar/core/pkg/rpc"
@@ -38,151 +37,94 @@ type Result = rpclib.Result
 // A Publisher makes it possible to publish events to Kafka
 type Publisher = rpclib.Publisher
 
-// which implementation to use
-var rpcLib = false
-
 // use new implementation
-func UseRpcLib(placementCache bool) {
-	rpcLib = true
+func UsePlacementCache(placementCache bool) {
 	rpclib.PlacementCache = placementCache
 }
 
 // Register method handler
 func Register(method string, handler Handler) {
-	if rpcLib {
-		rpclib.Register(method, handler)
-	} else {
-		register(method, handler)
-	}
+	rpclib.Register(method, handler)
 }
 
 // Connect to Kafka
 func Connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
-	if rpcLib {
-		return rpclib.Connect(ctx, topic, conf, services...)
-	}
-	return connect(ctx, topic, conf, services...)
+	return rpclib.Connect(ctx, topic, conf, services...)
 }
 
 // Call method and wait for result
 func Call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
-	if rpcLib {
-		return rpclib.Call(ctx, dest, deadline, value)
-	}
-	return call(ctx, dest, deadline, value)
+	return rpclib.Call(ctx, dest, deadline, value)
 }
 
 // Call method and return immediately (result will be discarded)
 func Tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
-	if rpcLib {
-		return rpclib.Tell(ctx, dest, deadline, value)
-	}
-	return tell(ctx, dest, deadline, value)
+	return rpclib.Tell(ctx, dest, deadline, value)
 }
 
 // Call method and return a request id and a result channel
 func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
-	if rpcLib {
-		return rpclib.Async(ctx, dest, deadline, value)
-	}
-	return async(ctx, dest, deadline, value)
+	return rpclib.Async(ctx, dest, deadline, value)
 }
 
 // Reclaim resources associated with async request id
 func Reclaim(requestID string) {
-	if rpcLib {
-		rpclib.Reclaim(requestID)
-	} else {
-		reclaim(requestID)
-	}
+	rpclib.Reclaim(requestID)
 }
 
 // GetTopology returns a map from node ids to services
 func GetTopology() (map[string][]string, <-chan struct{}) {
-	if rpcLib {
-		return rpclib.GetTopology()
-	}
-	return getTopology()
+	return rpclib.GetTopology()
 }
 
 // GetServices returns the sorted list of services currently available
 func GetServices() ([]string, <-chan struct{}) {
-	if rpcLib {
-		return rpclib.GetServices()
-	}
-	return getServices()
+	return rpclib.GetServices()
 }
 
 // GetAllSessions returns a map from Session names to all known IDs for each name
 func GetAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string][]string, error) {
-	if rpcLib {
-		return rpclib.GetAllSessions(ctx, sessionPrefixFilter)
-	}
-	return getAllSessions(ctx, sessionPrefixFilter)
+	return rpclib.GetAllSessions(ctx, sessionPrefixFilter)
 }
 
 // GetNodeID returns the node id for the current node
 func GetNodeID() string {
-	if rpcLib {
-		return rpclib.GetNodeID()
-	}
-	return getNodeID()
+	return rpclib.GetNodeID()
 }
 
 // GetNodeIDs returns the sorted list of live node ids and a channel to be notified of changes
 func GetNodeIDs() ([]string, <-chan struct{}) {
-	if rpcLib {
-		return rpclib.GetNodeIDs()
-	}
-	return getNodeIDs()
+	return rpclib.GetNodeIDs()
 }
 
 // GetServiceNodeIDs returns the sorted list of live node ids for a given service
 func GetServiceNodeIDs(service string) ([]string, <-chan struct{}) {
-	if rpcLib {
-		return rpclib.GetServiceNodeIDs(service)
-	}
-	return getServiceNodeIDs(service)
+	return rpclib.GetServiceNodeIDs(service)
 }
 
 // GetPartition returns the partition for the current node
 func GetPartition() int32 {
-	if rpcLib {
-		return rpclib.GetPartition()
-	}
-	return getPartition()
+	return rpclib.GetPartition()
 }
 
 // GetPartitions returns the sorted list of partitions in use and a channel to be notified of changes
 func GetPartitions() ([]int32, <-chan struct{}) {
-	if rpcLib {
-		return rpclib.GetPartitions()
-	}
-	return getPartitions()
+	return rpclib.GetPartitions()
 }
 
 // GetSessionNodeId returns the node responsible for the specified session if defined or "" if not
 func GetSessionNodeID(ctx context.Context, session Session) (string, error) {
-	if rpcLib {
-		return rpclib.GetSessionNodeID(ctx, session)
-	}
-	return getSessionNodeID(ctx, session)
+	return rpclib.GetSessionNodeID(ctx, session)
 }
 
 // DelSession forgets the node id responsible for the specified session
 func DelSession(ctx context.Context, session Session) error {
-	if rpcLib {
-		return rpclib.DelSession(ctx, session)
-	}
-	return delSession(ctx, session)
+	return rpclib.DelSession(ctx, session)
 }
 
 // CreateTopic attempts to create the specified topic using the given parameters
 func CreateTopic(conf *Config, topic string, parameters string) error {
-	if rpcLib {
-		return rpclib.CreateTopic(conf, topic, parameters)
-	}
-	return createTopic(conf, topic, parameters)
+	return rpclib.CreateTopic(conf, topic, parameters)
 }
 
 // DeleteTopic attempts to delete the specified topic
@@ -192,24 +134,14 @@ func DeleteTopic(conf *Config, topic string) error {
 
 // NewPublisher returns a new event publisher
 func NewPublisher(conf *Config) (Publisher, error) {
-	if rpcLib {
-		return rpclib.NewPublisher(conf)
-	}
-	return newPublisher(conf)
+	return rpclib.NewPublisher(conf)
 }
 
 // Subscribe to a topic
 func Subscribe(ctx context.Context, conf *Config, topic, group string, oldest bool, dest Destination, transform Transformer) (<-chan struct{}, error) {
-	if rpcLib {
-		return rpclib.Subscribe(ctx, conf, topic, group, oldest, dest, transform)
-	}
-	return subscribe(ctx, conf, topic, group, oldest, dest, transform)
+	return rpclib.Subscribe(ctx, conf, topic, group, oldest, dest, transform)
 }
 
 func ChoosePartition() int32 {
-	if rpcLib {
-		return 0
-	}
-	ps, _ := GetPartitions()
-	return ps[rand.Int31n(int32(len(ps)))]
+	return 0
 }

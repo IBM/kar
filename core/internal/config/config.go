@@ -135,9 +135,6 @@ var (
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
 	topicConfig                                                   = map[string]*string{"retention.ms": strptr("900000"), "segment.ms": strptr("300000")}
 
-	// use rpclib implementation
-	rpcLib bool
-
 	// enable cache for actor placement
 	placementCache bool
 )
@@ -180,7 +177,6 @@ func globalOptions(f *flag.FlagSet) {
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
-	f.BoolVar(&rpcLib, "rpclib", true, "Use rpclib implementation")
 	f.BoolVar(&placementCache, "placement_cache", false, "Use actor placement cache")
 }
 
@@ -333,9 +329,7 @@ Available commands:
 		ServiceName = "kar.none"
 	}
 
-	if rpcLib {
-		rpc.UseRpcLib(placementCache)
-	}
+	rpc.UsePlacementCache(placementCache)
 
 	if actorTypes == "" {
 		ActorTypes = make([]string, 0)
