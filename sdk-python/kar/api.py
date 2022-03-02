@@ -13,16 +13,15 @@
 # limitations under the License.
 #
 
-import aiohttp
+import httpx
 import asyncio
 import os
 import sys
 import traceback
 import json
-from flask import Flask, make_response
-from flask import request
-from flask import jsonify
-from werkzeug.exceptions import HTTPException
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi import HTTPException
 
 # -----------------------------------------------------------------------------
 # KAR constants
@@ -44,13 +43,12 @@ if os.getenv("KAR_APP_PORT") is None:
 kar_app_port = os.getenv("KAR_APP_PORT")
 
 # KAR request timeout in seconds
-kar_request_timeout = 10
+kar_request_timeout = 15
 request_timeout = os.getenv("KAR_REQUEST_TIMEOUT")
 if request_timeout is not None:
     request_timeout = int(os.getenv("KAR_REQUEST_TIMEOUT"))
     if request_timeout >= 0:
         kar_request_timeout = request_timeout
-kar_request_timeout = aiohttp.ClientTimeout(total=kar_request_timeout)
 
 # Number of retries:
 max_retries = 10
@@ -79,47 +77,50 @@ sidecar_url_prefix = '/kar/v1'
 # TODO: Implement backoff strategy for retries
 async def _request(request, api, body=None, headers=None):
     for i in range(max_retries):
-        async with request(api, data=body, headers=headers) as response:
-            if response.status >= 200 and response.status < 300:
-                if response.headers['content-type'] == 'application/json':
-                    return await response.json()
-                return await response.text()
-            if response.status not in retry_codes:
-                raise aiohttp.ClientResponseError(
-                    response.request_info,
-                    response.history,
-                    status=response.status,
-                    message=response.reason,
-                )
+        if body is None:
+            response = await request(api, headers=headers)
+        else:
+            response = await request(api, data=body, headers=headers)
+        if response.status_code >= 200 and response.status_code < 300:
+            if response.headers['content-type'] == 'application/json':
+                response = response.json()
+                if "error" in response and response["error"]:
+                    print(response["stack"], file=sys.stderr)
+                    return
+                return response
+            return response.text
+        if response.status_code not in retry_codes:
+            raise httpx.HTTPStatusError(response.text, response.request,
+                                        response)
     raise RuntimeError("Number of retries exceeded")
 
 
 # TODO: Implement backoff strategy for retries
 async def _actor_request(request, api, body, headers):
     for i in range(max_retries):
-        async with request(api, data=body, headers=headers) as response:
-            if response.status == 204:
-                return await response.text()
-            if response.status == 202:
-                return response.text()
-            if response.status in retry_codes:
-                continue
-            if response.status != 200:
-                raise aiohttp.ClientResponseError(
-                    response.request_info,
-                    response.history,
-                    status=response.status,
-                    message=response.reason,
-                )
-            if response.headers['content-type'] != 'application/kar+json':
-                raise RuntimeError(
-                    "Response type is not of 'application/kar+json type")
-            response = await response.json()
-            if "error" in response and response["error"]:
-                print(response["stack"], file=sys.stderr)
-                # TODO: is this appropriate?
-                return
-            return response["value"]
+        if body is None:
+            response = await request(api, headers=headers)
+        else:
+            response = await request(api, data=body, headers=headers)
+        if response.status_code == 204:
+            return response.text
+        if response.status_code == 202:
+            return response.text
+        if response.status_code in retry_codes:
+            continue
+        if response.status_code != 200:
+            raise httpx.HTTPStatusError(response.text,
+                                        request=response.request,
+                                        response=response)
+        if response.headers['content-type'] != 'application/kar+json':
+            raise RuntimeError(
+                "Response type is not of 'application/kar+json type")
+        response = response.json()
+        if "error" in response and response["error"]:
+            print(response["stack"], file=sys.stderr)
+            # TODO: is this appropriate?
+            return
+        return response["value"]
 
     raise RuntimeError("Number of retries exceeded")
 
@@ -131,8 +132,10 @@ async def _fetch(api, options):
     headers = {'Content-Type': 'text/plain'}
     if "headers" in options:
         headers = options["headers"]
-    async with aiohttp.ClientSession(base_url=base_url,
-                                     timeout=kar_request_timeout) as client:
+    async with httpx.AsyncClient(base_url=base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
         method = client.get
         if "method" in options:
             method_name = options["method"]
@@ -145,26 +148,34 @@ async def _fetch(api, options):
 
 
 async def _post(api, body, headers):
-    async with aiohttp.ClientSession(base_url=base_url,
-                                     timeout=kar_request_timeout) as client:
+    async with httpx.AsyncClient(base_url=base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
         return await _request(client.post, api, body, headers)
 
 
 async def _get(api, body, headers):
-    async with aiohttp.ClientSession(base_url=base_url,
-                                     timeout=kar_request_timeout) as client:
+    async with httpx.AsyncClient(base_url=base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
         return await _request(client.get, api, body, headers)
 
 
 async def _delete(api):
-    async with aiohttp.ClientSession(base_url=base_url,
-                                     timeout=kar_request_timeout) as client:
+    async with httpx.AsyncClient(base_url=base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
         return await _request(client.delete, api)
 
 
 async def _actor_post(api, body, headers):
-    async with aiohttp.ClientSession(base_url=base_url,
-                                     timeout=kar_request_timeout) as client:
+    async with httpx.AsyncClient(base_url=base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
         return await _actor_request(client.post, api, body, headers)
 
 
@@ -190,9 +201,10 @@ async def _actor_post(api, body, headers):
 #
 #        response = await invoke(service_name, endpoint_name, options)
 #
-async def invoke(service, endpoint, options):
-    return await _fetch(
-        f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', options)
+def invoke(service, endpoint, options):
+    return asyncio.create_task(
+        _fetch(f'{sidecar_url_prefix}/service/{service}/call/{endpoint}',
+               options))
 
 
 #
@@ -204,12 +216,13 @@ async def invoke(service, endpoint, options):
 #
 # The content type for this type of requests is always `application/json`.
 #
-async def tell(service, endpoint, body):
-    return await _post(
-        f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', body, {
-            'Content-Type': 'application/json',
-            'Pragma': 'async'
-        })
+def tell(service, endpoint, body):
+    return asyncio.create_task(
+        _post(f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', body,
+              {
+                  'Content-Type': 'application/json',
+                  'Pragma': 'async'
+              }))
 
 
 #
@@ -221,10 +234,10 @@ async def tell(service, endpoint, body):
 #
 # The content type for this type of requests is always `application/json`.
 #
-async def call(service, endpoint, body):
-    return await _post(
-        f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', body,
-        {'Content-Type': 'application/json'})
+def call(service, endpoint, body):
+    return asyncio.create_task(
+        _post(f'{sidecar_url_prefix}/service/{service}/call/{endpoint}', body,
+              {'Content-Type': 'application/json'}))
 
 
 # -----------------------------------------------------------------------------
@@ -325,7 +338,7 @@ def actor_proxy(actor_type, actor_id):
 # Note that `client_side_actor` is passed as argument so create the
 # client-side actor before invoking the `call_actor_method`.
 #
-async def actor_call(*args, **kwargs):
+def actor_call(*args, **kwargs):
     # Local actor instance which is nothing but a plain KarActor class
     actor = args[0]
     path = args[1]
@@ -338,9 +351,10 @@ async def actor_call(*args, **kwargs):
     elif len(args) > 2:
         body = args[2:]
     body = json.dumps(body)
-    return await _actor_post(
-        f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}",
-        body, {'Content-Type': 'application/kar+json'})
+    return asyncio.create_task(
+        _actor_post(
+            f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}",
+            body, {'Content-Type': 'application/kar+json'}))
 
 
 #
@@ -351,15 +365,17 @@ async def actor_call(*args, **kwargs):
 #
 # Note this method must be called from a function marked as `async`.
 #
-async def actor_remove(actor):
-    return await _delete(f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}")
+def actor_remove(actor):
+    return asyncio.create_task(
+        _delete(f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}"))
 
 
 #
 # Shutdown the sidecar associated with the current context.
 #
-async def shutdown():
-    return await _post(f"{sidecar_url_prefix}/system/shutdown", None, None)
+def shutdown():
+    return asyncio.create_task(
+        _post(f"{sidecar_url_prefix}/system/shutdown", None, None))
 
 
 # -----------------------------------------------------------------------------
@@ -377,11 +393,12 @@ def actor_runtime(actors, actor_server=None):
         actor_name_to_type[actor_type.__name__] = actor_type
 
     if actor_server is None:
-        actor_server = Flask(__name__)
-        # actor_server.env = "dev"
+        actor_server = FastAPI()
 
-    @actor_server.errorhandler(Exception)
-    def handle_exception(exception):
+    @actor_server.exception_handler(Exception)
+    async def exception_handler(request: Request, exception: Exception):
+        # print(f"OMG! An HTTP error!: {repr(exception)}", flush=True)
+        # return await http_exception_handler(request, exc)
         # HTTP error (TODO):
         if isinstance(exception, HTTPException):
             return exception
@@ -390,27 +407,26 @@ def actor_runtime(actors, actor_server=None):
         body = {}
         body["error"] = True
         body["stack"] = traceback.format_exc()
-        response = make_response(jsonify(body), 200)
-        response.headers["Content-Type"] = "application/kar+json"
-        return response
+        return JSONResponse(status_code=200,
+                            content=body,
+                            headers={"Content-Type": "application/kar+json"})
 
     # This method checks if the actor is already active and invokes the
     # activate method if one is provided. This method is automatically invoked
     # by KAR to activate an actor instance.
-    @actor_server.route(f"{kar_url}/<string:type>/<int:id>", methods=['GET'])
-    def get(type, id):
+    @actor_server.get(f"{kar_url}/" + "{type}/{id}")
+    def get(type: str, id: int):
+        print("CALL GET!!", type, id, flush=True)
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
-            response = make_response(f"no actor type {type}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(status_code=404,
+                                     content=f"no actor type {type}")
 
         # Send response that actor exists.
         if type in _actor_instances and id in _actor_instances[type]:
-            response = make_response("existing instance", 200)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(status_code=200,
+                                     content="existing instance")
 
         # Create the actor instance:
         actor_type = actor_name_to_type[type]
@@ -424,37 +440,33 @@ def actor_runtime(actors, actor_server=None):
         # Call an activate method if one is provided:
         try:
             actor_instance.activate()
-            response = make_response("activated", 201)
+            response = PlainTextResponse(status_code=201, content="activated")
         except AttributeError:
-            response = make_response("created", 201)
+            response = PlainTextResponse(status_code=201, content="created")
 
         # Send back response:
-        response.headers["Content-Type"] = "plain/text"
         return response
 
     # Method automatically called by KAR to deactivate an actor instance.
-    @actor_server.route(f"{kar_url}/<string:type>/<int:id>",
-                        methods=['DELETE'])
-    def delete(type, id):
+    @actor_server.delete(f"{kar_url}/" + "{type}/{id}")
+    def delete(type: str, id: int):
+        print("CALL DELETE!!", type, id, flush=True)
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
-            response = make_response(f"no actor type {type}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(status_code=404,
+                                     content=f"no actor type {type}")
 
         # Check if any instances of this actor exist.
         if type not in _actor_instances:
-            response = make_response(f"no instances of actor type {type}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(
+                status_code=404, content=f"no instances of actor type {type}")
 
         # Check if the actor instance we are looking for exists.
         if id not in _actor_instances[type]:
-            response = make_response("no actor with type {type} and id {id}",
-                                     404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(
+                status_code=404,
+                content=f"no actor with type {type} and id {id}")
 
         # Retrieve actor instance
         actor_instance = _actor_instances[type][id]
@@ -471,36 +483,34 @@ def actor_runtime(actors, actor_server=None):
         del _actor_instances[type][id]
 
         # Return OK code.
-        return ("deleted", 200)
+        return PlainTextResponse(status_code=200, content="deleted")
 
     # Method to call actor methods.
-    @actor_server.route(
-        f"{kar_url}/<string:type>/<int:id>/<string:session>/<string:method>",
-        methods=['POST'])
-    async def post(type, id, session, method):
+    @actor_server.post(f"{kar_url}" + "/{type}/{id}/{session}/{method}")
+    async def post(type: str, id: int, session: str, method: str,
+                   request: Request):
         # Check that the message has JSON type.
-        if not request.is_json:
-            response = make_response("message data not in JSON format", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+        if not request.headers['content-type'] in [
+                "application/kar+json", "application/json"
+        ]:
+            return PlainTextResponse(status_code=404,
+                                     content="message data not in JSON format")
 
         # Parse input data as JSON if any is provided
-        data = None
-        if request.data:
-            data = request.get_json()
+        data = await request.body()
+        data = data.decode("utf8")
+        data = json.loads(data)
 
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
-            response = make_response(f"no actor type {type}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(status_code=404,
+                                     content=f"no actor type {type}")
 
         # If the type exists check that the id exists.
         if type in _actor_instances and id not in _actor_instances[type]:
-            response = make_response(f"no actor type {type} with id {id}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(
+                status_code=404, content=f"no actor type {type} with id {id}")
 
         # Retrieve actor instance
         actor_instance = _actor_instances[type][id]
@@ -512,15 +522,13 @@ def actor_runtime(actors, actor_server=None):
         try:
             actor_method = getattr(actor_type, method)
             if not callable(actor_method):
-                response = make_response(
-                    f"no method {method} found for actor ({type}, {id})", 404)
-                response.headers["Content-Type"] = "plain/text"
-                return response
+                return PlainTextResponse(
+                    status_code=404,
+                    content=f"{method} not found for actor ({type}, {id})")
         except AttributeError:
-            response = make_response(
-                f"no {method} in actor with type {type} and id {id}", 404)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(
+                status_code=404,
+                content=f"no {method} in actor with type {type} and id {id}")
 
         # Call actor method:
         if data:
@@ -544,36 +552,29 @@ def actor_runtime(actors, actor_server=None):
 
         # If no result was returned, return undefined.
         if result is None:
-            response = make_response("undefined", 204)
-            response.headers["Content-Type"] = "plain/text"
-            return response
+            return PlainTextResponse(status_code=204)
 
         # Return value as JSON and OK code.
-        response = make_response(jsonify({"value": result}), 200)
-        response.headers["Content-Type"] = "application/kar+json"
-        return response
+        return JSONResponse(status_code=200,
+                            content={"value": result},
+                            headers={"Content-Type": "application/kar+json"})
 
     # Check that the actor type has been registered with KAR.
     # This method is automatically called by KAR to check if the actor type
     # still exists.
-    @actor_server.route(f"{kar_url}/<string:type>", methods=['HEAD'])
-    def head(type):
+    @actor_server.head(f"{kar_url}/" + "{type}")
+    def head(type: str):
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
-            response = make_response(f"no actor type {type}", 404)
-            response.headers["Content-Type"] = "text/plain"
-            return response
+            return PlainTextResponse(status_code=404,
+                                     content=f"no actor type {type}")
 
-        response = make_response("OK", 200)
-        response.headers["Content-Type"] = "text/plain"
-        return response
+        return PlainTextResponse(status_code=200, content="OK")
 
     # Health check route.
-    @actor_server.route("/kar/impl/v1/system/health", methods=['GET'])
+    @actor_server.get("/kar/impl/v1/system/health")
     def health():
-        response = make_response("Peachy Keen!", 200)
-        response.headers["Content-Type"] = "text/plain"
-        return response
+        return PlainTextResponse(status_code=200, content="Peachy Keen!")
 
     return actor_server

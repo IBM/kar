@@ -19,8 +19,8 @@ setup(
     long_description="KAR Python SDK.",
     packages=['kar'],
     install_requires=[
-        'flask>=2.0.2', 'flask[async]>=2.0.2', 'aiohttp>=3.8.0',
-        'asyncio>=3.4.3'
+        'hypercorn>=0.13.2', 'fastapi>=0.74.1', 'httpx>=0.22.0',
+        'httpx[http2]', 'aiohttp>=3.8.0', 'asyncio>=3.4.3'
     ],
     version="1.2.1",
     python_requires='>=3.6',

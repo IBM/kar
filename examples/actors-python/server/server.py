@@ -13,8 +13,10 @@
 # limitations under the License.
 
 from kar import actor_runtime, KarActor
-from flask import request
+from hypercorn.config import Config
+from hypercorn.asyncio import serve
 import os
+import asyncio
 
 # KAR app port
 if os.getenv("KAR_APP_PORT") is None:
@@ -26,6 +28,14 @@ kar_app_port = os.getenv("KAR_APP_PORT")
 kar_app_host = '127.0.0.1'
 if os.getenv("KAR_APP_HOST") is not None:
     kar_app_host = os.getenv("KAR_APP_HOST")
+
+# Setup server:
+config = Config()
+config.bind = [f"{kar_app_host}:{kar_app_port}"]
+config.alpn_protocols = ['h2']
+
+# Shutdown event:
+shutdown_event = asyncio.Event()
 
 
 # Actors are represented by classes that extend the KAR's KarActor
@@ -61,20 +71,17 @@ class FamousActor(KarActor):
     def get_movies(self):
         return self.movies
 
-    def exit(self):
-        pass
-
 
 if __name__ == '__main__':
     # Register actor type with the KAR runtime.
     app = actor_runtime([FamousActor])
 
     @app.post('/shutdown')
-    def shutdown():
-        shutdown_function = request.environ.get('werkzeug.server.shutdown')
-        if shutdown_function is not None:
-            shutdown_function()
-        return 'disconnected.', 200
+    async def shutdown():
+        shutdown_event.set()
+        return "shutdown"
 
     # Run the actor server.
-    app.run(host=kar_app_host, port=kar_app_port)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        serve(app, config, shutdown_trigger=shutdown_event.wait))
