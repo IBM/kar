@@ -397,8 +397,6 @@ def actor_runtime(actors, actor_server=None):
 
     @actor_server.exception_handler(Exception)
     async def exception_handler(request: Request, exception: Exception):
-        # print(f"OMG! An HTTP error!: {repr(exception)}", flush=True)
-        # return await http_exception_handler(request, exc)
         # HTTP error (TODO):
         if isinstance(exception, HTTPException):
             return exception
@@ -416,7 +414,6 @@ def actor_runtime(actors, actor_server=None):
     # by KAR to activate an actor instance.
     @actor_server.get(f"{kar_url}/" + "{type}/{id}")
     def get(type: str, id: int):
-        print("CALL GET!!", type, id, flush=True)
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
@@ -450,7 +447,6 @@ def actor_runtime(actors, actor_server=None):
     # Method automatically called by KAR to deactivate an actor instance.
     @actor_server.delete(f"{kar_url}/" + "{type}/{id}")
     def delete(type: str, id: int):
-        print("CALL DELETE!!", type, id, flush=True)
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
