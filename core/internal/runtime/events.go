@@ -25,6 +25,7 @@ import (
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/rpc"
+	"github.com/google/uuid"
 )
 
 // source describes an event source (subscription)
@@ -183,6 +184,7 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		msg := map[string]string{
 			"command": "tell", // post with no callback expected
 			"path":    s.Path,
+			"flow":    uuid.New().String(),
 			"payload": "[" + arg + "]"}
 
 		return json.Marshal(msg)
