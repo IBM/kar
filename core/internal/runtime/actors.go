@@ -82,7 +82,7 @@ var (
 )
 
 // acquire locks the actor, session must be not be ""
-// "exclusive" and "reminder" are reserved session names
+// "exclusive" and "nonexclusive" are reserved session names
 // acquire returns true if actor requires activation before invocation
 func (actor Actor) acquire(ctx context.Context, session string, msg map[string]string) (*actorEntry, bool, error, map[string]string) {
 	e := &actorEntry{actor: actor, lock: make(chan struct{}, 1)}
@@ -100,7 +100,7 @@ func (actor Actor) acquire(ctx context.Context, session string, msg map[string]s
 					<-e.lock
 					return e, false, nil, nil
 				}
-				if session == "reminder" || session != "exclusive" && session == e.session { // reenter existing session
+				if session == "nonexclusive" || session != "exclusive" && session == e.session { // reenter existing session
 					e.depth++
 					<-e.lock
 					return e, false, nil, nil

@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -43,12 +42,14 @@ const (
 	actorRuntimeRoutePrefix = "/kar/impl/v1/actor/"
 
 	actorEndpoint   = "handlerActor"
+	bindingEndpoint = "handlerBinding"
 	serviceEndpoint = "handlerService"
 	sidecarEndpoint = "handlerSidecar"
 )
 
 func init() {
 	rpc.Register(actorEndpoint, handlerActor)
+	rpc.Register(bindingEndpoint, handlerBinding)
 	rpc.Register(serviceEndpoint, handlerService)
 	rpc.Register(sidecarEndpoint, handlerSidecar)
 }
@@ -172,7 +173,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	msg := map[string]string{
 		"bindingId":    bindingID,
 		"kind":         kind,
-		"command":      "binding:" + action,
+		"command":      action,
 		"nilOnAbsent":  nilOnAbsent,
 		"content-type": contentType,
 		"accept":       accept,
@@ -181,7 +182,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: bindingEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -232,10 +233,10 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	}
 }
 
-// LoadBinding sends a binding:load message to the target actor
+// LoadBinding sends a load message to the bindingEndpoint the sidecar that hosts the target actor
 func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
-		"command":   "binding:load",
+		"command":   "load",
 		"kind":      kind,
 		"partition": strconv.Itoa(int(partition)),
 		"bindingId": bindingID}
@@ -243,7 +244,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, time.Time{}, bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: bindingEndpoint}, time.Time{}, bytes)
 	}
 }
 
@@ -314,7 +315,7 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsSession, ok := target.(rpc.Session)
 	if !ok {
-		return nil, nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
+		return nil, nil, fmt.Errorf("Protocol mismatch: handlerActor with target %v", target)
 	}
 	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
 	var reply []byte = nil
@@ -329,9 +330,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	// Determine session to use when acquiring actor instance lock
 	session := msg["session"]
 	if session == "" {
-		if strings.HasPrefix(msg["command"], "binding:") {
-			session = "reminder"
-		} else if msg["command"] == "delete" {
+		if msg["command"] == "delete" {
 			session = "exclusive"
 		} else {
 			session = uuid.New().String() // start new session
@@ -357,26 +356,6 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 
 	// We now have the lock on the actor instance.
 	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
-
-	if session == "reminder" { // do not activate actor
-		switch msg["command"] {
-		case "binding:del":
-			reply, err = bindingDel(ctx, actor, msg)
-		case "binding:get":
-			reply, err = bindingGet(ctx, actor, msg)
-		case "binding:set":
-			reply, err = bindingSet(ctx, actor, msg)
-		case "binding:load":
-			reply = nil
-			err = bindingLoad(ctx, actor, msg)
-		default:
-			logger.Error("unexpected command %s", msg["command"]) // dropping message
-			reply = nil
-			err = nil
-		}
-		e.release(session, false)
-		return nil, reply, err
-	}
 
 	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
@@ -467,7 +446,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 				}
 			}
 		} else {
-			logger.Error("unexpected command %s", msg["command"]) // dropping message
+			logger.Error("unexpected actor command %s", msg["command"]) // dropping message
 			reply = nil
 			err = nil
 		}
@@ -476,6 +455,63 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 
 	return dest, reply, err
+}
+
+func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
+	targetAsSession, ok := target.(rpc.Session)
+	if !ok {
+		return nil, nil, fmt.Errorf("Protocol mismatch: handlerBinding with target %v", target)
+	}
+	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
+	var reply []byte = nil
+	var err error = nil
+	var msg map[string]string
+
+	err = json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Determine session to use when acquiring actor instance lock
+	session := "nonexclusive"
+
+	// Acquire the actor instance lock
+	var e *actorEntry
+	var reason map[string]string
+	e, _, err, reason = actor.acquire(ctx, session, msg)
+	if err != nil {
+		if err == errActorAcquireTimeout {
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
+			logger.Error("%s", payload)
+			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
+			return nil, replyBytes, replyErr
+		} else {
+			// An error or cancelation that caused us to fail to acquire the lock.
+			return nil, nil, err
+		}
+	}
+
+	// We now have the lock on the actor instance.
+	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
+
+	switch msg["command"] {
+	case "del":
+		reply, err = bindingDel(ctx, actor, msg)
+	case "get":
+		reply, err = bindingGet(ctx, actor, msg)
+	case "set":
+		reply, err = bindingSet(ctx, actor, msg)
+	case "load":
+		reply = nil
+		err = bindingLoad(ctx, actor, msg)
+	default:
+		logger.Error("unexpected binding command %s", msg["command"]) // dropping message
+		reply = nil
+		err = nil
+	}
+
+	e.release(session, false)
+	return nil, reply, err
 }
 
 func bindingDel(ctx context.Context, actor Actor, msg map[string]string) ([]byte, error) {
