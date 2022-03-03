@@ -115,11 +115,11 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, session string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*Reply, error) {
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
-		"session": session,
+		"flow":    flow,
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
@@ -327,13 +327,13 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		return nil, nil, err
 	}
 
-	// Determine session to use when acquiring actor instance lock
-	session := msg["session"]
-	if session == "" {
+	// Determine flow to use when acquiring actor instance lock
+	flow := msg["flow"]
+	if flow == "" {
 		if msg["command"] == "delete" {
-			session = "exclusive"
+			flow = "exclusive"
 		} else {
-			session = uuid.New().String() // start new session
+			flow = uuid.New().String() // start new flow
 		}
 	}
 
@@ -341,10 +341,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	var e *actorEntry
 	var fresh bool
 	var reason map[string]string
-	e, fresh, err, reason = actor.acquire(ctx, session, msg)
+	e, fresh, err, reason = actor.acquire(ctx, flow, msg)
 	if err != nil {
 		if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], flow, reason)
 			logger.Error("%s", payload)
 			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
 			return nil, replyBytes, replyErr
@@ -380,12 +380,12 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 	if reply != nil { // activate returned an application-level error, do not retry
 		err = nil // Disable retry
-		e.release(session, false)
+		e.release(flow, false)
 	} else if err != nil { // failed to invoke activate
-		e.release(session, false)
+		e.release(flow, false)
 	} else { // invoke actor method
-		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+session
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + session + msg["path"]
+		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
@@ -451,7 +451,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 			err = nil
 		}
 
-		e.release(session, true)
+		e.release(flow, true)
 	}
 
 	return dest, reply, err
@@ -472,16 +472,16 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		return nil, nil, err
 	}
 
-	// Determine session to use when acquiring actor instance lock
-	session := "nonexclusive"
+	// Determine flow to use when acquiring actor instance lock
+	flow := "nonexclusive"
 
 	// Acquire the actor instance lock
 	var e *actorEntry
 	var reason map[string]string
-	e, _, err, reason = actor.acquire(ctx, session, msg)
+	e, _, err, reason = actor.acquire(ctx, flow, msg)
 	if err != nil {
 		if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], session, reason)
+			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], flow, reason)
 			logger.Error("%s", payload)
 			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
 			return nil, replyBytes, replyErr
@@ -510,7 +510,7 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		err = nil
 	}
 
-	e.release(session, false)
+	e.release(flow, false)
 	return nil, reply, err
 }
 

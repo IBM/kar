@@ -315,8 +315,8 @@ func routeImplCall(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 		}
 		reply, err = CallService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
-		session := r.FormValue("session")
-		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), session)
+		flow := r.FormValue("session")
+		reply, err = CallActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), flow)
 	}
 	if err != nil {
 		if err == context.DeadlineExceeded {
