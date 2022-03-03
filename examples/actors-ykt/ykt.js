@@ -83,7 +83,7 @@ class Company {
       this.sites.push(site)
       await actor.call(this, actor.proxy('Site', site), 'joinCompany', this.name)
       await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport',
-        { id: 'aisle14', targetTime: new Date(Date.now() + 1000) }, '5s')
+        { id: 'aisle14', targetTime: new Date(Date.now() + 1000), period: '5s' })
       await actor.state.set(this, 'sites', this.sites)
     }
 
@@ -93,7 +93,7 @@ class Company {
     this.nextSerialNumber = sn + workers
     await actor.state.set(this, 'nextSerialNumber', this.nextSerialNumber)
 
-    for (var i = 0; i < workers; i++) {
+    for (let i = 0; i < workers; i++) {
       const name = sn + i
       this.bluepages[name] = site
       await actor.tell(actor.proxy('Site', site), 'newHire', name, days, steps, thinkms)
@@ -205,7 +205,7 @@ class Site {
     }
 
     // Construct Cloud Event containing the status report.
-    var reportEvent = new CloudEvent({
+    const reportEvent = new CloudEvent({
       type: 'site.report',
       source: 'javascript.client',
       data: status
