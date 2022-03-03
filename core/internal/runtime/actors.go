@@ -65,14 +65,14 @@ type submapOp struct {
 }
 
 type actorEntry struct {
-	actor   Actor
-	time    time.Time     // last release time
-	lock    chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
-	valid   bool          // false iff entry has been removed from table
-	session string        // current session or "" if none
-	depth   int           // session depth
-	busy    chan struct{} // close to notify end of session
-	msg     map[string]string
+	actor Actor
+	time  time.Time     // last release time
+	lock  chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
+	valid bool          // false iff entry has been removed from table
+	flow  string        // current flow or "" if none
+	depth int           // flow depth
+	busy  chan struct{} // close to notify end of flow
+	msg   map[string]string
 }
 
 var (
@@ -81,10 +81,10 @@ var (
 	errActorAcquireTimeout = errors.New("timeout occurred while acquiring actor")
 )
 
-// acquire locks the actor, session must be not be ""
-// "exclusive" and "nonexclusive" are reserved session names
+// acquire locks the actor, flow must be not be ""
+// "exclusive" and "nonexclusive" are reserved flow names
 // acquire returns true if actor requires activation before invocation
-func (actor Actor) acquire(ctx context.Context, session string, msg map[string]string) (*actorEntry, bool, error, map[string]string) {
+func (actor Actor) acquire(ctx context.Context, flow string, msg map[string]string) (*actorEntry, bool, error, map[string]string) {
 	e := &actorEntry{actor: actor, lock: make(chan struct{}, 1)}
 	e.lock <- struct{}{} // lock entry
 	for {
@@ -92,20 +92,20 @@ func (actor Actor) acquire(ctx context.Context, session string, msg map[string]s
 			e := v.(*actorEntry) // found existing entry, := is required here!
 			e.lock <- struct{}{} // lock entry
 			if e.valid {
-				if e.session == "" { // start new session
-					e.session = session
+				if e.flow == "" { // start new flow
+					e.flow = flow
 					e.depth = 1
 					e.busy = make(chan struct{})
 					e.msg = msg
 					<-e.lock
 					return e, false, nil, nil
 				}
-				if session == "nonexclusive" || session != "exclusive" && session == e.session { // reenter existing session
+				if flow == "nonexclusive" || flow != "exclusive" && flow == e.flow { // reenter existing flow
 					e.depth++
 					<-e.lock
 					return e, false, nil, nil
 				}
-				// another session is in progress
+				// another flow is in progress
 				busy := e.busy // read while holding the lock
 				<-e.lock
 				if config.ActorBusyTimeout > 0 {
@@ -139,9 +139,9 @@ func (actor Actor) acquire(ctx context.Context, session string, msg map[string]s
 				<-e.lock
 				return nil, false, err, nil
 			}
-			if sidecar == rpc.GetNodeID() { // start new session
+			if sidecar == rpc.GetNodeID() { // start new flow
 				e.valid = true
-				e.session = session
+				e.flow = flow
 				e.depth = 1
 				e.msg = msg
 				e.busy = make(chan struct{})
@@ -158,18 +158,18 @@ func (actor Actor) acquire(ctx context.Context, session string, msg map[string]s
 // release releases the actor lock
 // release updates the timestamp if the actor was invoked
 // release removes the actor from the table if it was not activated at depth 0
-func (e *actorEntry) release(session string, invoked bool) {
+func (e *actorEntry) release(flow string, invoked bool) {
 	e.lock <- struct{}{} // lock entry
 	e.depth--
 	if invoked {
 		e.time = time.Now() // update last release time
 	}
-	if e.depth == 0 { // end session
+	if e.depth == 0 { // end flow
 		if !invoked { // actor was not activated
 			e.valid = false
 			actorTable.Delete(e.actor)
 		}
-		e.session = ""
+		e.flow = ""
 		close(e.busy)
 	}
 	<-e.lock
@@ -181,15 +181,15 @@ func collect(ctx context.Context, time time.Time) error {
 		e := v.(*actorEntry)
 		select {
 		case e.lock <- struct{}{}: // try acquire
-			if e.valid && e.session == "" && e.time.Before(time) {
+			if e.valid && e.flow == "" && e.time.Before(time) {
 				e.depth = 1
-				e.session = "exclusive"
+				e.flow = "exclusive"
 				e.busy = make(chan struct{})
 				<-e.lock
 				err := deactivate(ctx, actor.(Actor))
 				e.lock <- struct{}{}
 				e.depth--
-				e.session = ""
+				e.flow = ""
 				if err == nil {
 					e.valid = false
 					actorTable.Delete(actor)
@@ -294,7 +294,7 @@ func formatActorInstanceMap(actorInfo map[string][]string, format string) (strin
 func (e *actorEntry) delete() error {
 	e.lock <- struct{}{}
 	e.depth--
-	e.session = ""
+	e.flow = ""
 	e.valid = false
 	actorTable.Delete(e.actor)
 	err := rpc.DelSession(ctx, rpc.Session{Name: e.actor.Type, ID: e.actor.ID})
