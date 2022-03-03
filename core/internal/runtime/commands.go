@@ -116,6 +116,9 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 
 // CallActor calls an actor and waits for a reply
 func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*Reply, error) {
+	if flow == "" {
+		flow = uuid.New().String() // start new flow
+	}
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
@@ -140,6 +143,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
+		"flow":    uuid.New().String(), // start new flow
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
@@ -174,6 +178,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"bindingId":    bindingID,
 		"kind":         kind,
 		"command":      action,
+		"flow":         "nonexclusive",
 		"nilOnAbsent":  nilOnAbsent,
 		"content-type": contentType,
 		"accept":       accept,
@@ -213,6 +218,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	msg := map[string]string{
 		"command": "tell", // post with no callback expected
 		"path":    path,
+		"flow":    uuid.New().String(), // start new flow
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
@@ -224,7 +230,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
 func DeleteActor(ctx context.Context, actor Actor) error {
-	msg := map[string]string{"command": "delete"}
+	msg := map[string]string{"command": "delete", "flow": "exclusive"}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
@@ -237,6 +243,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
 		"command":   "load",
+		"flow":      "nonexclusive",
 		"kind":      kind,
 		"partition": strconv.Itoa(int(partition)),
 		"bindingId": bindingID}
@@ -330,11 +337,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	// Determine flow to use when acquiring actor instance lock
 	flow := msg["flow"]
 	if flow == "" {
-		if msg["command"] == "delete" {
-			flow = "exclusive"
-		} else {
-			flow = uuid.New().String() // start new flow
-		}
+		logger.Fatal("Empty flow %v %v", actor, msg)
 	}
 
 	// Acquire the actor instance lock
@@ -416,6 +419,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 								msg := map[string]string{
 									"command": "tell",
 									"path":    cr["path"].(string),
+									"flow":    flow,
 									"payload": cr["payload"].(string)}
 								reply, err = json.Marshal(msg)
 							}
@@ -433,6 +437,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 							msg := map[string]string{
 								"command": "call",
 								"path":    cr["path"].(string),
+								"flow":    flow,
 								"payload": cr["payload"].(string)}
 							reply, err = json.Marshal(msg)
 						}
@@ -472,9 +477,7 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		return nil, nil, err
 	}
 
-	// Determine flow to use when acquiring actor instance lock
-	flow := "nonexclusive"
-
+	flow := msg["flow"]
 	// Acquire the actor instance lock
 	var e *actorEntry
 	var reason map[string]string
