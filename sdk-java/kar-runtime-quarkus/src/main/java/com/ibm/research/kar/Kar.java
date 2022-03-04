@@ -483,6 +483,9 @@ public class Kar implements KarHttpConstants {
 		 * An actor method may return a TailCall to indicate that the "result"
 		 * of the method is to schedule a subsequent invocation (either to itself or
 		 * to another actor instance).
+		 * If the calling and callee Actors are the same, the actor lock is retained
+		 * between the two calls. This ensures that the Actor's state is not changed between
+		 * the end of the calling method and the start of the callee method.
 		 */
 		public static final class TailCall {
 			public final ActorRef actor;

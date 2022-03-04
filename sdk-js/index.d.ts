@@ -168,7 +168,11 @@ export namespace actor {
   export function remove (target: Actor): Promise<any>;
 
   /**
-   * Construct a result object that encodes a tail call to another actor method
+   * Construct a result object that encodes a tail call to another actor method.
+   * If the calling and callee Actors are the same, the actor lock is retained
+   * between the two calls. This ensures that the Actor's state is not changed between
+   * the end of the calling method and the start of the callee method.
+   *
    * @param callee The target Actor.
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
