@@ -184,14 +184,13 @@ func subscribe(ctx context.Context, s source) (<-chan struct{}, int, error) {
 		msg := map[string]string{
 			"command": "tell", // post with no callback expected
 			"path":    s.Path,
-			"flow":    uuid.New().String(),
 			"payload": "[" + arg + "]"}
 
 		return json.Marshal(msg)
 	}
 
 	ch, err := rpc.Subscribe(ctx, &config.KafkaConfig, s.Topic, group, s.OffsetOldest,
-		rpc.Destination{Target: rpc.Session{Name: s.Actor.Type, ID: s.Actor.ID}, Method: actorEndpoint}, rawEventToActorTellMsg)
+		rpc.Destination{Target: rpc.Session{Name: s.Actor.Type, ID: s.Actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, rawEventToActorTellMsg)
 
 	if err == nil {
 		return ch, http.StatusOK, nil

@@ -46,6 +46,7 @@ type Service struct {
 type Session struct {
 	Name string
 	ID   string
+	Flow string
 }
 
 // Node implements Target
