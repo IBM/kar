@@ -122,13 +122,12 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*R
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
-		"flow":    flow,
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -143,14 +142,13 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
-		"flow":    uuid.New().String(), // start new flow
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -178,7 +176,6 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 		"bindingId":    bindingID,
 		"kind":         kind,
 		"command":      action,
-		"flow":         "nonexclusive",
 		"nilOnAbsent":  nilOnAbsent,
 		"content-type": contentType,
 		"accept":       accept,
@@ -187,7 +184,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: bindingEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, defaultTimeout(), bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -218,24 +215,23 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	msg := map[string]string{
 		"command": "tell", // post with no callback expected
 		"path":    path,
-		"flow":    uuid.New().String(), // start new flow
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
 // DeleteActor sends a delete message to an actor and does not wait for a reply
 func DeleteActor(ctx context.Context, actor Actor) error {
-	msg := map[string]string{"command": "delete", "flow": "exclusive"}
+	msg := map[string]string{"command": "delete"}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "exclusive"}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -243,7 +239,6 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32, bindingID string) error {
 	msg := map[string]string{
 		"command":   "load",
-		"flow":      "nonexclusive",
 		"kind":      kind,
 		"partition": strconv.Itoa(int(partition)),
 		"bindingId": bindingID}
@@ -251,7 +246,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID}, Method: bindingEndpoint}, time.Time{}, bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, time.Time{}, bytes)
 	}
 }
 
@@ -335,7 +330,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 
 	// Determine flow to use when acquiring actor instance lock
-	flow := msg["flow"]
+	flow := targetAsSession.Flow
 	if flow == "" {
 		logger.Fatal("Empty flow %v %v", actor, msg)
 	}
@@ -415,11 +410,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
-								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
+								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}, Method: actorEndpoint}
 								msg := map[string]string{
 									"command": "tell",
 									"path":    cr["path"].(string),
-									"flow":    flow,
 									"payload": cr["payload"].(string)}
 								reply, err = json.Marshal(msg)
 							}
@@ -433,11 +427,10 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
-							dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string)}, Method: actorEndpoint}
+							dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}, Method: actorEndpoint}
 							msg := map[string]string{
 								"command": "call",
 								"path":    cr["path"].(string),
-								"flow":    flow,
 								"payload": cr["payload"].(string)}
 							reply, err = json.Marshal(msg)
 						}
@@ -477,7 +470,7 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		return nil, nil, err
 	}
 
-	flow := msg["flow"]
+	flow := targetAsSession.Flow
 	// Acquire the actor instance lock
 	var e *actorEntry
 	var reason map[string]string
