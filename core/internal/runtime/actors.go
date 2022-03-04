@@ -101,7 +101,9 @@ func (actor Actor) acquire(ctx context.Context, flow string, msg map[string]stri
 					return e, false, nil, nil
 				}
 				if flow == "nonexclusive" || flow != "exclusive" && flow == e.flow { // reenter existing flow
-					e.depth++
+					if msg["lockRetained"] != "true" { // do not increment depth for tail call (lock was not released at end of previous step)
+						e.depth++
+					}
 					<-e.lock
 					return e, false, nil, nil
 				}

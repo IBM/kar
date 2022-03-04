@@ -353,7 +353,8 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 
 	// We now have the lock on the actor instance.
-	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
+	// All paths must either call release before returning or set msg["lockRetained"] = true for a tailCall to the same actor
+	releaseLock := true
 
 	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
@@ -364,7 +365,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
 			logger.Error("deleting persistent state of %v failed with %v", actor, err)
 		}
-		// clear placement data and sidecar's in-memory state
+		// clear placement data and sidecar's in-memory state (effectively also releases the lock, since we are deleting the table entry)
 		err = e.delete()
 		if err != nil {
 			logger.Error("deleting placement date for %v failed with %v", actor, err)
@@ -410,12 +411,20 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
-								dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}, Method: actorEndpoint}
+								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}
+								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 								msg := map[string]string{
 									"command": "tell",
 									"path":    cr["path"].(string),
 									"payload": cr["payload"].(string)}
+								if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID {
+									msg["lockRetained"] = "true"
+									releaseLock = false
+								}
 								reply, err = json.Marshal(msg)
+								if err != nil {
+									releaseLock = true // Tail call is going to be abandoned due to serialization error
+								}
 							}
 						}
 					} else {
@@ -427,12 +436,20 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
-							dest = &rpc.Destination{Target: rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}, Method: actorEndpoint}
+							nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}
+							dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 							msg := map[string]string{
 								"command": "call",
 								"path":    cr["path"].(string),
 								"payload": cr["payload"].(string)}
+							if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID {
+								msg["lockRetained"] = "true"
+								releaseLock = false
+							}
 							reply, err = json.Marshal(msg)
+							if err != nil {
+								releaseLock = true // Tail call is going to be abandoned due to serialization error
+							}
 						}
 					}
 					if reply == nil {
@@ -449,7 +466,9 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 			err = nil
 		}
 
-		e.release(flow, true)
+		if releaseLock {
+			e.release(flow, true)
+		}
 	}
 
 	return dest, reply, err
