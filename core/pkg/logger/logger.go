@@ -24,6 +24,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"strconv"
 	"strings"
@@ -66,6 +67,11 @@ func SetVerbosity(s string) error {
 	}
 	verbosity = i
 	return nil
+}
+
+// SetOutput sets the output stream of the log.
+func SetOutput(w io.Writer) {
+	log.SetOutput(w)
 }
 
 // Debug outputs a formatted log message.
