@@ -320,6 +320,7 @@ Available commands:
 	}
 
 	logger.SetVerbosity(verbosity)
+	logger.SetOutput(os.Stdout)
 
 	if AppName == "" {
 		logger.Fatal("app name is required")
