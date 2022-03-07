@@ -179,6 +179,17 @@ export namespace actor {
    */
   export function tailCall(callee: Actor, path: string, ...args: any[]): any;
 
+  /**
+   * Construct a result object that encodes a tail call to another actor method.
+   * The lock on the current actor instance will be released even if the invoked
+   * method is on the same actor (it will be reacquired on invocation).
+   *
+   * @param callee The target Actor.
+   * @param path The actor method to invoke.
+   * @param args The arguments with which to invoke the actor method.
+   */
+     export function tailCallReleasingLock(callee: Actor, path: string, ...args: any[]): any;
+
   namespace reminders {
     /**
      * Cancel matching reminders for an Actor instance.

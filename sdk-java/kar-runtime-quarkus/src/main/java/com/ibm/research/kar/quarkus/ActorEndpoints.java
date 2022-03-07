@@ -223,6 +223,9 @@ public class ActorEndpoints implements KarHttpConstants {
 			crb.add("actorType", cr.actor.getType());
 			crb.add("actorId", cr.actor.getId());
 			crb.add("path", "/"+cr.path);
+			if (cr.releaseLock) {
+				crb.add("releaseLock", "true");
+			}
 			jb.add("tailCall", true);
 			jb.add("value", crb.build());
 		} else {

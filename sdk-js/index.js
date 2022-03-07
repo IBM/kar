@@ -180,6 +180,13 @@ function actorEncodeTailCall (...args) {
   return { tailCall: true, value: { actorType: ta.kar.type, actorId: ta.kar.id, path: '/' + path, payload } }
 }
 
+function actorEncodeTailCallReleasingLock (...args) {
+  const ta = args.shift()
+  const path = args.shift()
+  const payload = JSON.stringify(args)
+  return { tailCall: true, value: { actorType: ta.kar.type, actorId: ta.kar.id, releaseLock: 'true', path: '/' + path, payload } }
+}
+
 const actorDelete = (actor) => del(`actor/${actor.kar.type}/${actor.kar.id}`)
 
 const actorCancelReminder = (actor, reminderId) => reminderId ? del(`actor/${actor.kar.type}/${actor.kar.id}/reminders/${reminderId}?nilOnAbsent=true`) : del(`actor/${actor.kar.type}/${actor.kar.id}/reminders`)
@@ -378,6 +385,7 @@ module.exports = {
     asyncCall: actorAsyncCall,
     remove: actorDelete,
     tailCall: actorEncodeTailCall,
+    tailCallReleaasingLock: actorEncodeTailCallReleasingLock,
     reminders: {
       cancel: actorCancelReminder,
       get: actorGetReminder,

@@ -480,21 +480,41 @@ public class Kar implements KarHttpConstants {
 		}
 
 		/**
+		 * Continue execution by doing a tail call to the specified actor method,
+		 * but do not retain the lock on the current actor instance between invocations.
+		 * @param actor The actor instance
+		 * @param path The method to invoke
+		 * @param args The arguments to the invoked method
+		 * @return a Uni that represents the desired continuation.
+		 */
+		public static Uni<TailCall> tailCallReleasingLock(ActorRef actor, String path, JsonValue... args) {
+			return Uni.createFrom().item(new TailCall(actor, path, true, args));
+		}
+
+		/**
 		 * An actor method may return a TailCall to indicate that the "result"
 		 * of the method is to schedule a subsequent invocation (either to itself or
 		 * to another actor instance).
-		 * If the calling and callee Actors are the same, the actor lock is retained
-		 * between the two calls. This ensures that the Actor's state is not changed between
-		 * the end of the calling method and the start of the callee method.
+		 * If the calling and callee Actors are the same, then  by default the
+		 * actor lock is retained between the two calls. This ensures that the Actor's
+		 * state is not changed between the end of the calling method and the start of
+		 * the callee method.  This default can be overriden by setting `releaseLock` to
+		 * true to support interleaving multiple flows of execution on an actor instance.
 		 */
 		public static final class TailCall {
 			public final ActorRef actor;
 			public final String path;
+			public final boolean releaseLock;
 			public final JsonValue[] args;
 
 			public TailCall(ActorRef actor, String path, JsonValue... args) {
+				this(actor, path, false, args);
+			}
+
+			public TailCall(ActorRef actor, String path, boolean releaseLock, JsonValue... args) {
 				this.actor = actor;
 				this.path = path;
+				this.releaseLock = releaseLock;
 				this.args = args;
 			}
 		}

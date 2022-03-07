@@ -417,7 +417,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 									"command": "tell",
 									"path":    cr["path"].(string),
 									"payload": cr["payload"].(string)}
-								if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID {
+								if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID && cr["releaseLock"] != "true" {
 									msg["lockRetained"] = "true"
 									releaseLock = false
 								}
@@ -442,7 +442,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 								"command": "call",
 								"path":    cr["path"].(string),
 								"payload": cr["payload"].(string)}
-							if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID {
+							if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID && cr["releaseLock"] != "true" {
 								msg["lockRetained"] = "true"
 								releaseLock = false
 							}
