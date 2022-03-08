@@ -27,3 +27,12 @@ cd $ROOTDIR/examples/actors-python
 
 # Launch test:
 sh launch.sh
+
+# Run local version of the python unit tests.
+echo "*** Testing examples/python-unit-tests ***"
+
+# Move into the example directory:
+cd $ROOTDIR/examples/python-unit-tests
+
+# Launch test:
+sh launch.sh
