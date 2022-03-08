@@ -22,6 +22,10 @@
 .vscode
 .factorypath
 
+# IntelliJ
+.idea
+*.iml
+
 node_modules/
 dist/
 target/
