@@ -19,6 +19,8 @@
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
+pip list
+
 # Run local version of actors-python.
 echo "*** Testing examples/actors-python ***"
 

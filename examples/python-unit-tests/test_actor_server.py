@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# from kar import actor_call, actor_proxy, tell, shutdown
 from kar import actor_call, actor_proxy, base_call
 from fastapi.testclient import TestClient
 from actor_server import app
