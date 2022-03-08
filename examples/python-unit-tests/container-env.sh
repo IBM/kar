@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #
 # Copyright IBM Corporation 2020,2022
 #
@@ -16,23 +14,9 @@
 # limitations under the License.
 #
 
-SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/.."
-
-# Run local version of actors-python.
-echo "*** Testing examples/actors-python ***"
-
-# Move into the example directory:
-cd $ROOTDIR/examples/actors-python
-
-# Launch test:
-sh launch.sh
-
-# Run local version of the python unit tests.
-echo "*** Testing examples/python-unit-tests ***"
-
-# Move into the example directory:
-cd $ROOTDIR/examples/python-unit-tests
-
-# Launch test:
-sh launch.sh
+export KAFKA_BROKERS=kafka:9092
+export KAFKA_VERSION=2.7.1
+export REDIS_HOST=host.docker.internal
+export REDIS_PORT=31379
+export REDIS_PASSWORD=act0rstate
+export REDIS_USER=karmesh
