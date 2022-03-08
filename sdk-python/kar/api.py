@@ -19,7 +19,7 @@ import os
 import sys
 import traceback
 import json
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi import HTTPException
 
@@ -65,7 +65,7 @@ actor_id_attribute = "id"
 # -----------------------------------------------------------------------------
 
 # Base URL for the request:
-base_url = f'http://localhost:{kar_runtime_port}'
+default_base_url = f'http://localhost:{kar_runtime_port}'
 
 # URL prefix for HTTP requests to sidecar:
 sidecar_url_prefix = '/kar/v1'
@@ -74,55 +74,67 @@ sidecar_url_prefix = '/kar/v1'
 # -----------------------------------------------------------------------------
 # Helper methods
 # -----------------------------------------------------------------------------
+# Simple forwarding request to be used for local requests.
 # TODO: Implement backoff strategy for retries
-async def _request(request, api, body=None, headers=None):
+async def _base_request(request, api, body=None, headers=None):
     for i in range(max_retries):
         if body is None:
-            response = await request(api, headers=headers)
+            if headers is None:
+                response = await request(api)
+            else:
+                response = await request(api, headers=headers)
         else:
-            response = await request(api, data=body, headers=headers)
-        if response.status_code >= 200 and response.status_code < 300:
-            if response.headers['content-type'] == 'application/json':
-                response = response.json()
-                if "error" in response and response["error"]:
-                    print(response["stack"], file=sys.stderr)
-                    return
-                return response
-            return response.text
-        if response.status_code not in retry_codes:
-            raise httpx.HTTPStatusError(response.text, response.request,
-                                        response)
-    raise RuntimeError("Number of retries exceeded")
+            if headers is None:
+                response = await request(api, content=body)
+            else:
+                response = await request(api, content=body, headers=headers)
 
-
-# TODO: Implement backoff strategy for retries
-async def _actor_request(request, api, body, headers):
-    for i in range(max_retries):
-        if body is None:
-            response = await request(api, headers=headers)
-        else:
-            response = await request(api, data=body, headers=headers)
-        if response.status_code == 204:
-            return response.text
-        if response.status_code == 202:
-            return response.text
         if response.status_code in retry_codes:
             continue
-        if response.status_code != 200:
-            raise httpx.HTTPStatusError(response.text,
-                                        request=response.request,
-                                        response=response)
-        if response.headers['content-type'] != 'application/kar+json':
-            raise RuntimeError(
-                "Response type is not of 'application/kar+json type")
-        response = response.json()
-        if "error" in response and response["error"]:
-            print(response["stack"], file=sys.stderr)
-            # TODO: is this appropriate?
-            return
-        return response["value"]
+        return response
 
     raise RuntimeError("Number of retries exceeded")
+
+
+async def _request(request, api, body=None, headers=None):
+    response = await _base_request(request, api, body=body, headers=headers)
+    if response.status_code >= 200 and response.status_code < 300:
+        if response.headers is None or \
+           'content-type' not in response.headers:
+            return response
+        if response.headers['content-type'] == 'application/json':
+            response = response.json()
+            if "error" in response and response["error"]:
+                print(response["stack"], file=sys.stderr)
+                return response["stack"]
+            return response
+        if response.headers['content-type'] == 'text/plain':
+            return response.text
+        return response
+    if response.status_code not in retry_codes:
+        raise httpx.HTTPStatusError(response.text,
+                                    request=response.request,
+                                    response=response)
+
+
+async def _actor_request(request, api, body=None, headers=None):
+    response = await _base_request(request, api, body=body, headers=headers)
+    if response.status_code == 204:
+        return response.text
+    if response.status_code == 202:
+        return response.text
+    if response.status_code != 200:
+        raise httpx.HTTPStatusError(response.text,
+                                    request=response.request,
+                                    response=response)
+    if response.headers['content-type'] != 'application/kar+json':
+        raise RuntimeError(
+            "Response type is not of 'application/kar+json type")
+    response = response.json()
+    if "error" in response and response["error"]:
+        print(response["stack"], file=sys.stderr)
+        return response["stack"]
+    return response["value"]
 
 
 async def _fetch(api, options):
@@ -132,7 +144,7 @@ async def _fetch(api, options):
     headers = {'Content-Type': 'text/plain'}
     if "headers" in options:
         headers = options["headers"]
-    async with httpx.AsyncClient(base_url=base_url,
+    async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
@@ -148,7 +160,7 @@ async def _fetch(api, options):
 
 
 async def _post(api, body, headers):
-    async with httpx.AsyncClient(base_url=base_url,
+    async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
@@ -156,7 +168,7 @@ async def _post(api, body, headers):
 
 
 async def _get(api, body, headers):
-    async with httpx.AsyncClient(base_url=base_url,
+    async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
@@ -164,7 +176,7 @@ async def _get(api, body, headers):
 
 
 async def _delete(api):
-    async with httpx.AsyncClient(base_url=base_url,
+    async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
@@ -172,11 +184,77 @@ async def _delete(api):
 
 
 async def _actor_post(api, body, headers):
-    async with httpx.AsyncClient(base_url=base_url,
+    async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
         return await _actor_request(client.post, api, body, headers)
+
+
+async def _base_head(api, base_url=None):
+    app_base_url = default_base_url
+    if base_url is not None:
+        app_base_url = base_url
+    async with httpx.AsyncClient(base_url=app_base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
+        return await _base_request(client.head, api)
+
+
+async def _base_post(api, body, headers, base_url=None):
+    app_base_url = default_base_url
+    if base_url is not None:
+        app_base_url = base_url
+    async with httpx.AsyncClient(base_url=app_base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
+        return await _base_request(client.post, api, body, headers)
+
+
+async def _base_get(api, base_url=None):
+    app_base_url = default_base_url
+    if base_url is not None:
+        app_base_url = base_url
+    async with httpx.AsyncClient(base_url=app_base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
+        return await _base_request(client.get, api)
+
+
+# -----------------------------------------------------------------------------
+# Public testing and base methods
+# -----------------------------------------------------------------------------
+
+
+#
+# This method is used to make actor HEAD requests for testing purposes only.
+#
+def test_actor_head(hostname: str, port: int, actor_type: str):
+    app_base_url = f"http://{hostname}:{port}"
+    return asyncio.create_task(
+        _base_head(f"/kar/impl/v1/actor/{actor_type}", base_url=app_base_url))
+
+
+#
+# This method is used to make actor server health checks for testing purposes
+# only.
+#
+def test_server_health(hostname: str, port: int):
+    app_base_url = f"http://{hostname}:{port}"
+    return asyncio.create_task(
+        _base_get("/kar/impl/v1/system/health", base_url=app_base_url))
+
+
+#
+# KAR forwarding call
+#
+def base_call(service, endpoint, body):
+    return asyncio.create_task(
+        _base_post(f'{sidecar_url_prefix}/service/{service}/call/{endpoint}',
+                   body, {'Content-Type': 'application/json'}))
 
 
 # -----------------------------------------------------------------------------
@@ -387,6 +465,15 @@ _actor_instances = {}
 kar_url = "/kar/impl/v1/actor"
 
 
+def error_helper():
+    body = {}
+    body["error"] = True
+    body["stack"] = traceback.format_exc()
+    return JSONResponse(status_code=200,
+                        content=body,
+                        headers={"Content-Type": "application/kar+json"})
+
+
 def actor_runtime(actors, actor_server=None):
     actor_name_to_type = {}
     for actor_type in actors:
@@ -397,17 +484,14 @@ def actor_runtime(actors, actor_server=None):
 
     @actor_server.exception_handler(Exception)
     async def exception_handler(request: Request, exception: Exception):
-        # HTTP error (TODO):
         if isinstance(exception, HTTPException):
             return exception
+        return error_helper()
 
-        # non-HTTP error:
-        body = {}
-        body["error"] = True
-        body["stack"] = traceback.format_exc()
-        return JSONResponse(status_code=200,
-                            content=body,
-                            headers={"Content-Type": "application/kar+json"})
+    @actor_server.exception_handler(TypeError)
+    async def type_error_exception_handler(request: Request,
+                                           exception: TypeError):
+        return error_helper()
 
     # This method checks if the actor is already active and invokes the
     # activate method if one is provided. This method is automatically invoked
@@ -563,10 +647,9 @@ def actor_runtime(actors, actor_server=None):
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
-            return PlainTextResponse(status_code=404,
-                                     content=f"no actor type {type}")
+            return Response(status_code=404)
 
-        return PlainTextResponse(status_code=200, content="OK")
+        return Response(status_code=200)
 
     # Health check route.
     @actor_server.get("/kar/impl/v1/system/health")
