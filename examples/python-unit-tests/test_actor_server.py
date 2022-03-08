@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kar import actor_call, actor_proxy, base_call
+from kar import actor_call, actor_proxy, base_call, actor_remove
 from fastapi.testclient import TestClient
 from actor_server import app
 import httpx
@@ -166,6 +166,23 @@ async def head_actor_call():
 
 def test_actor_head_actor_call():
     asyncio.run(head_actor_call())
+
+
+# -----------------------------------------------------------------------------
+async def remove_actor():
+    famous_actor = actor_proxy("TestActor", "6")
+
+    # Remove actor:
+    try:
+        response = await actor_remove(famous_actor)
+    except httpx.HTTPStatusError:
+        assert False
+
+    assert response.content.decode("utf8") == "OK"
+
+
+def test_actor_remove_actor():
+    asyncio.run(remove_actor())
 
 
 # -----------------------------------------------------------------------------
