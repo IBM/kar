@@ -20,7 +20,8 @@ setup(
     packages=['kar'],
     install_requires=[
         'hypercorn>=0.13.2', 'fastapi>=0.74.1', 'httpx>=0.22.0',
-        'httpx[http2]', 'aiohttp>=3.8.0', 'asyncio>=3.4.3'
+        'httpx[http2]', 'aiohttp>=3.8.0', 'asyncio>=3.4.3', 'pytest>=6.2.3',
+        'pytest-asyncio', 'requests>=2.27.1'
     ],
     version="1.2.1",
     python_requires='>=3.6',

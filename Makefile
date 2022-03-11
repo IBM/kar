@@ -39,6 +39,7 @@ KAR_EXAMPLE_JAVA_REACTIVE_DP=$(DOCKER_IMAGE_PREFIX)kar-examples-java-reactive-ac
 KAR_EXAMPLE_JAVA_HELLO=$(DOCKER_IMAGE_PREFIX)kar-examples-java-service-hello:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED=$(DOCKER_IMAGE_PREFIX)kar-examples-actors-python-containerized:$(DOCKER_IMAGE_TAG)
 KAR_EXAMPLE_ACTORS_PYTHON_CLUSTER=$(DOCKER_IMAGE_PREFIX)kar-examples-actors-python-cluster:$(DOCKER_IMAGE_TAG)
+KAR_EXAMPLE_PYTHON_UNIT_TESTS_CONTAINERIZED=$(DOCKER_IMAGE_PREFIX)kar-examples-python-unit-tests-containerized:$(DOCKER_IMAGE_TAG)
 KAR_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-bench-js-image:$(DOCKER_IMAGE_TAG)
 KAFKA_BENCH=$(DOCKER_IMAGE_PREFIX)kar-kafka-bench:$(DOCKER_IMAGE_TAG)
 KAR_HTTP_BENCH_JS_IMAGE=$(DOCKER_IMAGE_PREFIX)kar-http-bench-js-image:$(DOCKER_IMAGE_TAG)
@@ -83,6 +84,7 @@ dockerBuildCore:
 docker-python-examples: docker-python-sdk
 	cd examples/actors-python && docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED) .
 	cd examples/actors-python && docker build -f Dockerfile.cluster --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_ACTORS_PYTHON_CLUSTER) .
+	cd examples/python-unit-tests && docker build -f Dockerfile.containerized --build-arg PYTHON_RUNTIME=$(KAR_PYTHON_SDK) -t $(KAR_EXAMPLE_PYTHON_UNIT_TESTS_CONTAINERIZED) .
 
 docker-js-examples: docker-js-sdk
 	cd examples/actors-dp-js && docker build --build-arg JS_RUNTIME=$(KAR_JS_SDK) -t $(KAR_EXAMPLE_JS_DP) .
@@ -159,6 +161,7 @@ dockerPushBenchmarks:
 # RUN containerized examples
 docker-run-containerized-python-examples: docker-python-examples
 	docker run --network kar-bus --add-host=host.docker.internal:host-gateway $(KAR_EXAMPLE_ACTORS_PYTHON_CONTAINERIZED)
+	docker run --network kar-bus --add-host=host.docker.internal:host-gateway $(KAR_EXAMPLE_PYTHON_UNIT_TESTS_CONTAINERIZED)
 
 
 # Build and push ALL docker-related images

@@ -13,11 +13,16 @@
 # limitations under the License.
 #
 
-# Basic methods
+# Non-actor methods
 from kar.api import invoke
 from kar.api import tell
 from kar.api import call
 from kar.api import shutdown
+
+# Base and testing methods
+from kar.api import base_call
+from kar.api import test_server_health
+from kar.api import test_actor_head
 
 # Actor methods
 from kar.api import actor_runtime
@@ -30,5 +35,6 @@ from kar.api import KarActor
 
 __all__ = [
     'invoke', 'tell', 'call', 'actor_proxy', 'actor_call', 'actor_runtime',
-    'KarActor', 'actor_remove', 'shutdown'
+    'KarActor', 'actor_remove', 'shutdown', 'test_actor_head', 'base_call',
+    'test_server_health'
 ]

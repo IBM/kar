@@ -1,5 +1,3 @@
-#!/bin/bash
-
 #
 # Copyright IBM Corporation 2020,2022
 #
@@ -16,23 +14,19 @@
 # limitations under the License.
 #
 
-SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/.."
+ARG PYTHON_RUNTIME=localhost:5000/kar/kar-sdk-python-3.8
 
-# Run local version of actors-python.
-echo "*** Testing examples/actors-python ***"
+FROM $PYTHON_RUNTIME
 
-# Move into the example directory:
-cd $ROOTDIR/examples/actors-python
+RUN mkdir /python_kar/python-unit-tests
+WORKDIR /python_kar/python-unit-tests
 
-# Launch test:
-sh launch.sh
+COPY pytest.ini pytest.ini
+COPY actor_server.py actor_server.py
+COPY test_actor_server.py test_actor_server.py
+COPY launch.sh launch.sh
+COPY container-env.sh container-env.sh
 
-# Run local version of the python unit tests.
-echo "*** Testing examples/python-unit-tests ***"
+ENV PATH=/python_kar/bin:$PATH
 
-# Move into the example directory:
-cd $ROOTDIR/examples/python-unit-tests
-
-# Launch test:
-sh launch.sh
+CMD source container-env.sh && sh launch.sh

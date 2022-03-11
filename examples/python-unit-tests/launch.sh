@@ -16,23 +16,13 @@
 # limitations under the License.
 #
 
-SCRIPTDIR=$(cd $(dirname "$0") && pwd)
-ROOTDIR="$SCRIPTDIR/.."
+set -e
 
-# Run local version of actors-python.
-echo "*** Testing examples/actors-python ***"
+# Run the server:
+( kar run -h2c -app unit-test -actors TestActor -service sdk-test python actor_server.py ) &
 
-# Move into the example directory:
-cd $ROOTDIR/examples/actors-python
+# Wait for server to start:
+sleep 2
 
-# Launch test:
-sh launch.sh
-
-# Run local version of the python unit tests.
-echo "*** Testing examples/python-unit-tests ***"
-
-# Move into the example directory:
-cd $ROOTDIR/examples/python-unit-tests
-
-# Launch test:
-sh launch.sh
+# Run the client:
+kar run -h2c -app unit-test pytest
