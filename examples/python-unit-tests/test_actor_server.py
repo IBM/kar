@@ -178,7 +178,7 @@ async def remove_actor():
     except httpx.HTTPStatusError:
         assert False
 
-    assert response.content.decode("utf8") == "OK"
+    assert response == "OK"
 
 
 def test_actor_remove_actor():

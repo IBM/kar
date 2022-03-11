@@ -18,8 +18,9 @@
 
 set -e
 
-# Run the server:
-( kar run -h2c -app unit-test -actors TestActor -service sdk-test python actor_server.py ) &
+# Run the servers:
+( kar run -h2c -app unit-test -app_port 8081 -actors TestActor -service sdk-test python actor_server.py ) &
+( kar run -h2c -app unit-test -app_port 8082 -service sdk-test-services python service_server.py ) &
 
 # Wait for server to start:
 sleep 2

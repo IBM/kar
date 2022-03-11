@@ -100,15 +100,16 @@ async def _request(request, api, body=None, headers=None):
     response = await _base_request(request, api, body=body, headers=headers)
     if response.status_code >= 200 and response.status_code < 300:
         if response.headers is None or \
-           'content-type' not in response.headers:
+           'content-type' not in response.headers or \
+           response.headers['content-type'] == "":
             return response
-        if response.headers['content-type'] == 'application/json':
+        if response.headers['content-type'].startswith('application/json'):
             response = response.json()
             if "error" in response and response["error"]:
                 print(response["stack"], file=sys.stderr)
                 return response["stack"]
             return response
-        if response.headers['content-type'] == 'text/plain':
+        if response.headers['content-type'].startswith('text/plain'):
             return response.text
         return response
     if response.status_code not in retry_codes:
@@ -127,7 +128,7 @@ async def _actor_request(request, api, body=None, headers=None):
         raise httpx.HTTPStatusError(response.text,
                                     request=response.request,
                                     response=response)
-    if response.headers['content-type'] != 'application/kar+json':
+    if not response.headers['content-type'].startswith('application/kar+json'):
         raise RuntimeError(
             "Response type is not of 'application/kar+json type")
     response = response.json()
@@ -155,7 +156,14 @@ async def _fetch(api, options):
                 method = client.post
             elif method_name == "PUT":
                 method = client.put
-            # TODO: add more request types
+            elif method_name == "DELETE":
+                method = client.delete
+            elif method_name == "GET":
+                method = client.get
+            elif method_name == "HEAD":
+                method = client.head
+            else:
+                raise RuntimeError(f"Invalid method {method_name}")
         return await _request(method, api, body, headers)
 
 
