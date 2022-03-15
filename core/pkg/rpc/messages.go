@@ -34,6 +34,7 @@ type Request interface {
 	target() Target
 	method() string
 	sequence() int
+	childID() string
 }
 
 type CallRequest struct {
@@ -54,6 +55,7 @@ func (m CallRequest) deadline() time.Time { return m.Deadline }
 func (m CallRequest) target() Target      { return m.Target }
 func (m CallRequest) method() string      { return m.Method }
 func (m CallRequest) sequence() int       { return m.Sequence }
+func (m CallRequest) childID() string     { return m.ChildID }
 
 type TellRequest struct {
 	RequestID string    // request id
@@ -71,6 +73,7 @@ func (m TellRequest) deadline() time.Time { return m.Deadline }
 func (m TellRequest) target() Target      { return m.Target }
 func (m TellRequest) method() string      { return m.Method }
 func (m TellRequest) sequence() int       { return m.Sequence }
+func (m TellRequest) childID() string     { return m.ChildID }
 
 type Response struct {
 	RequestID string    // request id
