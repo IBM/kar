@@ -13,12 +13,8 @@
 # limitations under the License.
 
 from kar import call, tell, invoke
-from fastapi.testclient import TestClient
-from service_server import app
 import asyncio
 import json
-
-client = TestClient(app)
 
 service_name = "sdk-test-services"
 

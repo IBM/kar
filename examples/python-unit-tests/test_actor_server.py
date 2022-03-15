@@ -13,13 +13,9 @@
 # limitations under the License.
 
 from kar import actor_call, actor_proxy, base_call, actor_remove
-from fastapi.testclient import TestClient
-from actor_server import app
 import httpx
 import asyncio
 import traceback
-
-client = TestClient(app)
 
 
 # -----------------------------------------------------------------------------

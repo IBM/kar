@@ -105,10 +105,12 @@ async def _request(request, api, body=None, headers=None):
             return response
         if response.headers['content-type'].startswith('application/json'):
             response = response.json()
-            if "error" in response and response["error"]:
+            if type(response
+                    ) is dict and "error" in response and response["error"]:
                 print(response["stack"], file=sys.stderr)
                 return response["stack"]
             return response
+
         if response.headers['content-type'].startswith('text/plain'):
             return response.text
         return response
@@ -175,12 +177,20 @@ async def _post(api, body, headers):
         return await _request(client.post, api, body, headers)
 
 
-async def _get(api, body, headers):
+async def _get(api):
     async with httpx.AsyncClient(base_url=default_base_url,
                                  http1=False,
                                  http2=True,
                                  timeout=kar_request_timeout) as client:
-        return await _request(client.get, api, body, headers)
+        return await _request(client.get, api, None, None)
+
+
+async def _put(api, body, headers=None):
+    async with httpx.AsyncClient(base_url=default_base_url,
+                                 http1=False,
+                                 http2=True,
+                                 timeout=kar_request_timeout) as client:
+        return await _request(client.put, api, body, None)
 
 
 async def _delete(api):
@@ -462,6 +472,41 @@ def actor_remove(actor):
 def shutdown():
     return asyncio.create_task(
         _post(f"{sidecar_url_prefix}/system/shutdown", None, None))
+
+
+# -----------------------------------------------------------------------------
+# State actor methods
+# -----------------------------------------------------------------------------
+
+
+def _actor_state_url(actor):
+    return f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/state"
+
+
+#
+# Get all the states of an actor.
+#
+def actor_state_get_all(actor):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(_get(f"{actor_state_api}"))
+
+
+#
+# Set the state of an actor.
+#
+def actor_state_set(actor, key, value={}):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _put(f"{actor_state_api}/{key}", json.dumps(value)))
+
+
+#
+# Get the state of an actor.
+#
+def actor_state_get(actor, key, value={}):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _get(f"{actor_state_api}/{key}?nilOnAbsent=true"))
 
 
 # -----------------------------------------------------------------------------
