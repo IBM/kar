@@ -122,7 +122,6 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
-		"parent":  parentID,
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
@@ -255,7 +254,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
+func handlerSidecar(ctx context.Context, target rpc.Target, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	_, ok := target.(rpc.Node)
 	if !ok {
 		return nil, nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
@@ -275,7 +274,7 @@ func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	}
 }
 
-func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
+func handlerService(ctx context.Context, target rpc.Target, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsService, ok := target.(rpc.Service)
 	if !ok {
 		return nil, nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
@@ -315,7 +314,7 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	return nil, replyBytes, err
 }
 
-func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
+func handlerActor(ctx context.Context, target rpc.Target, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsSession, ok := target.(rpc.Session)
 	if !ok {
 		return nil, nil, fmt.Errorf("Protocol mismatch: handlerActor with target %v", target)
@@ -385,7 +384,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		e.release(flow, false)
 	} else { // invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + ":" + msg["parent"] + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + ":" + requestID + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
@@ -475,7 +474,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	return dest, reply, err
 }
 
-func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
+func handlerBinding(ctx context.Context, target rpc.Target, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	targetAsSession, ok := target.(rpc.Session)
 	if !ok {
 		return nil, nil, fmt.Errorf("Protocol mismatch: handlerBinding with target %v", target)

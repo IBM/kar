@@ -64,7 +64,7 @@ type Destination struct {
 }
 
 // Handler for method
-type Handler func(context.Context, Target, []byte) (*Destination, []byte, error)
+type Handler func(context.Context, Target, string, []byte) (*Destination, []byte, error)
 
 // Data transformer applied to convert external events to Tell payloads
 type Transformer func(context.Context, []byte) ([]byte, error)

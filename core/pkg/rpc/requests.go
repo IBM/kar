@@ -33,7 +33,7 @@ var (
 	handlers = map[string]Handler{} // registered method handlers
 )
 
-func eval(ctx context.Context, method string, target Target, deadline time.Time, parentID string, value []byte) (*Destination, []byte, string) {
+func eval(ctx context.Context, method string, target Target, deadline time.Time, requestID string, value []byte) (*Destination, []byte, string) {
 	if !deadline.IsZero() && deadline.Before(time.Now()) {
 		return nil, nil, fmt.Sprintf("deadline expired: deadline was %v and it is now %v", deadline, time.Now())
 	}
@@ -41,7 +41,7 @@ func eval(ctx context.Context, method string, target Target, deadline time.Time,
 	if f == nil {
 		return nil, nil, "undefined method " + method
 	} else {
-		dest, result, err := f(ctx, target, value)
+		dest, result, err := f(ctx, target, requestID, value)
 		if err != nil {
 			b, _ := json.Marshal(err.Error) // attempt to serialize error object, ignore errors
 			return nil, b, err.Error()
@@ -65,7 +65,7 @@ func accept(ctx context.Context, msg Message) {
 		}
 		ch <- result
 	case CallRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.ParentID, m.value())
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.RequestID, m.value())
 		if ctx.Err() == context.Canceled {
 			return
 		}

@@ -32,16 +32,16 @@ import (
 
 var ctx, cancel = context.WithCancel(context.Background())
 
-func incr(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+func incr(ctx context.Context, t rpc.Target, requestID string, v []byte) (*rpc.Destination, []byte, error) {
 	fmt.Println("BLA")
 	return nil, []byte{v[0] + 1}, nil
 }
 
-func fail(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+func fail(ctx context.Context, t rpc.Target, requestID string, v []byte) (*rpc.Destination, []byte, error) {
 	return nil, nil, errors.New("failed")
 }
 
-func exit(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+func exit(ctx context.Context, t rpc.Target, requestID string, v []byte) (*rpc.Destination, []byte, error) {
 	log.Printf("%s", v)
 	cancel()
 	return nil, nil, nil
