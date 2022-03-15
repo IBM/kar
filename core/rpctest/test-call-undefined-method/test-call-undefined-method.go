@@ -34,7 +34,7 @@ func main() {
 
 	// Send a request to a non-existent method:
 	log.Print("undefined method test")
-	_, err := rpc.Call(c.ClientCtx, destinationFoo, time.Time{}, nil)
+	_, err := rpc.Call(c.ClientCtx, destinationFoo, time.Time{}, "42", nil)
 	if err == nil {
 		log.Print("test failed")
 		os.Exit(1)

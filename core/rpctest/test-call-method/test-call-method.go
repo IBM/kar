@@ -34,7 +34,7 @@ func main() {
 
 	// Send request to server to increment passed in value of 42.
 	log.Print("incr test")
-	result, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{42})
+	result, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, "42", []byte{42})
 	if err != nil {
 		log.Print("incr test failed")
 		os.Exit(1)

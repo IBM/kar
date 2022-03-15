@@ -44,6 +44,8 @@ type CallRequest struct {
 	Method    string    // method
 	Caller    string    // source node
 	Sequence  int       // sequence number
+	ChildID   string
+	ParentID  string
 }
 
 func (m CallRequest) requestID() string   { return m.RequestID }
@@ -60,6 +62,7 @@ type TellRequest struct {
 	Target    Target    // target
 	Method    string    // target method
 	Sequence  int       // sequence number
+	ChildID   string
 }
 
 func (m TellRequest) requestID() string   { return m.RequestID }
@@ -97,13 +100,13 @@ func encode(topic string, partition int32, msg Message) *sarama.ProducerMessage 
 		if m.Caller == "" {
 			m.Caller = self.Node
 		}
-		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Method": m.Method, "Caller": m.Caller}
+		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Method": m.Method, "Caller": m.Caller, "Child": m.ChildID, "Parent": m.ParentID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
 		encodeTarget(m.Target, meta)
 	case TellRequest:
-		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method}
+		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method, "Child": m.ChildID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
@@ -147,9 +150,9 @@ func decode(msg *sarama.ConsumerMessage) Message {
 	}
 	switch meta["Type"] {
 	case "Call":
-		return CallRequest{RequestID: meta["RequestID"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Caller: meta["Caller"], Value: msg.Value}
+		return CallRequest{RequestID: meta["RequestID"], ChildID: meta["Child"], ParentID: meta["Parent"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Caller: meta["Caller"], Value: msg.Value}
 	case "Tell":
-		return TellRequest{RequestID: meta["RequestID"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Value: msg.Value}
+		return TellRequest{RequestID: meta["RequestID"], ChildID: meta["Child"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Value: msg.Value}
 	case "Response":
 		return Response{RequestID: meta["RequestID"], Deadline: deadline, ErrMsg: meta["ErrMsg"], Value: msg.Value}
 	}

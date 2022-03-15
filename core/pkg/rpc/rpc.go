@@ -86,8 +86,8 @@ func Connect(ctx context.Context, topic string, conf *Config, services ...string
 }
 
 // Call method and wait for result
-func Call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
-	return call(ctx, dest, deadline, value)
+func Call(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	return call(ctx, dest, deadline, parentID, value)
 }
 
 // Call method and return immediately (result will be discarded)
@@ -97,7 +97,7 @@ func Tell(ctx context.Context, dest Destination, deadline time.Time, value []byt
 
 // Call method and return a request id and a result channel
 func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
-	return async(ctx, dest, deadline, value)
+	return async(ctx, dest, deadline, "", value)
 }
 
 // Reclaim resources associated with async request id

@@ -33,7 +33,7 @@ var (
 	handlers = map[string]Handler{} // registered method handlers
 )
 
-func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) (*Destination, []byte, string) {
+func eval(ctx context.Context, method string, target Target, deadline time.Time, parentID string, value []byte) (*Destination, []byte, string) {
 	if !deadline.IsZero() && deadline.Before(time.Now()) {
 		return nil, nil, fmt.Sprintf("deadline expired: deadline was %v and it is now %v", deadline, time.Now())
 	}
@@ -65,7 +65,7 @@ func accept(ctx context.Context, msg Message) {
 		}
 		ch <- result
 	case CallRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.ParentID, m.value())
 		if ctx.Err() == context.Canceled {
 			return
 		}
@@ -75,13 +75,13 @@ func accept(ctx context.Context, msg Message) {
 				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
 			}
 		} else {
-			err := Send(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
+			err := Send(ctx, CallRequest{RequestID: m.requestID(), ParentID: m.ParentID, Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
 				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
 			}
 		}
 	case TellRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), "", m.value())
 		if ctx.Err() == context.Canceled {
 			return
 		}
@@ -105,8 +105,8 @@ func accept(ctx context.Context, msg Message) {
 }
 
 // Call method and wait for result
-func call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
-	requestID, ch, err := async(ctx, dest, deadline, value)
+func call(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	requestID, ch, err := async(ctx, dest, deadline, parentID, value)
 	if err != nil {
 		return nil, err
 	}
@@ -126,11 +126,11 @@ func tell(ctx context.Context, dest Destination, deadline time.Time, value []byt
 }
 
 // Call method and return a request id and a result channel
-func async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) (string, <-chan Result, error) {
 	requestID := uuid.New().String()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
-	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
+	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
 	if err != nil {
 		requests.Delete(requestID)
 		return "", nil, err

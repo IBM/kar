@@ -85,7 +85,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), "", bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -115,19 +115,20 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, flow string, parentID string) (*Reply, error) {
 	if flow == "" {
 		flow = uuid.New().String() // start new flow
 	}
 	msg := map[string]string{
 		"command": "call",
 		"path":    path,
+		"parent":  parentID,
 		"payload": payload}
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +185,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, defaultTimeout(), "", bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -384,7 +385,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 		e.release(flow, false)
 	} else { // invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + ":" + msg["parent"] + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 

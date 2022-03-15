@@ -38,7 +38,7 @@ func main() {
 	n := byte(0)
 	for i := 0; i < 10; i++ {
 		fmt.Println("Before Call")
-		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
+		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, "42", []byte{n})
 		fmt.Println("After Call")
 		if err != nil {
 			log.Print(err)

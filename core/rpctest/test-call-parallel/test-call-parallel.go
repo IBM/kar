@@ -37,7 +37,7 @@ func main() {
 	for i := byte(0); i < 200; i++ {
 		x := i
 		go func() {
-			y, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{x + 42})
+			y, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, "42", []byte{x + 42})
 			if err != nil {
 				ch <- 0
 

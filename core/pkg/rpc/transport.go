@@ -101,9 +101,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		}
 		switch m := decode(msg).(type) {
 		case CallRequest:
-			if node2partition[m.Caller] != 0 {
-				processor(m) // process calls from live nodes only
-			}
+			processor(m)
 		case TellRequest, Response:
 			processor(m)
 		}
@@ -128,8 +126,10 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 
 	defer close(h.finished)
 
-	requests := map[string]Request{}        // all the non-cancelled requests in disconnected partitions
-	requests0 := map[string]int{}           // all the non-cancelled request ids in partition zero
+	calls := map[string][]string{}          // map from caller to callees for blocking calls
+	res := map[string]struct{}{}            // all the response ids
+	requests := map[string]Request{}        // all the requests in disconnected partitions
+	requests0 := map[string]int{}           // all the request ids in partition zero
 	handled := map[string]int{}             // all the request ids that have a matching response or appear in partitions connected to live nodes
 	offsetsForDeletion := map[int32]int64{} // a map from partition to the first offset to preserve in the partition
 
@@ -151,9 +151,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 			m := decode(msg)
 			switch v := decode(msg).(type) {
 			case CallRequest:
-				if node2partition[v.Caller] == 0 {
-					continue // ignore calls from dead nodes, they are cancelled
-				}
+				calls[v.ParentID] = append(calls[v.ParentID], v.RequestID)
 				if !recovery[p] { // collect requests targetting dead nodes
 					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
 						requests[v.requestID()] = v
@@ -184,6 +182,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 					handled[m.requestID()] = v.Sequence // requests targetting live nodes
 				}
 			default:
+				res[v.requestID()] = struct{}{}
 				handled[m.requestID()] = 1 << 30 // responses
 			}
 		}
@@ -201,6 +200,16 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	for k, v := range requests {
 		// skip requests that are already handled
 		if s, ok := handled[k]; !ok || s < v.sequence() {
+			for _, r := range calls[k] { // iterate of nested blocking calls
+				if _, ok := res[r]; !ok { // nested call has not completed
+					switch x := v.(type) {
+					case CallRequest:
+						x.ChildID = r
+					case TellRequest:
+						x.ChildID = r
+					}
+				}
+			}
 			// do not send to partition 0 if already in partition 0
 			s0, ok0 := requests0[k]
 			err := resend(session.Context(), v, ok0 && s0 >= v.sequence())

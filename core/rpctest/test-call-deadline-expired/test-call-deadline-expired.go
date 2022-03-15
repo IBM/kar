@@ -34,7 +34,7 @@ func main() {
 
 	// Send a request with expired deadline, expect error `deadline expired`
 	log.Print("deadline test")
-	_, err := rpc.Call(c.ClientCtx, destinationIncr, time.Now().Add(-time.Hour), []byte{42})
+	_, err := rpc.Call(c.ClientCtx, destinationIncr, time.Now().Add(-time.Hour), "42", []byte{42})
 	if err == nil {
 		log.Print("test failed")
 		os.Exit(1)

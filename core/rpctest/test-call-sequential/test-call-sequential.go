@@ -36,7 +36,7 @@ func main() {
 	log.Print("sequential test")
 	n := byte(42)
 	for i := 0; i < 200; i++ {
-		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, []byte{n})
+		x, err := rpc.Call(c.ClientCtx, destinationIncr, time.Time{}, "42", []byte{n})
 		if err != nil {
 			log.Print(err)
 			os.Exit(1)
