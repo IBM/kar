@@ -14,6 +14,7 @@
 
 from kar import actor_proxy, actor_call, call
 from kar import actor_state_set, actor_state_get, actor_state_get_all
+from kar import actor_state_contains, actor_state_remove
 import asyncio
 
 service_name = "sdk-test-state"
@@ -123,6 +124,48 @@ async def set_and_get_via_actor():
 
 def test_set_and_get_via_actor():
     asyncio.run(set_and_get_via_actor())
+
+
+# -----------------------------------------------------------------------------
+async def contains_field():
+    test_actor = actor_proxy("TestActorState", "7")
+
+    # Non-existent field.
+    assert await actor_state_contains(test_actor, "field") is False
+
+    # Add field:
+    await actor_state_set(test_actor, "field", 42)
+
+    # Check field exists:
+    assert await actor_state_contains(test_actor, "field") is True
+
+    # Remove field:
+    await actor_state_remove(test_actor, 'field')
+
+
+def test_contains_field():
+    asyncio.run(contains_field())
+
+
+# -----------------------------------------------------------------------------
+async def check_remove_field():
+    test_actor = actor_proxy("TestActorState", "8")
+
+    # Add field:
+    await actor_state_set(test_actor, "field", 42)
+
+    # Check field exists:
+    assert await actor_state_contains(test_actor, "field") is True
+
+    # Remove field:
+    await actor_state_remove(test_actor, 'field')
+
+    # Check field does not exist:
+    assert await actor_state_contains(test_actor, "field") is False
+
+
+def test_check_remove_field():
+    asyncio.run(check_remove_field())
 
 
 # -----------------------------------------------------------------------------

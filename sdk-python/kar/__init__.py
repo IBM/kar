@@ -34,6 +34,8 @@ from kar.api import actor_remove
 from kar.api import actor_state_get_all
 from kar.api import actor_state_get
 from kar.api import actor_state_set
+from kar.api import actor_state_contains
+from kar.api import actor_state_remove
 
 # Base actor type
 from kar.api import KarActor
@@ -42,5 +44,5 @@ __all__ = [
     'invoke', 'tell', 'call', 'actor_proxy', 'actor_call', 'actor_runtime',
     'KarActor', 'actor_remove', 'shutdown', 'test_actor_head', 'base_call',
     'test_server_health', 'actor_state_get_all', 'actor_state_get',
-    'actor_state_set'
+    'actor_state_set', 'actor_state_contains', 'actor_state_remove'
 ]

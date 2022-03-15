@@ -509,6 +509,24 @@ def actor_state_get(actor, key, value={}):
         _get(f"{actor_state_api}/{key}?nilOnAbsent=true"))
 
 
+#
+# Check the state of an actor contains a specific field.
+#
+async def actor_state_contains(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(_base_head(f"{actor_state_api}/{key}")
+                                         )
+    return response.status_code == 200
+
+
+#
+# Remove key from actor state.
+#
+def actor_state_remove(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(_delete(f"{actor_state_api}/{key}"))
+
+
 # -----------------------------------------------------------------------------
 # Server actor methods
 # -----------------------------------------------------------------------------
