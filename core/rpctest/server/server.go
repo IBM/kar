@@ -32,19 +32,24 @@ import (
 
 var ctx, cancel = context.WithCancel(context.Background())
 
-func incr(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+func incrService(ctx context.Context, t rpc.Service, v []byte) ([]byte, error) {
+	fmt.Println("BLA")
+	return []byte{v[0] + 1}, nil
+}
+
+func incrSession(ctx context.Context, t rpc.Session, v []byte) (*rpc.Destination, []byte, error) {
 	fmt.Println("BLA")
 	return nil, []byte{v[0] + 1}, nil
 }
 
-func fail(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
-	return nil, nil, errors.New("failed")
+func failService(ctx context.Context, t rpc.Service, v []byte) ([]byte, error) {
+	return nil, errors.New("failed")
 }
 
-func exit(ctx context.Context, t rpc.Target, v []byte) (*rpc.Destination, []byte, error) {
+func exitNode(ctx context.Context, t rpc.Node, v []byte) ([]byte, error) {
 	log.Printf("%s", v)
 	cancel()
-	return nil, nil, nil
+	return nil, nil
 }
 
 func main() {
@@ -73,9 +78,10 @@ func main() {
 	// rpclib.PlacementCache = false
 
 	// register function on this service
-	rpc.Register("incr", incr)
-	rpc.Register("fail", fail)
-	rpc.Register("exit", exit)
+	rpc.RegisterService("incr", incrService)
+	rpc.RegisterSession("incr", incrSession)
+	rpc.RegisterService("fail", failService)
+	rpc.RegisterNode("exit", exitNode)
 
 	// start service
 	closed, err := rpc.Connect(ctx, "test-rpc", conf, "server", "actor")

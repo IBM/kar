@@ -48,10 +48,10 @@ const (
 )
 
 func init() {
-	rpc.Register(actorEndpoint, handlerActor)
-	rpc.Register(bindingEndpoint, handlerBinding)
-	rpc.Register(serviceEndpoint, handlerService)
-	rpc.Register(sidecarEndpoint, handlerSidecar)
+	rpc.RegisterSession(actorEndpoint, handlerActor)
+	rpc.RegisterSession(bindingEndpoint, handlerBinding)
+	rpc.RegisterService(serviceEndpoint, handlerService)
+	rpc.RegisterNode(sidecarEndpoint, handlerSidecar)
 }
 
 // Reply contains the subset of an http.Response that are relevant to higher levels of the runtime
@@ -254,49 +254,41 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 // Callee (receiving) side of RPCs
 ////////////////////
 
-func handlerSidecar(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
-	_, ok := target.(rpc.Node)
-	if !ok {
-		return nil, nil, fmt.Errorf("Protocol mismatch: handlerSidecar with target %v", target)
-	}
+func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte, error) {
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if msg["command"] == "getActiveActors" {
 		replyBytes, replyErr := getActorInformation(ctx, msg)
-		return nil, replyBytes, replyErr
+		return replyBytes, replyErr
 	} else {
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
-		return nil, nil, nil
+		return nil, nil
 	}
 }
 
-func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
-	targetAsService, ok := target.(rpc.Service)
-	if !ok {
-		return nil, nil, fmt.Errorf("Protocol mismatch: handlerService with target %v", target)
-	}
+func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]byte, error) {
 	var msg map[string]string
 	err := json.Unmarshal(value, &msg)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	command := msg["command"]
 	if !(command == "call" || command == "tell") {
 		logger.Error("unexpected command %s", command)
-		return nil, nil, nil // returning `nil` error indicates that message processing is complete (ie, drop unknown commands)
+		return nil, nil // returning `nil` error indicates that message processing is complete (ie, drop unknown commands)
 	}
 
-	reply, err := invoke(ctx, msg["method"], msg, targetAsService.Name+":"+msg["path"])
+	reply, err := invoke(ctx, msg["method"], msg, target.Name+":"+msg["path"])
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("%s failed to invoke %s: %v", command, msg["path"], err)
 		}
-		return nil, nil, err
+		return nil, err
 	}
 
 	var replyBytes []byte = nil
@@ -311,15 +303,11 @@ func handlerService(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		}
 	}
 
-	return nil, replyBytes, err
+	return replyBytes, err
 }
 
-func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
-	targetAsSession, ok := target.(rpc.Session)
-	if !ok {
-		return nil, nil, fmt.Errorf("Protocol mismatch: handlerActor with target %v", target)
-	}
-	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
+func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil
 	var msg map[string]string
@@ -330,7 +318,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	}
 
 	// Determine flow to use when acquiring actor instance lock
-	flow := targetAsSession.Flow
+	flow := target.Flow
 	if flow == "" {
 		logger.Fatal("Empty flow %v %v", actor, msg)
 	}
@@ -417,7 +405,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 									"command": "tell",
 									"path":    cr["path"].(string),
 									"payload": cr["payload"].(string)}
-								if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID && cr["releaseLock"] != "true" {
+								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
 									msg["lockRetained"] = "true"
 									releaseLock = false
 								}
@@ -442,7 +430,7 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 								"command": "call",
 								"path":    cr["path"].(string),
 								"payload": cr["payload"].(string)}
-							if nextActor.Name == targetAsSession.Name && nextActor.ID == targetAsSession.ID && cr["releaseLock"] != "true" {
+							if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
 								msg["lockRetained"] = "true"
 								releaseLock = false
 							}
@@ -474,12 +462,8 @@ func handlerActor(ctx context.Context, target rpc.Target, value []byte) (*rpc.De
 	return dest, reply, err
 }
 
-func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.Destination, []byte, error) {
-	targetAsSession, ok := target.(rpc.Session)
-	if !ok {
-		return nil, nil, fmt.Errorf("Protocol mismatch: handlerBinding with target %v", target)
-	}
-	actor := Actor{Type: targetAsSession.Name, ID: targetAsSession.ID}
+func handlerBinding(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil
 	var msg map[string]string
@@ -489,7 +473,7 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 		return nil, nil, err
 	}
 
-	flow := targetAsSession.Flow
+	flow := target.Flow
 	// Acquire the actor instance lock
 	var e *actorEntry
 	var reason map[string]string
@@ -507,7 +491,7 @@ func handlerBinding(ctx context.Context, target rpc.Target, value []byte) (*rpc.
 	}
 
 	// We now have the lock on the actor instance.
-	// All paths must call release before returning, but we can't just defer it becuase we don't know if we did an invoke or not yet
+	// All paths must call release before returning.
 
 	switch msg["command"] {
 	case "del":

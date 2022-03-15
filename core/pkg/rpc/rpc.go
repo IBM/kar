@@ -64,7 +64,9 @@ type Destination struct {
 }
 
 // Handler for method
-type Handler func(context.Context, Target, []byte) (*Destination, []byte, error)
+type ServiceHandler func(context.Context, Service, []byte) ([]byte, error)
+type SessionHandler func(context.Context, Session, []byte) (*Destination, []byte, error)
+type NodeHandler func(context.Context, Node, []byte) ([]byte, error)
 
 // Data transformer applied to convert external events to Tell payloads
 type Transformer func(context.Context, []byte) ([]byte, error)
@@ -76,8 +78,18 @@ type Result struct {
 }
 
 // Register method handler
-func Register(method string, handler Handler) {
-	register(method, handler)
+func RegisterService(method string, handler ServiceHandler) {
+	registerService(method, handler)
+}
+
+// Register method handler
+func RegisterSession(method string, handler SessionHandler) {
+	registerSession(method, handler)
+}
+
+// Register method handler
+func RegisterNode(method string, handler NodeHandler) {
+	registerNode(method, handler)
 }
 
 // Connect to Kafka
