@@ -65,22 +65,49 @@ func accept(ctx context.Context, msg Message) {
 		}
 		ch <- result
 	case CallRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.RequestID, m.value())
-		if ctx.Err() == context.Canceled {
-			return
+		if m.childID() != "" {
+			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), ch)
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				return
+			}
+			requests.Delete(m.childID())
 		}
-		if dest == nil {
-			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
+		if node2partition[m.Caller] == 0 {
+			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
 				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
 			}
 		} else {
-			err := Send(ctx, CallRequest{RequestID: m.requestID(), ParentID: m.ParentID, Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
-			if err != nil && err != ctx.Err() && err != ErrUnavailable {
-				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
+			dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.RequestID, m.value())
+			if ctx.Err() == context.Canceled {
+				return
+			}
+			if dest == nil {
+				err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
+				if err != nil && err != ctx.Err() && err != ErrUnavailable {
+					logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
+				}
+			} else {
+				err := Send(ctx, CallRequest{RequestID: m.requestID(), ParentID: m.ParentID, Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
+				if err != nil && err != ctx.Err() && err != ErrUnavailable {
+					logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
+				}
 			}
 		}
 	case TellRequest:
+		if m.childID() != "" {
+			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), ch)
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				return
+			}
+			requests.Delete(m.childID())
+		}
 		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), "", m.value())
 		if ctx.Err() == context.Canceled {
 			return
