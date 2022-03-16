@@ -205,8 +205,10 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 					switch x := v.(type) {
 					case CallRequest:
 						x.ChildID = r
+						v = x
 					case TellRequest:
 						x.ChildID = r
+						v = x
 					}
 				}
 			}
