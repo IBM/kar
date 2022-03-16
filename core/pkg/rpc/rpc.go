@@ -47,6 +47,7 @@ type Session struct {
 	Name string
 	ID   string
 	Flow string
+	Lock bool
 }
 
 // Node implements Target
