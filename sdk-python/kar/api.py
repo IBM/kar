@@ -484,14 +484,6 @@ def _actor_state_url(actor):
 
 
 #
-# Get all the states of an actor.
-#
-def actor_state_get_all(actor):
-    actor_state_api = _actor_state_url(actor)
-    return asyncio.create_task(_get(f"{actor_state_api}"))
-
-
-#
 # Set the state of an actor.
 #
 def actor_state_set(actor, key, value={}):
@@ -510,6 +502,14 @@ def actor_state_get(actor, key, value={}):
 
 
 #
+# Get all the states of an actor.
+#
+def actor_state_get_all(actor):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(_get(f"{actor_state_api}"))
+
+
+#
 # Check the state of an actor contains a specific field.
 #
 async def actor_state_contains(actor, key):
@@ -525,6 +525,43 @@ async def actor_state_contains(actor, key):
 def actor_state_remove(actor, key):
     actor_state_api = _actor_state_url(actor)
     return asyncio.create_task(_delete(f"{actor_state_api}/{key}"))
+
+
+#
+# Remove all keys from actor state.
+#
+def actor_state_remove_all(actor):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(_delete(f"{actor_state_api}"))
+
+
+#
+# Remove some keys from actor state.
+#
+async def actor_state_remove_some(actor, keys=[]):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(
+        _post(f"{actor_state_api}", json.dumps({'removals': keys}), None))
+    return response["removed"]
+
+
+#
+# Set multiple keys in actor state.
+#
+async def actor_state_set_multiple(actor, state={}):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(
+        _post(f"{actor_state_api}", json.dumps({'updates': state}), None))
+    return response["added"]
+
+
+#
+# Set multiple keys in actor state.
+#
+def actor_state_update(actor, changes):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _post(f"{actor_state_api}", json.dumps(changes), None))
 
 
 # -----------------------------------------------------------------------------
