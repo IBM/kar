@@ -129,6 +129,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	calls := map[string][]string{}          // map from caller to callees for blocking calls
 	res := map[string]struct{}{}            // all the response ids
 	requests := map[string]Request{}        // all the requests in disconnected partitions
+	array := []Request{}                    // all the requests in disconnected partitions order
 	requests0 := map[string]int{}           // all the request ids in partition zero
 	handled := map[string]int{}             // all the request ids that have a matching response or appear in partitions connected to live nodes
 	offsetsForDeletion := map[int32]int64{} // a map from partition to the first offset to preserve in the partition
@@ -153,6 +154,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 			case CallRequest:
 				calls[v.ParentID] = append(calls[v.ParentID], v.RequestID)
 				if !recovery[p] { // collect requests targetting dead nodes
+					array = append(array, v)
 					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
 						requests[v.requestID()] = v
 					}
@@ -168,6 +170,7 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 				}
 			case TellRequest:
 				if !recovery[p] { // collect requests targetting dead nodes
+					array = append(array, v)
 					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
 						requests[v.requestID()] = v
 					}
@@ -197,7 +200,8 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	}
 
 	// resend requests targetting dead nodes
-	for k, v := range requests {
+	for _, v := range array {
+		k := v.requestID()
 		// skip requests that are already handled
 		if s, ok := handled[k]; !ok || s < v.sequence() {
 			for _, r := range calls[k] { // iterate of nested blocking calls
