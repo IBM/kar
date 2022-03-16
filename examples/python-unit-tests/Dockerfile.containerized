@@ -22,8 +22,16 @@ RUN mkdir /python_kar/python-unit-tests
 WORKDIR /python_kar/python-unit-tests
 
 COPY pytest.ini pytest.ini
+
+COPY service_server.py service_server.py
+COPY test_service_methods.py test_service_methods.py
+
 COPY actor_server.py actor_server.py
 COPY test_actor_server.py test_actor_server.py
+
+COPY actor_state_server.py actor_state_server.py
+COPY test_state_management.py test_state_management.py
+
 COPY launch.sh launch.sh
 COPY container-env.sh container-env.sh
 
