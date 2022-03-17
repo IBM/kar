@@ -29,28 +29,20 @@ import (
 )
 
 var (
-	requests = sync.Map{}           // map[string](chan Result){} // map request ids to result channels
-	handlers = map[string]Handler{} // registered method handlers
+	requests        = sync.Map{}                  // map[string](chan Result){} // map request ids to result channels
+	handlersService = map[string]ServiceHandler{} // registered method handlers for service targets
+	handlersSession = map[string]SessionHandler{} // registered method handlers for session targets
+	handlersNode    = map[string]NodeHandler{}    // registered method handlers for node targets
 )
 
-func eval(ctx context.Context, method string, target Target, deadline time.Time, value []byte) (*Destination, []byte, string) {
-	if !deadline.IsZero() && deadline.Before(time.Now()) {
-		return nil, nil, fmt.Sprintf("deadline expired: deadline was %v and it is now %v", deadline, time.Now())
-	}
-	f := handlers[method]
-	if f == nil {
-		return nil, nil, "undefined method " + method
-	} else {
-		dest, result, err := f(ctx, target, value)
-		if err != nil {
-			b, _ := json.Marshal(err.Error) // attempt to serialize error object, ignore errors
-			return nil, b, err.Error()
-		} else {
-			return dest, result, ""
-		}
+func sendOrDie(ctx context.Context, msg Message) {
+	err := Send(ctx, msg)
+	if err != nil && err != ctx.Err() && err != ErrUnavailable {
+		logger.Fatal("Producer error: cannot send message with request id %s: %v", msg.requestID(), err)
 	}
 }
 
+// accept must not block; it is executing on the primary go routine that is receiving messages
 func accept(ctx context.Context, msg Message) {
 	switch m := msg.(type) {
 	case Response:
@@ -64,42 +56,132 @@ func accept(ctx context.Context, msg Message) {
 			result.Err = errors.New(m.ErrMsg)
 		}
 		ch <- result
+
 	case CallRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
-		if ctx.Err() == context.Canceled {
+		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
+			go func() {
+				errMsg := fmt.Sprintf("deadline expired: deadline was %v and it is now %v", m.deadline(), time.Now())
+				sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: nil})
+			}()
 			return
 		}
-		if dest == nil {
-			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
-			if err != nil && err != ctx.Err() && err != ErrUnavailable {
-				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
-			}
-		} else {
-			err := Send(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
-			if err != nil && err != ctx.Err() && err != ErrUnavailable {
-				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
-			}
-		}
-	case TellRequest:
-		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.value())
-		if ctx.Err() == context.Canceled {
-			return
-		}
-		if errMsg != "" {
-			logger.Warning("tell %s to %v returned an error: %s", m.requestID(), m.target(), errMsg)
-		}
-		if dest == nil {
-			if _, ok := m.target().(Node); !ok {
-				err := Send(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
-				if err != nil && err != ctx.Err() && err != ErrUnavailable {
-					logger.Fatal("Producer error: cannot record completion for tell %s: %v", m.requestID(), err)
+
+		switch target := m.target().(type) {
+		case Service:
+			go func() {
+				f := handlersService[m.method()]
+				if f == nil {
+					errMsg := fmt.Sprintf("undefined method %v", m.method())
+					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: nil})
+				} else {
+					value, err := f(ctx, target, m.value())
+					if err != nil {
+						value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
+						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: err.Error(), Value: value})
+					} else {
+						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: "", Value: value})
+					}
 				}
-			}
-		} else {
-			err := Send(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
-			if err != nil && err != ctx.Err() && err != ErrUnavailable {
-				logger.Fatal("Producer error: cannot make tail tell %s: %v", m.requestID(), err)
-			}
+			}()
+
+		case Session:
+			go func() {
+				f := handlersSession[m.method()]
+				if f == nil {
+					errMsg := fmt.Sprintf("undefined method %v", m.method())
+					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: nil})
+				} else {
+					dest, value, err := f(ctx, target, m.value())
+					if err != nil {
+						value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
+						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: err.Error(), Value: value})
+					} else {
+						if dest == nil {
+							sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: "", Value: value})
+						} else {
+							sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
+						}
+					}
+				}
+			}()
+
+		case Node:
+			go func() {
+				f := handlersNode[m.method()]
+				if f == nil {
+					errMsg := fmt.Sprintf("undefined method %v", m.method())
+					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: nil})
+				} else {
+					value, err := f(ctx, target, m.value())
+					if err != nil {
+						value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
+						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: err.Error(), Value: value})
+					} else {
+						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: "", Value: value})
+					}
+				}
+			}()
+		}
+
+	case TellRequest:
+		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
+			go func() {
+				logger.Warning("tell %s to %v dropped at time %v due to expired deadline %v", m.requestID(), m.target(), time.Now(), m.deadline())
+				sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+			}()
+			return
+		}
+
+		switch target := m.target().(type) {
+		case Service:
+			go func() {
+				f := handlersService[m.method()]
+				if f == nil {
+					logger.Warning("tell %s to %v requested undefined method %v", m.requestID(), m.target(), m.method())
+					sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+				} else {
+					_, err := f(ctx, target, m.value())
+					if err != nil && err != ctx.Err() {
+						logger.Warning("tell %s to %v returned an error: %v", m.requestID(), m.target(), err)
+					}
+					sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+				}
+			}()
+
+		case Session:
+			go func() {
+				f := handlersSession[m.method()]
+				if f == nil {
+					logger.Warning("tell %s to %v requested undefined method %v", m.requestID(), m.target(), m.method())
+					sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+				} else {
+					dest, value, err := f(ctx, target, m.value())
+					if err != nil && err != ctx.Err() {
+						logger.Warning("tell %s to %v returned an error: %v", m.requestID(), m.target(), err)
+						sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+					} else {
+						if dest == nil {
+							sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
+						} else {
+							sendOrDie(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
+						}
+					}
+				}
+			}()
+
+		case Node:
+			// No matter what happens we don't need to send a Done record; a Node-targeted TellRequest is not replayed on failure.
+			go func() {
+				f := handlersNode[m.method()]
+				if f == nil {
+					logger.Warning("tell %s to %v requested undefined method %v", m.requestID(), m.target(), m.method())
+				} else {
+					_, err := f(ctx, target, m.value())
+					if err != nil && err != ctx.Err() {
+						logger.Warning("tell %s to %v returned an error: %v", m.requestID(), m.target(), err)
+					}
+				}
+			}()
 		}
 	}
 }
@@ -144,11 +226,19 @@ func reclaim(requestID string) {
 }
 
 // Register method handler
-func register(method string, handler Handler) {
-	handlers[method] = handler
+func registerService(method string, handler ServiceHandler) {
+	handlersService[method] = handler
+}
+
+func registerSession(method string, handler SessionHandler) {
+	handlersSession[method] = handler
+}
+
+func registerNode(method string, handler NodeHandler) {
+	handlersNode[method] = handler
 }
 
 // Connect to Kafka
 func connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
-	return Dial(ctx, topic, conf, services, func(msg Message) { go accept(ctx, msg) })
+	return Dial(ctx, topic, conf, services, func(msg Message) { accept(ctx, msg) })
 }
