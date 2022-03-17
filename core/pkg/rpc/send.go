@@ -176,3 +176,9 @@ func resend(ctx context.Context, msg Request, drop bool) error {
 	_, _, err := producer.SendMessage(encode(appTopic, partition, msg))
 	return err
 }
+
+// Resend response during recovery (errors: cancelled, Redis, Kafka)
+func respond(ctx context.Context, msg Done) error {
+	_, _, err := producer.SendMessage(encode(appTopic, 0, msg))
+	return err
+}

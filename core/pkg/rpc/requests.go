@@ -75,26 +75,19 @@ func accept(ctx context.Context, msg Message) {
 			}
 			requests.Delete(m.childID())
 		}
-		if node2partition[m.Caller] == 0 {
-			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller})
+		dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.RequestID, m.value())
+		if ctx.Err() == context.Canceled {
+			return
+		}
+		if dest == nil {
+			err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
 			if err != nil && err != ctx.Err() && err != ErrUnavailable {
 				logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
 			}
 		} else {
-			dest, value, errMsg := eval(ctx, m.method(), m.target(), m.deadline(), m.RequestID, m.value())
-			if ctx.Err() == context.Canceled {
-				return
-			}
-			if dest == nil {
-				err := Send(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: value})
-				if err != nil && err != ctx.Err() && err != ErrUnavailable {
-					logger.Fatal("Producer error: cannot respond to call %s: %v", m.requestID(), err)
-				}
-			} else {
-				err := Send(ctx, CallRequest{RequestID: m.requestID(), ParentID: m.ParentID, Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
-				if err != nil && err != ctx.Err() && err != ErrUnavailable {
-					logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
-				}
+			err := Send(ctx, CallRequest{RequestID: m.requestID(), ParentID: m.ParentID, Deadline: m.deadline(), Caller: m.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: m.Sequence + 1})
+			if err != nil && err != ctx.Err() && err != ErrUnavailable {
+				logger.Fatal("Producer error: cannot make tail call %s: %v", m.requestID(), err)
 			}
 		}
 	case TellRequest:
