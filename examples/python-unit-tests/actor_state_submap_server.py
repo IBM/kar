@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from kar import actor_runtime, KarActor
-from kar import actor_state_set, actor_state_get
+from kar import actor_state_submap_set, actor_state_submap_get
 from hypercorn.config import Config
 from hypercorn.asyncio import serve
 from fastapi import FastAPI, Response
@@ -45,7 +45,7 @@ app = FastAPI()
 
 # Actors are represented by classes that extend the KAR's KarActor
 # class.
-class TestActorState(KarActor):
+class TestActorSubState(KarActor):
 
     # Kar only supports constructors without arguments. Use methods
     # to update actor state.
@@ -74,11 +74,11 @@ class TestActorState(KarActor):
     def add_movie(self):
         self.movies += 1
 
-    async def set_persistent_field(self, value):
-        await actor_state_set(self, "field", value)
+    async def set_persistent_field(self, subkey, value):
+        await actor_state_submap_set(self, "field", subkey, value)
 
-    async def get_persistent_field(self):
-        return await actor_state_get(self, "field")
+    async def get_persistent_field(self, subkey):
+        return await actor_state_submap_get(self, "field", subkey)
 
     def get_movies(self):
         return self.movies
@@ -86,7 +86,7 @@ class TestActorState(KarActor):
 
 if __name__ == '__main__':
     # Register actor type with the KAR runtime.
-    app = actor_runtime([TestActorState], actor_server=app)
+    app = actor_runtime([TestActorSubState], actor_server=app)
 
     @app.post('/shutdown')
     async def shutdown():

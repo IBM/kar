@@ -32,6 +32,9 @@ COPY test_actor_server.py test_actor_server.py
 COPY actor_state_server.py actor_state_server.py
 COPY test_state_management.py test_state_management.py
 
+COPY actor_state_submap_server.py actor_state_submap_server.py
+COPY test_state_submap_management.py test_state_submap_management.py
+
 COPY launch.sh launch.sh
 COPY container-env.sh container-env.sh
 

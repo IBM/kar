@@ -564,6 +564,103 @@ def actor_state_update(actor, changes):
         _post(f"{actor_state_api}", json.dumps(changes), None))
 
 
+#
+# Set the state of an actor.
+#
+def actor_state_submap_set(actor, key, subkey, value={}):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _put(f"{actor_state_api}/{key}/{subkey}", json.dumps(value)))
+
+
+#
+# Set the state of an actor.
+#
+def actor_state_submap_get(actor, key, subkey):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _get(f"{actor_state_api}/{key}/{subkey}?nilOnAbsent=true"))
+
+
+#
+# Get all the states of an actor.
+#
+def actor_state_submap_get_all(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _post(f"{actor_state_api}/{key}", json.dumps({'op': 'get'}), None))
+
+
+#
+# Check the state of an actor contains a specific field and submap.
+#
+async def actor_state_submap_contains(actor, key, subkey):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(
+        _base_head(f"{actor_state_api}/{key}/{subkey}"))
+    return response.status_code == 200
+
+
+#
+# Remove subkey from actor state.
+#
+def actor_state_submap_remove(actor, key, subkey):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(_delete(f"{actor_state_api}/{key}/{subkey}"))
+
+
+#
+# Remove all subkeys from actor state.
+#
+def actor_state_submap_remove_all(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _post(f"{actor_state_api}/{key}", json.dumps({'op': 'clear'}), None))
+
+
+#
+# Remove some subkeys from actor state.
+#
+async def actor_state_submap_remove_some(actor, key, subkeys=[]):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(
+        _post(f"{actor_state_api}",
+              json.dumps({'submapremovals': {
+                  key: subkeys
+              }}), None))
+    return response["removed"]
+
+
+#
+# Set multiple subkeys in actor state.
+#
+async def actor_state_submap_set_multiple(actor, key, state={}):
+    actor_state_api = _actor_state_url(actor)
+    response = await asyncio.create_task(
+        _post(f"{actor_state_api}", json.dumps({'submapupdates': {
+            key: state
+        }}), None))
+    return response["added"]
+
+
+#
+# List all subkeys.
+#
+def actor_state_submap_keys(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _post(f"{actor_state_api}/{key}", json.dumps({'op': 'keys'}), None))
+
+
+#
+# Return the number of subkeys.
+#
+def actor_state_submap_size(actor, key):
+    actor_state_api = _actor_state_url(actor)
+    return asyncio.create_task(
+        _post(f"{actor_state_api}/{key}", json.dumps({'op': 'size'}), None))
+
+
 # -----------------------------------------------------------------------------
 # Server actor methods
 # -----------------------------------------------------------------------------
