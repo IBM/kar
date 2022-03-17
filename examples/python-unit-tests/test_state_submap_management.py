@@ -203,7 +203,7 @@ def test_check_remove_field():
 
 # -----------------------------------------------------------------------------
 async def check_remove_field_twice():
-    test_actor = actor_proxy("TestActorState", "9")
+    test_actor = actor_proxy("TestActorSubState", "9")
 
     # Add field:
     await actor_state_set(test_actor, "field", 42)
@@ -266,7 +266,7 @@ def test_remove_all():
 
 # -----------------------------------------------------------------------------
 async def remove_some():
-    test_actor = actor_proxy("TestActorState", "11")
+    test_actor = actor_proxy("TestActorSubState", "11")
 
     # Add field:
     await actor_state_set(test_actor, "field1", 42)
@@ -508,7 +508,7 @@ def test_list_keys():
 
 # -----------------------------------------------------------------------------
 async def count_keys():
-    test_actor = actor_proxy("TestActorSubState", "15")
+    test_actor = actor_proxy("TestActorSubState", "16")
 
     # Add sub-fields:
     await actor_state_submap_set(test_actor, "field1", "key1", 42)
