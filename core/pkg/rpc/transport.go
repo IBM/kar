@@ -157,61 +157,37 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 			next = msg.Offset + 1
 			m := decode(msg)
 			switch v := decode(msg).(type) {
-			case CallRequest:
-				if max[v.RequestID] <= v.Sequence {
-					max[v.RequestID] = v.Sequence
-					latest[v.RequestID] = v
+			case Request:
+				if max[v.requestID()] <= v.sequence() {
+					max[v.requestID()] = v.sequence()
+					latest[v.requestID()] = v
 				}
-				if s, ok := v.Target.(Session); ok && s.Lock {
-					if retainers[v.RequestID] == nil {
-						retainers[v.RequestID] = map[int]struct{}{}
+				if s, ok := v.target().(Session); ok && s.Lock {
+					if retainers[v.requestID()] == nil {
+						retainers[v.requestID()] = map[int]struct{}{}
 					}
-					retainers[v.RequestID][v.Sequence] = struct{}{}
+					retainers[v.requestID()][v.sequence()] = struct{}{}
 				}
-				calls[v.ParentID] = append(calls[v.ParentID], v.RequestID)
+				if c, ok := v.(CallRequest); ok {
+					calls[c.ParentID] = append(calls[c.ParentID], c.RequestID)
+				}
 				if !recovery[p] { // collect requests targetting dead partitions and partition 0
 					if p == 0 {
 						orphans0 = append(orphans0, v)
-						requests[v.RequestID] = struct{}{}
-						if v.Sequence >= requests0[m.requestID()] {
-							requests0[m.requestID()] = v.Sequence
+						requests[v.requestID()] = struct{}{}
+						if v.sequence() >= requests0[m.requestID()] {
+							requests0[m.requestID()] = v.sequence()
 						}
 					} else {
 						orphans = append(orphans, v)
 					}
 					continue
 				}
-				if v.Sequence >= handled[m.requestID()] {
-					handled[m.requestID()] = v.Sequence // requests targetting live partitions
+				if v.sequence() >= handled[m.requestID()] {
+					handled[m.requestID()] = v.sequence() // requests targetting live partitions
 				}
-				requests[v.RequestID] = struct{}{}
-			case TellRequest:
-				if max[v.RequestID] <= v.Sequence {
-					max[v.RequestID] = v.Sequence
-					latest[v.RequestID] = v
-				}
-				if s, ok := v.Target.(Session); ok && s.Lock {
-					if retainers[v.RequestID] == nil {
-						retainers[v.RequestID] = map[int]struct{}{}
-					}
-					retainers[v.RequestID][v.Sequence] = struct{}{}
-				}
-				if !recovery[p] { // collect requests targetting dead partitions and partition 0
-					if p == 0 {
-						orphans0 = append(orphans0, v)
-						requests[v.RequestID] = struct{}{}
-						if v.Sequence >= requests0[m.requestID()] {
-							requests0[m.requestID()] = v.Sequence
-						}
-					} else {
-						orphans = append(orphans, v)
-					}
-					continue
-				}
-				if v.Sequence >= handled[m.requestID()] {
-					handled[m.requestID()] = v.Sequence // requests targetting live partitions
-				}
-				requests[v.RequestID] = struct{}{}
+				requests[v.requestID()] = struct{}{}
+
 			default:
 				responses[v.requestID()] = struct{}{}
 				handled[m.requestID()] = 1 << 30 // responses
@@ -260,39 +236,28 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 					continue
 				}
 				seen[k] = struct{}{}
+				childID := ""
+				for _, r := range calls[k] { // iterate of nested blocking calls
+					if _, ok := responses[r]; !ok { // nested call has not completed
+						childID = r
+					}
+				}
 				switch w := latest[k].(type) {
 				case CallRequest:
-					w.ChildID = ""
-					for _, r := range calls[k] { // iterate of nested blocking calls
-						if _, ok := responses[r]; !ok { // nested call has not completed
-							w.ChildID = r
-						}
-					}
-					// do not send to partition 0 if already in partition 0
-					s0, ok0 := requests0[k]
-					err := resend(session.Context(), w, ok0 && s0 >= max[k])
-					if err != nil {
-						if err != session.Context().Err() {
-							logger.Error("resend error during recovery: %v", err)
-						}
-						return err
-					}
+					w.ChildID = childID
+					v = w
 				case TellRequest:
-					w.ChildID = ""
-					for _, r := range calls[k] { // iterate of nested blocking calls
-						if _, ok := responses[r]; !ok { // nested call has not completed
-							w.ChildID = r
-						}
+					w.ChildID = childID
+					v = w
+				}
+				// do not send to partition 0 if already in partition 0
+				s0, ok0 := requests0[k]
+				err := resend(session.Context(), v, ok0 && s0 >= max[k])
+				if err != nil {
+					if err != session.Context().Err() {
+						logger.Error("resend error during recovery: %v", err)
 					}
-					// do not send to partition 0 if already in partition 0
-					s0, ok0 := requests0[k]
-					err := resend(session.Context(), w, ok0 && s0 >= max[k])
-					if err != nil {
-						if err != session.Context().Err() {
-							logger.Error("resend error during recovery: %v", err)
-						}
-						return err
-					}
+					return err
 				}
 			}
 		default:
