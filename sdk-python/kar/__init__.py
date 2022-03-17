@@ -41,6 +41,17 @@ from kar.api import actor_state_remove_some
 from kar.api import actor_state_set_multiple
 from kar.api import actor_state_update
 
+from kar.api import actor_state_submap_get
+from kar.api import actor_state_submap_set
+from kar.api import actor_state_submap_get_all
+from kar.api import actor_state_submap_contains
+from kar.api import actor_state_submap_remove
+from kar.api import actor_state_submap_remove_all
+from kar.api import actor_state_submap_remove_some
+from kar.api import actor_state_submap_set_multiple
+from kar.api import actor_state_submap_keys
+from kar.api import actor_state_submap_size
+
 # Base actor type
 from kar.api import KarActor
 
@@ -50,5 +61,10 @@ __all__ = [
     'test_server_health', 'actor_state_get_all', 'actor_state_get',
     'actor_state_set', 'actor_state_contains', 'actor_state_remove',
     'actor_state_remove_all', 'actor_state_remove_some',
-    'actor_state_set_multiple', 'actor_state_update'
+    'actor_state_set_multiple', 'actor_state_update', 'actor_state_submap_set',
+    'actor_state_submap_get', 'actor_state_submap_get_all',
+    'actor_state_submap_contains', 'actor_state_submap_remove',
+    'actor_state_submap_remove_all', 'actor_state_submap_remove_some',
+    'actor_state_submap_set_multiple', 'actor_state_submap_keys',
+    'actor_state_submap_size'
 ]

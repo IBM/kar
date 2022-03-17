@@ -29,5 +29,10 @@ set -e
 # Test state method calls:
 ( kar run -h2c -app unit-test -app_port 8083 -actors TestActorState -service sdk-test-state python actor_state_server.py ) &
 
+
+# Test state submap method calls:
+( kar run -h2c -app unit-test -app_port 8084 -actors TestActorSubState -service sdk-test-state-submap python actor_state_submap_server.py ) &
+
+
 # Run the client:
 kar run -h2c -app unit-test pytest
