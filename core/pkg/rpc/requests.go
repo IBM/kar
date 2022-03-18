@@ -43,6 +43,22 @@ var (
 	sessionBusyTimeout time.Duration = 0
 )
 
+func getLocalActivatedSessions(ctxt context.Context, name string) map[string][]string {
+	information := make(map[string][]string)
+	sessionTable.Range(func(key, v interface{}) bool {
+		instance := v.(*SessionInstance)
+		instance.lock <- struct{}{}
+		if instance.valid && instance.Activated {
+			if name == "" || instance.Name == name {
+				information[instance.Name] = append(information[instance.Name], instance.ID)
+			}
+		}
+		<-instance.lock
+		return true
+	})
+	return information
+}
+
 func sendOrDie(ctx context.Context, msg Message) {
 	err := Send(ctx, msg)
 	if err != nil && err != ctx.Err() && err != ErrUnavailable {

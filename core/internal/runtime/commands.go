@@ -514,7 +514,7 @@ func bindingLoad(ctx context.Context, actor Actor, msg map[string]string) error 
 
 // Returns information about this sidecar's actors
 func getActorInformation(ctx context.Context, msg map[string]string) ([]byte, error) {
-	actorInfo := getMyActiveActors(msg["actorType"])
+	actorInfo := rpc.GetLocalActivatedSessions(ctx, msg["actorType"])
 	m, err := json.Marshal(actorInfo)
 	var reply Reply
 	if err != nil {
