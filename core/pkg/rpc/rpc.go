@@ -148,8 +148,13 @@ func GetAllSessions(ctx context.Context, sessionPrefixFilter string) (map[string
 
 // GetLocalActivatedSessions returns a map from Session names IDs with local Activated SessionInstances
 // If name is not "", only SessionInstances with the given Name are returned.
-func GetLocalActivatedSessions(ctxt context.Context, name string) map[string][]string {
-	return getLocalActivatedSessions(ctxt, name)
+func GetLocalActivatedSessions(ctx context.Context, name string) map[string][]string {
+	return getLocalActivatedSessions(ctx, name)
+}
+
+// CollectInactiveSessions deactives SessionInstances that have not been used since the given time
+func CollectInactiveSessions(ctx context.Context, time time.Time, callback func(context.Context, *SessionInstance)) {
+	collectInactiveSessions(ctx, time, callback)
 }
 
 // GetNodeID returns the node id for the current node
