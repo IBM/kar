@@ -19,14 +19,12 @@ package runtime
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/rpc"
 )
@@ -76,106 +74,8 @@ type actorEntry struct {
 }
 
 var (
-	actorTable             = sync.Map{} // actor table: Actor -> *actorEntry
-	errActorHasMoved       = errors.New("actor has moved")
-	errActorAcquireTimeout = errors.New("timeout occurred while acquiring actor")
+	actorTable = sync.Map{} // actor table: Actor -> *actorEntry
 )
-
-// acquire locks the actor, flow must be not be ""
-// "exclusive" and "nonexclusive" are reserved flow names
-// acquire returns true if actor requires activation before invocation
-func (actor Actor) acquire(ctx context.Context, flow string, msg map[string]string) (*actorEntry, bool, error, map[string]string) {
-	e := &actorEntry{actor: actor, lock: make(chan struct{}, 1)}
-	e.lock <- struct{}{} // lock entry
-	for {
-		if v, loaded := actorTable.LoadOrStore(actor, e); loaded {
-			e := v.(*actorEntry) // found existing entry, := is required here!
-			e.lock <- struct{}{} // lock entry
-			if e.valid {
-				if e.flow == "" { // start new flow
-					e.flow = flow
-					e.depth = 1
-					e.busy = make(chan struct{})
-					e.msg = msg
-					<-e.lock
-					return e, false, nil, nil
-				}
-				if flow == "nonexclusive" || flow != "exclusive" && flow == e.flow { // reenter existing flow
-					if msg["lockRetained"] != "true" { // do not increment depth for tail call (lock was not released at end of previous step)
-						e.depth++
-					}
-					<-e.lock
-					return e, false, nil, nil
-				}
-				// another flow is in progress
-				busy := e.busy // read while holding the lock
-				<-e.lock
-				if config.ActorBusyTimeout > 0 {
-					select {
-					case <-busy: // wait
-					case <-ctx.Done():
-						return nil, false, ctx.Err(), nil
-					case <-time.After(config.ActorBusyTimeout):
-						e.lock <- struct{}{}
-						reason := e.msg
-						<-e.lock
-						return nil, false, errActorAcquireTimeout, reason
-					}
-				} else {
-					select {
-					case <-busy: // wait
-					case <-ctx.Done():
-						return nil, false, ctx.Err(), nil
-					}
-				}
-				// loop around
-				// no fairness issue trying to reacquire because we waited on busy
-			} else {
-				<-e.lock // invalid entry
-				// loop around
-				// no fairness issue trying to reacquire because this entry is dead
-			}
-		} else { // new entry
-			sidecar, err := rpc.GetSessionNodeID(ctx, rpc.Session{Name: actor.Type, ID: actor.ID})
-			if err != nil {
-				<-e.lock
-				return nil, false, err, nil
-			}
-			if sidecar == rpc.GetNodeID() { // start new flow
-				e.valid = true
-				e.flow = flow
-				e.depth = 1
-				e.msg = msg
-				e.busy = make(chan struct{})
-				<-e.lock
-				return e, true, nil, nil
-			}
-			actorTable.Delete(actor)
-			<-e.lock // actor has moved
-			return nil, false, errActorHasMoved, nil
-		}
-	}
-}
-
-// release releases the actor lock
-// release updates the timestamp if the actor was invoked
-// release removes the actor from the table if it was not activated at depth 0
-func (e *actorEntry) release(flow string, invoked bool) {
-	e.lock <- struct{}{} // lock entry
-	e.depth--
-	if invoked {
-		e.time = time.Now() // update last release time
-	}
-	if e.depth == 0 { // end flow
-		if !invoked { // actor was not activated
-			e.valid = false
-			actorTable.Delete(e.actor)
-		}
-		e.flow = ""
-		close(e.busy)
-	}
-	<-e.lock
-}
 
 // collect deactivates actors that not been used since time
 func collect(ctx context.Context, time time.Time) error {

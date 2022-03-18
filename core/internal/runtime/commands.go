@@ -306,7 +306,7 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 	return replyBytes, err
 }
 
-func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.SessionInstance, value []byte) (*rpc.Destination, []byte, error) {
 	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil
@@ -317,36 +317,9 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 		return nil, nil, err
 	}
 
-	// Determine flow to use when acquiring actor instance lock
-	flow := target.Flow
-	if flow == "" {
-		logger.Fatal("Empty flow %v %v", actor, msg)
-	}
-
-	// Acquire the actor instance lock
-	var e *actorEntry
-	var fresh bool
-	var reason map[string]string
-	e, fresh, err, reason = actor.acquire(ctx, flow, msg)
-	if err != nil {
-		if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], flow, reason)
-			logger.Error("%s", payload)
-			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
-			return nil, replyBytes, replyErr
-		} else {
-			// An error or cancelation that caused us to fail to acquire the lock.
-			return nil, nil, err
-		}
-	}
-
-	// We now have the lock on the actor instance.
-	// All paths must either call release before returning or set msg["lockRetained"] = true for a tailCall to the same actor
-	releaseLock := true
-
 	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
-		if !fresh {
+		if instance.Activated {
 			deactivate(ctx, actor)
 		}
 		// delete persistent actor state
@@ -354,25 +327,28 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 			logger.Error("deleting persistent state of %v failed with %v", actor, err)
 		}
 		// clear placement data and sidecar's in-memory state (effectively also releases the lock, since we are deleting the table entry)
-		err = e.delete()
+		err = rpc.DelSession(ctx, rpc.Session{Name: actor.Type, ID: actor.ID})
 		if err != nil {
-			logger.Error("deleting placement date for %v failed with %v", actor, err)
+			logger.Error("deleting placement data for %v failed with %v", actor, err)
 		}
 		return nil, reply, err
 	}
 
 	var dest *rpc.Destination = nil
-	if fresh {
+	if !instance.Activated {
 		reply, err = activate(ctx, actor, msg["command"] == "call", msg["path"])
+		if reply != nil {
+			// activate returned an application-level error, do not retry
+			err = nil
+		} else if err == nil {
+			instance.Activated = true
+		}
 	}
-	if reply != nil { // activate returned an application-level error, do not retry
-		err = nil // Disable retry
-		e.release(flow, false)
-	} else if err != nil { // failed to invoke activate
-		e.release(flow, false)
-	} else { // invoke actor method
+
+	if instance.Activated {
+		// invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + target.Flow + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
@@ -399,20 +375,16 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
-								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}
+								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+									nextActor.DeferredLockID = uuid.New().String()
+								}
 								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 								msg := map[string]string{
 									"command": "tell",
 									"path":    cr["path"].(string),
 									"payload": cr["payload"].(string)}
-								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-									msg["lockRetained"] = "true"
-									releaseLock = false
-								}
 								reply, err = json.Marshal(msg)
-								if err != nil {
-									releaseLock = true // Tail call is going to be abandoned due to serialization error
-								}
 							}
 						}
 					} else {
@@ -424,20 +396,16 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
-							nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: flow}
+							nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+							if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+								nextActor.DeferredLockID = uuid.New().String()
+							}
 							dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 							msg := map[string]string{
 								"command": "call",
 								"path":    cr["path"].(string),
 								"payload": cr["payload"].(string)}
-							if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-								msg["lockRetained"] = "true"
-								releaseLock = false
-							}
 							reply, err = json.Marshal(msg)
-							if err != nil {
-								releaseLock = true // Tail call is going to be abandoned due to serialization error
-							}
 						}
 					}
 					if reply == nil {
@@ -453,16 +421,12 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 			reply = nil
 			err = nil
 		}
-
-		if releaseLock {
-			e.release(flow, true)
-		}
 	}
 
 	return dest, reply, err
 }
 
-func handlerBinding(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+func handlerBinding(ctx context.Context, target rpc.Session, instance *rpc.SessionInstance, value []byte) (*rpc.Destination, []byte, error) {
 	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil
@@ -472,26 +436,6 @@ func handlerBinding(ctx context.Context, target rpc.Session, value []byte) (*rpc
 	if err != nil {
 		return nil, nil, err
 	}
-
-	flow := target.Flow
-	// Acquire the actor instance lock
-	var e *actorEntry
-	var reason map[string]string
-	e, _, err, reason = actor.acquire(ctx, flow, msg)
-	if err != nil {
-		if err == errActorAcquireTimeout {
-			payload := fmt.Sprintf("acquiring actor %v timed out, aborting command %s with path %s in session %s, due to %v", actor, msg["command"], msg["path"], flow, reason)
-			logger.Error("%s", payload)
-			replyBytes, replyErr := json.Marshal(Reply{StatusCode: http.StatusRequestTimeout, Payload: payload, ContentType: "text/plain"})
-			return nil, replyBytes, replyErr
-		} else {
-			// An error or cancelation that caused us to fail to acquire the lock.
-			return nil, nil, err
-		}
-	}
-
-	// We now have the lock on the actor instance.
-	// All paths must call release before returning.
 
 	switch msg["command"] {
 	case "del":
@@ -509,7 +453,6 @@ func handlerBinding(ctx context.Context, target rpc.Session, value []byte) (*rpc
 		err = nil
 	}
 
-	e.release(flow, false)
 	return nil, reply, err
 }
 
@@ -628,22 +571,25 @@ func deactivate(ctx context.Context, actor Actor) error {
 
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
-	lock := make(chan struct{}, 1) // trylock
-	ticker := time.NewTicker(config.ActorCollectorInterval)
-	for {
-		select {
-		case now := <-ticker.C:
+	return
+	/*
+		lock := make(chan struct{}, 1) // trylock
+		ticker := time.NewTicker(config.ActorCollectorInterval)
+		for {
 			select {
-			case lock <- struct{}{}:
-				collect(ctx, now.Add(-config.ActorCollectorInterval))
-				<-lock
-			default: // skip this collection if collection is already in progress
+			case now := <-ticker.C:
+				select {
+				case lock <- struct{}{}:
+					collect(ctx, now.Add(-config.ActorCollectorInterval))
+					<-lock
+				default: // skip this collection if collection is already in progress
+				}
+			case <-ctx.Done():
+				ticker.Stop()
+				return
 			}
-		case <-ctx.Done():
-			ticker.Stop()
-			return
 		}
-	}
+	*/
 }
 
 // ProcessReminders runs periodically and schedules delivery of all reminders whose targetTime has passed

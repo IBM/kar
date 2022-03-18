@@ -162,6 +162,7 @@ func encodeTarget(target Target, meta map[string]string) {
 		meta["Service"] = t.Name
 		meta["Session"] = t.ID
 		meta["Flow"] = t.Flow
+		meta["Lock"] = t.DeferredLockID
 	case Service:
 		meta["Service"] = t.Name
 	case Node:
@@ -171,7 +172,7 @@ func encodeTarget(target Target, meta map[string]string) {
 
 func decodeTarget(meta map[string]string) Target {
 	if session, ok := meta["Session"]; ok {
-		return Session{Name: meta["Service"], ID: session, Flow: meta["Flow"]}
+		return Session{Name: meta["Service"], ID: session, Flow: meta["Flow"], DeferredLockID: meta["Lock"]}
 	} else if service, ok1 := meta["Service"]; ok1 {
 		return Service{Name: service}
 	}
