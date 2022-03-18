@@ -58,6 +58,18 @@ func accept(ctx context.Context, msg Message) {
 		ch <- result
 
 	case CallRequest:
+		// TODO remove waiting here once actor queue is implemented
+		if m.childID() != "" {
+			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), ch)
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				return
+			}
+			requests.Delete(m.childID())
+		}
+
 		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
 			go func() {
 				errMsg := fmt.Sprintf("deadline expired: deadline was %v and it is now %v", m.deadline(), time.Now())
@@ -91,7 +103,7 @@ func accept(ctx context.Context, msg Message) {
 					errMsg := fmt.Sprintf("undefined method %v", m.method())
 					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: errMsg, Value: nil})
 				} else {
-					dest, value, err := f(ctx, target, m.value())
+					dest, value, err := f(ctx, target, m.requestID(), m.value())
 					if err != nil {
 						value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
 						sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: m.Caller, ErrMsg: err.Error(), Value: value})
@@ -124,6 +136,18 @@ func accept(ctx context.Context, msg Message) {
 		}
 
 	case TellRequest:
+		// TODO remove waiting here once actor queue is implemented
+		if m.childID() != "" {
+			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), ch)
+			select {
+			case <-ch:
+			case <-ctx.Done():
+				return
+			}
+			requests.Delete(m.childID())
+		}
+
 		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
 			go func() {
 				logger.Warning("tell %s to %v dropped at time %v due to expired deadline %v", m.requestID(), m.target(), time.Now(), m.deadline())
@@ -155,7 +179,7 @@ func accept(ctx context.Context, msg Message) {
 					logger.Warning("tell %s to %v requested undefined method %v", m.requestID(), m.target(), m.method())
 					sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
 				} else {
-					dest, value, err := f(ctx, target, m.value())
+					dest, value, err := f(ctx, target, m.requestID(), m.value())
 					if err != nil && err != ctx.Err() {
 						logger.Warning("tell %s to %v returned an error: %v", m.requestID(), m.target(), err)
 						sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
@@ -187,8 +211,8 @@ func accept(ctx context.Context, msg Message) {
 }
 
 // Call method and wait for result
-func call(ctx context.Context, dest Destination, deadline time.Time, value []byte) ([]byte, error) {
-	requestID, ch, err := async(ctx, dest, deadline, value)
+func call(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	requestID, ch, err := async(ctx, dest, deadline, parentID, value)
 	if err != nil {
 		return nil, err
 	}
@@ -208,11 +232,11 @@ func tell(ctx context.Context, dest Destination, deadline time.Time, value []byt
 }
 
 // Call method and return a request id and a result channel
-func async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
+func async(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) (string, <-chan Result, error) {
 	requestID := uuid.New().String()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
-	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
+	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
 	if err != nil {
 		requests.Delete(requestID)
 		return "", nil, err

@@ -34,7 +34,7 @@ func main() {
 
 	// Test failure of method on server:
 	log.Print("error result test")
-	_, err := rpc.Call(c.ClientCtx, destinationFail, time.Time{}, nil)
+	_, err := rpc.Call(c.ClientCtx, destinationFail, time.Time{}, "", nil)
 	if err == nil {
 		log.Print("test failed")
 		os.Exit(1)
