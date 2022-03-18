@@ -320,7 +320,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
 		if instance.Activated {
-			deactivate(ctx, actor)
+			deactivate(ctx, instance)
 		}
 		// delete persistent actor state
 		if _, err := store.Del(ctx, stateKey(actor.Type, actor.ID)); err != nil && err != store.ErrNil {
@@ -549,14 +549,15 @@ func activate(ctx context.Context, actor Actor, isCall bool, causingMethod strin
 }
 
 // deactivate an actor (but retains placement)
-func deactivate(ctx context.Context, actor Actor) error {
-	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":deactivate")
+func deactivate(ctx context.Context, actor *rpc.SessionInstance) error {
+	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Name + "/" + actor.ID}, actor.Name+":deactivate")
 	if err != nil {
 		if err != ctx.Err() {
-			logger.Debug("deactivate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
+			logger.Debug("deactivate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Name+"/"+actor.ID, err)
 		}
 		return err
 	}
+	actor.Activated = false
 	if reply.StatusCode >= http.StatusBadRequest {
 		logger.Error("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	} else {

@@ -88,7 +88,7 @@ func collect(ctx context.Context, time time.Time) error {
 				e.flow = "exclusive"
 				e.busy = make(chan struct{})
 				<-e.lock
-				err := deactivate(ctx, actor.(Actor))
+				err := deactivate(ctx, nil /*actor.(Actor)*/)
 				e.lock <- struct{}{}
 				e.depth--
 				e.flow = ""
