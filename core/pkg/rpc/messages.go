@@ -34,6 +34,7 @@ type Request interface {
 	target() Target
 	method() string
 	sequence() int
+	childID() string
 }
 
 type CallRequest struct {
@@ -44,6 +45,8 @@ type CallRequest struct {
 	Method    string    // method
 	Caller    string    // source node
 	Sequence  int       // sequence number
+	ChildID   string
+	ParentID  string
 }
 
 func (m CallRequest) requestID() string   { return m.RequestID }
@@ -52,6 +55,7 @@ func (m CallRequest) deadline() time.Time { return m.Deadline }
 func (m CallRequest) target() Target      { return m.Target }
 func (m CallRequest) method() string      { return m.Method }
 func (m CallRequest) sequence() int       { return m.Sequence }
+func (m CallRequest) childID() string     { return m.ChildID }
 
 type TellRequest struct {
 	RequestID string    // request id
@@ -60,6 +64,7 @@ type TellRequest struct {
 	Target    Target    // target
 	Method    string    // target method
 	Sequence  int       // sequence number
+	ChildID   string
 }
 
 func (m TellRequest) requestID() string   { return m.RequestID }
@@ -68,6 +73,7 @@ func (m TellRequest) deadline() time.Time { return m.Deadline }
 func (m TellRequest) target() Target      { return m.Target }
 func (m TellRequest) method() string      { return m.Method }
 func (m TellRequest) sequence() int       { return m.Sequence }
+func (m TellRequest) childID() string     { return m.ChildID }
 
 type Response struct {
 	RequestID string    // request id
@@ -97,13 +103,13 @@ func encode(topic string, partition int32, msg Message) *sarama.ProducerMessage 
 		if m.Caller == "" {
 			m.Caller = self.Node
 		}
-		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Method": m.Method, "Caller": m.Caller}
+		meta = map[string]string{"Type": "Call", "RequestID": m.RequestID, "Method": m.Method, "Caller": m.Caller, "Child": m.ChildID, "Parent": m.ParentID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
 		encodeTarget(m.Target, meta)
 	case TellRequest:
-		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method}
+		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method, "Child": m.ChildID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
@@ -147,9 +153,9 @@ func decode(msg *sarama.ConsumerMessage) Message {
 	}
 	switch meta["Type"] {
 	case "Call":
-		return CallRequest{RequestID: meta["RequestID"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Caller: meta["Caller"], Value: msg.Value}
+		return CallRequest{RequestID: meta["RequestID"], ChildID: meta["Child"], ParentID: meta["Parent"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Caller: meta["Caller"], Value: msg.Value}
 	case "Tell":
-		return TellRequest{RequestID: meta["RequestID"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Value: msg.Value}
+		return TellRequest{RequestID: meta["RequestID"], ChildID: meta["Child"], Sequence: sequence, Deadline: deadline, Target: decodeTarget(meta), Method: meta["Method"], Value: msg.Value}
 	case "Response":
 		return Response{RequestID: meta["RequestID"], Deadline: deadline, ErrMsg: meta["ErrMsg"], Value: msg.Value}
 	}
@@ -162,6 +168,7 @@ func encodeTarget(target Target, meta map[string]string) {
 		meta["Service"] = t.Name
 		meta["Session"] = t.ID
 		meta["Flow"] = t.Flow
+		meta["Lock"] = t.DeferredLockID
 	case Service:
 		meta["Service"] = t.Name
 	case Node:
@@ -171,7 +178,7 @@ func encodeTarget(target Target, meta map[string]string) {
 
 func decodeTarget(meta map[string]string) Target {
 	if session, ok := meta["Session"]; ok {
-		return Session{Name: meta["Service"], ID: session, Flow: meta["Flow"]}
+		return Session{Name: meta["Service"], ID: session, Flow: meta["Flow"], DeferredLockID: meta["Lock"]}
 	} else if service, ok1 := meta["Service"]; ok1 {
 		return Service{Name: service}
 	}

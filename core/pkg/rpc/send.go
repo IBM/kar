@@ -33,31 +33,36 @@ func place(names ...string) string {
 	return key
 }
 
+func alt(id string) string {
+	return "alt_" + id
+}
+
 func instance(key string) (string, string) {
 	parts := strings.Split(key, "_")
 	return parts[1], parts[2]
 }
 
 // Lookup partition offering service
-func routeToService(service string) int32 {
+func routeToService(service string) (string, int32) {
 	nodes := service2nodes[service]
 	if len(nodes) == 0 {
-		return 0
+		return "", 0
 	}
-	return node2partition[nodes[rand.Int31n(int32(len(nodes)))]]
+	node := nodes[rand.Int31n(int32(len(nodes)))]
+	return node, node2partition[node]
 }
 
 // Lookup partition offering session (errors: cancelled, Redis)
-func routeToSession(ctx context.Context, service, session string) (int32, error) {
+func routeToSession(ctx context.Context, service, session string) (string, int32, error) {
 	nodes := service2nodes[service]
 	if len(nodes) == 0 {
-		return 0, nil // no matching service
+		return "", 0, nil // no matching service
 	}
 
 	key := place(service, session)
 	if PlacementCache {
 		if node, ok := session2NodeCache.Get(key); ok {
-			return node2partition[node.(string)], nil
+			return node.(string), node2partition[node.(string)], nil
 		}
 	}
 
@@ -68,17 +73,17 @@ func routeToSession(ctx context.Context, service, session string) (int32, error)
 		var err error
 		node, err = store.CAS(ctx, key, node, next)
 		if err != nil {
-			return 0, err
+			return "", 0, err
 		}
 		partition := node2partition[node]
 		if partition != 0 {
 			if PlacementCache {
 				session2NodeCache.Add(key, node)
 			}
-			return partition, nil
+			return node, partition, nil
 		}
 	}
-	return 0, ctx.Err()
+	return "", 0, ctx.Err()
 }
 
 // Send message (errors: cancelled, Redis, Kafka, ErrUnavailable)
@@ -94,14 +99,15 @@ func Send(ctx context.Context, msg Message) error {
 
 	// decide target partition
 	var partition int32
+	redirected := ""
 	switch v := msg.(type) {
 	case Request:
 		switch t := v.target().(type) {
 		case Service:
-			partition = routeToService(t.Name)
+			_, partition = routeToService(t.Name)
 		case Session:
 			var err error
-			partition, err = routeToSession(ctx, t.Name, t.ID)
+			_, partition, err = routeToSession(ctx, t.Name, t.ID)
 			if err != nil {
 				return err
 			}
@@ -114,7 +120,13 @@ func Send(ctx context.Context, msg Message) error {
 	case Response:
 		partition = node2partition[v.Node]
 		if partition == 0 {
-			return ErrUnavailable
+			key := alt(v.requestID())
+			node, _ := store.Get(ctx, key)
+			if node == "" {
+				return ErrUnavailable
+			}
+			redirected = key
+			partition = node2partition[node]
 		}
 	case Done:
 		// TODO use myPartition instead but resend message to partition 0 during recovery if request id occurs in partition 0
@@ -123,12 +135,16 @@ func Send(ctx context.Context, msg Message) error {
 
 	// send message
 	_, _, err := producer.SendMessage(encode(appTopic, partition, msg))
+	if err == nil && redirected != "" {
+		store.Del(ctx, redirected)
+	}
 	return err
 }
 
 // Resend request during recovery (errors: cancelled, Redis, Kafka)
 func resend(ctx context.Context, msg Request, drop bool) error {
 	// decide target partition
+	var node string
 	var partition int32
 	switch t := msg.target().(type) {
 	case Node:
@@ -142,10 +158,10 @@ func resend(ctx context.Context, msg Request, drop bool) error {
 			return nil
 		}
 	case Service:
-		partition = routeToService(t.Name)
+		node, partition = routeToService(t.Name)
 	case Session:
 		var err error
-		partition, err = routeToSession(ctx, t.Name, t.ID)
+		node, partition, err = routeToSession(ctx, t.Name, t.ID)
 		if err != nil {
 			return err
 		}
@@ -153,8 +169,16 @@ func resend(ctx context.Context, msg Request, drop bool) error {
 	if partition == 0 && drop {
 		return nil
 	}
-
+	if msg.childID() != "" && node != "" {
+		store.Set(ctx, alt(msg.childID()), node)
+	}
 	// resend message
 	_, _, err := producer.SendMessage(encode(appTopic, partition, msg))
+	return err
+}
+
+// Resend response during recovery (errors: cancelled, Redis, Kafka)
+func respond(ctx context.Context, msg Done) error {
+	_, _, err := producer.SendMessage(encode(appTopic, 0, msg))
 	return err
 }

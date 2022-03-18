@@ -85,7 +85,7 @@ func CallService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), "", bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 }
 
 // CallActor calls an actor and waits for a reply
-func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*Reply, error) {
+func CallActor(ctx context.Context, actor Actor, path, payload, flow string, parentID string) (*Reply, error) {
 	if flow == "" {
 		flow = uuid.New().String() // start new flow
 	}
@@ -127,7 +127,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string) (*R
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +184,7 @@ func Bindings(ctx context.Context, kind string, actor Actor, bindingID, nilOnAbs
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, defaultTimeout(), bytes)
+		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, defaultTimeout(), "", bytes)
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 	return replyBytes, err
 }
 
-func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+func handlerActor(ctx context.Context, target rpc.Session, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil
@@ -372,7 +372,7 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 		e.release(flow, false)
 	} else { // invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + flow + ":" + requestID + msg["path"]
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
@@ -462,7 +462,7 @@ func handlerActor(ctx context.Context, target rpc.Session, value []byte) (*rpc.D
 	return dest, reply, err
 }
 
-func handlerBinding(ctx context.Context, target rpc.Session, value []byte) (*rpc.Destination, []byte, error) {
+func handlerBinding(ctx context.Context, target rpc.Session, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	actor := Actor{Type: target.Name, ID: target.ID}
 	var reply []byte = nil
 	var err error = nil

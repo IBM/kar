@@ -101,9 +101,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		}
 		switch m := decode(msg).(type) {
 		case CallRequest:
-			if node2partition[m.Caller] != 0 {
-				processor(m) // process calls from live nodes only
-			}
+			processor(m)
 		case TellRequest, Response:
 			processor(m)
 		}
@@ -128,10 +126,19 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 
 	defer close(h.finished)
 
-	requests := map[string]Request{}        // all the non-cancelled requests in disconnected partitions
-	requests0 := map[string]int{}           // all the non-cancelled request ids in partition zero
+	orphans := []Message{}                  // all the messages in dead partitions in order
+	orphans0 := []Message{}                 // all the requests in partition 0 in order
+	calls := map[string][]string{}          // map caller id to callee ids for blocking calls
+	responses := map[string]struct{}{}      // all the response ids
+	requests := map[string]struct{}{}       // all the request ids in live partitions or partition 0
+	responses0 := map[string]struct{}{}     // all the response ids in partition 0
+	requests0 := map[string]int{}           // map request id to max sequence in partition 0
 	handled := map[string]int{}             // all the request ids that have a matching response or appear in partitions connected to live nodes
 	offsetsForDeletion := map[int32]int64{} // a map from partition to the first offset to preserve in the partition
+	min := map[string]int{}
+	max := map[string]int{}
+	latest := map[string]Message{}
+	chains := map[string]map[int]struct{}{}
 
 	// iterate over all claimed partitions and all messages
 	for _, p := range session.Claims()[appTopic] {
@@ -150,41 +157,46 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 			next = msg.Offset + 1
 			m := decode(msg)
 			switch v := decode(msg).(type) {
-			case CallRequest:
-				if node2partition[v.Caller] == 0 {
-					continue // ignore calls from dead nodes, they are cancelled
+			case Request:
+				if max[v.requestID()] <= v.sequence() {
+					max[v.requestID()] = v.sequence()
+					latest[v.requestID()] = v
 				}
-				if !recovery[p] { // collect requests targetting dead nodes
-					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
-						requests[v.requestID()] = v
+				if s, ok := v.target().(Session); ok && s.DeferredLockID != "" {
+					if chains[v.requestID()] == nil {
+						chains[v.requestID()] = map[int]struct{}{}
 					}
+					chains[v.requestID()][v.sequence()] = struct{}{}
+				}
+				if c, ok := v.(CallRequest); ok {
+					calls[c.ParentID] = append(calls[c.ParentID], c.RequestID)
+				}
+				if !recovery[p] { // collect requests targetting dead partitions and partition 0
 					if p == 0 {
-						if v.Sequence >= requests0[m.requestID()] {
-							requests0[m.requestID()] = v.Sequence
+						orphans0 = append(orphans0, v)
+						requests[v.requestID()] = struct{}{}
+						if v.sequence() >= requests0[m.requestID()] {
+							requests0[m.requestID()] = v.sequence()
 						}
+					} else {
+						orphans = append(orphans, v)
 					}
 					continue
 				}
-				if v.Sequence >= handled[m.requestID()] {
-					handled[m.requestID()] = v.Sequence // requests targetting live nodes
+				if v.sequence() >= handled[m.requestID()] {
+					handled[m.requestID()] = v.sequence() // requests targetting live partitions
 				}
-			case TellRequest:
-				if !recovery[p] { // collect requests targetting dead nodes
-					if req, ok := requests[v.requestID()]; !ok || v.Sequence > req.sequence() {
-						requests[v.requestID()] = v
-					}
-					if p == 0 {
-						if v.Sequence >= requests0[m.requestID()] {
-							requests0[m.requestID()] = v.Sequence // requests targetting live nodes
-						}
-					}
-					continue
-				}
-				if v.Sequence >= handled[m.requestID()] {
-					handled[m.requestID()] = v.Sequence // requests targetting live nodes
-				}
+				requests[v.requestID()] = struct{}{}
+
 			default:
+				responses[v.requestID()] = struct{}{}
 				handled[m.requestID()] = 1 << 30 // responses
+				if !recovery[p] && p != 0 {      // collect responses targetting dead partitions
+					orphans = append(orphans, v)
+				}
+				if p == 0 {
+					responses0[v.requestID()] = struct{}{}
+				}
 			}
 		}
 		if !recovery[p] && p != 0 { // partition 0 may still contain requests for unavailable services
@@ -197,18 +209,78 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 		return err
 	}
 
-	// resend requests targetting dead nodes
-	for k, v := range requests {
-		// skip requests that are already handled
-		if s, ok := handled[k]; !ok || s < v.sequence() {
-			// do not send to partition 0 if already in partition 0
-			s0, ok0 := requests0[k]
-			err := resend(session.Context(), v, ok0 && s0 >= v.sequence())
-			if err != nil {
-				if err != session.Context().Err() {
-					logger.Error("resend error during recovery: %v", err)
+	for k, v := range max {
+		min[k] = v
+	}
+
+	for k, v := range chains {
+		for i := max[k]; i >= 0; i-- {
+			if _, ok := v[i]; !ok {
+				min[k] = i
+				break
+			}
+		}
+	}
+
+	seen := map[string]struct{}{}
+
+	orphans = append(orphans, orphans0...)
+
+	// resend messages targetting dead nodes
+	for _, msg := range orphans {
+		k := msg.requestID()
+		switch v := msg.(type) {
+		case Request:
+			if s, ok := handled[k]; (!ok || s < max[k]) && v.sequence() == min[k] {
+				if _, ok := seen[k]; ok {
+					continue
 				}
-				return err
+				seen[k] = struct{}{}
+				childID := ""
+				for _, r := range calls[k] { // iterate of nested blocking calls
+					if _, ok := responses[r]; !ok { // nested call has not completed
+						childID = r
+					}
+				}
+				switch w := latest[k].(type) {
+				case CallRequest:
+					w.ChildID = childID
+					w.Sequence = min[k]
+					if t, ok := w.Target.(Session); ok {
+						t.DeferredLockID = ""
+						w.Target = t
+					}
+					v = w
+				case TellRequest:
+					w.ChildID = childID
+					w.Sequence = min[k]
+					if t, ok := w.Target.(Session); ok {
+						t.DeferredLockID = ""
+						w.Target = t
+					}
+					v = w
+				}
+				// do not send to partition 0 if already in partition 0
+				s0, ok0 := requests0[k]
+				err := resend(session.Context(), v, ok0 && s0 >= max[k])
+				if err != nil {
+					if err != session.Context().Err() {
+						logger.Error("resend error during recovery: %v", err)
+					}
+					return err
+				}
+			}
+		default:
+			if _, ok := requests[k]; ok {
+				if _, ok := responses0[k]; !ok {
+					err := respond(session.Context(), Done{RequestID: k, Deadline: v.deadline()})
+					if err != nil {
+						if err != session.Context().Err() {
+							logger.Error("resend error during recovery: %v", err)
+						}
+						return err
+					}
+				}
 			}
 		}
 	}
