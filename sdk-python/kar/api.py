@@ -662,6 +662,86 @@ def actor_state_submap_size(actor, key):
 
 
 # -----------------------------------------------------------------------------
+# Eventing methods
+# -----------------------------------------------------------------------------
+
+
+#
+# Create topic:
+#
+def events_create_topic(topic,
+                        options={
+                            "numPartitions": 1,
+                            "replicationFactor": 1
+                        }):
+    return asyncio.create_task(
+        _put(f'{sidecar_url_prefix}/event/{topic}', json.dumps(options), None))
+
+
+#
+# Delete topic:
+#
+def events_delete_topic(topic, options={}):
+    return asyncio.create_task(_delete(f'{sidecar_url_prefix}/event/{topic}'))
+
+
+#
+# Create subscription:
+#
+def events_create_subscription(actor, path, topic, options={}):
+    # Resolve topic.
+    id = None
+    if "id" in options and options["id"]:
+        id = options["id"]
+    if id is None and topic is not None:
+        id = topic
+
+    # Resolve content type.
+    content_type = None
+    if "contentType" in options and options["contentType"] is not None:
+        content_type = options["contentType"]
+
+    # Call API:
+    api = f'{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/events/{id}'
+    return asyncio.create_task(
+        _put(
+            api,
+            json.dumps({
+                'path': f'/{path}',
+                'topic': topic,
+                'contentType': content_type
+            })))
+
+
+#
+# Publish event to topic:
+#
+def events_publish(topic, event):
+    return asyncio.create_task(
+        _post(f"{sidecar_url_prefix}/event/{topic}/publish", event, None))
+
+
+#
+# Cancel subscription:
+#
+def events_cancel_subscription(actor, id=None):
+    actor_api = f'{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/events'
+    if id is not None:
+        return asyncio.create_task(_delete(f'{actor_api}/{id}'))
+    return asyncio.create_task(_delete(f'{actor_api}'))
+
+
+#
+# Get subscription:
+#
+def events_get_subscription(actor, id=None):
+    actor_api = f'{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/events'
+    if id is not None:
+        return asyncio.create_task(_get(f'{actor_api}/{id}'))
+    return asyncio.create_task(_get(f'{actor_api}'))
+
+
+# -----------------------------------------------------------------------------
 # Server actor methods
 # -----------------------------------------------------------------------------
 

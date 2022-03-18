@@ -34,5 +34,9 @@ set -e
 ( kar run -h2c -app unit-test -app_port 8084 -actors TestActorSubState -service sdk-test-state-submap python actor_state_submap_server.py ) &
 
 
+# Test eventing:
+( kar run -h2c -app unit-test -app_port 8085 -actors TestActorEvents -service sdk-test-events python actor_events_server.py ) &
+
+
 # Run the client:
 kar run -h2c -app unit-test pytest
