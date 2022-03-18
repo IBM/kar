@@ -52,6 +52,14 @@ from kar.api import actor_state_submap_set_multiple
 from kar.api import actor_state_submap_keys
 from kar.api import actor_state_submap_size
 
+# Eventing
+from kar.api import events_create_subscription
+from kar.api import events_publish
+from kar.api import events_create_topic
+from kar.api import events_delete_topic
+from kar.api import events_cancel_subscription
+from kar.api import events_get_subscription
+
 # Base actor type
 from kar.api import KarActor
 
@@ -66,5 +74,7 @@ __all__ = [
     'actor_state_submap_contains', 'actor_state_submap_remove',
     'actor_state_submap_remove_all', 'actor_state_submap_remove_some',
     'actor_state_submap_set_multiple', 'actor_state_submap_keys',
-    'actor_state_submap_size'
+    'actor_state_submap_size', 'events_create_subscription', 'events_publish',
+    'events_create_topic', 'events_delete_topic', 'events_cancel_subscription',
+    'events_get_subscription'
 ]
