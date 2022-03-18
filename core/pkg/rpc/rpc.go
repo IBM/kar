@@ -23,13 +23,14 @@ import (
 
 // Config specifies the Kafka configuration
 type Config struct {
-	Version       string   // Kafka version
-	Brokers       []string // Kafka brokers
-	User          string   // Kafka SASL user
-	Password      string   // Kafka SASL password
-	EnableTLS     bool
-	TLSSkipVerify bool
-	TopicConfig   map[string]*string
+	Version            string   // Kafka version
+	Brokers            []string // Kafka brokers
+	User               string   // Kafka SASL user
+	Password           string   // Kafka SASL password
+	EnableTLS          bool
+	TLSSkipVerify      bool
+	TopicConfig        map[string]*string
+	SessionBusyTimeout time.Duration
 }
 
 // Target of an invocation
@@ -66,7 +67,7 @@ type Destination struct {
 
 // Handler for method
 type ServiceHandler func(context.Context, Service, []byte) ([]byte, error)
-type SessionHandler func(context.Context, Session, string, []byte) (*Destination, []byte, error)
+type SessionHandler func(context.Context, Session, *SessionInstance, string, []byte) (*Destination, []byte, error)
 type NodeHandler func(context.Context, Node, []byte) ([]byte, error)
 
 // Data transformer applied to convert external events to Tell payloads
@@ -76,6 +77,18 @@ type Transformer func(context.Context, []byte) ([]byte, error)
 type Result struct {
 	Value []byte
 	Err   error
+}
+
+// An instance of a Session
+type SessionInstance struct {
+	Name       string
+	ID         string
+	ActiveFlow string
+	Activated  bool
+	lastAccess time.Time
+	next       chan struct{} // coordination of queued tasks
+	lock       chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
+	valid      bool          // false iff entry has been removed from table
 }
 
 // Register method handler

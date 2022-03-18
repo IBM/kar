@@ -37,7 +37,7 @@ func incrService(ctx context.Context, t rpc.Service, v []byte) ([]byte, error) {
 	return []byte{v[0] + 1}, nil
 }
 
-func incrSession(ctx context.Context, t rpc.Session, requestID string, v []byte) (*rpc.Destination, []byte, error) {
+func incrSession(ctx context.Context, t rpc.Session, i *rpc.SessionInstance, requestID string, v []byte) (*rpc.Destination, []byte, error) {
 	fmt.Println("BLA")
 	return nil, []byte{v[0] + 1}, nil
 }
