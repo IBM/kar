@@ -106,23 +106,6 @@ func collect(ctx context.Context, time time.Time) error {
 	return ctx.Err()
 }
 
-// getMyActiveActors returns a map of actor types ->  list of active IDs in this sidecar
-func getMyActiveActors(targetedActorType string) map[string][]string {
-	information := make(map[string][]string)
-	actorTable.Range(func(actor, v interface{}) bool {
-		e := v.(*actorEntry)
-		e.lock <- struct{}{}
-		if e.valid {
-			if targetedActorType == "" || targetedActorType == e.actor.Type {
-				information[e.actor.Type] = append(information[e.actor.Type], e.actor.ID)
-			}
-		}
-		<-e.lock
-		return true
-	})
-	return information
-}
-
 // getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
 func getAllActiveActors(ctx context.Context, targetedActorType string) (map[string][]string, error) {
 	information := make(map[string][]string)
@@ -160,7 +143,7 @@ func getAllActiveActors(ctx context.Context, targetedActorType string) (map[stri
 				return nil, err
 			}
 		} else {
-			actorInformation = getMyActiveActors(targetedActorType)
+			actorInformation = rpc.GetLocalActivatedSessions(ctx, targetedActorType)
 		}
 		for actorType, actorIDs := range actorInformation { // accumulate sidecar's info into information
 			information[actorType] = append(information[actorType], actorIDs...)
