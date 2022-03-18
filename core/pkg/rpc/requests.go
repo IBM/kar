@@ -41,9 +41,10 @@ var (
 	sessionTable                     = sync.Map{}                  // session table: SessionKey -> *SessionInstance
 	deferredLocks                    = sync.Map{}                  // locks being defered by tail calls: uuid -> chan
 	sessionBusyTimeout time.Duration = 0
+	deactivateCallback               = func(ctx context.Context, i *SessionInstance) error { i.Activated = false; return nil }
 )
 
-func getLocalActivatedSessions(ctxt context.Context, name string) map[string][]string {
+func getLocalActivatedSessions(ctx context.Context, name string) map[string][]string {
 	information := make(map[string][]string)
 	sessionTable.Range(func(key, v interface{}) bool {
 		instance := v.(*SessionInstance)
@@ -54,9 +55,65 @@ func getLocalActivatedSessions(ctxt context.Context, name string) map[string][]s
 			}
 		}
 		<-instance.lock
-		return true
+		return ctx.Err() == nil // stop gathering information if cancelled
 	})
 	return information
+}
+
+func collectInactiveSessions(ctx context.Context, time time.Time, callback func(context.Context, *SessionInstance)) {
+	sessionTable.Range(func(key, v interface{}) bool {
+		instance := v.(*SessionInstance)
+		select {
+		case instance.lock <- struct{}{}:
+			if instance.valid && instance.lastAccess.Before(time) {
+				before := instance.next
+				instance.next = make(chan struct{}, 1)
+				savedLast := instance.next
+				logger.Debug("Scheduling deactivation of %v", v)
+				go func() {
+					// wait
+					select {
+					case <-before:
+					case <-ctx.Done():
+						return
+					}
+					logger.Debug("Deactivation of %v is executing", v)
+					instance.ActiveFlow = "deactivate" + uuid.New().String()
+
+					// Check: was anyone been scheduled while I was waiting?
+					var canDeactivate = false
+					instance.lock <- struct{}{}
+					if instance.valid && instance.next == savedLast {
+						canDeactivate = true
+					}
+					<-instance.lock
+
+					// To avoid useless deactivation, only do the callback if nothing else was scheduled and the actor is actually activated
+					if canDeactivate && instance.Activated {
+						callback(ctx, instance)
+					}
+
+					// The callback may have taken a long time, check again
+					instance.lock <- struct{}{}
+					if instance.valid && instance.next == savedLast {
+						instance.valid = false
+						sessionTable.Delete(key)
+						close(savedLast)
+						<-instance.lock
+						logger.Debug("Deactivation of %v completed", v)
+					} else {
+						<-instance.lock
+						logger.Debug("Deactivation of %v aborted; subsequent task detected", v)
+						savedLast <- struct{}{}
+					}
+				}()
+			}
+			<-instance.lock
+		default:
+		}
+		return ctx.Err() == nil // stop collection if cancelled
+	})
+
 }
 
 func sendOrDie(ctx context.Context, msg Message) {

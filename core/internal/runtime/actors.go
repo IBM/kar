@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
@@ -60,50 +59,6 @@ type stateUpdateOp struct {
 // submapOp describes the requested operation on a submap in an Actors state
 type submapOp struct {
 	Op string `json:"op"`
-}
-
-type actorEntry struct {
-	actor Actor
-	time  time.Time     // last release time
-	lock  chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
-	valid bool          // false iff entry has been removed from table
-	flow  string        // current flow or "" if none
-	depth int           // flow depth
-	busy  chan struct{} // close to notify end of flow
-	msg   map[string]string
-}
-
-var (
-	actorTable = sync.Map{} // actor table: Actor -> *actorEntry
-)
-
-// collect deactivates actors that not been used since time
-func collect(ctx context.Context, time time.Time) error {
-	actorTable.Range(func(actor, v interface{}) bool {
-		e := v.(*actorEntry)
-		select {
-		case e.lock <- struct{}{}: // try acquire
-			if e.valid && e.flow == "" && e.time.Before(time) {
-				e.depth = 1
-				e.flow = "exclusive"
-				e.busy = make(chan struct{})
-				<-e.lock
-				err := deactivate(ctx, nil /*actor.(Actor)*/)
-				e.lock <- struct{}{}
-				e.depth--
-				e.flow = ""
-				if err == nil {
-					e.valid = false
-					actorTable.Delete(actor)
-				}
-				close(e.busy)
-			}
-			<-e.lock
-		default:
-		}
-		return ctx.Err() == nil // stop collection if cancelled
-	})
-	return ctx.Err()
 }
 
 // getAllActiveActors Returns map of actor types ->  list of active IDs for all sidecars in the app
@@ -172,18 +127,4 @@ func formatActorInstanceMap(actorInfo map[string][]string, format string) (strin
 		fmt.Fprintf(&str, "]\n")
 	}
 	return str.String(), nil
-}
-
-// delete releases the actor lock and removes the placement for the actor
-// the lock cannot be held multiple times
-func (e *actorEntry) delete() error {
-	e.lock <- struct{}{}
-	e.depth--
-	e.flow = ""
-	e.valid = false
-	actorTable.Delete(e.actor)
-	err := rpc.DelSession(ctx, rpc.Session{Name: e.actor.Type, ID: e.actor.ID})
-	close(e.busy)
-	<-e.lock
-	return err
 }

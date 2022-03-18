@@ -231,7 +231,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "exclusive"}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "deactivate"}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -548,14 +548,14 @@ func activate(ctx context.Context, actor Actor, isCall bool, causingMethod strin
 	return nil, nil
 }
 
-// deactivate an actor (but retains placement)
-func deactivate(ctx context.Context, actor *rpc.SessionInstance) error {
+// invoke the deactivate method of an actor
+func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 	reply, err := invoke(ctx, "DELETE", map[string]string{"path": actorRuntimeRoutePrefix + actor.Name + "/" + actor.ID}, actor.Name+":deactivate")
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("deactivate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Name+"/"+actor.ID, err)
 		}
-		return err
+		return
 	}
 	actor.Activated = false
 	if reply.StatusCode >= http.StatusBadRequest {
@@ -563,7 +563,7 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) error {
 	} else {
 		logger.Debug("deactivate %v returned status %v with body %s", actor, reply.StatusCode, reply.Payload)
 	}
-	return nil
+	return
 }
 
 ////////////////////
@@ -572,25 +572,22 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) error {
 
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
-	return
-	/*
-		lock := make(chan struct{}, 1) // trylock
-		ticker := time.NewTicker(config.ActorCollectorInterval)
-		for {
+	lock := make(chan struct{}, 1) // trylock
+	ticker := time.NewTicker(config.ActorCollectorInterval)
+	for {
+		select {
+		case now := <-ticker.C:
 			select {
-			case now := <-ticker.C:
-				select {
-				case lock <- struct{}{}:
-					collect(ctx, now.Add(-config.ActorCollectorInterval))
-					<-lock
-				default: // skip this collection if collection is already in progress
-				}
-			case <-ctx.Done():
-				ticker.Stop()
-				return
+			case lock <- struct{}{}:
+				rpc.CollectInactiveSessions(ctx, now.Add(-config.ActorCollectorInterval), deactivate)
+				<-lock
+			default: // skip this collection if collection is already in progress
 			}
+		case <-ctx.Done():
+			ticker.Stop()
+			return
 		}
-	*/
+	}
 }
 
 // ProcessReminders runs periodically and schedules delivery of all reminders whose targetTime has passed
