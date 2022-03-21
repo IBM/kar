@@ -158,9 +158,6 @@ public class ActorRuntimeResource implements KarHttpConstants {
 			return Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Method not found: " + type + "." + path + " with " + args.size() + " arguments").build();
 		}
 
-		// set the session
-		actorObj.setSession(sessionid);
-
 		// Construct actual argument arrays for the invoke
 		Object[] actuals = new Object[args.size() + 1];
 		actuals[0] = actorObj;
@@ -168,7 +165,9 @@ public class ActorRuntimeResource implements KarHttpConstants {
 			actuals[i + 1] = args.get(i);
 		}
 
+		String priorSession = actorObj.getSession();
 		try {
+			actorObj.setSession(sessionid);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
 				return Response.status(NO_CONTENT).build();
@@ -203,6 +202,8 @@ public class ActorRuntimeResource implements KarHttpConstants {
 			}
 			jb.add("stack", ActorManager.stacktraceToString(t, ActorRuntimeResource.class.getName(), "invokeActorMethod"));
 			return Response.ok().type(KAR_ACTOR_JSON).entity(jb.build().toString()).build();
+		} finally {
+			actorObj.setSession(priorSession);
 		}
 	}
 }

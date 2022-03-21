@@ -330,14 +330,15 @@ function actorRuntime (actors) {
     const actor = (table[req.params.type] || {})[req.params.id]
     if (actor == null) return res.status(404).type('text/plain').send(`no actor with type ${req.params.type} and id ${req.params.id}`)
     if (!(req.params.method in actor)) return res.status(404).type('text/plain').send(`no ${req.params.method} in actor with type ${req.params.type} and id ${req.params.id}`)
+    const priorSession = actor.kar.session
     return Promise.resolve()
       .then(_ => {
-        // NOTE: session intentionally not cleared before return (could be nested call in same session)
         actor.kar.session = req.params.session
         if (typeof actor[req.params.method] === 'function') return actor[req.params.method](...req.body)
         return actor[req.params.method]
       }) // invoke method on actor
       .then(value => {
+        actor.kar.session = priorSession
         if (value === undefined) {
           return res.status(204).send()
         } else {
@@ -348,7 +349,10 @@ function actorRuntime (actors) {
           }
         }
       })
-      .catch(next)
+      .catch(_ => {
+        actor.kar.session = priorSession
+        next()
+      })
   })
 
   // actor type validation route
