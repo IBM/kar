@@ -139,18 +139,6 @@ func accept(ctx context.Context, msg Message) {
 		ch <- result
 
 	case CallRequest:
-		// TODO remove waiting here once actor queue is implemented
-		if m.childID() != "" {
-			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
-			requests.Store(m.childID(), ch)
-			select {
-			case <-ch:
-			case <-ctx.Done():
-				return
-			}
-			requests.Delete(m.childID())
-		}
-
 		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
 			go func() {
 				errMsg := fmt.Sprintf("deadline expired: deadline was %v and it is now %v", m.deadline(), time.Now())
@@ -159,9 +147,25 @@ func accept(ctx context.Context, msg Message) {
 			return
 		}
 
+		var waitForChild chan Result = nil
+		if m.childID() != "" {
+			logger.Debug("Parent %v is preparing to wait for child %v to complete before exeucting", m.requestID(), m.childID())
+			waitForChild = make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), waitForChild)
+		}
+
 		switch target := m.target().(type) {
 		case Service:
 			go func() {
+				if waitForChild != nil {
+					select {
+					case <-waitForChild:
+					case <-ctx.Done():
+						return
+					}
+					logger.Debug("Child %v has completed; start execution of parent task %v", m.childID(), m.requestID())
+					requests.Delete(m.childID())
+				}
 				f := handlersService[m.method()]
 				if f == nil {
 					errMsg := fmt.Sprintf("undefined method %v", m.method())
@@ -178,10 +182,11 @@ func accept(ctx context.Context, msg Message) {
 			}()
 
 		case Session:
-			acceptSession(ctx, target, m)
+			acceptSession(ctx, target, m, waitForChild)
 
 		case Node:
 			go func() {
+				// Node targeted Requests are never re-executed.  waitForChild must be nil.
 				f := handlersNode[m.method()]
 				if f == nil {
 					errMsg := fmt.Sprintf("undefined method %v", m.method())
@@ -199,18 +204,6 @@ func accept(ctx context.Context, msg Message) {
 		}
 
 	case TellRequest:
-		// TODO remove waiting here once actor queue is implemented
-		if m.childID() != "" {
-			ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
-			requests.Store(m.childID(), ch)
-			select {
-			case <-ch:
-			case <-ctx.Done():
-				return
-			}
-			requests.Delete(m.childID())
-		}
-
 		if !m.deadline().IsZero() && m.deadline().Before(time.Now()) {
 			go func() {
 				logger.Warning("tell %s to %v dropped at time %v due to expired deadline %v", m.requestID(), m.target(), time.Now(), m.deadline())
@@ -219,9 +212,25 @@ func accept(ctx context.Context, msg Message) {
 			return
 		}
 
+		var waitForChild chan Result = nil
+		if m.childID() != "" {
+			logger.Debug("Parent %v is preparing to wait for child %v to complete before exeucting", m.requestID(), m.childID())
+			waitForChild = make(chan Result, 1) // capacity one to be able to store result before accepting it
+			requests.Store(m.childID(), waitForChild)
+		}
+
 		switch target := m.target().(type) {
 		case Service:
 			go func() {
+				if waitForChild != nil {
+					select {
+					case <-waitForChild:
+					case <-ctx.Done():
+						return
+					}
+					logger.Debug("Child %v has completed; start execution of parent task %v", m.childID(), m.requestID())
+					requests.Delete(m.childID())
+				}
 				f := handlersService[m.method()]
 				if f == nil {
 					logger.Warning("tell %s to %v requested undefined method %v", m.requestID(), m.target(), m.method())
@@ -236,7 +245,7 @@ func accept(ctx context.Context, msg Message) {
 			}()
 
 		case Session:
-			acceptSession(ctx, target, m)
+			acceptSession(ctx, target, m, waitForChild)
 
 		case Node:
 			// No matter what happens we don't need to send a Done record; a Node-targeted TellRequest is not replayed on failure.
@@ -256,7 +265,7 @@ func accept(ctx context.Context, msg Message) {
 }
 
 // acceptSession must not block; it is executing on the primary go routine that is receiving messages
-func acceptSession(ctx context.Context, target Session, msg Request) {
+func acceptSession(ctx context.Context, target Session, msg Request, waitForChild chan Result) {
 	// Step 1: Get valid SessionInstance for target Session
 	key := sessionKey{Name: target.Name, ID: target.ID}
 	var instance *SessionInstance = nil
@@ -293,15 +302,15 @@ func acceptSession(ctx context.Context, target Session, msg Request) {
 			logger.Debug("reentrant message %v for %v; found deferred lock", msg.requestID(), target)
 		}
 
-		go handleSessionRequest(ctx, nil, dl, instance, target, msg)
+		go handleSessionRequest(ctx, nil, waitForChild, dl, instance, target, msg)
 	} else if target.Flow == "nonexclusive" {
 		logger.Debug("nonexclusive message for %v", target)
-		go handleSessionRequest(ctx, nil, nil, instance, target, msg)
+		go handleSessionRequest(ctx, nil, waitForChild, nil, instance, target, msg)
 	} else {
 		before := instance.next
 		instance.next = make(chan struct{}, 1)
 		logger.Debug("queued message for %v", target)
-		go handleSessionRequest(ctx, before, instance.next, instance, target, msg)
+		go handleSessionRequest(ctx, before, waitForChild, instance.next, instance, target, msg)
 	}
 
 	// Step 3: Release lock
@@ -309,7 +318,7 @@ func acceptSession(ctx context.Context, target Session, msg Request) {
 }
 
 // handleSessionRequest executes on a go routine spawned to process a single request; it can safely block
-func handleSessionRequest(ctx context.Context, before chan struct{}, after chan struct{}, instance *SessionInstance, target Session, m Request) {
+func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChild chan Result, after chan struct{}, instance *SessionInstance, target Session, m Request) {
 	if before != nil {
 		// wait for my turn to execute
 		logger.Debug("%v is waiting to execute %v", target, m.requestID())
@@ -344,6 +353,16 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, after chan 
 			case <-ctx.Done():
 				return
 			}
+		}
+	}
+
+	if waitForChild != nil {
+		// If this task is being re-run to recover from a failure, it must wait until child task from prior execution finishes
+		logger.Debug("%v parent task %v is waiting for child %v to finish", target, m.requestID(), m.childID())
+		select {
+		case <-waitForChild:
+		case <-ctx.Done():
+			return
 		}
 	}
 
