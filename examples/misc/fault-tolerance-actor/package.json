@@ -1,0 +1,14 @@
+{
+  "name": "kar-failure-tests",
+  "version": "0.0.1",
+  "scripts": {
+    "test": "standard"
+  },
+  "dependencies": {
+    "express": "^4.17.2",
+    "kar-sdk": "^1.2.3"
+  },
+  "devDependencies": {
+    "standard": "^16.0.4"
+  }
+}
