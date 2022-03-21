@@ -174,9 +174,6 @@ public class ActorEndpoints implements KarHttpConstants {
 			return Uni.createFrom().item(resp);
 		}
 
-		// set the session
-		actorObj.setSession(sessionid);
-
 		// Construct actual argument arrays for the invoke
 		Object[] actuals = new Object[args.size() + 1];
 		actuals[0] = actorObj;
@@ -184,7 +181,9 @@ public class ActorEndpoints implements KarHttpConstants {
 			actuals[i + 1] = args.get(i);
 		}
 
+		String priorSession = actorObj.getSession();
 		try {
+			actorObj.setSession(sessionid);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
 				return Uni.createFrom().item(Response.status(NO_CONTENT).build());
@@ -207,6 +206,8 @@ public class ActorEndpoints implements KarHttpConstants {
 			}
 		} catch (Throwable t) {
 			return Uni.createFrom().item(encodeInvocationError(t));
+		} finally {
+			actorObj.setSession(priorSession);
 		}
 	}
 
