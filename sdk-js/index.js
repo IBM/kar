@@ -146,6 +146,22 @@ const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${acto
 function actorCall (...args) {
   if (typeof args[1] === 'string') {
     // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
+    // TODO: Once we release an SDK with rootCall, then remove this option
+    const ta = args.shift()
+    const path = args.shift()
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
+  } else {
+    //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const sa = args.shift()
+    const ta = args.shift()
+    const path = args.shift()
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json' })
+  }
+}
+
+function actorRootCall (...args) {
+  if (typeof args[1] === 'string') {
+    // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
     const ta = args.shift()
     const path = args.shift()
     return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
@@ -386,6 +402,7 @@ module.exports = {
     proxy: actorProxy,
     tell: actorTell,
     call: actorCall,
+    rootCall: actorRootCall,
     asyncCall: actorAsyncCall,
     remove: actorDelete,
     tailCall: actorEncodeTailCall,

@@ -34,7 +34,7 @@ import io.smallrye.mutiny.Uni;
 public class Cafe extends ActorSkeleton {
 	@Remote
 	public Uni<JsonValue> occupancy(JsonString table) {
-		return Actors.call(Actors.ref("Table", table.getString()), "occupancy");
+		return Actors.call(this, Actors.ref("Table", table.getString()), "occupancy");
 	}
 
 	@Remote
@@ -50,7 +50,7 @@ public class Cafe extends ActorSkeleton {
 
 	@Remote
 	public Uni<JsonString> seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		return Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings)
+		return Actors.call(this, Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings)
 			.chain(() -> Uni.createFrom().item(requestId));
 	}
 }

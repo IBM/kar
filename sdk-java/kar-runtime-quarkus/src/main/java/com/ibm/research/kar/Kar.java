@@ -401,7 +401,7 @@ public class Kar implements KarHttpConstants {
 
 		/**
 		 * Synchronous actor invocation where the invoked method will execute as part of
-		 * the current session.
+		 * the current chain of calls.
 		 *
 		 * @param caller The calling actor.
 		 * @param actor  The target actor.
@@ -415,30 +415,17 @@ public class Kar implements KarHttpConstants {
 		}
 
 		/**
-		 * Synchronous actor invocation where the invoked method will execute as part of
-		 * the specified session.
-		 *
-		 * @param session The session in which to execute the actor method
-		 * @param actor   The target actor.
-		 * @param path    The actor method to invoke.
-		 * @param args    The arguments with which to invoke the actor method.
-		 * @return The result of the invoked actor method.
-		 */
-		public static Uni<JsonValue> call(String session, ActorRef actor, String path, JsonValue... args) {
-			return sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args))
-					.chain(resp -> callProcessResponse(resp, actor, path));
-		}
-
-		/**
-		 * Synchronous actor invocation where the invoked method will execute in a new
-		 * session.
+		 * Synchronous actor invocation where the execution of the invoked callee method
+		 * will create a new chain of calls. Typically this method should only be used
+		 * when the caller is not an actor as it does not create a caller-callee dependency
+		 * that can be managed by KAR during failure recovery.
 		 *
 		 * @param actor The target Actor.
 		 * @param path  The actor method to invoke.
 		 * @param args  The arguments with which to invoke the actor method.
 		 * @return The result of the invoked actor method.
 		 */
-		public static Uni<JsonValue> call(ActorRef actor, String path, JsonValue... args) {
+		public static Uni<JsonValue> rootCall(ActorRef actor, String path, JsonValue... args) {
 			return sidecar.actorCall(actor.getType(), actor.getId(), path, packArgs(args))
 					.chain(resp -> callProcessResponse(resp, actor, path));
 		}

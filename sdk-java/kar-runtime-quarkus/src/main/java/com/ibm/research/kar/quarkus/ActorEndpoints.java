@@ -186,10 +186,12 @@ public class ActorEndpoints implements KarHttpConstants {
 			actorObj.setSession(sessionid);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
+				actorObj.setSession(priorSession);
 				return Uni.createFrom().item(Response.status(NO_CONTENT).build());
 			} else if (result instanceof Uni<?>) {
 				return ((Uni<?>)result)
 					.chain(res -> {
+						actorObj.setSession(priorSession);
 						if (res == null) {
 							return Uni.createFrom().item(Response.status(NO_CONTENT).build());
 						} else {
@@ -198,16 +200,19 @@ public class ActorEndpoints implements KarHttpConstants {
 							return Uni.createFrom().item(resp);
 						}
 					})
-					.onFailure().recoverWithItem(t -> encodeInvocationError(t));
+					.onFailure().recoverWithItem(t -> {
+						actorObj.setSession(priorSession);
+						return encodeInvocationError(t);
+					});
 			} else {
+				actorObj.setSession(priorSession);
 				JsonObject response = encodeInvocationResult(result);
 				Response resp = Response.ok().type(KAR_ACTOR_JSON).entity(response.toString()).build();
 				return Uni.createFrom().item(resp);
 			}
 		} catch (Throwable t) {
-			return Uni.createFrom().item(encodeInvocationError(t));
-		} finally {
 			actorObj.setSession(priorSession);
+			return Uni.createFrom().item(encodeInvocationError(t));
 		}
 	}
 

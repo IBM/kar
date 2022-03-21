@@ -138,7 +138,7 @@ class Site {
     this.company = state.company
     await actor.state.set(this, 'cleanShutdown', false)
     if (this.company !== undefined && state.cleanShutdown !== true) {
-      const employees = await actor.call(actor.proxy('Company', this.company), 'activeEmployees', this.name)
+      const employees = await actor.call(this, actor.proxy('Company', this.company), 'activeEmployees', this.name)
       for (const sn of employees) {
         this.workers[sn] = States.ONBOARDING // Not accurate, but will be corrected on next workerUpdate
       }

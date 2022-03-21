@@ -32,7 +32,7 @@ import com.ibm.research.kar.actor.annotations.Remote;
 public class Cafe extends ActorSkeleton {
 	@Remote
 	public JsonValue occupancy(JsonString table) {
-		return Actors.call(Actors.ref("Table", table.getString()), "occupancy");
+		return Actors.call(this, Actors.ref("Table", table.getString()), "occupancy");
 	}
 
 	@Remote
@@ -48,7 +48,7 @@ public class Cafe extends ActorSkeleton {
 
 	@Remote
 	public JsonString seatTable(JsonNumber n, JsonNumber servings, JsonString requestId) {
-		Actors.call(Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings);
+		Actors.call(this, Actors.ref("Table", requestId.getString()), "prepare", Json.createValue(this.getId()), n, servings);
 		return requestId;
 	}
 }

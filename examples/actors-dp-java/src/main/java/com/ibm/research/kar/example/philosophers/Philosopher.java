@@ -93,7 +93,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public TailCall getFirstFork(JsonNumber attempt) {
-		if (Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
+		if (Actors.call(this, Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
 			return new TailCall(this, "getSecondFork", Json.createValue(1));
 		} else {
 			if (attempt.intValue() > 5) {
@@ -106,7 +106,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public TailCall getSecondFork(JsonNumber attempt) {
-		if (Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
+		if (Actors.call(this, Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId())).equals(JsonValue.TRUE)) {
 			return new TailCall(this, "eat", this.servingsEaten);
 		} else {
 			if (attempt.intValue() > 5) {
@@ -120,8 +120,8 @@ public class Philosopher extends ActorSkeleton {
 	@Remote
 	public TailCall eat(JsonNumber serving) {
 		if (VERBOSE) System.out.println(this.getId()+" ate serving number "+serving);
-		Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
-		Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
+		Actors.call(this, Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()));
+		Actors.call(this, Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId()));
 		this.servingsEaten = Json.createValue(serving.intValue() + 1);
 		Actors.State.set(this, "servingsEaten", this.servingsEaten);
 		if (serving.intValue() < this.targetServings.intValue()) {
