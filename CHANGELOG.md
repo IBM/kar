@@ -16,6 +16,16 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.0 - 2022-03-22
++ KAR 1.3.0 introduces several major enhancements to the programming model
+  + Failure recovery ensures that a retry of a failed actor invocation
+    will not be executed until after all synchronous calls made by the
+    failed version of the task have completed.
+  + Tail calls to the same actor instance retain the actor lock by default.
+  + Each actor's queue of incoming messages is now always processed in order.
++ There is a new Python SDK.
++ The legacy transport layer that predated pkg/rpc was removed.
+
 # KAR 1.2.3 - 2022-02-28
 + JavaSDK: fix @Produces annotation on Service.tell* routes in OpenLiberty sidecar (#254)
 
