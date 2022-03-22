@@ -58,13 +58,12 @@ jobs:
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
         - make docker-run-containerized-python-examples
-# Disabled due to backwards incompatible sidecar API changes
-#    - name: local-released
-#      script:
-#        - ./scripts/docker-compose-start.sh || travis_terminate 1
-#        - make cli || travis_terminate 1
-#        - ./ci/testJSLocal.sh
-#        - ./ci/testJavaLocal.sh
+    - name: local-released
+      script:
+        - ./scripts/docker-compose-start.sh || travis_terminate 1
+        - make cli || travis_terminate 1
+        - ./ci/testJSLocal.sh
+        - ./ci/testJavaLocal.sh
     - name: in-cluster
       script:
         - ./scripts/kind-start.sh || travis_terminate 1
