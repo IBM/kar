@@ -521,7 +521,7 @@ public class Kar {
 
 		/**
 		 * Synchronous actor invocation where the invoked method will execute as part of
-		 * the current session.
+		 * the current chain of calls.
 		 *
 		 * @param caller The calling actor.
 		 * @param actor  The target actor.
@@ -532,8 +532,7 @@ public class Kar {
 		public static JsonValue call(ActorInstance caller, ActorRef actor, String path, JsonValue... args)
 				throws ActorMethodNotFoundException, ActorMethodInvocationException {
 			try {
-				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, caller.getSession(),
-						packArgs(args));
+				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, caller.getSession(), packArgs(args));
 				return callProcessResponse(response);
 			} catch (WebApplicationException e) {
 				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
@@ -550,44 +549,17 @@ public class Kar {
 		}
 
 		/**
-		 * Synchronous actor invocation where the invoked method will execute as part of
-		 * the specified session.
-		 *
-		 * @param session The session in which to execute the actor method
-		 * @param actor   The target actor.
-		 * @param path    The actor method to invoke.
-		 * @param args    The arguments with which to invoke the actor method.
-		 * @return The result of the invoked actor method.
-		 */
-		public static JsonValue call(String session, ActorRef actor, String path, JsonValue... args)
-				throws ActorMethodNotFoundException, ActorMethodInvocationException, ActorMethodTimeoutException {
-			try {
-				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, session, packArgs(args));
-				return callProcessResponse(response);
-			} catch (WebApplicationException e) {
-				if (e.getResponse() != null && e.getResponse().getStatus() == 404) {
-					String msg = responseToString(e.getResponse());
-					throw new ActorMethodNotFoundException(
-							msg != null ? msg : "Not found: " + actor.getType() + "[" + actor.getId() + "]." + path, e);
-				} else if (e.getResponse() != null && e.getResponse().getStatus() == 408) {
-					throw new ActorMethodTimeoutException(
-							"Method timeout: " + actor.getType() + "[" + actor.getId() + "]." + path);
-				} else {
-					throw e;
-				}
-			}
-		}
-
-		/**
-		 * Synchronous actor invocation where the invoked method will execute in a new
-		 * session.
+		 * Synchronous actor invocation where the execution of the invoked callee method
+		 * will create a new chain of calls. Typically this method should only be used
+		 * when the caller is not an actor as it does not create a caller-callee dependency
+		 * that can be managed by KAR during failure recovery.
 		 *
 		 * @param actor The target Actor.
 		 * @param path  The actor method to invoke.
 		 * @param args  The arguments with which to invoke the actor method.
 		 * @return The result of the invoked actor method.
 		 */
-		public static JsonValue call(ActorRef actor, String path, JsonValue... args)
+		public static JsonValue rootCall(ActorRef actor, String path, JsonValue... args)
 				throws ActorMethodNotFoundException, ActorMethodInvocationException {
 			try {
 				Response response = sidecar.actorCall(actor.getType(), actor.getId(), path, null, packArgs(args));
@@ -608,7 +580,10 @@ public class Kar {
 
 		/**
 		 * Asynchronous actor invocation with eventual access to the result of the
-		 * invocation.
+		 * invocation which will execute in a new top-level chain of calls.
+		 * Typically this method should only be used
+		 * when the caller is not an actor because this API does not create a
+		 * caller-callee dependency that can be managed by KAR during failure recovery.
 		 *
 		 * @param actor The target Actor.
 		 * @param path  The actor method to invoke.

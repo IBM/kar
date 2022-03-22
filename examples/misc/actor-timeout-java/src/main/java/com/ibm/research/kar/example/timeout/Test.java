@@ -17,6 +17,7 @@
 package com.ibm.research.kar.example.timeout;
 
 import static com.ibm.research.kar.Kar.Actors.call;
+import static com.ibm.research.kar.Kar.Actors.rootCall;
 import static com.ibm.research.kar.Kar.Actors.tell;
 
 import java.time.Duration;
@@ -49,7 +50,7 @@ public class Test extends ActorSkeleton {
 
   @Remote public void B() {
     System.out.println("Entering method B");
-    call(this, "A"); // synchronous call to self in a new session -> deadlock
+    rootCall(this, "A"); // synchronous call to self in a new session -> deadlock
     System.out.println("Exiting method B");
   }
 
@@ -59,7 +60,7 @@ public class Test extends ActorSkeleton {
 
   @Remote public void externalA(JsonString target) {
     ActorRef other = ref("Test", target.getString());
-    call(other, "A");
+    rootCall(other, "A");
   }
 
   @Remote public void echo(JsonString msg, JsonNumber count) {

@@ -62,7 +62,7 @@ public class MiddleServices {
 
     System.out.println("Awake; invoking first actor");
     ActorRef myBackend = Kar.Actors.ref("SlowAdder", "Singleton");
-    JsonValue firstPart = Kar.Actors.call(myBackend, "add", Json.createValue(data), Json.createValue(delay));
+    JsonValue firstPart = Kar.Actors.rootCall(myBackend, "add", Json.createValue(data), Json.createValue(delay));
 
     System.out.println("Received response " + firstPart + "; now sleeping for " + delay + " seconds.");
     try {
@@ -72,7 +72,7 @@ public class MiddleServices {
     }
 
     System.out.println("Awake; invoking second actor");
-    JsonValue secondPart = Kar.Actors.call(myBackend, "add", Json.createValue(data), Json.createValue(delay));
+    JsonValue secondPart = Kar.Actors.rootCall(myBackend, "add", Json.createValue(data), Json.createValue(delay));
     System.out.println("Received response " + secondPart + "; now sleeping for " + delay + " seconds.");
     try {
       Thread.sleep(delay * 1000);

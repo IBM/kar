@@ -95,7 +95,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public Uni<TailCall> getFirstFork(JsonNumber attempt) {
-		return Actors.call(Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId()))
+		return Actors.call(this, Actors.ref("Fork", this.firstFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
 					return Actors.tailCall(this, "getSecondFork", Json.createValue(1));
@@ -111,7 +111,7 @@ public class Philosopher extends ActorSkeleton {
 
 	@Remote
 	public Uni<TailCall> getSecondFork(JsonNumber attempt) {
-		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId()))
+		return Actors.call(this, Actors.ref("Fork", this.secondFork.getString()), "pickUp", Json.createValue(this.getId()))
 			.chain(acquired -> {
 				if (acquired.equals(JsonValue.TRUE)) {
 					return Actors.tailCall(this, "eat", this.servingsEaten);
@@ -128,8 +128,8 @@ public class Philosopher extends ActorSkeleton {
 	@Remote
 	public Uni<TailCall> eat(JsonNumber serving) {
 		if (VERBOSE) System.out.println(this.getId() + " ate serving number " + serving);
-		return Actors.call(Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()))
-			.chain(() -> Actors.call(Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId())))
+		return Actors.call(this, Actors.ref("Fork", this.secondFork.getString()), "putDown", Json.createValue(this.getId()))
+			.chain(() -> Actors.call(this, Actors.ref("Fork", this.firstFork.getString()), "putDown", Json.createValue(this.getId())))
 			.chain(() -> {
 				this.servingsEaten = Json.createValue(serving.intValue() + 1);
 				return Actors.State.set(this, "servingsEaten", this.servingsEaten);

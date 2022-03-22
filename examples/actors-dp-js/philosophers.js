@@ -67,7 +67,7 @@ class Philosopher {
   }
 
   async getFirstFork (attempt) {
-    if (await actor.call(actor.proxy('Fork', this.firstFork), 'pickUp', this.kar.id)) {
+    if (await actor.call(this, actor.proxy('Fork', this.firstFork), 'pickUp', this.kar.id)) {
       return actor.tailCall(this, 'getSecondFork', 1)
     } else {
       if (attempt > 5) {
@@ -79,7 +79,7 @@ class Philosopher {
   }
 
   async getSecondFork (attempt) {
-    if (await actor.call(actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id)) {
+    if (await actor.call(this, actor.proxy('Fork', this.secondFork), 'pickUp', this.kar.id)) {
       return actor.tailCall(this, 'eat', this.servingsEaten)
     } else {
       if (attempt > 5) {
@@ -92,8 +92,8 @@ class Philosopher {
 
   async eat (serving) {
     if (verbose) console.log(`${this.kar.id} ate serving number ${serving}`)
-    await actor.call(actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
-    await actor.call(actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
+    await actor.call(this, actor.proxy('Fork', this.secondFork), 'putDown', this.kar.id)
+    await actor.call(this, actor.proxy('Fork', this.firstFork), 'putDown', this.kar.id)
     this.servingsEaten = serving + 1
     await actor.state.set(this, 'servingsEaten', this.servingsEaten)
     if (this.servingsEaten < this.targetServings) {
@@ -163,11 +163,11 @@ class Table {
 
 class Cafe {
   async occupancy (table) {
-    return actor.call(actor.proxy('Table', table), 'occupancy')
+    return actor.call(this, actor.proxy('Table', table), 'occupancy')
   }
 
   async seatTable (n = 5, servings = 20, requestId = uuidv4()) {
-    await actor.call(actor.proxy('Table', requestId), 'prepare', this.kar.id, n, servings, requestId)
+    await actor.call(this, actor.proxy('Table', requestId), 'prepare', this.kar.id, n, servings, requestId)
     return requestId
   }
 }

@@ -158,7 +158,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-  export function call (callee: Actor, path: string, ...args: any[]): Promise<any>;
+  export function rootCall (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**
    * Asynchronously remove all user-level and runtime state of an Actor.
