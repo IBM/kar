@@ -348,7 +348,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	if instance.Activated {
 		// invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "/" + target.Flow + ":" + requestID + msg["path"]
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + msg["path"] + "?session=" + target.Flow + ":" + requestID
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 

@@ -51,7 +51,7 @@ function prettyPrintHistogram (header, bucketSizeInMS, histogram) {
 async function summaryReport (division) {
   const summary = { onboarding: 0, home: 0, commuting: 0, working: 0, meeting: 0, coffee: 0, lunch: 0 }
   for (const site of division) {
-    const sr = await actor.call(site.proxy, 'siteReport')
+    const sr = await actor.rootCall(site.proxy, 'siteReport')
     summary.onboarding += sr.onboarding || 0
     summary.home += sr.home || 0
     summary.commuting += sr.commuting || 0
@@ -79,21 +79,21 @@ async function main () {
   }
 
   for (const site of researchDivision) {
-    await actor.call(site.proxy, 'resetDelayStats')
+    await actor.rootCall(site.proxy, 'resetDelayStats')
     await actor.reminders.schedule(site.proxy, 'siteReport', { id: 'clientSiteReport', targetTime: new Date(Date.now() + 1000), period: '1s' })
-    await actor.call(ibm, 'hire', Object.assign({ site: site.proxy.kar.id }, site.params))
+    await actor.rootCall(ibm, 'hire', Object.assign({ site: site.proxy.kar.id }, site.params))
   }
 
   while (true) {
     await sleep(5000)
-    const employees = await actor.call(ibm, 'count')
+    const employees = await actor.rootCall(ibm, 'count')
     console.log(`Num employees is ${employees}`)
     if (employees === 0) {
       const summary = { reminderDelays: [], tellLatencies: [] }
       let bucketSizeInMS
       for (const site of researchDivision) {
         console.log(`Valiadating ${site.proxy.kar.id}`)
-        const sr = await actor.call(site.proxy, 'siteReport')
+        const sr = await actor.rootCall(site.proxy, 'siteReport')
         if (sr.siteEmployees !== 0) {
           console.log(`FAILURE: ${sr.siteEmployees} stranded employees at ${site.proxy.kar.id}`)
           failure = true

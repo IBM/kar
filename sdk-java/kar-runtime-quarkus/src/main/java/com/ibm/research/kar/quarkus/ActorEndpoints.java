@@ -43,6 +43,8 @@ import com.ibm.research.kar.runtime.ActorManager;
 import com.ibm.research.kar.runtime.ActorType;
 import com.ibm.research.kar.runtime.KarHttpConstants;
 
+import org.jboss.resteasy.reactive.RestQuery;
+
 import io.smallrye.mutiny.Uni;
 
 @Path("/kar/impl/v1/actor")
@@ -86,7 +88,7 @@ public class ActorEndpoints implements KarHttpConstants {
 		MethodHandle activate = actorType.getActivateMethod();
 		if (activate != null) {
 			try {
-				Object result = activate.invoke(actorInstance);
+				Object result = activate.invokeWithArguments(actorInstance);
 				if (result instanceof Uni<?>) {
 					return ((Uni<?>)result).chain(() -> Uni.createFrom().item(success));
 				}
@@ -122,7 +124,7 @@ public class ActorEndpoints implements KarHttpConstants {
 		MethodHandle deactivateMethod = actorType.getDeactivateMethod();
 		if (deactivateMethod != null) {
 			try {
-				Object result = deactivateMethod.invoke(actorInstance);
+				Object result = deactivateMethod.invokeWithArguments(actorInstance);
 				if (result instanceof Uni<?>) {
 					return ((Uni<?>)result).chain(() -> {
 						ActorManager.removeInstanceIfPresent(type, id);
@@ -151,16 +153,16 @@ public class ActorEndpoints implements KarHttpConstants {
 	 *
 	 * @param type The type of the actor
 	 * @param id The id of the target instancr
-	 * @param sessionid The session in which the method is being invoked
+	 * @param session The session in which the method is being invoked
 	 * @param path The method to invoke
 	 * @param args The arguments to the method
 	 * @return a Uni representing the result of the method invocation
 	 */
 	@POST
-	@Path("/{type}/{id}/{sessionid}/{path}")
+	@Path("/{type}/{id}/{path}")
 	@Consumes(KAR_ACTOR_JSON)
 	@Produces(KAR_ACTOR_JSON)
-	public Uni<Response> invokeActorMethod(String type, String id, String sessionid, String path, JsonArray args) {
+	public Uni<Response> invokeActorMethod(String type, String id, @RestQuery String session, String path, JsonArray args) {
 		ActorInstance actorObj = ActorManager.getInstanceIfPresent(type, id);
 		if (actorObj == null) {
 			Response resp = Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
@@ -183,7 +185,7 @@ public class ActorEndpoints implements KarHttpConstants {
 
 		String priorSession = actorObj.getSession();
 		try {
-			actorObj.setSession(sessionid);
+			actorObj.setSession(session);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
 				actorObj.setSession(priorSession);

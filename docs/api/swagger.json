@@ -126,7 +126,7 @@
         }
       }
     },
-    "/impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}": {
+    "/impl/v1/actor/{actorType}/{actorId}/{methodName}": {
       "post": {
         "description": "### Invoke an actor method of the specified actor instance\n\nInvokes the actor method on the actor instance within the session specified in the path.\nThe body of the request will contain the actual paramters on which to invoke the method.",
         "consumes": [
@@ -171,12 +171,10 @@
           },
           {
             "type": "string",
-            "format": "uuid",
             "x-go-name": "Session",
-            "description": "The session to use for the actor method invocation.",
+            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls and tracking parent-child relationships",
             "name": "session",
-            "in": "path",
-            "required": true
+            "in": "query"
           },
           {
             "example": "[3, 'hello', { msg: 'Greetings' }]",
@@ -285,9 +283,8 @@
           },
           {
             "type": "string",
-            "format": "uuid",
             "x-go-name": "Session",
-            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.",
+            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls and tracking parent-child relationships",
             "name": "session",
             "in": "query"
           },

@@ -328,7 +328,7 @@ paths:
       summary: actor allocation
       tags:
       - actor-runtime
-  /impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}:
+  /impl/v1/actor/{actorType}/{actorId}/{methodName}:
     post:
       consumes:
       - application/kar+json
@@ -358,11 +358,10 @@ paths:
         required: true
         type: string
         x-go-name: MethodName
-      - description: The session to use for the actor method invocation.
-        format: uuid
-        in: path
+      - description: Optionally specific the session to use when performing the call.  Enables
+          re-entrancy for nested actor calls and tracking parent-child relationships
+        in: query
         name: session
-        required: true
         type: string
         x-go-name: Session
       - description: A possibly empty array containing the arguments with which to
@@ -455,8 +454,7 @@ paths:
         type: string
         x-go-name: MethodName
       - description: Optionally specific the session to use when performing the call.  Enables
-          re-entrancy for nested actor calls.
-        format: uuid
+          re-entrancy for nested actor calls and tracking parent-child relationships
         in: query
         name: session
         type: string

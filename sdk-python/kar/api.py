@@ -851,8 +851,8 @@ def actor_runtime(actors, actor_server=None):
         return PlainTextResponse(status_code=200, content="deleted")
 
     # Method to call actor methods.
-    @actor_server.post(f"{kar_url}" + "/{type}/{id}/{session}/{method}")
-    async def post(type: str, id: int, session: str, method: str,
+    @actor_server.post(f"{kar_url}" + "/{type}/{id}/{method}")
+    async def post(type: str, id: int, method: str,
                    request: Request):
         # Check that the message has JSON type.
         if not request.headers['content-type'] in [

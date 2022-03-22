@@ -33,6 +33,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -82,7 +83,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 		MethodHandle activate = actorType.getActivateMethod();
 		if (activate != null) {
 			try {
-				activate.invoke(actorInstance);
+				activate.invokeWithArguments(actorInstance);
 			}  catch (Throwable t) {
 				return Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
 			}
@@ -113,7 +114,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 		MethodHandle deactivateMethod = actorType.getDeactivateMethod();
 		if (deactivateMethod != null) {
 			try {
-				deactivateMethod.invoke(actorInstance);
+				deactivateMethod.invokeWithArguments(actorInstance);
 			} catch (Throwable t) {
 				return Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
 			}
@@ -143,10 +144,10 @@ public class ActorRuntimeResource implements KarHttpConstants {
 	 * @return a Response containing the result of the method invocation
 	 */
 	@POST
-	@Path("{type}/{id}/{sessionid}/{path}")
+	@Path("{type}/{id}/{path}")
 	@Consumes(Kar.KAR_ACTOR_JSON)
 	@Produces(Kar.KAR_ACTOR_JSON)
-	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id, @PathParam("sessionid") String sessionid, @PathParam("path") String path, JsonArray args) {
+	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id, @QueryParam("session") String sessionid, @PathParam("path") String path, JsonArray args) {
 		ActorInstance actorObj = ActorManager.getInstanceIfPresent(type, id);
 		if (actorObj == null) {
 			return Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
