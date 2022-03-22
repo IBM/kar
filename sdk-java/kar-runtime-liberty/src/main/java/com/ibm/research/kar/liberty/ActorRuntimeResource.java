@@ -63,7 +63,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 	@GET
 	@Path("{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response getActor(@PathParam("type") String type, @PathParam("id") String id) {
+	public Response getActor(@PathParam("type") String type, @PathParam("id") String id, @QueryParam("session") String session) {
 		ActorInstance actorInstance = ActorManager.getInstanceIfPresent(type, id);
 		if (actorInstance != null) {
 			return Response.ok().build();
@@ -83,9 +83,12 @@ public class ActorRuntimeResource implements KarHttpConstants {
 		MethodHandle activate = actorType.getActivateMethod();
 		if (activate != null) {
 			try {
+				actorInstance.setSession(session);
 				activate.invokeWithArguments(actorInstance);
 			}  catch (Throwable t) {
 				return Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
+			} finally {
+				actorInstance.setSession(null);
 			}
 		}
 
@@ -138,7 +141,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 	 *
 	 * @param type The type of the actor
 	 * @param id The id of the target instancr
-	 * @param sessionid The session in which the method is being invoked
+	 * @param session The session in which the method is being invoked
 	 * @param path The method to invoke
 	 * @param args The arguments to the method
 	 * @return a Response containing the result of the method invocation
@@ -147,7 +150,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 	@Path("{type}/{id}/{path}")
 	@Consumes(Kar.KAR_ACTOR_JSON)
 	@Produces(Kar.KAR_ACTOR_JSON)
-	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id, @QueryParam("session") String sessionid, @PathParam("path") String path, JsonArray args) {
+	public Response invokeActorMethod(@PathParam("type") String type, @PathParam("id") String id, @QueryParam("session") String session, @PathParam("path") String path, JsonArray args) {
 		ActorInstance actorObj = ActorManager.getInstanceIfPresent(type, id);
 		if (actorObj == null) {
 			return Response.status(NOT_FOUND).type(TEXT_PLAIN).entity("Actor instance not found: " + type + "[" + id +"]").build();
@@ -168,7 +171,7 @@ public class ActorRuntimeResource implements KarHttpConstants {
 
 		String priorSession = actorObj.getSession();
 		try {
-			actorObj.setSession(sessionid);
+			actorObj.setSession(session);
 			Object result = actorMethod.invokeWithArguments(actuals);
 			if (result == null || actorMethod.type().returnType().equals(Void.TYPE)) {
 				return Response.status(NO_CONTENT).build();

@@ -306,12 +306,15 @@ function actorRuntime (actors) {
         table[req.params.type] = table[req.params.type] || {}
         const actor = new Actor(req.params.id)
         table[req.params.type][req.params.id] = actor
-        table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id }
+        table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id, session: req.query.session }
       }) // instantiate actor and add to index
       .then(_ => { // run optional activate callback
         if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
       })
-      .then(_ => res.sendStatus(201)) // Created
+      .then(_ => {
+        table[req.params.type][req.params.id].kar.session = undefined
+        return res.sendStatus(201) // Created
+      })
       .catch(next)
   })
 

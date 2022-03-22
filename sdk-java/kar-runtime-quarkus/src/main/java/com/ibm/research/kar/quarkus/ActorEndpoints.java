@@ -65,7 +65,7 @@ public class ActorEndpoints implements KarHttpConstants {
 	@GET
 	@Path("/{type}/{id}")
 	@Produces(MediaType.TEXT_PLAIN)
-	public Uni<Response> getActor(String type, String id) {
+	public Uni<Response> getActor(String type, String id, @RestQuery String session) {
 		ActorInstance actorInstance = ActorManager.getInstanceIfPresent(type, id);
 		if (actorInstance != null) {
 			return Uni.createFrom().item(Response.ok().build());
@@ -88,11 +88,19 @@ public class ActorEndpoints implements KarHttpConstants {
 		MethodHandle activate = actorType.getActivateMethod();
 		if (activate != null) {
 			try {
+				actorInstance.setSession(session);
+				final ActorInstance capturedActorInstance = actorInstance;
 				Object result = activate.invokeWithArguments(actorInstance);
 				if (result instanceof Uni<?>) {
-					return ((Uni<?>)result).chain(() -> Uni.createFrom().item(success));
+					return ((Uni<?>)result).chain(res -> {
+						capturedActorInstance.setSession(null);
+						return Uni.createFrom().item(success);
+					});
+				} else {
+					actorInstance.setSession(null);
 				}
 			} catch (Throwable t) {
+				actorInstance.setSession(null);
 				Response failure = Response.status(BAD_REQUEST).type(TEXT_PLAIN).entity(t.toString()).build();
 				return Uni.createFrom().item(failure);
 			}

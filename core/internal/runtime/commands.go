@@ -308,6 +308,7 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 
 func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.SessionInstance, requestID string, value []byte) (*rpc.Destination, []byte, error) {
 	actor := Actor{Type: target.Name, ID: target.ID}
+	session := target.Flow + ":" + requestID
 	var reply []byte = nil
 	var err error = nil
 	var msg map[string]string
@@ -336,7 +337,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 
 	var dest *rpc.Destination = nil
 	if !instance.Activated {
-		reply, err = activate(ctx, actor, msg["command"] == "call", msg["path"])
+		reply, err = activate(ctx, actor, session, msg)
 		if reply != nil {
 			// activate returned an application-level error, do not retry
 			err = nil
@@ -348,7 +349,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	if instance.Activated {
 		// invoke actor method
 		metricLabel := actor.Type + ":" + msg["path"] // compute metric label before we augment the path with id+flow
-		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + msg["path"] + "?session=" + target.Flow + ":" + requestID
+		msg["path"] = actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + msg["path"] + "?session=" + session
 		msg["content-type"] = "application/kar+json"
 		msg["method"] = "POST"
 
@@ -527,8 +528,9 @@ func getActorInformation(ctx context.Context, msg map[string]string) ([]byte, er
 }
 
 // activate an actor
-func activate(ctx context.Context, actor Actor, isCall bool, causingMethod string) ([]byte, error) {
-	reply, err := invoke(ctx, "GET", map[string]string{"path": actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID}, actor.Type+":activate")
+func activate(ctx context.Context, actor Actor, session string, causingMsg map[string]string) ([]byte, error) {
+	activatePath := actorRuntimeRoutePrefix + actor.Type + "/" + actor.ID + "?session=" + session
+	reply, err := invoke(ctx, "GET", map[string]string{"path": activatePath}, actor.Type+":activate")
 	if err != nil {
 		if err != ctx.Err() {
 			logger.Debug("activate failed to invoke %s: %v", actorRuntimeRoutePrefix+actor.Type+"/"+actor.ID, err)
@@ -536,11 +538,11 @@ func activate(ctx context.Context, actor Actor, isCall bool, causingMethod strin
 		return nil, err
 	}
 	if reply.StatusCode >= http.StatusBadRequest {
-		if isCall {
-			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, causingMethod)
+		if causingMsg["command"] == "call" {
+			logger.Debug("activate %v returned status %v with body %s, aborting call %s", actor, reply.StatusCode, reply.Payload, causingMsg["path"])
 		} else {
 			// Log at error level becasue there is no one waiting on the method reponse to notice the failure.
-			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, causingMethod)
+			logger.Error("activate %v returned status %v with body %s, aborting tell %s", actor, reply.StatusCode, reply.Payload, causingMsg["path"])
 		}
 		return json.Marshal(reply)
 	}

@@ -71,6 +71,13 @@
             "name": "actorId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Session",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
+            "name": "session",
+            "in": "query"
           }
         ],
         "responses": {
@@ -172,7 +179,7 @@
           {
             "type": "string",
             "x-go-name": "Session",
-            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls and tracking parent-child relationships",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
             "name": "session",
             "in": "query"
           },
@@ -284,7 +291,7 @@
           {
             "type": "string",
             "x-go-name": "Session",
-            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls and tracking parent-child relationships",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
             "name": "session",
             "in": "query"
           },

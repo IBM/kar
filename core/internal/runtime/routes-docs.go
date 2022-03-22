@@ -288,9 +288,11 @@ type methodParam struct {
 }
 
 // swagger:parameters idActorCall
+// swagger:parameters idImplActorGet
 // swagger:parameters idImplActorPost
 type sessionParam struct {
-	// Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls and tracking parent-child relationships
+	// The session is an opaque string used by the KAR runtime to enable reentrancy
+	// for nested actor calls and to track caller-callee relationships for failure recovery
 	// in:query
 	// required:false
 	Session string `json:"session"`
