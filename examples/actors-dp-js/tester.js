@@ -39,11 +39,11 @@ async function main () {
   const cafe = actor.proxy('Cafe', 'Cafe+de+Flore')
 
   console.log('Serving a meal:')
-  const table = await actor.call(cafe, 'seatTable', 20, 5)
+  const table = await actor.rootCall(cafe, 'seatTable', 20, 5)
 
   let occupancy = 1
   while (occupancy > 0 & !failure) {
-    occupancy = await actor.call(cafe, 'occupancy', table)
+    occupancy = await actor.rootCall(cafe, 'occupancy', table)
     console.log(`Table occupancy is ${occupancy}`)
     await sleep(2000)
     countdown = countdown - 1

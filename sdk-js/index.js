@@ -160,18 +160,10 @@ function actorCall (...args) {
 }
 
 function actorRootCall (...args) {
-  if (typeof args[1] === 'string') {
-    // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
-    const ta = args.shift()
-    const path = args.shift()
-    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
-  } else {
-    //  call (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
-    const sa = args.shift()
-    const ta = args.shift()
-    const path = args.shift()
-    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, { 'Content-Type': 'application/kar+json' })
-  }
+  // call (callee:Actor, path:string, ...args:any[]):Promise<any>;
+  const ta = args.shift()
+  const path = args.shift()
+  return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json' })
 }
 
 function actorAsyncCall (...args) {
@@ -314,12 +306,15 @@ function actorRuntime (actors) {
         table[req.params.type] = table[req.params.type] || {}
         const actor = new Actor(req.params.id)
         table[req.params.type][req.params.id] = actor
-        table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id }
+        table[req.params.type][req.params.id].kar = { type: req.params.type, id: req.params.id, session: req.query.session }
       }) // instantiate actor and add to index
       .then(_ => { // run optional activate callback
         if (typeof table[req.params.type][req.params.id].activate === 'function') return table[req.params.type][req.params.id].activate()
       })
-      .then(_ => res.sendStatus(201)) // Created
+      .then(_ => {
+        table[req.params.type][req.params.id].kar.session = undefined
+        return res.sendStatus(201) // Created
+      })
       .catch(next)
   })
 
@@ -340,7 +335,7 @@ function actorRuntime (actors) {
   })
 
   // method invocation route
-  router.post('/kar/impl/v1/actor/:type/:id/:session/:method', (req, res, next) => {
+  router.post('/kar/impl/v1/actor/:type/:id/:method', (req, res, next) => {
     const Actor = actors[req.params.type]
     if (Actor == null) return res.status(404).type('text/plain').send(`no actor type ${req.params.type}`)
     const actor = (table[req.params.type] || {})[req.params.id]
@@ -349,7 +344,7 @@ function actorRuntime (actors) {
     const priorSession = actor.kar.session
     return Promise.resolve()
       .then(_ => {
-        actor.kar.session = req.params.session
+        actor.kar.session = req.query.session
         if (typeof actor[req.params.method] === 'function') return actor[req.params.method](...req.body)
         return actor[req.params.method]
       }) // invoke method on actor

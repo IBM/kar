@@ -132,7 +132,7 @@ func dummy1() {}
 //
 func dummy2() {}
 
-// swagger:route POST /impl/v1/actor/{actorType}/{actorId}/{session}/{methodName} actor-runtime idImplActorPost
+// swagger:route POST /impl/v1/actor/{actorType}/{actorId}/{methodName} actor-runtime idImplActorPost
 //
 // actor invocation
 //
@@ -288,19 +288,13 @@ type methodParam struct {
 }
 
 // swagger:parameters idActorCall
+// swagger:parameters idImplActorGet
+// swagger:parameters idImplActorPost
 type sessionParam struct {
-	// Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.
+	// The session is an opaque string used by the KAR runtime to enable reentrancy
+	// for nested actor calls and to track caller-callee relationships for failure recovery
 	// in:query
 	// required:false
-	// swagger:strfmt uuid
-	Session string `json:"session"`
-}
-
-// swagger:parameters idImplActorPost
-type sessionPathParam struct {
-	// The session to use for the actor method invocation.
-	// in:path
-	// swagger:strfmt uuid
 	Session string `json:"session"`
 }
 

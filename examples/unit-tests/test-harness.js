@@ -194,7 +194,7 @@ async function actorTests () {
 
   // external synchronous invocation of an actor method
   for (let i = 0; i < 25; i++) {
-    const x = await actor.call(actor.proxy('Foo', 'anotherInstance'), 'incrQuiet', i)
+    const x = await actor.rootCall(actor.proxy('Foo', 'anotherInstance'), 'incrQuiet', i)
     if (x !== i + 1) {
       console.log(`Failed! incr(${i}) returned ${x}`)
       failure = true
@@ -202,7 +202,7 @@ async function actorTests () {
   }
 
   // synchronous invocation via the actor
-  const v6 = await actor.call(a, 'incr', 42)
+  const v6 = await actor.rootCall(a, 'incr', 42)
   if (v6 !== 43) {
     console.log(`Failed: unexpected result from incr ${v6}`)
     failure = true
@@ -216,7 +216,7 @@ async function actorTests () {
   }
 
   // getter
-  const v7 = await actor.call(a, 'field')
+  const v7 = await actor.rootCall(a, 'field')
   if (v7 !== 42) {
     console.log(`Failed: getter of 'field' returned ${v7}`)
     failure = true
@@ -225,7 +225,7 @@ async function actorTests () {
   console.log('Testing actor invocation error handling')
   // error in synchronous invocation
   try {
-    console.log(await actor.call(a, 'fail', 'error message 123'))
+    console.log(await actor.rootCall(a, 'fail', 'error message 123'))
     console.log('Failed to raise expected error')
     failure = true
   } catch (err) {
@@ -234,7 +234,7 @@ async function actorTests () {
 
   // undefined method
   try {
-    console.log(await actor.call(a, 'missing', 'error message 123'))
+    console.log(await actor.rootCall(a, 'missing', 'error message 123'))
     console.log('Failed. No error raised invoking missing method')
     failure = true
   } catch (err) {
@@ -242,7 +242,7 @@ async function actorTests () {
   }
 
   // reentrancy
-  const v9 = await actor.call(a, 'reenter', 42)
+  const v9 = await actor.rootCall(a, 'reenter', 42)
   if (v9 !== 43) {
     console.log(`Failed: unexpected result from reenter ${v9}`)
     failure = true
@@ -266,7 +266,7 @@ async function pubSubTests () {
 
   await events.createTopic(topic)
 
-  const v1 = await actor.call(a, 'pubsub', topic)
+  const v1 = await actor.rootCall(a, 'pubsub', topic)
   if (v1 !== 'OK') {
     console.log('Failed: pubsub')
     failure = true
@@ -274,7 +274,7 @@ async function pubSubTests () {
 
   let i
   for (i = 30; i > 0; i--) { // poll
-    const v2 = await actor.call(a, 'check', topic)
+    const v2 = await actor.rootCall(a, 'check', topic)
     if (v2 === true) break
     await new Promise(resolve => setTimeout(resolve, 500)) // wait
   }
@@ -300,7 +300,7 @@ async function testTermination (failure) {
 }
 
 async function main () {
-  var failure = false
+  let failure = false
 
   console.log('*** Service Tests ***')
   failure |= await serviceTests()
