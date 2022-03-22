@@ -71,6 +71,13 @@
             "name": "actorId",
             "in": "path",
             "required": true
+          },
+          {
+            "type": "string",
+            "x-go-name": "Session",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
+            "name": "session",
+            "in": "query"
           }
         ],
         "responses": {
@@ -126,7 +133,7 @@
         }
       }
     },
-    "/impl/v1/actor/{actorType}/{actorId}/{session}/{methodName}": {
+    "/impl/v1/actor/{actorType}/{actorId}/{methodName}": {
       "post": {
         "description": "### Invoke an actor method of the specified actor instance\n\nInvokes the actor method on the actor instance within the session specified in the path.\nThe body of the request will contain the actual paramters on which to invoke the method.",
         "consumes": [
@@ -171,12 +178,10 @@
           },
           {
             "type": "string",
-            "format": "uuid",
             "x-go-name": "Session",
-            "description": "The session to use for the actor method invocation.",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
             "name": "session",
-            "in": "path",
-            "required": true
+            "in": "query"
           },
           {
             "example": "[3, 'hello', { msg: 'Greetings' }]",
@@ -285,9 +290,8 @@
           },
           {
             "type": "string",
-            "format": "uuid",
             "x-go-name": "Session",
-            "description": "Optionally specific the session to use when performing the call.  Enables re-entrancy for nested actor calls.",
+            "description": "The session is an opaque string used by the KAR runtime to enable reentrancy\nfor nested actor calls and to track caller-callee relationships for failure recovery",
             "name": "session",
             "in": "query"
           },
