@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
@@ -37,7 +38,7 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 	// reset the routing tables
 	service2nodes = map[string][]string{}
 	// node2partition = map[string]int32{} // keep the info we already have
-	session2NodeCache.Purge()
+	session2NodeCache = new(sync.Map)
 	liveNodes := map[string]struct{}{}
 
 	// reset partition message counts
@@ -158,7 +159,7 @@ func updateRoutes() error {
 	// reset routing tables
 	service2nodes = map[string][]string{}
 	node2partition = map[string]int32{}
-	session2NodeCache.Purge()
+	session2NodeCache = new(sync.Map)
 
 	// rebuild tables
 	for _, member := range members {

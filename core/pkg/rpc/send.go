@@ -61,8 +61,10 @@ func routeToSession(ctx context.Context, service, session string) (string, int32
 
 	key := place(service, session)
 	if PlacementCache {
-		if node, ok := session2NodeCache.Get(key); ok {
-			return node.(string), node2partition[node.(string)], nil
+		if e, ok := session2NodeCache.Load(key); ok {
+			entry := e.(*placementCacheEntry)
+			entry.used = true
+			return entry.node, node2partition[entry.node], nil
 		}
 	}
 
@@ -78,7 +80,8 @@ func routeToSession(ctx context.Context, service, session string) (string, int32
 		partition := node2partition[node]
 		if partition != 0 {
 			if PlacementCache {
-				session2NodeCache.Add(key, node)
+				entry := placementCacheEntry{node: node, used: true}
+				session2NodeCache.Store(key, &entry)
 			}
 			return node, partition, nil
 		}

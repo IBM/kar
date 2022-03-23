@@ -177,7 +177,7 @@ func globalOptions(f *flag.FlagSet) {
 
 	f.StringVar(&configDir, "config_dir", "", "Directory containing configuration files")
 
-	f.BoolVar(&placementCache, "placement_cache", false, "Use actor placement cache")
+	f.BoolVar(&placementCache, "placement_cache", true, "Use actor placement cache")
 }
 
 func init() {
