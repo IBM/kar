@@ -38,6 +38,7 @@ args=""
 parse=true
 injectorOnly=""
 openshift=""
+agent=""
 while [ -n "$1" ]; do
     if [ -z "$parse" ]; then
         args="$args '$1'"
@@ -45,6 +46,7 @@ while [ -n "$1" ]; do
         continue
     fi
     case "$1" in
+	-a|-agent|--agent) agent="1"; break;;
         -h|-help|--help) help="1"; break;;
         -os|-openshift) openshift="1";;
         -m|-managed|--managed)
@@ -81,6 +83,7 @@ if [ -n "$help" ]; then
     cat << EOF
 Usage: kar-deploy.sh [options]
 where [options] includes:
+    -a -agent                 embeds prometheus exporter into kafka to expose metrics
     -f -file <config.yaml>    pass -f <config.yaml> to helm install kar
     -m -managed <service-key> use managed EventStreams and Redis accessed via service-key
     -s -set key=value         pass --set key=value to helm install kar
@@ -95,6 +98,11 @@ helmargs="$helmargs --set-string kar.version=$kartag "
 cd $ROOTDIR
 
 kubectl create namespace kar-system 2>/dev/null || true
+
+if [ -n "$agent" ]; then
+    echo "Deploying prometheus metrics exporter configMap"
+    kubectl create -f $SCRIPTDIR/kafka-jmx-exporter-cm.yaml
+fi
 
 if [ -n "$openshift" ]; then
     oc create sa sa-with-anyuid -n kar-system

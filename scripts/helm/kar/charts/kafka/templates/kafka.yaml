@@ -104,6 +104,35 @@ spec:
       - name: wait-for-zookeeper
         image: busybox:1.33
         command: ["sh", "-c", 'result=1; until [ $result -eq 0 ]; do OK=$(echo ruok | nc -w 1 {{ include "kar.zookeeper_host_zero" . }} {{ .Values.zk.port }}); if [ "$OK" == "imok" ]; then result=0; echo "zookeeper returned imok!"; else echo waiting for zookeeper to be ready; sleep 1; fi; done; echo "Success: zookeeper is up"']
+      - name: install-kafka-exporter
+        image: busybox:1.33
+        command:
+          - sh
+          - -c
+          - >
+             if [[ -n "${EXPORTER_JAR_URL}" ]]; then
+                echo "Pulling prometheus kafka exporter and its configuration ..."
+                wget -O /kafka/jmx_prometheus_javaagent.jar "${EXPORTER_JAR_URL}"
+                wget -O /kafka/jmx-prometheus-javaagent-config.yaml "${EXPORTER_CONFIG_URL}"
+             fi
+        env:
+        - name: EXPORTER_JAR_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-jmx-exporter-cm
+              # Specify the key associated with the value
+              key: kafka-exporter-url
+              optional: true
+        - name: EXPORTER_CONFIG_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-jmx-exporter-cm
+              # Specify the key associated with the value
+              key: kafka-exporter-config-url
+              optional: true
+        volumeMounts:
+        - mountPath: /kafka
+          name: kar-kafka-pvc
       containers:
       - name: kafka
         image: {{ .Values.kafka.imageRegistry }}/{{ .Values.kafka.imageName }}:{{ .Values.kafka.imageTag }}
@@ -157,7 +186,13 @@ spec:
 {{- end }}
         - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
           value: "false"
-
+        - name: EXTRA_ARGS
+          valueFrom:
+            configMapKeyRef:
+              name: kafka-jmx-exporter-cm
+              # Specify the key associated with the value
+              key: kafkaOpts
+              optional: true
 {{/* PVCs created by volumeClaimTemplates must be manually removed; only create them if we really need them */}}
 {{- if and .Values.global.replicatedServices .Values.global.persistence }}
   volumeClaimTemplates:
