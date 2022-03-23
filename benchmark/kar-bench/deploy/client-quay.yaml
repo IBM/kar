@@ -25,7 +25,7 @@ spec:
     metadata:
       annotations:
         kar.ibm.com/app: kar-bench-js
-        kar.ibm.com/extraArgs: -rpclib=true,-placement_cache=true
+        kar.ibm.com/extraArgs: -placement_cache=true
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:

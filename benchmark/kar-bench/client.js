@@ -114,7 +114,7 @@ async function measureActorCall (numCalls) {
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
     const start = process.hrtime.bigint()
-    const response = await actor.call(actorClass, 'simpleMethod')
+    const response = await actor.rootCall(actorClass, 'simpleMethod')
     await response
     stats.actorEndToEnd.push(Number(process.hrtime.bigint() - start) / 1e6)
     await sleep(sleepTime)
@@ -127,7 +127,7 @@ async function measureActorOneWayCall (numCalls) {
   // Perform requests
   for (let i = 0; i < numCalls; i++) {
     const start = process.hrtime.bigint()
-    const remoteStamp = await actor.call(actorClass, 'timedMethod')
+    const remoteStamp = await actor.rootCall(actorClass, 'timedMethod')
     const end = process.hrtime.bigint()
     const midTime = BigInt(remoteStamp)
     stats.actorOneWayRequest.push(Number(midTime - start) / 1e6)
