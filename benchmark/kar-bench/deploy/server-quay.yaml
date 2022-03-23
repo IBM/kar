@@ -22,7 +22,7 @@ metadata:
     kar.ibm.com/app: kar-bench-js
     kar.ibm.com/actors: BenchActor
     kar.ibm.com/service: bench
-    kar.ibm.com/extraArgs: -rpclib=true,-placement_cache=true
+    kar.ibm.com/extraArgs: -placement_cache=true
 spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
@@ -31,4 +31,4 @@ spec:
     image: quay.io/ibm/kar-bench-js-image
     env:
     - name: KAR_EXTRA_ARGS
-      value: -actors BenchActor -rpclib=true -placement_cache=true
+      value: -actors BenchActor -placement_cache=true
