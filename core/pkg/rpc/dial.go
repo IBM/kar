@@ -26,7 +26,6 @@ import (
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
-	lru "github.com/hashicorp/golang-lru"
 )
 
 // The info provided by each live node when rebalancing
@@ -34,6 +33,12 @@ type info struct {
 	Node      string   // the uuid of the node
 	Services  []string // the services provided by the node
 	Partition int32    // the partition > 0 assigned to the node if known or 0 if not yet decided
+}
+
+// NRU cache entry
+type placementCacheEntry struct {
+	node string
+	used bool
 }
 
 var (
@@ -50,7 +55,7 @@ var (
 	self              = info{Node: uuid.New().String()} // service, node, partition (initially unknown == 0)
 	service2nodes     map[string][]string               // the map from services to nodes providing these services
 	node2partition    = map[string]int32{}              // the map from nodes to their assigned partitions
-	session2NodeCache *lru.ARCCache                     // a cache of the mapping from sessions to their assigned Node
+	session2NodeCache = new(sync.Map)                   // a cache of the mapping from sessions to their assigned Node
 	mu                = new(sync.RWMutex)               // a RW mutex held when rebalancing (W) and sending messages (R)
 	tick              = make(chan struct{})             // a channel closed at replaced at the end of rebalance
 
@@ -71,10 +76,6 @@ var (
 	// Temp staging for experiments
 	PlacementCache = true
 )
-
-func init() {
-	session2NodeCache, _ = lru.NewARC(4096)
-}
 
 func configureClient(config *Config) *sarama.Config {
 	conf := sarama.NewConfig()

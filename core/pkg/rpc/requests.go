@@ -114,6 +114,18 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 		return ctx.Err() == nil // stop collection if cancelled
 	})
 
+	// For each entry, clear its used bit and if it hadn't been
+	// used since the last time we did this process, remove it from the cache.
+	// This is potentially racy, but this is only a cache so that's fine
+	session2NodeCache.Range(func(key, v interface{}) bool {
+		entry := v.(*placementCacheEntry)
+		if entry.used {
+			entry.used = false
+		} else {
+			session2NodeCache.Delete(key)
+		}
+		return ctx.Err() == nil // stop collection if cancelled
+	})
 }
 
 func sendOrDie(ctx context.Context, msg Message) {
