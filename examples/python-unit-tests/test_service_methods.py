@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from kar import call, tell, invoke
+from kar import call, tell, invoke, async_call
 import asyncio
 import json
 
@@ -62,6 +62,16 @@ async def text_structured_generic(request):
 
 def test_text_structured_generic():
     asyncio.run(text_structured_generic(call))
+
+
+# -----------------------------------------------------------------------------
+async def text_simple_async():
+    response = await async_call(service_name, "test-text-simple", "World")
+    assert response == "Hello World"
+
+
+def test_text_simple_async():
+    asyncio.run(text_simple_async())
 
 
 # -----------------------------------------------------------------------------
@@ -145,6 +155,16 @@ async def json_generic(request):
 
 def test_json_generic():
     asyncio.run(json_generic(call))
+
+
+# -----------------------------------------------------------------------------
+async def text_to_json_async():
+    response = await async_call(service_name, "test-text-to-json", "World")
+    assert response["message"] == "Hello World"
+
+
+def test_text_to_json_async():
+    asyncio.run(text_to_json_async())
 
 
 # -----------------------------------------------------------------------------
