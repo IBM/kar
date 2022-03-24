@@ -242,6 +242,18 @@ async def _base_get(api, base_url=None):
         return await _base_request(client.get, api)
 
 
+def _actor_call_body(*args, **kwargs):
+    body = []
+    if len(kwargs) > 0:
+        body = {"args": [], "kwargs": {}}
+        if len(args) > 0:
+            body["args"] = list(args)
+        body["kwargs"] = kwargs
+    elif len(args) > 0:
+        body = args
+    return json.dumps(body)
+
+
 # -----------------------------------------------------------------------------
 # Public testing and base methods
 # -----------------------------------------------------------------------------
@@ -436,43 +448,26 @@ def actor_proxy(actor_type, actor_id):
 # client-side actor before invoking the `call_actor_method`.
 #
 def actor_call(*args, **kwargs):
-    # Local actor instance which is nothing but a plain KarActor class
+    # Local actor instance which is nothing but a plain KarActor class.
+    # Prepare call arguments based on the type of actor call being performed:
     if isinstance(args[1], str):
-        # call (Actor, string, [args])
+        # call (Actor, string, <args>)
         actor = args[0]
         path = args[1]
-        body = []
-        if len(kwargs) > 0:
-            body = {"args": [], "kwargs": {}}
-            if len(args) > 2:
-                body["args"] = list(args[2:])
-            body["kwargs"] = kwargs
-        elif len(args) > 2:
-            body = args[2:]
-        body = json.dumps(body)
-        return asyncio.create_task(
-            _actor_post(
-                f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call"
-                f"/{path}", body, {'Content-Type': 'application/kar+json'}))
+        body = _actor_call_body(*args[2:], **kwargs)
+        api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}"
     else:
-        # call (Actor, Actor, string, [args])
+        # call (Actor, Actor, string, <args>)
         from_actor = args[0]
         actor = args[1]
         path = args[2]
-        body = []
-        if len(kwargs) > 0:
-            body = {"args": [], "kwargs": {}}
-            if len(args) > 3:
-                body["args"] = list(args[3:])
-            body["kwargs"] = kwargs
-        elif len(args) > 3:
-            body = args[3:]
-        body = json.dumps(body)
-        return asyncio.create_task(
-            _actor_post(
-                f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call"
-                f"/{path}?session={from_actor.session}", body,
-                {'Content-Type': 'application/kar+json'}))
+        body = _actor_call_body(*args[3:], **kwargs)
+        actor_api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}"
+        api = f"{actor_api}/call/{path}?session={from_actor.session}"
+
+    # Call actor method:
+    return asyncio.create_task(
+        _actor_post(api, body, {'Content-Type': 'application/kar+json'}))
 
 
 #
