@@ -20,7 +20,6 @@ import httpx
 import asyncio
 import traceback
 import datetime
-import time
 
 
 # -----------------------------------------------------------------------------
@@ -273,6 +272,7 @@ async def actor_reminders_schedule():
     # Future time +5s:
     future_time = current + datetime.timedelta(0, 5)
     formatted_time = future_time.astimezone().isoformat()
+    print(formatted_time)
 
     # Schedule reminder:
     await actor_schedule_reminder(famous_actor,
@@ -297,7 +297,9 @@ async def actor_reminders_schedule():
 
     # Get the reminder by name:
     response = await actor_get_reminder(famous_actor, "default_id_1")
-    assert len(response) == 1
+    assert response["Actor"] == {'ID': '9', 'Type': 'TestActor'}
+    assert response["id"] == "default_id_1"
+    assert response["path"] == "/set_name"
 
     # Cancel the reminder:
     response = await actor_cancel_reminder(famous_actor, "default_id_1")
