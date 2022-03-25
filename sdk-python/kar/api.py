@@ -336,6 +336,27 @@ def call(service, endpoint, body):
               {'Content-Type': 'application/json'}))
 
 
+#
+# KAR resolver method
+#
+async def resolver(request):
+    return await _post("/kar/v1/await", await request,
+                       {'Content-Type': 'text/plain'})
+
+
+#
+# KAR async call
+#
+def async_call(service, endpoint, body):
+    return asyncio.create_task(
+        resolver(
+            _post(f'{sidecar_url_prefix}/service/{service}/call/{endpoint}',
+                  body, {
+                      'Content-Type': 'application/json',
+                      'Pragma': 'promise'
+                  })))
+
+
 # -----------------------------------------------------------------------------
 # Public actor methods
 # -----------------------------------------------------------------------------
@@ -852,8 +873,7 @@ def actor_runtime(actors, actor_server=None):
 
     # Method to call actor methods.
     @actor_server.post(f"{kar_url}" + "/{type}/{id}/{method}")
-    async def post(type: str, id: int, method: str,
-                   request: Request):
+    async def post(type: str, id: int, method: str, request: Request):
         # Check that the message has JSON type.
         if not request.headers['content-type'] in [
                 "application/kar+json", "application/json"

@@ -18,6 +18,7 @@ from kar.api import invoke
 from kar.api import tell
 from kar.api import call
 from kar.api import shutdown
+from kar.api import async_call
 
 # Base and testing methods
 from kar.api import base_call
@@ -76,5 +77,5 @@ __all__ = [
     'actor_state_submap_set_multiple', 'actor_state_submap_keys',
     'actor_state_submap_size', 'events_create_subscription', 'events_publish',
     'events_create_topic', 'events_delete_topic', 'events_cancel_subscription',
-    'events_get_subscription'
+    'events_get_subscription', 'async_call'
 ]
