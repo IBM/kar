@@ -186,9 +186,11 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 
 	go func() {
 		for {
+			logger.Info("before consume")
 			if err1 := cg.Consume(ctx, []string{appTopic}, new(handler)); err1 != nil && err1 != errTooFewPartitions {
 				logger.Fatal("Consumer error: %v", err1)
 			}
+			logger.Info("after consume")
 			if ctx.Err() != nil {
 				break
 			}
