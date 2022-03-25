@@ -492,6 +492,19 @@ def actor_call(*args, **kwargs):
 
 
 #
+# KAR actor root call
+#
+def actor_root_call(*args, **kwargs):
+    # call (Actor, string, <args>)
+    actor = args[0]
+    path = args[1]
+    body = _actor_call_body(*args[2:], **kwargs)
+    api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}"
+    return asyncio.create_task(
+        _actor_post(api, body, {'Content-Type': 'application/kar+json'}))
+
+
+#
 # Request an actor be explicitely removed from the server side. This method is
 # to be called by passing in the client-side actor instance:
 #
