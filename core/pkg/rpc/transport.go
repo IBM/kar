@@ -83,7 +83,7 @@ func (*handler) Cleanup(session sarama.ConsumerGroupSession) error {
 	if recovery == nil && len(session.Claims()[appTopic]) > 0 { // not in recovery
 		mu.Lock() // acquire W mutex to prevent producer from sending
 	}
-
+	logger.Info("finish cleanup %v", session.GenerationID())
 	return nil
 }
 
@@ -93,6 +93,8 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		// recovery leader, run recovery code
 		return h.recover(session, claim)
 	}
+
+	logger.Info("begin claim %v %v", session.GenerationID(), claim.Partition())
 
 	// not in recovery (nodes other than the leader are not assigned partitions during recovery)
 	for msg := range claim.Messages() {
@@ -107,6 +109,7 @@ func (h *handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 		}
 		head = msg.Offset + 1
 	}
+	logger.Info("finish claim %v %v", session.GenerationID(), claim.Partition())
 	return nil
 }
 
@@ -123,6 +126,8 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 		<-h.finished
 		return nil
 	}
+
+	logger.Info("enter recover %v %v", session.GenerationID(), claim.Partition())
 
 	defer close(h.finished)
 
@@ -226,6 +231,8 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 
 	orphans = append(orphans, orphans0...)
 
+	logger.Info("recover done reading %v %v", session.GenerationID(), claim.Partition())
+
 	// resend messages targetting dead nodes
 	for _, msg := range orphans {
 		k := msg.requestID()
@@ -289,5 +296,8 @@ func (h *handler) recover(session sarama.ConsumerGroupSession, claim sarama.Cons
 	admin.DeleteRecords(appTopic, offsetsForDeletion)
 	// remember partition 0 offset to avoid an infinite recovery loop
 	offset0 = max0
+
+	logger.Info("exit recover %v %v", session.GenerationID(), claim.Partition())
+
 	return nil
 }
