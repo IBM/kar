@@ -543,6 +543,43 @@ def actor_async_call(*args, **kwargs):
 
 
 #
+# KAR encode tail call
+#
+def actor_encode_tail_call(*args, **kwargs):
+    actor = args[0]
+    path = args[1]
+    payload = _actor_call_body(*args[2:], **kwargs)
+    return {
+        "tailCall": True,
+        "value": {
+            "actorType": actor.type,
+            "actorId": actor.id,
+            "path": '/' + path,
+            "payload": payload
+        }
+    }
+
+
+#
+# KAR encode tail call releasing lock
+#
+def actor_encode_tail_call_releasing_lock(*args, **kwargs):
+    actor = args[0]
+    path = args[1]
+    payload = _actor_call_body(*args[2:], **kwargs)
+    return {
+        "tailCall": True,
+        "value": {
+            "actorType": actor.type,
+            "actorId": actor.id,
+            "releaseLock": "true",
+            "path": '/' + path,
+            "payload": payload
+        }
+    }
+
+
+#
 # Request an actor be explicitely removed from the server side. This method is
 # to be called by passing in the client-side actor instance:
 #
