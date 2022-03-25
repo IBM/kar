@@ -118,6 +118,7 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 			if err := admin.CreatePartitions(appTopic, int32(len(partitions))+missing, nil, false); err != nil {
 				return nil, err
 			}
+			logger.Info("exit plan errTooFewPartitions")
 			return nil, errTooFewPartitions
 		}
 	}
