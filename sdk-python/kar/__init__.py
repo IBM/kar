@@ -31,6 +31,7 @@ from kar.api import actor_proxy
 from kar.api import actor_call
 from kar.api import actor_remove
 from kar.api import actor_root_call
+from kar.api import actor_async_call
 
 # Actor state methods:
 from kar.api import actor_state_get_all
@@ -78,5 +79,6 @@ __all__ = [
     'actor_state_submap_set_multiple', 'actor_state_submap_keys',
     'actor_state_submap_size', 'events_create_subscription', 'events_publish',
     'events_create_topic', 'events_delete_topic', 'events_cancel_subscription',
-    'events_get_subscription', 'async_call', 'actor_root_call'
+    'events_get_subscription', 'async_call', 'actor_root_call',
+    'actor_async_call'
 ]

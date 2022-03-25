@@ -437,6 +437,14 @@ def actor_proxy(actor_type, actor_id):
 
 
 #
+# KAR actor resolver method
+#
+async def actor_resolver(request):
+    return await _actor_post("/kar/v1/await", await request,
+                             {'Content-Type': 'text/plain'})
+
+
+#
 # This method is used to remotely call actor methods. The methods can be
 # passed arguments and keyword arguments in typical Python style.
 #
@@ -502,6 +510,36 @@ def actor_root_call(*args, **kwargs):
     api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}"
     return asyncio.create_task(
         _actor_post(api, body, {'Content-Type': 'application/kar+json'}))
+
+
+#
+# KAR asynchronous actor call
+#
+def actor_async_call(*args, **kwargs):
+    # Local actor instance which is nothing but a plain KarActor class.
+    # Prepare call arguments based on the type of actor call being performed:
+    if isinstance(args[1], str):
+        # call (Actor, string, <args>)
+        actor = args[0]
+        path = args[1]
+        body = _actor_call_body(*args[2:], **kwargs)
+        api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}"
+    else:
+        # call (Actor, Actor, string, <args>)
+        from_actor = args[0]
+        actor = args[1]
+        path = args[2]
+        body = _actor_call_body(*args[3:], **kwargs)
+        actor_api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}"
+        api = f"{actor_api}/call/{path}?session={from_actor.session}"
+
+    # Call actor method:
+    return asyncio.create_task(
+        actor_resolver(
+            _actor_post(api, body, {
+                'Content-Type': 'application/kar+json',
+                'Pragma': 'promise'
+            })))
 
 
 #
