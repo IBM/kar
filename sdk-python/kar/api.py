@@ -556,6 +556,44 @@ def actor_remove(actor):
 
 
 #
+# KAR actor reminder scheduling:
+#
+def actor_schedule_reminder(actor, path, options, *args, **kwargs):
+    body = _actor_call_body(*args, **kwargs)
+    opts = {
+        "path": f"/{path}",
+        "targetTime": options["target_time"],
+        "period": options["period"],
+        "data": body
+    }
+    actor_api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}"
+    reminder_id = options["id"]
+    return asyncio.create_task(
+        _put(f"{actor_api}/reminders/{reminder_id}", json.dumps(opts)))
+
+
+#
+# KAR get reminder
+#
+def actor_get_reminder(actor, reminder_id=None):
+    api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/reminders"
+    if not reminder_id:
+        return asyncio.create_task(_get(f"{api}"))
+    return asyncio.create_task(_get(f"{api}/{reminder_id}?nilOnAbsent=true"))
+
+
+#
+# KAR cancel reminder
+#
+def actor_cancel_reminder(actor, reminder_id=None):
+    api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/reminders"
+    if not reminder_id:
+        return asyncio.create_task(_delete(f"{api}"))
+    return asyncio.create_task(
+        _delete(f"{api}/{reminder_id}?nilOnAbsent=true"))
+
+
+#
 # Shutdown the sidecar associated with the current context.
 #
 def shutdown():

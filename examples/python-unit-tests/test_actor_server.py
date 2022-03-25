@@ -14,9 +14,13 @@
 
 from kar import actor_call, actor_proxy, base_call, actor_remove
 from kar import actor_async_call, actor_root_call
+from kar import actor_schedule_reminder, actor_get_reminder
+from kar import actor_cancel_reminder
 import httpx
 import asyncio
 import traceback
+import datetime
+import time
 
 
 # -----------------------------------------------------------------------------
@@ -257,6 +261,55 @@ async def actor_root_call_access():
 
 def test_actor_root_call_access():
     asyncio.run(actor_root_call_access())
+
+
+# -----------------------------------------------------------------------------
+async def actor_reminders_schedule():
+    famous_actor = actor_proxy("TestActor", "9")
+
+    # Current time:
+    current = datetime.datetime.now()
+
+    # Future time +5s:
+    future_time = current + datetime.timedelta(0, 5)
+    formatted_time = future_time.astimezone().isoformat()
+
+    # Schedule reminder:
+    await actor_schedule_reminder(famous_actor,
+                                  "set_name", {
+                                      "id": "default_id_1",
+                                      "target_time": formatted_time,
+                                      "period": "5s"
+                                  },
+                                  "John",
+                                  suffix="Jr.",
+                                  surname="Smith")
+
+    # Check that the reminder was registered:
+    response = await actor_get_reminder(famous_actor)
+
+    # A list of reminders is returned, in this case there is only 1:
+    assert len(response) == 1
+    reminder = response[0]
+    assert reminder["Actor"] == {'ID': '9', 'Type': 'TestActor'}
+    assert reminder["id"] == "default_id_1"
+    assert reminder["path"] == "/set_name"
+
+    # Get the reminder by name:
+    response = await actor_get_reminder(famous_actor, "default_id_1")
+    assert len(response) == 1
+
+    # Cancel the reminder:
+    response = await actor_cancel_reminder(famous_actor, "default_id_1")
+    assert response == "1"
+
+    # Get the reminder:
+    response = await actor_get_reminder(famous_actor, "default_id_1")
+    assert response is None
+
+
+def test_actor_reminders_schedule():
+    asyncio.run(actor_reminders_schedule())
 
 
 # -----------------------------------------------------------------------------
