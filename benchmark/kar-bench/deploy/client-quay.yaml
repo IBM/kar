@@ -25,7 +25,7 @@ spec:
     metadata:
       annotations:
         kar.ibm.com/app: kar-bench-js
-        kar.ibm.com/extraArgs: -placement_cache=true
+        kar.ibm.com/extraArgs: -placement_cache=true,-kafka_topic_config=retention.ms=3600000
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:
