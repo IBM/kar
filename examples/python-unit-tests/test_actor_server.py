@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from kar import actor_call, actor_proxy, base_call, actor_remove
-from kar import actor_async_call
+from kar import actor_async_call, actor_root_call
 import httpx
 import asyncio
 import traceback
@@ -237,6 +237,26 @@ async def set_actor_field_async():
 
 def test_set_actor_field_async():
     asyncio.run(set_actor_field_async())
+
+
+# -----------------------------------------------------------------------------
+async def actor_root_call_access():
+    famous_actor = actor_proxy("TestActor", "8")
+
+    # Set actor state via actor method:
+    await actor_root_call(famous_actor,
+                          "set_name",
+                          "John",
+                          suffix="Jr.",
+                          surname="Smith")
+
+    # Retrieve field value:
+    response = await actor_root_call(famous_actor, "get_name")
+    assert response == "John Smith Jr."
+
+
+def test_actor_root_call_access():
+    asyncio.run(actor_root_call_access())
 
 
 # -----------------------------------------------------------------------------
