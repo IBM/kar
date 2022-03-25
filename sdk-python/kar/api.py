@@ -242,6 +242,18 @@ async def _base_get(api, base_url=None):
         return await _base_request(client.get, api)
 
 
+def _actor_call_body(*args, **kwargs):
+    body = []
+    if len(kwargs) > 0:
+        body = {"args": [], "kwargs": {}}
+        if len(args) > 0:
+            body["args"] = list(args)
+        body["kwargs"] = kwargs
+    elif len(args) > 0:
+        body = args
+    return json.dumps(body)
+
+
 # -----------------------------------------------------------------------------
 # Public testing and base methods
 # -----------------------------------------------------------------------------
@@ -396,6 +408,7 @@ class KarActor(object):
     def __init__(self):
         self.type = None
         self.id = None
+        self.session = None
 
 
 #
@@ -456,22 +469,26 @@ def actor_proxy(actor_type, actor_id):
 # client-side actor before invoking the `call_actor_method`.
 #
 def actor_call(*args, **kwargs):
-    # Local actor instance which is nothing but a plain KarActor class
-    actor = args[0]
-    path = args[1]
-    body = []
-    if len(kwargs) > 0:
-        body = {"args": [], "kwargs": {}}
-        if len(args) > 2:
-            body["args"] = list(args[2:])
-        body["kwargs"] = kwargs
-    elif len(args) > 2:
-        body = args[2:]
-    body = json.dumps(body)
+    # Local actor instance which is nothing but a plain KarActor class.
+    # Prepare call arguments based on the type of actor call being performed:
+    if isinstance(args[1], str):
+        # call (Actor, string, <args>)
+        actor = args[0]
+        path = args[1]
+        body = _actor_call_body(*args[2:], **kwargs)
+        api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}"
+    else:
+        # call (Actor, Actor, string, <args>)
+        from_actor = args[0]
+        actor = args[1]
+        path = args[2]
+        body = _actor_call_body(*args[3:], **kwargs)
+        actor_api = f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}"
+        api = f"{actor_api}/call/{path}?session={from_actor.session}"
+
+    # Call actor method:
     return asyncio.create_task(
-        _actor_post(
-            f"{sidecar_url_prefix}/actor/{actor.type}/{actor.id}/call/{path}",
-            body, {'Content-Type': 'application/kar+json'}))
+        _actor_post(api, body, {'Content-Type': 'application/kar+json'}))
 
 
 #
@@ -803,7 +820,7 @@ def actor_runtime(actors, actor_server=None):
     # activate method if one is provided. This method is automatically invoked
     # by KAR to activate an actor instance.
     @actor_server.get(f"{kar_url}/" + "{type}/{id}")
-    def get(type: str, id: int):
+    def get(type: str, id: int, request: Request):
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
@@ -820,6 +837,8 @@ def actor_runtime(actors, actor_server=None):
         actor_instance = actor_type()
         actor_instance.type = type
         actor_instance.id = id
+        if "session" in request.query_params:
+            actor_instance.session = request.query_params["session"]
         if type not in _actor_instances:
             _actor_instances[type] = {}
         _actor_instances[type][id] = actor_instance
@@ -830,6 +849,9 @@ def actor_runtime(actors, actor_server=None):
             response = PlainTextResponse(status_code=201, content="activated")
         except AttributeError:
             response = PlainTextResponse(status_code=201, content="created")
+
+        # Reset session:
+        _actor_instances[type][id].session = None
 
         # Send back response:
         return response
@@ -861,6 +883,8 @@ def actor_runtime(actors, actor_server=None):
         # This is an optional method so if the method does not exist do not
         # error.
         try:
+            if actor_instance.session is not None:
+                del actor_instance.session
             actor_instance.deactivate()
         except AttributeError:
             pass
@@ -903,6 +927,9 @@ def actor_runtime(actors, actor_server=None):
         # Fetch the actual actor type.
         actor_type = actor_name_to_type[type]
 
+        # Prior session:
+        prior_session = actor_instance.session
+
         # Get actor method by name and check if the method is callable
         try:
             actor_method = getattr(actor_type, method)
@@ -914,6 +941,10 @@ def actor_runtime(actors, actor_server=None):
             return PlainTextResponse(
                 status_code=404,
                 content=f"no {method} in actor with type {type} and id {id}")
+
+        # Save session:
+        if "session" in request.query_params:
+            actor_instance.session = request.query_params["session"]
 
         # Call actor method:
         if data:
@@ -934,6 +965,9 @@ def actor_runtime(actors, actor_server=None):
                 result = await actor_method(actor_instance)
             else:
                 result = actor_method(actor_instance)
+
+        # Save session:
+        actor_instance.session = prior_session
 
         # If no result was returned, return undefined.
         if result is None:
