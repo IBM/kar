@@ -22,7 +22,7 @@ metadata:
     kar.ibm.com/app: kar-bench-js
     kar.ibm.com/actors: BenchActor
     kar.ibm.com/service: bench
-    kar.ibm.com/extraArgs: -placement_cache=true
+    kar.ibm.com/extraArgs: -kafka_topic_config=retention.ms=3600000
 spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
@@ -31,4 +31,4 @@ spec:
     image: quay.io/ibm/kar-bench-js-image
     env:
     - name: KAR_EXTRA_ARGS
-      value: -actors BenchActor -placement_cache=true
+      value: -actors BenchActor -kafka_topic_config retention.ms=3600000
