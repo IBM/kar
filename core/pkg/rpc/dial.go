@@ -127,6 +127,8 @@ func configureConsumer(config *Config) *sarama.Config {
 	// we decide how to assign partitions to nodes
 	conf.Consumer.Group.Rebalance.Strategy = new(strategy)
 
+	logger.Info("kafka: session.timeout.ms = %v", conf.Consumer.Group.Session.Timeout.Milliseconds())
+
 	return conf
 }
 
