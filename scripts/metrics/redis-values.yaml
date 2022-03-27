@@ -1,0 +1,60 @@
+#
+# Copyright IBM Corporation 2020,2022
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Additional Environment variables
+env:
+  - name: REDIS_USER
+    value: karmesh
+  - name: REDIS_PASSWORD
+    value: act0rstate
+service:
+  name: redis-exporter-svc
+  type: ClusterIP
+  port: 9121
+  annotations: {}
+  labels: 
+    prometheus.io/port: "9121"
+    prometheus.io/scrape: "true"
+
+redisAddress: redis://kar-redis.kar-system.svc.cluster.local:6379
+
+labels: 
+  prometheus.io/port: "9121"
+  prometheus.io/scrape: "true"
+
+serviceMonitor:
+  # When set true then use a ServiceMonitor to configure scraping
+  enabled: true
+  # Set the namespace the ServiceMonitor should be deployed
+  namespace: kar-system
+  # Set how frequently Prometheus should scrape
+  interval: 15s
+  # Set labels for the ServiceMonitor, use this to define your scrape label for Prometheus Operator.
+  # Need release: prometheus in order for the Prometheus server to discover rest exporter service monitor
+  labels:
+     release: prometheus
+  # Set timeout for scrape
+  timeout: 10s
+  
+affinity:
+  nodeAffinity:
+     requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+           - key: metrics-type
+             operator: In
+             values:
+             - master
