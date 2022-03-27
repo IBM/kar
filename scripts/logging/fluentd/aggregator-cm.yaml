@@ -1,0 +1,62 @@
+#
+# Copyright IBM Corporation 2020,2021
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+apiVersion: v1
+data: 
+  fluent.conf: |
+    <source>
+      @type forward
+      bind 0.0.0.0
+      port 24224
+    </source>
+    <source>
+      @type http
+      bind 0.0.0.0
+      port 9880
+    </source>
+    <match fluentd.healthcheck>
+      @type stdout
+    </match>
+    <match fluentd-**>
+      @type null
+    </match>
+    <match kubernetes.var.log.containers.fluentd-**>
+      @type null
+    </match>
+    <filter kubernetes.**>
+      @id filter_kubernetes_metadata
+      @type kubernetes_metadata
+    </filter>
+    
+    <match **>
+      @type elasticsearch
+      host elasticsearch.logging
+      logstash_format true
+      port 9200
+      path ""
+      <buffer>
+        flush_at_shutdown true
+        flush_thread_count 8
+        flush_thread_interval 20
+        flush_thread_burst_interval 1
+        retry_forever true
+        retry_type exponential_backoff
+      </buffer>
+    </match>
+kind: ConfigMap
+metadata: 
+  name: fluentd-aggregator-conf
+  namespace: logging
