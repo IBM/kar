@@ -31,6 +31,8 @@ func (s *strategy) Name() string { return "custom" }
 
 // Assign partitions to group members
 func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, topics map[string][]int32) (sarama.BalanceStrategyPlan, error) {
+	logger.Info("enter plan")
+
 	partitions := topics[appTopic]     // topic partitions
 	node2member := map[string]string{} // a map from node id to sarama member id
 	recovery = map[int32]bool{}
@@ -116,6 +118,7 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 			if err := admin.CreatePartitions(appTopic, int32(len(partitions))+missing, nil, false); err != nil {
 				return nil, err
 			}
+			logger.Info("exit plan errTooFewPartitions")
 			return nil, errTooFewPartitions
 		}
 	}
@@ -140,6 +143,8 @@ func (s *strategy) Plan(members map[string]sarama.ConsumerGroupMemberMetadata, t
 		recovery = nil
 	}
 
+	logger.Info("exit plan")
+
 	return plan, nil
 }
 
@@ -149,6 +154,8 @@ func (s *strategy) AssignmentData(memberID string, topics map[string][]int32, ge
 }
 
 func updateRoutes() error {
+	logger.Info("enter update routes")
+
 	// retrieve consumer group description
 	groups, err := admin.DescribeConsumerGroups([]string{appTopic})
 	if err != nil {
@@ -184,5 +191,8 @@ func updateRoutes() error {
 		}
 		node2partition[data.Node] = assignment.Topics[appTopic][0]
 	}
+
+	logger.Info("exit update routes")
+
 	return nil
 }

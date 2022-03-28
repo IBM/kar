@@ -33,6 +33,7 @@ var (
 	failures     []failureEvent   = []failureEvent{}
 	summaries    []summary        = []summary{}
 	failureHisto []int            = []int{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	kafkaDetect                   = 10 * time.Second // assume default, will update with value parsed from kar leader log
 )
 
 type rebalanceEvent struct {
@@ -81,6 +82,14 @@ func readKarLog() {
 			if err != nil {
 				panic(fmt.Errorf("Can't parse time %v: %v", msg[0], err))
 			}
+			if strings.Contains(msg[1], "kafka: session.timeout.ms") {
+				tmp := strings.Split(msg[1], "=")
+				ms, err := strconv.Atoi(strings.TrimSpace(tmp[1]))
+				if err == nil {
+					kafkaDetect = time.Duration(ms) * time.Millisecond
+				}
+			}
+
 			if !recovering && strings.Contains(msg[1], "completed generation") {
 				startTime = ts
 				recovering = true
@@ -133,7 +142,6 @@ func readAppLog() {
 }
 
 func correlateLogs() {
-	kafkaDetect := 10 * time.Second // for now, assuming a fixed minimum.  Eventually we should analyze the kafka logs and get a real number.
 	rebalanceIdx := 0
 	failureIdx := 0
 	for ; failureIdx < len(failures); failureIdx += 1 {
@@ -163,10 +171,10 @@ func correlateLogs() {
 }
 
 func printSummary() {
-	fmt.Printf("Start Time, Failure Number, Num Failures, Total Outage, Kafka Detection, KAR Detection, KAR Reconcilliation, Max Order Latency\n")
+	fmt.Printf("Start Time, Failure Number, Num Failures, Kafka Detection, KAR Detection, KAR Reconcilliation, Total Outage, Max Order Latency\n")
 	for i, f := range summaries {
-		fmt.Printf("%v, %v, %v, %.6v, %.6v, %.6v, %.6v, %.6v\n", f.startTime, i+1, f.failureCount, f.totalDuration.Seconds(), f.kafkaDetection.Seconds(), f.karDetection.Seconds(),
-			f.karReconcilliation.Seconds(), f.maximumOrder.Seconds())
+		fmt.Printf("%v, %v, %v, %.6v, %.6v, %.6v, %.6v, %.6v\n", f.startTime, i+1, f.failureCount, f.kafkaDetection.Seconds(), f.karDetection.Seconds(),
+			f.karReconcilliation.Seconds(), f.totalDuration.Seconds(), f.maximumOrder.Seconds())
 	}
 }
 

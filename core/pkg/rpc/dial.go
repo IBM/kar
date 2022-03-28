@@ -127,6 +127,8 @@ func configureConsumer(config *Config) *sarama.Config {
 	// we decide how to assign partitions to nodes
 	conf.Consumer.Group.Rebalance.Strategy = new(strategy)
 
+	logger.Info("kafka: session.timeout.ms = %v", conf.Consumer.Group.Session.Timeout.Milliseconds())
+
 	return conf
 }
 
@@ -186,9 +188,11 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 
 	go func() {
 		for {
+			logger.Info("before consume")
 			if err1 := cg.Consume(ctx, []string{appTopic}, new(handler)); err1 != nil && err1 != errTooFewPartitions {
 				logger.Fatal("Consumer error: %v", err1)
 			}
+			logger.Info("after consume")
 			if ctx.Err() != nil {
 				break
 			}

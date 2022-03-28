@@ -34,6 +34,9 @@ from kar.api import actor_root_call
 from kar.api import actor_async_call
 from kar.api import actor_encode_tail_call
 from kar.api import actor_encode_tail_call_releasing_lock
+from kar.api import actor_schedule_reminder
+from kar.api import actor_get_reminder
+from kar.api import actor_cancel_reminder
 
 # Actor state methods:
 from kar.api import actor_state_get_all
@@ -83,5 +86,6 @@ __all__ = [
     'events_create_topic', 'events_delete_topic', 'events_cancel_subscription',
     'events_get_subscription', 'async_call', 'actor_root_call',
     'actor_async_call', 'actor_encode_tail_call',
-    'actor_encode_tail_call_releasing_lock'
+    'actor_encode_tail_call_releasing_lock', 'actor_schedule_reminder',
+    'actor_get_reminder', 'actor_cancel_reminder'
 ]

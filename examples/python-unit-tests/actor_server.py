@@ -50,9 +50,9 @@ class TestActor(KarActor):
     # Kar only supports constructors without arguments. Use methods
     # to update actor state.
     def __init__(self):
-        self.name = None
-        self.surname = None
-        self.suffix = None
+        self.name = "John"
+        self.surname = "Silver"
+        self.suffix = "Esq."
         self.movies = 0
         self.not_callable = None
 
