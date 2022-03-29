@@ -14,6 +14,7 @@
 
 from kar import actor_runtime, KarActor, test_actor_head
 from kar import test_server_health
+from kar import actor_encode_tail_call, actor_call, actor_proxy
 from hypercorn.config import Config
 from hypercorn.asyncio import serve
 from fastapi import FastAPI, Response
@@ -55,6 +56,7 @@ class TestActor(KarActor):
         self.suffix = "Esq."
         self.movies = 0
         self.not_callable = None
+        self.pet = None
 
     def set_name(self, name, surname=None, suffix=None):
         self.name = name
@@ -62,6 +64,54 @@ class TestActor(KarActor):
             self.surname = surname
         if suffix:
             self.suffix = suffix
+
+    async def async_set_name(self, name, surname=None, suffix=None):
+        self.name = name
+        if surname:
+            self.surname = surname
+        if suffix:
+            self.suffix = suffix
+
+    async def set_name_with_tail_1(self, name, surname=None, suffix=None):
+        return actor_encode_tail_call(self,
+                                      "async_set_name",
+                                      name,
+                                      surname=surname,
+                                      suffix=suffix)
+
+    async def set_name_with_tail_2(self, name, surname=None, suffix=None):
+        return actor_encode_tail_call(self,
+                                      "set_name",
+                                      name,
+                                      surname=surname,
+                                      suffix=suffix)
+
+    def set_name_with_tail_3(self, name, surname=None, suffix=None):
+        return actor_encode_tail_call(self,
+                                      "async_set_name",
+                                      name,
+                                      surname=surname,
+                                      suffix=suffix)
+
+    def set_name_with_tail_4(self, name, surname=None, suffix=None):
+        return actor_encode_tail_call(self,
+                                      "set_name",
+                                      name,
+                                      surname=surname,
+                                      suffix=suffix)
+
+    def set_pet(self, pet_actor_type, pet_actor_id):
+        self.pet = actor_proxy(pet_actor_type, pet_actor_id)
+
+    async def set_pet_details(self, pet_type, pet_name):
+        await actor_call(self.pet, "set_pet_type", pet_type)
+        return actor_encode_tail_call(self.pet, "set_pet_name", pet_name)
+
+    def set_pet_name(self, pet_name):
+        return actor_encode_tail_call(self.pet, "set_pet_name", pet_name)
+
+    def set_pet_type(self, pet_type):
+        return actor_encode_tail_call(self.pet, "set_pet_type", pet_type)
 
     def get_name(self):
         full_name = [self.name]
@@ -78,9 +128,24 @@ class TestActor(KarActor):
         return self.movies
 
 
+class AnotherTestActor(KarActor):
+    def __init__(self):
+        self.pet = None
+        self.pet_name = None
+
+    def set_pet_type(self, pet_type):
+        self.pet = pet_type
+
+    def set_pet_name(self, pet_name):
+        self.pet_name = pet_name
+
+    def get_pet(self):
+        return ": ".join([self.pet, self.pet_name])
+
+
 if __name__ == '__main__':
     # Register actor type with the KAR runtime.
-    app = actor_runtime([TestActor], actor_server=app)
+    app = actor_runtime([TestActor, AnotherTestActor], actor_server=app)
 
     @app.post('/shutdown')
     async def shutdown():

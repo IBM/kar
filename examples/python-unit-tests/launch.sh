@@ -23,7 +23,7 @@ set -e
 
 
 # Test actor method calls:
-( kar run -h2c -app unit-test -app_port 8081 -actors TestActor -service sdk-test python actor_server.py ) &
+( kar run -h2c -app unit-test -app_port 8081 -actors TestActor,AnotherTestActor -service sdk-test python actor_server.py ) &
 
 
 # Test state method calls:
