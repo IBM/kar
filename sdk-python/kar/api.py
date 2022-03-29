@@ -553,7 +553,7 @@ def actor_encode_tail_call(*args, **kwargs):
         "tailCall": True,
         "value": {
             "actorType": actor.type,
-            "actorId": actor.id,
+            "actorId": str(actor.id),
             "path": '/' + path,
             "payload": payload
         }
@@ -571,7 +571,7 @@ def actor_encode_tail_call_releasing_lock(*args, **kwargs):
         "tailCall": True,
         "value": {
             "actorType": actor.type,
-            "actorId": actor.id,
+            "actorId": str(actor.id),
             "releaseLock": "true",
             "path": '/' + path,
             "payload": payload
@@ -1022,8 +1022,8 @@ def actor_runtime(actors, actor_server=None):
         return PlainTextResponse(status_code=200, content="deleted")
 
     # Method to call actor methods.
-    @actor_server.post(f"{kar_url}" + "/{type}/{id}/{method}")
-    async def post(type: str, id: int, method: str, request: Request):
+    @actor_server.post(f"{kar_url}" + "/{_type}/{_id}/{method}")
+    async def post(_type: str, _id: int, method: str, request: Request):
         # Check that the message has JSON type.
         if not request.headers['content-type'] in [
                 "application/kar+json", "application/json"
@@ -1038,20 +1038,21 @@ def actor_runtime(actors, actor_server=None):
 
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
-        if type not in actor_name_to_type:
+        if _type not in actor_name_to_type:
             return PlainTextResponse(status_code=404,
-                                     content=f"no actor type {type}")
+                                     content=f"no actor type {_type}")
 
         # If the type exists check that the id exists.
-        if type in _actor_instances and id not in _actor_instances[type]:
+        if _type in _actor_instances and _id not in _actor_instances[_type]:
             return PlainTextResponse(
-                status_code=404, content=f"no actor type {type} with id {id}")
+                status_code=404,
+                content=f"no actor type {_type} with id {_id}")
 
         # Retrieve actor instance
-        actor_instance = _actor_instances[type][id]
+        actor_instance = _actor_instances[_type][_id]
 
         # Fetch the actual actor type.
-        actor_type = actor_name_to_type[type]
+        actor_type = actor_name_to_type[_type]
 
         # Prior session:
         prior_session = actor_instance.session
@@ -1062,11 +1063,11 @@ def actor_runtime(actors, actor_server=None):
             if not callable(actor_method):
                 return PlainTextResponse(
                     status_code=404,
-                    content=f"{method} not found for actor ({type}, {id})")
+                    content=f"{method} not found for actor ({_type}, {_id})")
         except AttributeError:
             return PlainTextResponse(
                 status_code=404,
-                content=f"no {method} in actor with type {type} and id {id}")
+                content=f"no {method} in actor with type {_type} and id {_id}")
 
         # Save session:
         if "session" in request.query_params:
@@ -1098,6 +1099,15 @@ def actor_runtime(actors, actor_server=None):
         # If no result was returned, return undefined.
         if result is None:
             return PlainTextResponse(status_code=204)
+
+        # Check if this is the output of a tail call:
+        if type(result) is dict and \
+           "tailCall" in result and \
+           result["tailCall"]:
+            return JSONResponse(
+                status_code=200,
+                content=result,
+                headers={"Content-Type": "application/kar+json"})
 
         # Return value as JSON and OK code.
         return JSONResponse(status_code=200,

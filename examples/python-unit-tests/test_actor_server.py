@@ -315,6 +315,98 @@ def test_actor_reminders_schedule():
 
 
 # -----------------------------------------------------------------------------
+async def actor_tail_calls():
+    famous_actor = actor_proxy("TestActor", "10")
+
+    # Set actor state via actor method:
+    await actor_call(famous_actor,
+                     "set_name_with_tail_1",
+                     "John",
+                     suffix="Jr.",
+                     surname="Smith")
+
+    response = await actor_call(famous_actor, "get_name")
+    assert response == "John Smith Jr."
+
+    # Set actor state via actor method:
+    await actor_call(famous_actor,
+                     "set_name_with_tail_2",
+                     "Bill",
+                     suffix="Sr.",
+                     surname="Smith")
+
+    response = await actor_call(famous_actor, "get_name")
+    assert response == "Bill Smith Sr."
+
+    # Set actor state via actor method:
+    await actor_call(famous_actor,
+                     "set_name_with_tail_3",
+                     "John",
+                     suffix="Jr.",
+                     surname="Doe")
+
+    response = await actor_call(famous_actor, "get_name")
+    assert response == "John Doe Jr."
+
+    # Set actor state via actor method:
+    await actor_call(famous_actor,
+                     "set_name_with_tail_4",
+                     "Bill",
+                     suffix="Sr.",
+                     surname="Doe")
+
+    response = await actor_call(famous_actor, "get_name")
+    assert response == "Bill Doe Sr."
+
+
+def test_actor_tail_calls():
+    asyncio.run(actor_tail_calls())
+
+
+# -----------------------------------------------------------------------------
+async def actor_tail_pet_calls():
+    famous_actor = actor_proxy("TestActor", "11")
+
+    pet_actor = actor_proxy("AnotherTestActor", "1")
+
+    # Set pet actor in actor:
+    await actor_call(famous_actor, "set_pet", pet_actor.type, pet_actor.id)
+
+    # Set details of pet:
+    await actor_call(famous_actor, "set_pet_details", "cat", "Tiddles")
+
+    # Check pet name and type:
+    response = await actor_call(pet_actor, "get_pet")
+    assert response == "cat: Tiddles"
+
+
+def test_actor_tail_pet_calls():
+    asyncio.run(actor_tail_pet_calls())
+
+
+# -----------------------------------------------------------------------------
+async def actor_tail_pet_individual_calls():
+    famous_actor = actor_proxy("TestActor", "12")
+
+    pet_actor = actor_proxy("AnotherTestActor", "2")
+
+    # Set pet actor in actor:
+    await actor_call(famous_actor, "set_pet", pet_actor.type, pet_actor.id)
+
+    # Set details of pet:
+    await actor_call(famous_actor, "set_pet_name", "Tiddles")
+    await actor_call(famous_actor, "set_pet_type", "cat")
+
+    # Check pet name and type:
+    response = await actor_call(pet_actor, "get_pet")
+    assert response == "cat: Tiddles"
+
+
+def test_actor_tail_pet_individual_calls():
+    asyncio.run(actor_tail_pet_individual_calls())
+
+
+# -----------------------------------------------------------------------------
 async def shutdown_server():
     # Shutdown server:
     try:
