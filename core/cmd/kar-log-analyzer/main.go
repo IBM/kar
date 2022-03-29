@@ -96,7 +96,7 @@ func readKarLog() {
 			} else if strings.Contains(msg[1], "processing messages") {
 				if recovering {
 					outage := ts.Sub(startTime)
-					rebalances = append(rebalances, rebalanceEvent{startTime: ts, duration: outage})
+					rebalances = append(rebalances, rebalanceEvent{startTime: startTime, duration: outage})
 					startTime = time.Time{}
 					recovering = false
 				}
