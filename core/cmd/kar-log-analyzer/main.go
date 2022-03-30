@@ -190,13 +190,17 @@ func correlateLogs() {
 			}
 		}
 
-		outage := p.Sub(pf.startTime)
-		detect := r.startTime.Sub(pf.startTime)
-		rebalance := r.endTime.Sub(r.startTime)
-		reconcile := p.Sub(r.endTime)
-		summaries = append(summaries, summary{startTime: pf.startTime, failureCount: numFailures, totalDuration: outage, detection: detect,
-			consensus: rebalance, reconcilliation: reconcile, maximumOrder: maxOrder})
-		failureHisto[numFailures] += 1
+		if numFailures > 10 {
+			fmt.Printf("Fast forwarding over %v failures from %v to %v. Assuming missing log entries\n", numFailures, pf.startTime, p)
+		} else {
+			outage := p.Sub(pf.startTime)
+			detect := r.startTime.Sub(pf.startTime)
+			rebalance := r.endTime.Sub(r.startTime)
+			reconcile := p.Sub(r.endTime)
+			summaries = append(summaries, summary{startTime: pf.startTime, failureCount: numFailures, totalDuration: outage, detection: detect,
+				consensus: rebalance, reconcilliation: reconcile, maximumOrder: maxOrder})
+			failureHisto[numFailures] += 1
+		}
 	}
 	fmt.Printf("Count of failure clusters: %v\n", failureHisto[1:])
 }
