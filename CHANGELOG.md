@@ -16,6 +16,17 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.1 - 2022-04-07
++ Enhancements to the Python SDK
+  + Support for reentrancy (#288) (#294)
+  + Support for async actor calls (#290) (#293)
+  + Support for reminders (#298)
+  + Support for tail calls (#296)
++ Enable simple NRU-based actor placement cache (#285)
++ Improvements to KAR deployment scripts
+  + Add support for logging stack (#301)
+  + Add support for metrics stack (#286) (#292)
+
 # KAR 1.3.0 - 2022-03-22
 + KAR 1.3.0 introduces several major enhancements to the programming model
   + Failure recovery ensures that a retry of a failed actor invocation
