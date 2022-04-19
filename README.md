@@ -38,6 +38,85 @@ KAR is:
 - extensible: KAR applications can produce or consume events and data streams
   using hundreds of [Apache Camel](https://camel.apache.org) sources and sinks.
 
+# Scalable and Fault-Tolerant State
+
+KAR puts a great deal of emphasis on helping developers manage application
+state. Stateless microservices are easy to scale and easy to restart or replace
+on failure. Stateful microservices are not. Moreover the state of an application
+not only includes the state of its microservice components, but also the state
+of in-flight requests or events, external state in databases or on disk, etc.
+Keeping track of this state, avoiding performance bottlenecks, and protecting it
+from failures is typically very hard.
+
+## Actors
+
+KAR make it easy to structure the state of microservices as a collection of
+_actor_ instances. The [actor model](https://en.wikipedia.org/wiki/Actor_model)
+is a popular and well-understood approach to programming concurrent and
+distributed systems. Each actor instance is responsible for its own state. The
+state of an actor instance can be saved or restored safely (because actor
+instances are single-threaded) and independently from other actor instances
+(since there is no shared state).
+
+KAR offers simple APIs for actors to incrementally save their state to Redis.
+These APIs can be triggered periodically, or when idle with little effort. KAR
+can automatically restore the state of a failed actor instance. Timers or event
+subscriptions associated with an actor instance are also restored.
+
+Actor instances can migrate from one microservice replica to another due to
+failures or for load balancing purposes. KAR understands that actors are
+relocatable. KAR's API for invoking actors transparently routes, and if necessary
+reroutes, requests to the proper destination.
+
+For instance, in the simulation engine example  described below, the simulation state is
+partitioned across multiple replicas of the simulator microservice using actors.
+A developer can reason about and program these actors and their interactions
+without having to worry about exhausting the resources of a single process or
+mapping actor instances to processes. In that sense, KAR supports a "serverless"
+experience.
+
+## Retry Orchestration
+
+KAR automatically retries failed (i.e., interrupted) actor method invocations.
+Retries are necessary but dangerous. Many other systems
+proactively retry a task when its success is in
+doubt, for
+instance if it has not completed by a deadline. As a result, multiple executions
+of a task may happen concurrently. Worse, two tasks in a sequence may end up
+running concurrently as a spurious retry of the first one overlaps with the
+second. The tasks therefore have to be carefully engineered to be resilient not
+only to sequential retries, but also concurrent retries, and possible
+reordering. By contrast, KAR is designed to better orchestrate retries---retries
+are more constrained---so as to unburden developers from complex non-local
+reasoning.
+
+To start with, KAR guarantees that:
+- a failed invocation is retried until success
+- a successfully completed invocation is never retried
+- a strict happens before relationship is preserved across failures within each distributed chain of invocations and retries.
+
+In other words, KAR will try as many times as necessary, making one attempt
+after the other, but not once more than necessary.
+KAR goes beyond individual invocations to offer guarantees about nested
+invocations and chains of invocations.
+- KAR guarantees that a retry of a failed caller will not begin until all of the
+non-failed callees of the previous execution have completed.
+- KAR introduces a tail call
+mechanism that makes it possible to transactionally transfer control from one
+actor method to another (of the same or a different actor) so that in a chain of
+invocations, only the last invocation in the chain will be retried even if both
+the caller and callee actors have failed. Developers still have to worry about
+retries, typically by making individual actor methods idempotent, but, using tail
+calls, complex code can be broken into smaller pieces that are easier to make
+idempotent.
+
+KAR strives to achieve such guarantees in a dynamic, distributed system with
+minimal overheads.
+
+For a detailed technical description, see [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
+
+# KAR Application Mesh
+
 KAR is deployed as a lightweight process, a container, or a Kubernetes sidecar
 that runs alongside each microservice:
 - The KAR process exposes a REST API to the microservice. Using this API, the
@@ -75,82 +154,6 @@ by means of a few lines of YAML.
 A developer may choose to deploy the simulator to Kubernetes/OpenShift but run
 the controller on his laptop. The KAR CLI or operator automatically injects and
 configures the KAR runtime that runs alongside each component.
-
-# Scalable and Fault-Tolerant State
-
-KAR puts a great deal of emphasis on helping developers manage application
-state. Stateless microservices are easy to scale and easy to restart or replace
-on failure. Stateful microservices are not. Moreover the state of an application
-not only includes the state of its microservice components, but also the state
-of in-flight requests or events, external state in databases or on disk, etc.
-Keeping track of this state, avoiding performance bottlenecks, and protecting it
-from failures is typically very hard.
-
-## Actors
-
-KAR make it easy to structure the state of microservices as a collection of
-_actor_ instances. The [actor model](https://en.wikipedia.org/wiki/Actor_model)
-is a popular and well-understood approach to programming concurrent and
-distributed systems. Each actor instance is responsible for its own state. The
-state of an actor instance can be saved or restored safely (because actor
-instances are single-threaded) and independently from other actor instances
-(since there is no shared state).
-
-KAR offers simple APIs for actors to incrementally save their state to Redis.
-These APIs can be triggered periodically, or when idle with little effort. KAR
-can automatically restore the state of a failed actor instance. Timers or event
-subscriptions associated with an actor instance are also restored.
-
-Actor instances can migrate from one microservice replica to another due to
-failures or for load balancing purposes. KAR understands that actors are
-relocatable. KAR's API for invoking actors transparently routes, and if necessary
-reroutes, requests to the proper destination.
-
-For instance, in the simulation engine example, the simulation state is
-partitioned across multiple replicas of the simulator microservice using actors.
-A developer can reason about and program these actors and their interactions
-without having to worry about exhausting the resources of a single process or
-mapping actor instances to processes. In that sense, KAR supports a "serverless"
-experience.
-
-## Retry Orchestration
-
-KAR automatically retries failed (i.e., interrupted) actor method invocations.
-Retries are necessary but dangerous. Many other systems
-proactively retry a task when its success is in
-doubt, for
-instance if it has not completed by a deadline. As a result, multiple executions
-of a task may happen concurrently. Worse, two tasks in a sequence may end up
-running concurrently as a spurious retry of the first one overlaps with the
-second. The tasks therefore have to be carefully engineered to be resilient not
-only to sequential retries, but also concurrent retries, and possible
-reordering. By contrast, KAR is designed to better orchestrate retries---retries
-are more constrained---so as to unburden developers from complex non-local
-reasoning.
-
-To start with, KAR guarantees that:
-- a failed invocation is retried until success
-- a strict happens before relationship is preserved across failures within each distributed chain of invocations and retries.
-
-In other words, KAR will try as many times as necessary, making one attempt
-after the other, but not once more than necessary.
-KAR goes beyond individual invocations to offer guarantees about nested
-invocations and chains of invocations.
-- KAR guarantees that a retry of a failed caller will not begin until all of the
-non-failed callees of the previous execution have completed.
-- KAR introduces a tail call
-mechanism that makes it possible to transactionally transfer control from one
-actor method to another (of the same or a different actor) so that in a chain of
-invocations, only the last invocation in the chain will be retried even if both
-the caller and callee actors have failed. Developers still have to worry about
-retries, typically by making individual actor methods idempotent, but, using tail
-calls, complex code can be broken into smaller pieces that are easier to make
-idempotent.
-
-KAR strives to achieve such guarantees in a dynamic, distributed system with
-minimal overheads.
-
-For a detailed technical description, see [Reliable Actors with Retry Orchestration](https://arxiv.org/abs/2111.11562).
 
 # Quick Links
 
