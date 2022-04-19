@@ -137,13 +137,13 @@ after the other, but not once more than necessary.
 KAR goes beyond individual invocations to offer guarantees about nested
 invocations and chains of invocations.
 - KAR guarantees that a retry of a failed caller will not begin until all of the
-non-failed callees of the previous execution have compileted.
+non-failed callees of the previous execution have completed.
 - KAR introduces a tail call
 mechanism that makes it possible to transactionally transfer control from one
 actor method to another (of the same or a different actor) so that in a chain of
 invocations, only the last invocation in the chain will be retried even if both
 the caller and callee actors have failed. Developers still have to worry about
-retries typically by making individual actor methods idempotent, but, using tail
+retries, typically by making individual actor methods idempotent, but, using tail
 calls, complex code can be broken into smaller pieces that are easier to make
 idempotent.
 
