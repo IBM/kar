@@ -129,18 +129,15 @@ are more constrained---so as to unburden developers from complex non-local
 reasoning.
 
 To start with, KAR guarantees that:
-- a failed invocation is retried
-- retries of this invocation happen one after the other
-- a successful invocation is not retried.
+- a failed invocation is retried until success
+- a strict happens before relationship is preserved across failures within each distributed chain of invocations and retries.
 
 In other words, KAR will try as many times as necessary, making one attempt
 after the other, but not once more than necessary.
 KAR goes beyond individual invocations to offer guarantees about nested
 invocations and chains of invocations.
-- KAR guarantees that a pending
-synchronous invocation is prevented from running if the caller has failed. This
-is because a retry of the caller will repeat the invocation so preserving the
-initial invocation would be problematic.
+- KAR guarantees that a retry of a failed caller will not begin until all of the
+non-failed callees of the previous execution have compileted.
 - KAR introduces a tail call
 mechanism that makes it possible to transactionally transfer control from one
 actor method to another (of the same or a different actor) so that in a chain of
