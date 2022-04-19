@@ -380,12 +380,15 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 
 	// Now it is my turn to execute.
 	logger.Debug("%v is executing %v", target, m.requestID())
-	if target.Flow != "nonexclusive" {
+	if before != nil {
 		instance.ActiveFlow = target.Flow
 	}
 	f := handlersSession[m.method()]
 	if f == nil {
 		errMsg := fmt.Sprintf("undefined method %v", m.method())
+		if before != nil {
+			instance.ActiveFlow = "released"
+		}
 		if cr, ok := m.(CallRequest); ok {
 			sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
 		} else {
@@ -399,6 +402,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 		}
 
 		if err != nil {
+			if before != nil {
+				instance.ActiveFlow = "released"
+			}
 			if err != ctx.Err() {
 				if cr, ok := m.(CallRequest); ok {
 					value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
@@ -410,6 +416,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			}
 		} else {
 			if dest == nil {
+				if before != nil {
+					instance.ActiveFlow = "released"
+				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: "", Value: value})
 				} else {
@@ -420,10 +429,14 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 					// Defer my obligation to release after to the next invocation of this flow on this instance
 					logger.Debug("%v executing %v is deferring lock to %v", target, m.requestID(), next.DeferredLockID)
 					if next.Flow != instance.ActiveFlow {
-						logger.Error("Improper lock deferal from flow %v to flow %v", instance.ActiveFlow, next.Flow)
+						logger.Error("Improper lock deferal in %v from flow %v to flow %v", target, instance.ActiveFlow, next.Flow)
 					}
 					deferredLocks.Store(next.DeferredLockID, after)
 					after = nil
+				} else {
+					if before != nil {
+						instance.ActiveFlow = "released"
+					}
 				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: cr.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: cr.Sequence + 1})
