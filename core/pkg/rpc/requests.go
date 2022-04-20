@@ -33,6 +33,10 @@ type sessionKey struct {
 	ID   string
 }
 
+const (
+	releasedFlow = "released"
+)
+
 var (
 	requests                         = sync.Map{}                  // map[string](chan Result){} // map request ids to result channels
 	handlersService                  = map[string]ServiceHandler{} // registered method handlers for service targets
@@ -78,6 +82,9 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 						return
 					}
 					logger.Debug("Deactivation of %v is executing", v)
+					if instance.ActiveFlow != releasedFlow {
+						logger.Error("Flow violation: %v was already owned when acquired by deactivate", instance)
+					}
 					instance.ActiveFlow = "deactivate" + uuid.New().String()
 
 					// Check: was anyone been scheduled while I was waiting?
@@ -95,6 +102,7 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 
 					// The callback may have taken a long time, check again
 					instance.lock <- struct{}{}
+					instance.ActiveFlow = releasedFlow
 					if instance.valid && instance.next == savedLast {
 						instance.valid = false
 						sessionTable.Delete(key)
@@ -295,13 +303,14 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 		instance = &SessionInstance{Name: target.Name, ID: target.ID, ActiveFlow: target.Flow, next: make(chan struct{}, 1), lock: make(chan struct{}, 1), valid: true}
 		instance.next <- struct{}{} // enable tasks
 		instance.lock <- struct{}{} // lock entry
+		instance.ActiveFlow = releasedFlow
 		freshInstance = true
 		sessionTable.Store(key, instance)
 	}
 
 	// Step 2: Schedule the go-routine that will actually do the processing of the msg
 	if !freshInstance && instance.ActiveFlow == target.Flow {
-		// re-entrancy bypass; handler must execute "concurrently" with ancestors
+		// re-entrancy bypass or tail call with retained lock; handler must execute "concurrently" with ancestors
 		var dl chan struct{} = nil
 		if target.DeferredLockID != "" {
 			if l, ok := deferredLocks.LoadAndDelete(target.DeferredLockID); ok {
@@ -313,16 +322,15 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 		} else {
 			logger.Debug("reentrant message %v for %v; found deferred lock", msg.requestID(), target)
 		}
-
-		go handleSessionRequest(ctx, nil, waitForChild, dl, instance, target, msg)
+		go handleSessionRequest(ctx, nil, waitForChild, dl, instance, target, msg, dl != nil)
 	} else if target.Flow == "nonexclusive" {
 		logger.Debug("nonexclusive message for %v", target)
-		go handleSessionRequest(ctx, nil, waitForChild, nil, instance, target, msg)
+		go handleSessionRequest(ctx, nil, waitForChild, nil, instance, target, msg, false)
 	} else {
 		before := instance.next
 		instance.next = make(chan struct{}, 1)
 		logger.Debug("queued message for %v", target)
-		go handleSessionRequest(ctx, before, waitForChild, instance.next, instance, target, msg)
+		go handleSessionRequest(ctx, before, waitForChild, instance.next, instance, target, msg, true)
 	}
 
 	// Step 3: Release lock
@@ -330,7 +338,7 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 }
 
 // handleSessionRequest executes on a go routine spawned to process a single request; it can safely block
-func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChild chan Result, after chan struct{}, instance *SessionInstance, target Session, m Request) {
+func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChild chan Result, after chan struct{}, instance *SessionInstance, target Session, m Request, clearFlowOnRelease bool) {
 	if before != nil {
 		// wait for my turn to execute
 		logger.Debug("%v is waiting to execute %v", target, m.requestID())
@@ -380,12 +388,18 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 
 	// Now it is my turn to execute.
 	logger.Debug("%v is executing %v", target, m.requestID())
-	if target.Flow != "nonexclusive" {
+	if before != nil {
+		if instance.ActiveFlow != releasedFlow {
+			logger.Error("Flow violation: %v was already owned when it time for %v to execute", instance, target.Flow)
+		}
 		instance.ActiveFlow = target.Flow
 	}
 	f := handlersSession[m.method()]
 	if f == nil {
 		errMsg := fmt.Sprintf("undefined method %v", m.method())
+		if clearFlowOnRelease {
+			instance.ActiveFlow = releasedFlow
+		}
 		if cr, ok := m.(CallRequest); ok {
 			sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
 		} else {
@@ -399,6 +413,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 		}
 
 		if err != nil {
+			if clearFlowOnRelease {
+				instance.ActiveFlow = releasedFlow
+			}
 			if err != ctx.Err() {
 				if cr, ok := m.(CallRequest); ok {
 					value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
@@ -410,6 +427,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			}
 		} else {
 			if dest == nil {
+				if clearFlowOnRelease {
+					instance.ActiveFlow = releasedFlow
+				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: "", Value: value})
 				} else {
@@ -420,10 +440,15 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 					// Defer my obligation to release after to the next invocation of this flow on this instance
 					logger.Debug("%v executing %v is deferring lock to %v", target, m.requestID(), next.DeferredLockID)
 					if next.Flow != instance.ActiveFlow {
-						logger.Error("Improper lock deferal from flow %v to flow %v", instance.ActiveFlow, next.Flow)
+						logger.Error("Improper lock deferal in %v from flow %v to flow %v", target, instance.ActiveFlow, next.Flow)
 					}
 					deferredLocks.Store(next.DeferredLockID, after)
 					after = nil
+					clearFlowOnRelease = false
+				} else {
+					if clearFlowOnRelease {
+						instance.ActiveFlow = releasedFlow
+					}
 				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: cr.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: cr.Sequence + 1})
@@ -437,7 +462,11 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 
 	// Finally, if I am responsible for releasing the next task, do so.
 	if after != nil {
-		logger.Debug("%v executing %v released lock", target, m.requestID())
+		if clearFlowOnRelease {
+			logger.Debug("%v executing %v released lock", target, m.requestID())
+		} else {
+			logger.Error("Flow violation: %v executing %v released lock but did not clear flow", instance, m.requestID())
+		}
 		after <- struct{}{}
 	}
 }

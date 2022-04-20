@@ -318,6 +318,10 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		return nil, nil, err
 	}
 
+	if target.Flow != instance.ActiveFlow {
+		logger.Error("Reentrancy Violation: Flow mismatch between target %v and instance %v at entry", target, instance)
+	}
+
 	if msg["command"] == "delete" {
 		// delete SDK-level in-memory state
 		if instance.Activated {
@@ -422,6 +426,10 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			reply = nil
 			err = nil
 		}
+	}
+
+	if target.Flow != instance.ActiveFlow {
+		logger.Error("Reentrancy Violation: Flow mismatch between target %v and instance %v at exit", target, instance)
 	}
 
 	return dest, reply, err
