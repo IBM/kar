@@ -102,6 +102,7 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 
 					// The callback may have taken a long time, check again
 					instance.lock <- struct{}{}
+					instance.ActiveFlow = releasedFlow
 					if instance.valid && instance.next == savedLast {
 						instance.valid = false
 						sessionTable.Delete(key)
