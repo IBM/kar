@@ -319,8 +319,8 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	}
 
 	if target.Flow != instance.ActiveFlow {
-		logger.Error("Reentrancy Violation: Flow mismatch between target %v and instance %v at entry", target, instance)
-		return nil, nil, fmt.Errorf("Reentrancy Violation: Flow mismatch between target %v and instance %v at entry", target, instance)
+		logger.Error("Flow violation: mismatch between target %v and instance %v at entry", target, instance)
+		return nil, nil, fmt.Errorf("Flow violation: mismatch between target %v and instance %v at entry", target, instance)
 	}
 
 	if msg["command"] == "delete" {
@@ -430,7 +430,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	}
 
 	if target.Flow != instance.ActiveFlow {
-		logger.Error("Reentrancy Violation: Flow mismatch between target %v and instance %v at exit", target, instance)
+		logger.Error("Flow violation: mismatch between target %v and instance %v at exit", target, instance)
 	}
 
 	return dest, reply, err
