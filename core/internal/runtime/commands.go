@@ -381,16 +381,30 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
-								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
-								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-									nextActor.DeferredLockID = uuid.New().String()
+								if _, ok := cr["serviceName"]; ok {
+									nextService := rpc.Service{Name: cr["serviceName"].(string)}
+									dest = &rpc.Destination{Target: nextService, Method: serviceEndpoint}
+								} else if _, ok := cr["actorType"]; ok {
+									nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+									if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+										nextActor.DeferredLockID = uuid.New().String()
+									}
+									dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
+								} else {
+									logger.Error("Asynchronous invoke of %s returned unsupported tail call result %v", msg["path"], cr)
+									err = fmt.Errorf("Asynchronous invoke of %s returned unsupported tail call result %v", msg["path"], cr)
 								}
-								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
-								msg := map[string]string{
-									"command": "tell",
-									"path":    cr["path"].(string),
-									"payload": cr["payload"].(string)}
-								reply, err = json.Marshal(msg)
+								if dest != nil {
+									msg := map[string]string{
+										"command": "tell",
+										"path":    cr["path"].(string),
+										"payload": cr["payload"].(string)}
+									if cr["method"] != nil {
+										msg["method"] = cr["method"].(string)
+										msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+									}
+									reply, err = json.Marshal(msg)
+								}
 							}
 						}
 					} else {
@@ -402,16 +416,29 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
-							nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
-							if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-								nextActor.DeferredLockID = uuid.New().String()
+							if _, ok := cr["serviceName"]; ok {
+								nextService := rpc.Service{Name: cr["serviceName"].(string)}
+								dest = &rpc.Destination{Target: nextService, Method: serviceEndpoint}
+							} else if _, ok := cr["actorType"]; ok {
+								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+									nextActor.DeferredLockID = uuid.New().String()
+								}
+								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
+							} else {
+								err = fmt.Errorf("Invoke of %s returned unsupported tail call result %v", msg["path"], cr)
 							}
-							dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
-							msg := map[string]string{
-								"command": "call",
-								"path":    cr["path"].(string),
-								"payload": cr["payload"].(string)}
-							reply, err = json.Marshal(msg)
+							if dest != nil {
+								msg := map[string]string{
+									"command": "call",
+									"path":    cr["path"].(string),
+									"payload": cr["payload"].(string)}
+								if cr["method"] != nil {
+									msg["method"] = cr["method"].(string)
+									msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+								}
+								reply, err = json.Marshal(msg)
+							}
 						}
 					}
 					if reply == nil {
