@@ -256,6 +256,13 @@ async function actorTests () {
     failure = true
   }
 
+  // tailCall returning a result
+  const v12 = await actor.call(a, 'incrTailCall', 10, 10)
+  if (v12 !== 20) {
+    console.log(`Failed: incrTailCall returned ${v12} instead of 20`)
+    failure = true
+  }
+
   return failure
 }
 
