@@ -29,7 +29,6 @@ import static com.ibm.research.kar.Kar.Actors.ref;
 import javax.json.Json;
 import javax.json.JsonNumber;
 import javax.json.JsonString;
-import javax.json.JsonValue;
 
 import com.ibm.research.kar.actor.ActorRef;
 import com.ibm.research.kar.actor.ActorSkeleton;
@@ -67,6 +66,15 @@ public class Test extends ActorSkeleton {
     int n = count.intValue();
     for (int i=0; i<n; i++) {
       System.out.println(getId() + " says "+ msg.getString());
+    }
+  }
+
+  @Remote public Object incrTailCall(JsonNumber v, JsonNumber toGo) {
+    System.out.println("incrTailCall: "+v+" "+toGo);
+    if (toGo.intValue() == 0) {
+      return v;
+    } else {
+      return new Kar.Actors.TailCall(this, "incrTailCall", Json.createValue(v.intValue() + 1), Json.createValue(toGo.intValue() - 1));
     }
   }
 
