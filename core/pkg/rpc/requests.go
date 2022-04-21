@@ -440,7 +440,7 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 					// Defer my obligation to release after to the next invocation of this flow on this instance
 					logger.Debug("%v executing %v is deferring lock to %v", target, m.requestID(), next.DeferredLockID)
 					if next.Flow != instance.ActiveFlow {
-						logger.Error("Improper lock deferal in %v from flow %v to flow %v", target, instance.ActiveFlow, next.Flow)
+						logger.Error("Flow violation: improper lock deferal in %v from flow %v to flow %v", target, instance.ActiveFlow, next.Flow)
 					}
 					deferredLocks.Store(next.DeferredLockID, after)
 					after = nil
