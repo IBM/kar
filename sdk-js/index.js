@@ -131,6 +131,10 @@ const tell = (service, path, body) => post(`service/${service}/call/${path}`, bo
 
 const call = (service, path, body) => post(`service/${service}/call/${path}`, body, { 'Content-Type': 'application/json' })
 
+function encodeTailCall (service, path, payload) {
+  return { tailCall: true, value: { serviceName: service, path: '/' + path, payload, method: 'POST' } }
+}
+
 const resolver = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' } }).then(parse)
 
 const resolverActor = request => () => fetch(url + 'await', { method: 'POST', body: request, headers: { 'Content-Type': 'text/plain' } }).then(parseActor)
@@ -393,6 +397,7 @@ module.exports = {
   tell,
   call,
   asyncCall,
+  tailCall: encodeTailCall,
   actor: {
     proxy: actorProxy,
     tell: actorTell,
