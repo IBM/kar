@@ -16,6 +16,10 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.2 - 2022-04-26
++ Implement basic tail call from Actor to Service (#313)
++ Bug fix in actor locking -- overly forgiving reentrancy bypass (#309)
+
 # KAR 1.3.1 - 2022-04-07
 + Enhancements to the Python SDK
   + Support for reentrancy (#288) (#294)
