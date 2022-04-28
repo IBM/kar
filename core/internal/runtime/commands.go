@@ -299,6 +299,18 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 				logger.Error("Asynchronous %s of %s returned status %v with body %s", msg["method"], msg["path"], reply.StatusCode, reply.Payload)
 			}
 		} else {
+			if msg["actorTailCall"] == "true" {
+				// Caller is expecting a result encoded using the kar-actor conventions.
+				if reply.StatusCode == 200 {
+					var rawVal interface{}
+					if e2 := json.Unmarshal([]byte(reply.Payload), &rawVal); e2 == nil {
+						wrapped := map[string]interface{}{"value": rawVal}
+						tmp, _ := json.Marshal(wrapped)
+						reply.Payload = string(tmp)
+						reply.ContentType = "application/kar+json"
+					}
+				}
+			}
 			replyBytes, err = json.Marshal(*reply)
 		}
 	}
@@ -402,6 +414,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 									if cr["method"] != nil {
 										msg["method"] = cr["method"].(string)
 										msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+										msg["actorTailCall"] = "true"
 									}
 									reply, err = json.Marshal(msg)
 								}
@@ -436,6 +449,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 								if cr["method"] != nil {
 									msg["method"] = cr["method"].(string)
 									msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+									msg["actorTailCall"] = "true"
 								}
 								reply, err = json.Marshal(msg)
 							}

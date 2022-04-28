@@ -69,10 +69,14 @@ public class Test extends ActorSkeleton {
     }
   }
 
+  @Remote public Object doMath(JsonNumber v, JsonNumber toGo) {
+    return Kar.Actors.call(this, this, "incrTailCall", v, toGo);
+  }
+
   @Remote public Object incrTailCall(JsonNumber v, JsonNumber toGo) {
     System.out.println("incrTailCall: "+v+" "+toGo);
     if (toGo.intValue() == 0) {
-      return v;
+      return new Kar.Actors.TailCall("greeter", "increment", v);
     } else {
       return new Kar.Actors.TailCall(this, "incrTailCall", Json.createValue(v.intValue() + 1), Json.createValue(toGo.intValue() - 1));
     }
