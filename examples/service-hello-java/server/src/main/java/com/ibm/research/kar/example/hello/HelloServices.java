@@ -16,6 +16,8 @@
 
 package com.ibm.research.kar.example.hello;
 
+import javax.json.Json;
+import javax.json.JsonNumber;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonValue;
 import javax.json.spi.JsonProvider;
@@ -65,5 +67,19 @@ public class HelloServices {
     String msg = "Hello " + body;
     System.out.println(msg);
     return msg;
+  }
+
+  /**
+   * A simple increment service that consumes/produces JSON values
+   *
+   * @param body The request body
+   * @return A greeting message
+   */
+  @POST
+  @Path("increment")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  public JsonValue increment(JsonNumber body) {
+    return Json.createValue(body.intValue() + 1);
   }
 }
