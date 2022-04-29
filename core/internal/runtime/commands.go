@@ -308,6 +308,11 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 						tmp, _ := json.Marshal(wrapped)
 						reply.Payload = string(tmp)
 						reply.ContentType = "application/kar+json"
+					} else {
+						wrapped := map[string]interface{}{"value": reply.Payload}
+						tmp, _ := json.Marshal(wrapped)
+						reply.Payload = string(tmp)
+						reply.ContentType = "application/kar+json"
 					}
 				}
 			}
