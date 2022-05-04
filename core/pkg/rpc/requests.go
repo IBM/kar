@@ -303,7 +303,11 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 		instance = &SessionInstance{Name: target.Name, ID: target.ID, ActiveFlow: target.Flow, next: make(chan struct{}, 1), lock: make(chan struct{}, 1), valid: true}
 		instance.next <- struct{}{} // enable tasks
 		instance.lock <- struct{}{} // lock entry
-		instance.ActiveFlow = releasedFlow
+		if waitForChild == nil {
+			instance.ActiveFlow = releasedFlow
+		} else {
+			instance.ActiveFlow = target.Flow // recovery in process; recreate lock state that held before the failure
+		}
 		freshInstance = true
 		sessionTable.Store(key, instance)
 	}
@@ -348,6 +352,7 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			case <-ctx.Done():
 				return
 			case <-time.After(sessionBusyTimeout):
+				logger.Debug("%v has timed out waiting to execute %v", target, m.requestID())
 				errMsg := fmt.Sprintf("Possible deadlock: timed out waiting in instance queue for %v", target)
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, Response{RequestID: cr.requestID(), Deadline: cr.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
@@ -379,8 +384,13 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 	if waitForChild != nil {
 		// If this task is being re-run to recover from a failure, it must wait until child task from prior execution finishes
 		logger.Debug("%v parent task %v is waiting for child %v to finish", target, m.requestID(), m.childID())
+		if instance.ActiveFlow != target.Flow {
+			logger.Error("Flow violation: %v was not already owned by the waiting parent's flow %v", instance, target.Flow)
+		}
 		select {
 		case <-waitForChild:
+			logger.Debug("%v parent task %v is released; child %v has finished", target, m.requestID(), m.childID())
+			instance.ActiveFlow = releasedFlow
 		case <-ctx.Done():
 			return
 		}
@@ -394,6 +404,7 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 		}
 		instance.ActiveFlow = target.Flow
 	}
+
 	f := handlersSession[m.method()]
 	if f == nil {
 		errMsg := fmt.Sprintf("undefined method %v", m.method())

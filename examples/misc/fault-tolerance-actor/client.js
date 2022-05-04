@@ -17,7 +17,7 @@
 const { actor } = require('kar-sdk')
 
 async function main () {
-  console.log(await actor.call(actor.proxy('A', 123), 'f', 42))
+  console.log(await actor.call(actor.proxy('A', 123), 'f', 42, true))
 }
 
 main()
