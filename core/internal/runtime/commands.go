@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	// pending requests: map request uuid (string) to channel (chan rpc.Result)
+	// pending requests: map requestId (string) to channel (chan rpc.Result)
 	requests = sync.Map{}
 )
 
@@ -71,6 +71,14 @@ func defaultTimeout() time.Time {
 	} else {
 		return time.Time{}
 	}
+}
+
+func newFlowId() string {
+	return "flow-" + uuid.New().String()
+}
+
+func newLockId() string {
+	return "dl-" + uuid.New().String()
 }
 
 // CallService calls a service and waits for a reply
@@ -117,7 +125,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 // CallActor calls an actor and waits for a reply
 func CallActor(ctx context.Context, actor Actor, path, payload, flow string, parentID string) (*Reply, error) {
 	if flow == "" {
-		flow = uuid.New().String() // start new flow
+		flow = newFlowId()
 	}
 	msg := map[string]string{
 		"command": "call",
@@ -148,7 +156,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -220,7 +228,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -404,7 +412,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 								} else if _, ok := cr["actorType"]; ok {
 									nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
 									if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-										nextActor.DeferredLockID = uuid.New().String()
+										nextActor.DeferredLockID = newLockId()
 									}
 									dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 								} else {
@@ -440,7 +448,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 							} else if _, ok := cr["actorType"]; ok {
 								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
 								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-									nextActor.DeferredLockID = uuid.New().String()
+									nextActor.DeferredLockID = newLockId()
 								}
 								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
 							} else {

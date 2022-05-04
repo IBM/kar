@@ -43,10 +43,14 @@ var (
 	handlersSession                  = map[string]SessionHandler{} // registered method handlers for session targets
 	handlersNode                     = map[string]NodeHandler{}    // registered method handlers for node targets
 	sessionTable                     = sync.Map{}                  // session table: SessionKey -> *SessionInstance
-	deferredLocks                    = sync.Map{}                  // locks being defered by tail calls: uuid -> chan
+	deferredLocks                    = sync.Map{}                  // locks being defered by tail calls: deferredLockId -> chan
 	sessionBusyTimeout time.Duration = 0
 	deactivateCallback               = func(ctx context.Context, i *SessionInstance) error { i.Activated = false; return nil }
 )
+
+func newRequestId() string {
+	return "req-" + uuid.New().String()
+}
 
 func getLocalActivatedSessions(ctx context.Context, name string) map[string][]string {
 	information := make(map[string][]string)
@@ -85,7 +89,7 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 					if instance.ActiveFlow != releasedFlow {
 						logger.Error("Flow violation: %v was already owned when acquired by deactivate", instance)
 					}
-					instance.ActiveFlow = "deactivate" + uuid.New().String()
+					instance.ActiveFlow = "flow-deactivate-" + uuid.New().String()
 
 					// Check: was anyone been scheduled while I was waiting?
 					var canDeactivate = false
@@ -499,13 +503,13 @@ func call(ctx context.Context, dest Destination, deadline time.Time, parentID st
 
 // Call method and return immediately (result will be discarded)
 func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
-	requestID := uuid.New().String()
+	requestID := newRequestId()
 	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
 }
 
 // Call method and return a request id and a result channel
 func async(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) (string, <-chan Result, error) {
-	requestID := uuid.New().String()
+	requestID := newRequestId()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
 	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
