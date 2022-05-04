@@ -18,6 +18,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -89,6 +90,10 @@ type SessionInstance struct {
 	next       chan struct{} // coordination of queued tasks
 	lock       chan struct{} // entry lock, never held for long, no need to watch ctx.Done()
 	valid      bool          // false iff entry has been removed from table
+}
+
+func (a SessionInstance) String() string {
+	return fmt.Sprintf("{Name: %v, ID: %v, ActiveFlow: %v, Activated: %v}", a.Name, a.ID, a.ActiveFlow, a.Activated)
 }
 
 // Register method handler

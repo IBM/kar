@@ -17,6 +17,7 @@
 package rpc
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -35,6 +36,7 @@ type Request interface {
 	method() string
 	sequence() int
 	childID() string
+	logString() string
 }
 
 type CallRequest struct {
@@ -56,6 +58,13 @@ func (m CallRequest) target() Target      { return m.Target }
 func (m CallRequest) method() string      { return m.Method }
 func (m CallRequest) sequence() int       { return m.Sequence }
 func (m CallRequest) childID() string     { return m.ChildID }
+func (m CallRequest) logString() string {
+	if m.ChildID != "" || m.ParentID != "" {
+		return fmt.Sprintf("{RequestID: %v, Sequence: %v, Target: %v, ChildID: %v, ParentId: %v}", m.RequestID, m.Sequence, m.Target, m.ChildID, m.ParentID)
+	} else {
+		return fmt.Sprintf("{RequestID: %v, Sequence: %v, Target: %v}", m.RequestID, m.Sequence, m.Target)
+	}
+}
 
 type TellRequest struct {
 	RequestID string    // request id
@@ -74,6 +83,13 @@ func (m TellRequest) target() Target      { return m.Target }
 func (m TellRequest) method() string      { return m.Method }
 func (m TellRequest) sequence() int       { return m.Sequence }
 func (m TellRequest) childID() string     { return m.ChildID }
+func (m TellRequest) logString() string {
+	if m.ChildID != "" {
+		return fmt.Sprintf("{RequestID: %v, Sequence: %v, Target: %v, ChildID: %v}", m.RequestID, m.Sequence, m.Target, m.ChildID)
+	} else {
+		return fmt.Sprintf("{RequestID: %v, Sequence: %v, Target: %v}", m.RequestID, m.Sequence, m.Target)
+	}
+}
 
 type Response struct {
 	RequestID string    // request id
