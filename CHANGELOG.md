@@ -16,6 +16,11 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.3 - 2022-05-05
++ Encode service result when invoked from actor tail call (#316, #317)
++ Bug fix in actor scheduling for recovery from a blocked self-call (#318)
++ Improve debug logging in message processing layer of rpclib (#319)
+
 # KAR 1.3.2 - 2022-04-25
 + Implement basic tail call from Actor to Service (#313)
 + Bug fix in actor locking -- overly forgiving reentrancy bypass (#309)
