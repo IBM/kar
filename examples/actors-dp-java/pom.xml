@@ -4,11 +4,11 @@
 
   <groupId>com.ibm.research.kar.example</groupId>
   <artifactId>philosophers-liberty</artifactId>
-  <version>1.3.2</version>
+  <version>1.3.3</version>
   <packaging>war</packaging>
 
   <properties>
-    <version.kar-java-sdk>1.3.2</version.kar-java-sdk>
+    <version.kar-java-sdk>1.3.3</version.kar-java-sdk>
 
     <version.java-compiler>11</version.java-compiler>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
