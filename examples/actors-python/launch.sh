@@ -19,7 +19,7 @@
 set -e
 
 # Run the server:
-( kar run -app hello-actor -actors FamousActor -service actor-server-service python3 server/server.py ) &
+( kar run -actor_collector_interval 0s -app hello-actor -actors FamousActor -service actor-server-service python3 server/server.py ) &
 
 # Wait for server to start:
 sleep 2
