@@ -234,7 +234,7 @@ Available commands:
 		description = "Run application component"
 		flag.StringVar(&ServiceName, "service", "", "The name of the service provided by this process")
 		flag.StringVar(&actorTypes, "actors", "", "The actor types provided by this process, as a comma separated list")
-		flag.DurationVar(&ActorCollectorInterval, "actor_collector_interval", 10*time.Second, "Actor collector interval")
+		flag.DurationVar(&ActorCollectorInterval, "actor_collector_interval", 10*time.Second, "Actor collector interval (0 disables collection)")
 		flag.DurationVar(&ActorReminderInterval, "actor_reminder_interval", 100*time.Millisecond, "Actor reminder processing interval")
 		flag.DurationVar(&ActorReminderAcceptableDelay, "actor_reminder_acceptable_delay", 3*time.Second, "Threshold at which reminders are logged as being late")
 		flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")

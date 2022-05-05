@@ -637,6 +637,10 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
+	if config.ActorCollectorInterval == 0 {
+		logger.Info("Inactive actor collection disabled")
+		return
+	}
 	lock := make(chan struct{}, 1) // trylock
 	ticker := time.NewTicker(config.ActorCollectorInterval)
 	for {
