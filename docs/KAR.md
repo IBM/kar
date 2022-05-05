@@ -487,7 +487,7 @@ In this snippet, the currently running actor instance schedules an
 invocation of `getFirstFork(1, step)` on itself to occur at a
 targetTime of `this.nextStepTime()`. This is a one-shot reminder.
 
-The [ykt.js/(../examples/actors-ykt/ykt.js) contains an example of a
+The [ykt.js](../examples/actors-ykt/ykt.js) contains an example of a
 periodic reminder:
 ```
 await actor.reminders.schedule(actor.proxy('Site', site), 'siteReport',

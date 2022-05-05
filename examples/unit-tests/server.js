@@ -61,7 +61,7 @@ class Foo {
     await events.subscribe(this, 'accumulate', topic) // subscribe actor to topic
 
     // Create event 1:
-    var e1 = new cloudevents.CloudEvent({
+    const e1 = new cloudevents.CloudEvent({
       type: type,
       source: source,
       data: 1
@@ -69,7 +69,7 @@ class Foo {
     await events.publish(topic, e1)
 
     // Create event 2:
-    var e2 = new cloudevents.CloudEvent({
+    const e2 = new cloudevents.CloudEvent({
       type: type,
       source: source,
       data: 2
@@ -77,7 +77,7 @@ class Foo {
     await events.publish(topic, e2)
 
     // Create event 3:
-    var e3 = new cloudevents.CloudEvent({
+    const e3 = new cloudevents.CloudEvent({
       type: type,
       source: source,
       data: 3
@@ -137,6 +137,15 @@ class Foo {
 
   reenter (v) {
     return actor.call(this, this, 'incrQuiet', v)
+  }
+
+  incrTailCall (v, toGo) {
+    if (toGo === 0) {
+      console.log(`base case of incrTailCall ${v}`)
+      return v
+    } else {
+      return actor.tailCall(this, 'incrTailCall', v + 1, toGo - 1)
+    }
   }
 
   deactivate () {

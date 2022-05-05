@@ -33,16 +33,24 @@ type sessionKey struct {
 	ID   string
 }
 
+const (
+	releasedFlow = "released"
+)
+
 var (
 	requests                         = sync.Map{}                  // map[string](chan Result){} // map request ids to result channels
 	handlersService                  = map[string]ServiceHandler{} // registered method handlers for service targets
 	handlersSession                  = map[string]SessionHandler{} // registered method handlers for session targets
 	handlersNode                     = map[string]NodeHandler{}    // registered method handlers for node targets
 	sessionTable                     = sync.Map{}                  // session table: SessionKey -> *SessionInstance
-	deferredLocks                    = sync.Map{}                  // locks being defered by tail calls: uuid -> chan
+	deferredLocks                    = sync.Map{}                  // locks being defered by tail calls: deferredLockId -> chan
 	sessionBusyTimeout time.Duration = 0
 	deactivateCallback               = func(ctx context.Context, i *SessionInstance) error { i.Activated = false; return nil }
 )
+
+func newRequestId() string {
+	return "req-" + uuid.New().String()
+}
 
 func getLocalActivatedSessions(ctx context.Context, name string) map[string][]string {
 	information := make(map[string][]string)
@@ -78,7 +86,10 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 						return
 					}
 					logger.Debug("Deactivation of %v is executing", v)
-					instance.ActiveFlow = "deactivate" + uuid.New().String()
+					if instance.ActiveFlow != releasedFlow {
+						logger.Error("Flow violation: %v was already owned when acquired by deactivate", instance)
+					}
+					instance.ActiveFlow = "flow-deactivate-" + uuid.New().String()
 
 					// Check: was anyone been scheduled while I was waiting?
 					var canDeactivate = false
@@ -95,6 +106,7 @@ func collectInactiveSessions(ctx context.Context, time time.Time, callback func(
 
 					// The callback may have taken a long time, check again
 					instance.lock <- struct{}{}
+					instance.ActiveFlow = releasedFlow
 					if instance.valid && instance.next == savedLast {
 						instance.valid = false
 						sessionTable.Delete(key)
@@ -161,7 +173,7 @@ func accept(ctx context.Context, msg Message) {
 
 		var waitForChild chan Result = nil
 		if m.childID() != "" {
-			logger.Debug("Parent %v is preparing to wait for child %v to complete before exeucting", m.requestID(), m.childID())
+			logger.Debug("Parent is preparing to wait for child to complete before exeucting: %v", m.logString())
 			waitForChild = make(chan Result, 1) // capacity one to be able to store result before accepting it
 			requests.Store(m.childID(), waitForChild)
 		}
@@ -175,7 +187,7 @@ func accept(ctx context.Context, msg Message) {
 					case <-ctx.Done():
 						return
 					}
-					logger.Debug("Child %v has completed; start execution of parent task %v", m.childID(), m.requestID())
+					logger.Debug("Child has completed; start execution of parent: %v", m.logString())
 					requests.Delete(m.childID())
 				}
 				f := handlersService[m.method()]
@@ -226,7 +238,7 @@ func accept(ctx context.Context, msg Message) {
 
 		var waitForChild chan Result = nil
 		if m.childID() != "" {
-			logger.Debug("Parent %v is preparing to wait for child %v to complete before exeucting", m.requestID(), m.childID())
+			logger.Debug("Parent is preparing to wait for child to complete before executing: %v", m.logString())
 			waitForChild = make(chan Result, 1) // capacity one to be able to store result before accepting it
 			requests.Store(m.childID(), waitForChild)
 		}
@@ -240,7 +252,7 @@ func accept(ctx context.Context, msg Message) {
 					case <-ctx.Done():
 						return
 					}
-					logger.Debug("Child %v has completed; start execution of parent task %v", m.childID(), m.requestID())
+					logger.Debug("Child has completed; start execution of parent: %v", m.logString())
 					requests.Delete(m.childID())
 				}
 				f := handlersService[m.method()]
@@ -295,13 +307,18 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 		instance = &SessionInstance{Name: target.Name, ID: target.ID, ActiveFlow: target.Flow, next: make(chan struct{}, 1), lock: make(chan struct{}, 1), valid: true}
 		instance.next <- struct{}{} // enable tasks
 		instance.lock <- struct{}{} // lock entry
+		if waitForChild == nil {
+			instance.ActiveFlow = releasedFlow
+		} else {
+			instance.ActiveFlow = target.Flow // recovery in process; recreate lock state that held before the failure
+		}
 		freshInstance = true
 		sessionTable.Store(key, instance)
 	}
 
 	// Step 2: Schedule the go-routine that will actually do the processing of the msg
 	if !freshInstance && instance.ActiveFlow == target.Flow {
-		// re-entrancy bypass; handler must execute "concurrently" with ancestors
+		// re-entrancy bypass or tail call with retained lock; handler must execute "concurrently" with ancestors
 		var dl chan struct{} = nil
 		if target.DeferredLockID != "" {
 			if l, ok := deferredLocks.LoadAndDelete(target.DeferredLockID); ok {
@@ -309,20 +326,19 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 			}
 		}
 		if dl == nil {
-			logger.Debug("reentrant message %v for %v; no deferred lock", msg.requestID(), target)
+			logger.Debug("reentrant message (no deferred lock) %v", msg.logString())
 		} else {
-			logger.Debug("reentrant message %v for %v; found deferred lock", msg.requestID(), target)
+			logger.Debug("reentrant message (with deferred lock) %v", msg.logString())
 		}
-
-		go handleSessionRequest(ctx, nil, waitForChild, dl, instance, target, msg)
+		go handleSessionRequest(ctx, nil, waitForChild, dl, instance, target, msg, dl != nil)
 	} else if target.Flow == "nonexclusive" {
-		logger.Debug("nonexclusive message for %v", target)
-		go handleSessionRequest(ctx, nil, waitForChild, nil, instance, target, msg)
+		logger.Debug("nonexclusive message %v", msg.logString())
+		go handleSessionRequest(ctx, nil, waitForChild, nil, instance, target, msg, false)
 	} else {
 		before := instance.next
 		instance.next = make(chan struct{}, 1)
-		logger.Debug("queued message for %v", target)
-		go handleSessionRequest(ctx, before, waitForChild, instance.next, instance, target, msg)
+		logger.Debug("queued message %v", msg.logString())
+		go handleSessionRequest(ctx, before, waitForChild, instance.next, instance, target, msg, true)
 	}
 
 	// Step 3: Release lock
@@ -330,16 +346,17 @@ func acceptSession(ctx context.Context, target Session, msg Request, waitForChil
 }
 
 // handleSessionRequest executes on a go routine spawned to process a single request; it can safely block
-func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChild chan Result, after chan struct{}, instance *SessionInstance, target Session, m Request) {
+func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChild chan Result, after chan struct{}, instance *SessionInstance, target Session, m Request, clearFlowOnRelease bool) {
 	if before != nil {
 		// wait for my turn to execute
-		logger.Debug("%v is waiting to execute %v", target, m.requestID())
+		logger.Debug("%v is waiting to execute %v", instance, m.logString())
 		if sessionBusyTimeout > 0 {
 			select {
 			case <-before:
 			case <-ctx.Done():
 				return
 			case <-time.After(sessionBusyTimeout):
+				logger.Debug("%v has timed out waiting to execute %v", instance, m.logString())
 				errMsg := fmt.Sprintf("Possible deadlock: timed out waiting in instance queue for %v", target)
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, Response{RequestID: cr.requestID(), Deadline: cr.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
@@ -370,22 +387,34 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 
 	if waitForChild != nil {
 		// If this task is being re-run to recover from a failure, it must wait until child task from prior execution finishes
-		logger.Debug("%v parent task %v is waiting for child %v to finish", target, m.requestID(), m.childID())
+		logger.Debug("%v is waiting for child to finish", m.logString())
+		if instance.ActiveFlow != target.Flow {
+			logger.Error("Flow violation: %v was not already owned by the waiting parent's flow %v", instance, target.Flow)
+		}
 		select {
 		case <-waitForChild:
+			logger.Debug("%v is released; child finished", m.logString())
+			instance.ActiveFlow = releasedFlow
 		case <-ctx.Done():
 			return
 		}
 	}
 
 	// Now it is my turn to execute.
-	logger.Debug("%v is executing %v", target, m.requestID())
-	if target.Flow != "nonexclusive" {
+	logger.Debug("%v is invoking handler", m.logString())
+	if before != nil {
+		if instance.ActiveFlow != releasedFlow {
+			logger.Error("Flow violation: %v was already owned when it time for %v to execute", instance, target.Flow)
+		}
 		instance.ActiveFlow = target.Flow
 	}
+
 	f := handlersSession[m.method()]
 	if f == nil {
 		errMsg := fmt.Sprintf("undefined method %v", m.method())
+		if clearFlowOnRelease {
+			instance.ActiveFlow = releasedFlow
+		}
 		if cr, ok := m.(CallRequest); ok {
 			sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
 		} else {
@@ -399,6 +428,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 		}
 
 		if err != nil {
+			if clearFlowOnRelease {
+				instance.ActiveFlow = releasedFlow
+			}
 			if err != ctx.Err() {
 				if cr, ok := m.(CallRequest); ok {
 					value, _ = json.Marshal(err) // attempt to serialize error object, ignore errors
@@ -410,6 +442,9 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			}
 		} else {
 			if dest == nil {
+				if clearFlowOnRelease {
+					instance.ActiveFlow = releasedFlow
+				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: "", Value: value})
 				} else {
@@ -418,12 +453,17 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			} else {
 				if next, ok := dest.Target.(Session); ok && after != nil && next.DeferredLockID != "" {
 					// Defer my obligation to release after to the next invocation of this flow on this instance
-					logger.Debug("%v executing %v is deferring lock to %v", target, m.requestID(), next.DeferredLockID)
+					logger.Debug("%v is deferring lock to %v", m.logString(), next.DeferredLockID)
 					if next.Flow != instance.ActiveFlow {
-						logger.Error("Improper lock deferal from flow %v to flow %v", instance.ActiveFlow, next.Flow)
+						logger.Error("Flow violation: improper lock deferal in %v from flow %v to flow %v", target, instance.ActiveFlow, next.Flow)
 					}
 					deferredLocks.Store(next.DeferredLockID, after)
 					after = nil
+					clearFlowOnRelease = false
+				} else {
+					if clearFlowOnRelease {
+						instance.ActiveFlow = releasedFlow
+					}
 				}
 				if cr, ok := m.(CallRequest); ok {
 					sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: cr.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: cr.Sequence + 1})
@@ -437,7 +477,11 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 
 	// Finally, if I am responsible for releasing the next task, do so.
 	if after != nil {
-		logger.Debug("%v executing %v released lock", target, m.requestID())
+		if clearFlowOnRelease {
+			logger.Debug("%v has completed and released lock", m.logString())
+		} else {
+			logger.Error("Flow violation: %v executing %v released lock but did not clear flow", instance, m.requestID())
+		}
 		after <- struct{}{}
 	}
 }
@@ -459,13 +503,13 @@ func call(ctx context.Context, dest Destination, deadline time.Time, parentID st
 
 // Call method and return immediately (result will be discarded)
 func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
-	requestID := uuid.New().String()
+	requestID := newRequestId()
 	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
 }
 
 // Call method and return a request id and a result channel
 func async(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) (string, <-chan Result, error) {
-	requestID := uuid.New().String()
+	requestID := newRequestId()
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
 	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})

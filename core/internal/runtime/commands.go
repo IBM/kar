@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	// pending requests: map request uuid (string) to channel (chan rpc.Result)
+	// pending requests: map requestId (string) to channel (chan rpc.Result)
 	requests = sync.Map{}
 )
 
@@ -71,6 +71,14 @@ func defaultTimeout() time.Time {
 	} else {
 		return time.Time{}
 	}
+}
+
+func newFlowId() string {
+	return "flow-" + uuid.New().String()
+}
+
+func newLockId() string {
+	return "dl-" + uuid.New().String()
 }
 
 // CallService calls a service and waits for a reply
@@ -117,7 +125,7 @@ func CallPromiseService(ctx context.Context, service, path, payload, header, met
 // CallActor calls an actor and waits for a reply
 func CallActor(ctx context.Context, actor Actor, path, payload, flow string, parentID string) (*Reply, error) {
 	if flow == "" {
-		flow = uuid.New().String() // start new flow
+		flow = newFlowId()
 	}
 	msg := map[string]string{
 		"command": "call",
@@ -148,7 +156,7 @@ func CallPromiseActor(ctx context.Context, actor Actor, path, payload string) (s
 		return "", err
 	}
 
-	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
+	requestID, ch, err := rpc.Async(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	if err == nil {
 		requests.Store(requestID, ch)
 	}
@@ -220,7 +228,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: uuid.New().String()}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), bytes)
 	}
 }
 
@@ -299,6 +307,23 @@ func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]by
 				logger.Error("Asynchronous %s of %s returned status %v with body %s", msg["method"], msg["path"], reply.StatusCode, reply.Payload)
 			}
 		} else {
+			if msg["actorTailCall"] == "true" {
+				// Caller is expecting a result encoded using the kar-actor conventions.
+				if reply.StatusCode == 200 {
+					var rawVal interface{}
+					if e2 := json.Unmarshal([]byte(reply.Payload), &rawVal); e2 == nil {
+						wrapped := map[string]interface{}{"value": rawVal}
+						tmp, _ := json.Marshal(wrapped)
+						reply.Payload = string(tmp)
+						reply.ContentType = "application/kar+json"
+					} else {
+						wrapped := map[string]interface{}{"value": reply.Payload}
+						tmp, _ := json.Marshal(wrapped)
+						reply.Payload = string(tmp)
+						reply.ContentType = "application/kar+json"
+					}
+				}
+			}
 			replyBytes, err = json.Marshal(*reply)
 		}
 	}
@@ -316,6 +341,11 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	err = json.Unmarshal(value, &msg)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if target.Flow != instance.ActiveFlow {
+		logger.Error("Flow violation: mismatch between target %v and instance %v at entry", target, instance)
+		return nil, nil, fmt.Errorf("Flow violation: mismatch between target %v and instance %v at entry", target, instance)
 	}
 
 	if msg["command"] == "delete" {
@@ -376,16 +406,31 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 								logger.Error("Asynchronous invoke of %s raised error %s\nStacktrace: %v", msg["path"], result.Message, result.Stack)
 							} else if result.TailCall {
 								cr := result.Value.(map[string]interface{})
-								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
-								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-									nextActor.DeferredLockID = uuid.New().String()
+								if _, ok := cr["serviceName"]; ok {
+									nextService := rpc.Service{Name: cr["serviceName"].(string)}
+									dest = &rpc.Destination{Target: nextService, Method: serviceEndpoint}
+								} else if _, ok := cr["actorType"]; ok {
+									nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+									if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+										nextActor.DeferredLockID = newLockId()
+									}
+									dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
+								} else {
+									logger.Error("Asynchronous invoke of %s returned unsupported tail call result %v", msg["path"], cr)
+									err = fmt.Errorf("Asynchronous invoke of %s returned unsupported tail call result %v", msg["path"], cr)
 								}
-								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
-								msg := map[string]string{
-									"command": "tell",
-									"path":    cr["path"].(string),
-									"payload": cr["payload"].(string)}
-								reply, err = json.Marshal(msg)
+								if dest != nil {
+									msg := map[string]string{
+										"command": "tell",
+										"path":    cr["path"].(string),
+										"payload": cr["payload"].(string)}
+									if cr["method"] != nil {
+										msg["method"] = cr["method"].(string)
+										msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+										msg["actorTailCall"] = "true"
+									}
+									reply, err = json.Marshal(msg)
+								}
 							}
 						}
 					} else {
@@ -397,16 +442,30 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 						var result actorCallResult
 						if err = json.Unmarshal([]byte(replyStruct.Payload), &result); err == nil && result.TailCall {
 							cr := result.Value.(map[string]interface{})
-							nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
-							if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
-								nextActor.DeferredLockID = uuid.New().String()
+							if _, ok := cr["serviceName"]; ok {
+								nextService := rpc.Service{Name: cr["serviceName"].(string)}
+								dest = &rpc.Destination{Target: nextService, Method: serviceEndpoint}
+							} else if _, ok := cr["actorType"]; ok {
+								nextActor := rpc.Session{Name: cr["actorType"].(string), ID: cr["actorId"].(string), Flow: target.Flow}
+								if nextActor.Name == target.Name && nextActor.ID == target.ID && cr["releaseLock"] != "true" {
+									nextActor.DeferredLockID = newLockId()
+								}
+								dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
+							} else {
+								err = fmt.Errorf("Invoke of %s returned unsupported tail call result %v", msg["path"], cr)
 							}
-							dest = &rpc.Destination{Target: nextActor, Method: actorEndpoint}
-							msg := map[string]string{
-								"command": "call",
-								"path":    cr["path"].(string),
-								"payload": cr["payload"].(string)}
-							reply, err = json.Marshal(msg)
+							if dest != nil {
+								msg := map[string]string{
+									"command": "call",
+									"path":    cr["path"].(string),
+									"payload": cr["payload"].(string)}
+								if cr["method"] != nil {
+									msg["method"] = cr["method"].(string)
+									msg["header"] = "{\"Content-Type\": [\"application/json\"]}"
+									msg["actorTailCall"] = "true"
+								}
+								reply, err = json.Marshal(msg)
+							}
 						}
 					}
 					if reply == nil {
@@ -422,6 +481,10 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			reply = nil
 			err = nil
 		}
+	}
+
+	if target.Flow != instance.ActiveFlow {
+		logger.Error("Flow violation: mismatch between target %v and instance %v at exit", target, instance)
 	}
 
 	return dest, reply, err
@@ -574,6 +637,10 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 
 // Collect periodically collect actors with no recent usage (but retains placement)
 func Collect(ctx context.Context) {
+	if config.ActorCollectorInterval == 0 {
+		logger.Info("Inactive actor collection disabled")
+		return
+	}
 	lock := make(chan struct{}, 1) // trylock
 	ticker := time.NewTicker(config.ActorCollectorInterval)
 	for {

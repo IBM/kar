@@ -61,13 +61,13 @@ type failureEvent struct {
 }
 
 type summary struct {
-	startTime       time.Time
-	totalDuration   time.Duration
-	maximumOrder    time.Duration
-	detection       time.Duration
-	consensus       time.Duration
-	reconcilliation time.Duration
-	failureCount    int
+	startTime      time.Time
+	totalDuration  time.Duration
+	maximumOrder   time.Duration
+	detection      time.Duration
+	consensus      time.Duration
+	reconciliation time.Duration
+	failureCount   int
 }
 
 func init() {
@@ -190,22 +190,26 @@ func correlateLogs() {
 			}
 		}
 
-		outage := p.Sub(pf.startTime)
-		detect := r.startTime.Sub(pf.startTime)
-		rebalance := r.endTime.Sub(r.startTime)
-		reconcile := p.Sub(r.endTime)
-		summaries = append(summaries, summary{startTime: pf.startTime, failureCount: numFailures, totalDuration: outage, detection: detect,
-			consensus: rebalance, reconcilliation: reconcile, maximumOrder: maxOrder})
-		failureHisto[numFailures] += 1
+		if numFailures > 10 {
+			fmt.Printf("Fast forwarding over %v failures from %v to %v. Assuming missing log entries\n", numFailures, pf.startTime, p)
+		} else {
+			outage := p.Sub(pf.startTime)
+			detect := r.startTime.Sub(pf.startTime)
+			rebalance := r.endTime.Sub(r.startTime)
+			reconcile := p.Sub(r.endTime)
+			summaries = append(summaries, summary{startTime: pf.startTime, failureCount: numFailures, totalDuration: outage, detection: detect,
+				consensus: rebalance, reconciliation: reconcile, maximumOrder: maxOrder})
+			failureHisto[numFailures] += 1
+		}
 	}
 	fmt.Printf("Count of failure clusters: %v\n", failureHisto[1:])
 }
 
 func printSummary() {
-	fmt.Printf("Start Time, Failure Number, Num Failures, Detection, Consensus, Reconcilliation, Total Outage, Max Order Latency\n")
+	fmt.Printf("Start Time, Failure Number, Num Failures, Detection, Consensus, Reconciliation, Total Outage, Max Order Latency\n")
 	for i, f := range summaries {
 		fmt.Printf("%v, %v, %v, %.6v, %.6v, %.6v, %.6v, %.6v\n", f.startTime, i+1, f.failureCount, f.detection.Seconds(), f.consensus.Seconds(),
-			f.reconcilliation.Seconds(), f.totalDuration.Seconds(), f.maximumOrder.Seconds())
+			f.reconciliation.Seconds(), f.totalDuration.Seconds(), f.maximumOrder.Seconds())
 	}
 }
 

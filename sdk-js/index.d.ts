@@ -123,6 +123,14 @@ export function tell (service: string, path: string, body: any): Promise<any>;
 export function call (service: string, path: string, body: any): Promise<any>;
 
 /**
+ * Construct a result object that encodes a tail call to a service.
+ * @param service The service to invoke.
+ * @param path The service endpoint to invoke.
+ * @param body The request body with which to invoke the service endpoint.
+ */
+ export function tailCall (service: string, path: string, body: any): any;
+
+/**
  * Actor operations
  */
 export namespace actor {
@@ -188,7 +196,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
-     export function tailCallReleasingLock(callee: Actor, path: string, ...args: any[]): any;
+  export function tailCallReleasingLock(callee: Actor, path: string, ...args: any[]): any;
 
   namespace reminders {
     /**

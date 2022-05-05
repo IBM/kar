@@ -25,23 +25,22 @@ app.use(express.json({ strict: false }))
 // example actor
 
 class A {
-  async f (v) {
-    console.log('>', this.kar)
-    var result = await actor.call(this, actor.proxy('B', '123'), 'g', v)
-    console.log('<', this.kar)
+  async f (v, self) {
+    console.log('f >', this.kar)
+    const callee = self ? actor.proxy('A', this.kar.id) : actor.proxy('A', this.kar.id + this.kar.id)
+    const result = await actor.call(this, callee, 'g', v)
+    console.log('f <', this.kar)
     return result
   }
-}
 
-class B {
   async g (v) {
-    console.log('>', this.kar)
+    console.log('g >', this.kar)
     await new Promise(r => setTimeout(r, 15000))
-    console.log('<', this.kar)
+    console.log('g <', this.kar)
     return v + 1
   }
 }
 
-app.use(sys.actorRuntime({ A, B }))
+app.use(sys.actorRuntime({ A }))
 
 app.listen(process.env.KAR_APP_PORT, '127.0.0.1')

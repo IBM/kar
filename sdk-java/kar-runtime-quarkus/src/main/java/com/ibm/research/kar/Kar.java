@@ -479,9 +479,21 @@ public class Kar implements KarHttpConstants {
 		}
 
 		/**
+		 * Continue execution by doing a tail call to the specified service.
+		 * @param service The name of the service to invoke.
+		 * @param path    The service endpoint to invoke.
+		 * @param body    The request body with which to invoke the service endpoint.
+		 * @return a Uni that represents the desired continuation.
+		 */
+		public static Uni<TailCall> tailCall(String service, String path, JsonValue body) {
+			return Uni.createFrom().item(new TailCall(service, path, body));
+		}
+
+		/**
 		 * An actor method may return a TailCall to indicate that the "result"
-		 * of the method is to schedule a subsequent invocation (either to itself or
-		 * to another actor instance).
+		 * of the method is to schedule a subsequent invocation
+		 * (to itself or to another actor instance or to a service).
+		 *
 		 * If the calling and callee Actors are the same, then  by default the
 		 * actor lock is retained between the two calls. This ensures that the Actor's
 		 * state is not changed between the end of the calling method and the start of
@@ -489,6 +501,7 @@ public class Kar implements KarHttpConstants {
 		 * true to support interleaving multiple flows of execution on an actor instance.
 		 */
 		public static final class TailCall {
+			public final String service;
 			public final ActorRef actor;
 			public final String path;
 			public final boolean releaseLock;
@@ -499,10 +512,19 @@ public class Kar implements KarHttpConstants {
 			}
 
 			public TailCall(ActorRef actor, String path, boolean releaseLock, JsonValue... args) {
+				this.service = null;
 				this.actor = actor;
 				this.path = path;
 				this.releaseLock = releaseLock;
 				this.args = args;
+			}
+
+			public TailCall(String service, String path, JsonValue body) {
+				this.service = service;
+				this.actor = null;
+				this.path = path;
+				this.releaseLock = true;
+				this.args = new JsonValue[] { body };
 			}
 		}
 

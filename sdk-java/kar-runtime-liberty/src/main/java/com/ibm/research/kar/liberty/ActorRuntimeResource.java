@@ -180,13 +180,19 @@ public class ActorRuntimeResource implements KarHttpConstants {
 				if (result instanceof TailCall) {
 					TailCall cr = (TailCall)result;
 					JsonObjectBuilder crb = factory.createObjectBuilder();
-					JsonArrayBuilder argb = factory.createArrayBuilder();
-					for (JsonValue arg: cr.args) {
-						argb.add(arg);
+					if (cr.service != null) {
+						crb.add("payload", cr.args[0].toString());
+						crb.add("serviceName", cr.service);
+						crb.add("method", "POST");
+					} else {
+						JsonArrayBuilder argb = factory.createArrayBuilder();
+						for (JsonValue arg: cr.args) {
+							argb.add(arg);
+						}
+						crb.add("payload", argb.build().toString());
+						crb.add("actorType", cr.actor.getType());
+						crb.add("actorId", cr.actor.getId());
 					}
-					crb.add("payload", argb.build().toString());
-					crb.add("actorType", cr.actor.getType());
-					crb.add("actorId", cr.actor.getId());
 					crb.add("path", "/"+cr.path);
 					if (cr.releaseLock) {
 						crb.add("releaseLock", "true");

@@ -52,12 +52,12 @@ var (
 	admin          sarama.ClusterAdmin // the cluster admin
 
 	// routing tables (partition 0 is reserved)
-	self              = info{Node: uuid.New().String()} // service, node, partition (initially unknown == 0)
-	service2nodes     map[string][]string               // the map from services to nodes providing these services
-	node2partition    = map[string]int32{}              // the map from nodes to their assigned partitions
-	session2NodeCache = new(sync.Map)                   // a cache of the mapping from sessions to their assigned Node
-	mu                = new(sync.RWMutex)               // a RW mutex held when rebalancing (W) and sending messages (R)
-	tick              = make(chan struct{})             // a channel closed at replaced at the end of rebalance
+	self              = info{Node: "node-" + uuid.New().String()} // service, node, partition (initially unknown == 0)
+	service2nodes     map[string][]string                         // the map from services to nodes providing these services
+	node2partition    = map[string]int32{}                        // the map from nodes to their assigned partitions
+	session2NodeCache = new(sync.Map)                             // a cache of the mapping from sessions to their assigned Node
+	mu                = new(sync.RWMutex)                         // a RW mutex held when rebalancing (W) and sending messages (R)
+	tick              = make(chan struct{})                       // a channel closed at replaced at the end of rebalance
 
 	head      int64                 // the next offset to read
 	processor func(Message)         // the function to invoke on each incoming message
@@ -126,8 +126,6 @@ func configureConsumer(config *Config) *sarama.Config {
 
 	// we decide how to assign partitions to nodes
 	conf.Consumer.Group.Rebalance.Strategy = new(strategy)
-
-	logger.Info("kafka: session.timeout.ms = %v", conf.Consumer.Group.Session.Timeout.Milliseconds())
 
 	return conf
 }
