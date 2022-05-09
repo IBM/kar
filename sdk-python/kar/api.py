@@ -946,7 +946,7 @@ def actor_runtime(actors, actor_server=None):
     # activate method if one is provided. This method is automatically invoked
     # by KAR to activate an actor instance.
     @actor_server.get(f"{kar_url}/" + "{type}/{id}")
-    def get(type: str, id: int, request: Request):
+    async def get(type: str, id: int, request: Request):
         # If actor is not present in the list of actor types then return an
         # error to signal that the actor has not been found.
         if type not in actor_name_to_type:
@@ -971,7 +971,11 @@ def actor_runtime(actors, actor_server=None):
 
         # Call an activate method if one is provided:
         try:
-            actor_instance.activate()
+            activate_method = getattr(actor_type, "activate")
+            if asyncio.iscoroutinefunction(activate_method):
+                await actor_instance.activate()
+            else:
+                actor_instance.activate()
             response = PlainTextResponse(status_code=201, content="activated")
         except AttributeError:
             response = PlainTextResponse(status_code=201, content="created")
