@@ -16,8 +16,10 @@
 # limitations under the License.
 #
 
+# change to metrics directory
+cd $(dirname "$0")
+
 NAMESPACE=prometheus
-SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 
 # Prometheus Server, Prometheus Operator, Grafana, K8s Dashboards
 helm uninstall prometheus -n $NAMESPACE  2>/dev/null
@@ -26,10 +28,9 @@ kubectl delete cm redis-dashboard-cm -n $NAMESPACE
 # Redis
 helm uninstall redis-exporter  -n $NAMESPACE  2>/dev/null
 # Kar (ServiceMonitor + Service)
-kubectl delete -f $SCRIPTDIR/metrics/kar-metrics.yaml -n $NAMESPACE
 
-kubectl delete -f $SCRIPTDIR/metrics/kafka-dash.yaml -n $NAMESPACE
+kubectl delete -f kafka-dash.yaml -n $NAMESPACE
 
-kubectl delete -f $SCRIPTDIR/metrics/kafka-exporter-service-monitor.yaml -n $NAMESPACE
+kubectl delete -f kafka-exporter-service-monitor.yaml -n $NAMESPACE
 
 kubectl delete ns $NAMESPACE

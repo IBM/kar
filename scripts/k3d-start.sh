@@ -27,6 +27,20 @@ K3D_REQUIRED_VERSION=v5
 set -ue
 #set -x
 
+# enable deployment of a variable number of worker nodes
+num_workers=2
+if [ $# -gt 0 ];
+then
+    regexp="^[0-9]$"
+    if ! [[ $1 =~ $regexp ]] || [[ $# -gt 1 ]];
+    then
+	echo "Usage: k3d-start.sh [num_workers]"
+	echo "    default num_workers = 2"
+	exit 1
+    fi
+    num_workers=$1
+fi
+
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 cd $SCRIPTDIR
@@ -37,6 +51,8 @@ if [[ $K3D_ACTUAL_VERSION != ${K3D_REQUIRED_VERSION}* ]]; then
     echo "K3d version problem: need compatible $K3D_REQUIRED_VERSION but found $K3D_ACTUAL_VERSION"
     exit 1
 fi
+
+echo "starting k3d with $num_workers worker nodes"
 
 # create registry container unless it already exists
 reg_name='registry'
@@ -62,15 +78,15 @@ printf "waiting for ingress-controller-nginx to be ready: "
 while [[ $(kubectl get po -l app.kubernetes.io/name=ingress-nginx -n kube-system -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do printf "." && sleep 5; done
 echo 
 
-# create 2 worker nodes and kar system node
-k3d node create workernode-1 --wait
-k3d node create workernode-2 --wait
+# create and label kar system node
 k3d node create karsystemnode --wait
-
-# label the new worker and kar system node
 kubectl label nodes k3d-karsystemnode-0 kar-type=system
-kubectl label nodes k3d-workernode-1-0 kar-type=worker
-kubectl label nodes k3d-workernode-2-0 kar-type=worker
+
+# create and label num_worker nodes
+for i in $(seq 1 $num_workers); do
+       k3d node create "workernode-$i" --wait
+       kubectl label nodes "k3d-workernode-$i-0" kar-type=worker
+done
 
 # tell em what they got
 kubectl cluster-info
