@@ -33,13 +33,14 @@ to embed the prometheus exporter into kafka to expose kafka metrics.
 
 Other Prometheus and Grafana components are deployed with:
 ```shell
-./scripts/metrics/start-kar-metrics.sh
+../scripts/metrics/start-kar-metrics.sh
 ```
 This script creates a new K3D node and a new namespace for these components.
 
 Application specific configuration can now be deployed, before or after the
-application itself is deployed.
-See for example `XXXXXXXXXXXXXXXX` for how this is done for the reefer application.
+application itself is deployed. See
+[Deploying Reefer Metrics](https://github.com/IBM/kar-apps/blob/main/reefer/docs/reefer-metrics.md)
+for details on the reefer application.
 
 
 ## Accessing raw KAR sidecar metrics
