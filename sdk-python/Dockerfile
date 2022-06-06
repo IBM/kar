@@ -15,10 +15,11 @@
 #
 
 ARG KAR_BASE=localhost:5000/kar/kar-sidecar
+ARG PYTHON_VERSION=3.8
 
 FROM $KAR_BASE as kar
 
-FROM python:3.8-alpine
+FROM python:${PYTHON_VERSION}-alpine
 
 # Setup the working directory:
 RUN mkdir /python_kar
