@@ -29,6 +29,7 @@ import (
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/cenkalti/backoff/v4"
 	"github.com/gomodule/redigo/redis"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
@@ -40,6 +41,12 @@ var (
 
 	// store configuration
 	sc *StoreConfig
+
+	requestDurationHistogram = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Name:    "kar_redis_request_durations_histogram_seconds",
+		Help:    "KAR Redis request duration distributions.",
+		Buckets: prometheus.ExponentialBuckets(0.001, 2, 12),
+	})
 )
 
 type StoreConfig struct {
@@ -78,6 +85,10 @@ type StoreConfig struct {
 	CA *x509.Certificate
 }
 
+func init() {
+	prometheus.MustRegister(requestDurationHistogram)
+}
+
 // send a command using a connection from the pool
 func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
 	opStart := time.Now()
@@ -114,6 +125,7 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 	last := time.Now()
 	elapsed := last.Sub(opStart)
 	connElapsed := last.Sub(start)
+	requestDurationHistogram.Observe(connElapsed.Seconds())
 	if elapsed > sc.LongOperation {
 		logger.Error("Slow Redis operation: %v total seconds (%v in conn.Do). Command was %v %v", elapsed.Seconds(), connElapsed.Seconds(), command, args[0])
 	}
