@@ -69,7 +69,7 @@ func (c *Connection) ConnectClient(appName string) {
 		Port:              redisPortInteger,
 	}
 
-	if err := store.Dial(sc); err != nil {
+	if err := store.Dial(c.ClientCtx, sc); err != nil {
 		log.Printf("failed to connect to Redis: %v", err)
 		os.Exit(1)
 	}
