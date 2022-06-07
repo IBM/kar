@@ -62,6 +62,7 @@ func (rq *reminderQueue) Pop() interface{} {
 
 func (rq *reminderQueue) add(ctx context.Context, b binding) (int, error) {
 	heap.Push(rq, &reminderEntry{r: b.(Reminder)})
+	activeRemindersGauge.Inc()
 	return http.StatusOK, nil
 }
 
@@ -70,6 +71,7 @@ func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {
 	for idx, elem := range *rq {
 		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			(*rq)[idx].cancelled = true
+			cancelledRemindersGuage.Inc()
 			found = append(found, (*rq)[idx].r)
 		}
 	}
@@ -89,7 +91,10 @@ func (rq *reminderQueue) find(actor Actor, ID string) []binding {
 func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {
 	for len(*rq) > 0 && (*rq)[0].r.TargetTime.Before(t) {
 		re := heap.Pop(rq).(*reminderEntry)
-		if !re.cancelled {
+		if re.cancelled {
+			cancelledRemindersGuage.Dec()
+		} else {
+			activeRemindersGauge.Dec()
 			return re.r, true
 		}
 	}
