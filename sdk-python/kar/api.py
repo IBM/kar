@@ -376,12 +376,10 @@ def async_call(service, endpoint, body):
 
 #
 # Class which represents the generic class of a KAR actor. This class is
-# used in two situations: server side and client side.
+# used on the server side to define a KAR actor.
 #
 #
-# 1. Server-side usage:
-# On the server side, the class is used as a base class for a user-created KAR
-# actor:
+# The class is used as a base class for a user-created KAR actor:
 #
 #   class MyFirstActor(KarActor):
 #       def __init__(self):
@@ -396,11 +394,10 @@ def async_call(service, endpoint, body):
 # actors.
 #
 #
-# 2. Client-side:
-# On the client side, the KarActor class is used to represent an client-side
+# On the client side, the KarActor class is used to represent a client-side
 # instance of the actor. To create a client-side instance:
 #
-#   client_side_actor = proxy_actor("MyFirstActor", 123)
+#   client_side_actor_instance = proxy_actor("MyFirstActor", 123)
 #
 # The `proxy_actor` is defined below.
 #
