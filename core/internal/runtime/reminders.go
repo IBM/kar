@@ -26,16 +26,26 @@ import (
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/IBM/kar/core/pkg/store"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-	activeReminders = &reminderQueue{}
-	arMutex         = &sync.Mutex{}
+	activeReminders      = &reminderQueue{}
+	arMutex              = &sync.Mutex{}
+	activeRemindersGauge = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "kar_actors_active_reminders_gauge",
+		Help: "KAR number of active reminders.",
+	})
+	cancelledRemindersGuage = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "kar_actors_cancelled_reminders_gauge",
+		Help: "KAR number of cancelled reminders whose deadline has not passed.",
+	})
 )
 
 func init() {
 	heap.Init(activeReminders)
 	pairs["reminders"] = pair{bindings: activeReminders, mu: arMutex}
+	prometheus.MustRegister(cancelledRemindersGuage)
 }
 
 // Reminder describes a time-triggered asynchronous invocation of a Path on an Actor

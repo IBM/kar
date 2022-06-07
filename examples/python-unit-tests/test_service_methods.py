@@ -291,5 +291,5 @@ async def shutdown(request):
     assert response.status_code == 200
 
 
-def test_shutdown():
+def teardown_module():
     asyncio.run(shutdown(call))
