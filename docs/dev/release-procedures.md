@@ -60,6 +60,24 @@ npm notice total files:   5
 ```
    + `npm publish --public`
 
+#### Python SDK
+
+1. Update `version` in `setup.py` file.
+2. Commit version bump to release-prep
+3. Prepare environment for package publishing (first time step only):
+```
+python3 -m pip install --upgrade build
+python3 -m pip install --upgrade twine
+```
+4. Build the PyPi package by running the following command inside the `sdk-python` subdirectory of KAR. The command will create a `dist` subdirectory with the package files.
+```
+python3 -m build
+```
+5. Publish the contents of the dist subdirectory to PyPi:
+```
+python3 -m twine upload --repository pypi dist/*
+```
+
 ### Publish Helm Chart
 
 1. Update version numbers in:
