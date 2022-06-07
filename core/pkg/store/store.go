@@ -89,9 +89,7 @@ func init() {
 	prometheus.MustRegister(requestDurationHistogram)
 }
 
-// send a command using a connection from the pool
-func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
-	opStart := time.Now()
+func getValidConnection(ctx context.Context, limit time.Duration) (redis.Conn, error) {
 	conn, err := pool.GetContext(ctx)
 	if err == context.Canceled {
 		return nil, err
@@ -99,8 +97,8 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 	if err != nil {
 		cancelled := false
 		b := backoff.NewExponentialBackOff()
-		if sc.RequestRetryLimit >= 0 {
-			b.MaxElapsedTime = sc.RequestRetryLimit
+		if limit >= 0 {
+			b.MaxElapsedTime = limit
 		}
 		err = backoff.Retry(func() error {
 			conn.Close()
@@ -115,6 +113,16 @@ func doRaw(ctx context.Context, command string, args ...interface{}) (reply inte
 		if cancelled {
 			return nil, context.Canceled
 		}
+	}
+	return conn, err
+}
+
+// send a command using a connection from the pool
+func doRaw(ctx context.Context, command string, args ...interface{}) (reply interface{}, err error) {
+	opStart := time.Now()
+	conn, err := getValidConnection(ctx, sc.RequestRetryLimit)
+	if err != nil {
+		return nil, err
 	}
 	defer conn.Close()
 	start := time.Now()
@@ -340,7 +348,7 @@ func ZRemRangeByScore(ctx context.Context, key string, min, max int64) (int, err
 }
 
 // Dial connects to Redis.
-func Dial(conf *StoreConfig) error {
+func Dial(ctx context.Context, conf *StoreConfig) error {
 	sc = conf // persist conf internally
 
 	redisOptions := []redis.DialOption{}
@@ -386,9 +394,15 @@ func Dial(conf *StoreConfig) error {
 			return err
 		},
 	}
-	conn := pool.Get()
-	defer conn.Close()
-	_, err := conn.Do("PING")
+	var limit time.Duration = sc.RequestRetryLimit
+	if limit <= 0 {
+		limit = 30 * time.Second
+	}
+	conn, err := getValidConnection(ctx, limit)
+	if err == nil {
+		defer conn.Close()
+		_, err = conn.Do("PING")
+	}
 	return err
 }
 

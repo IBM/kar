@@ -64,7 +64,7 @@ func main() {
 		Port:              31379,
 	}
 
-	if err := store.Dial(sc); err != nil {
+	if err := store.Dial(ctx, sc); err != nil {
 		log.Printf("failed to connect to Reddis: %v", err)
 		os.Exit(1)
 	}

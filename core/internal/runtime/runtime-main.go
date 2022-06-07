@@ -165,7 +165,7 @@ func Main() {
 	}
 	redisConfig.RequestRetryLimit = config.RequestRetryLimit
 
-	if err = store.Dial(&redisConfig); err != nil {
+	if err = store.Dial(ctx, &redisConfig); err != nil {
 		logger.Fatal("failed to connect to Redis: %v", err)
 	}
 	defer store.Close()
