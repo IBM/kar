@@ -22,9 +22,11 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/Shopify/sarama"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/google/uuid"
 )
 
@@ -141,7 +143,24 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 	// initialize producer client
 	producerClient, err = sarama.NewClient(conf.Brokers, configureProducer(conf))
 	if err != nil {
-		return nil, err
+		cancelled := false
+		b := backoff.NewExponentialBackOff()
+		b.MaxElapsedTime = 30 * time.Second
+		err = backoff.Retry(func() error {
+			producerClient, err = sarama.NewClient(conf.Brokers, configureProducer(conf))
+			if err == context.Canceled {
+				cancelled = true
+				return nil
+			} else {
+				return err
+			}
+		}, b)
+		if cancelled {
+			return nil, context.Canceled
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// initialize producer
