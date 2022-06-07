@@ -418,5 +418,5 @@ async def shutdown_server():
     assert response.content.decode("utf8") == "shutting down"
 
 
-def test_actor_shutdown_server():
+def teardown_module():
     asyncio.run(shutdown_server())
