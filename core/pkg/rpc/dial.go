@@ -143,21 +143,15 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 	// initialize producer client
 	producerClient, err = sarama.NewClient(conf.Brokers, configureProducer(conf))
 	if err != nil {
-		cancelled := false
 		b := backoff.NewExponentialBackOff()
 		b.MaxElapsedTime = 30 * time.Second
 		err = backoff.Retry(func() error {
 			producerClient, err = sarama.NewClient(conf.Brokers, configureProducer(conf))
-			if err == context.Canceled {
-				cancelled = true
-				return nil
-			} else {
-				return err
+			if err == ctx.Err() {
+				return backoff.Permanent(err)
 			}
+			return err
 		}, b)
-		if cancelled {
-			return nil, context.Canceled
-		}
 		if err != nil {
 			return nil, err
 		}

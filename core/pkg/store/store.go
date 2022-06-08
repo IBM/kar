@@ -95,7 +95,6 @@ func getValidConnection(ctx context.Context, limit time.Duration) (redis.Conn, e
 		return nil, err
 	}
 	if err != nil {
-		cancelled := false
 		b := backoff.NewExponentialBackOff()
 		if limit >= 0 {
 			b.MaxElapsedTime = limit
@@ -103,16 +102,11 @@ func getValidConnection(ctx context.Context, limit time.Duration) (redis.Conn, e
 		err = backoff.Retry(func() error {
 			conn.Close()
 			conn, err = pool.GetContext(ctx)
-			if err == context.Canceled {
-				cancelled = true
-				return nil
-			} else {
-				return err
+			if err == ctx.Err() {
+				return backoff.Permanent(err)
 			}
+			return err
 		}, b)
-		if cancelled {
-			return nil, context.Canceled
-		}
 	}
 	return conn, err
 }
