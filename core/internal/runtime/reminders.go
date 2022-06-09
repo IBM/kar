@@ -36,7 +36,7 @@ var (
 		Name: "kar_actors_active_reminders_gauge",
 		Help: "KAR number of active reminders.",
 	})
-	cancelledRemindersGuage = prometheus.NewGauge(prometheus.GaugeOpts{
+	cancelledRemindersGauge = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "kar_actors_cancelled_reminders_gauge",
 		Help: "KAR number of cancelled reminders whose deadline has not passed.",
 	})
@@ -45,7 +45,8 @@ var (
 func init() {
 	heap.Init(activeReminders)
 	pairs["reminders"] = pair{bindings: activeReminders, mu: arMutex}
-	prometheus.MustRegister(cancelledRemindersGuage)
+	prometheus.MustRegister(activeRemindersGauge)
+	prometheus.MustRegister(cancelledRemindersGauge)
 }
 
 // Reminder describes a time-triggered asynchronous invocation of a Path on an Actor
