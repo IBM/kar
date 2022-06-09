@@ -69,9 +69,10 @@ func (rq *reminderQueue) add(ctx context.Context, b binding) (int, error) {
 func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {
 	found := make([]binding, 0)
 	for idx, elem := range *rq {
-		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
+		if !elem.cancelled && elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			(*rq)[idx].cancelled = true
-			cancelledRemindersGuage.Inc()
+			activeRemindersGauge.Dec()
+			cancelledRemindersGauge.Inc()
 			found = append(found, (*rq)[idx].r)
 		}
 	}
@@ -81,7 +82,7 @@ func (rq *reminderQueue) cancel(actor Actor, ID string) []binding {
 func (rq *reminderQueue) find(actor Actor, ID string) []binding {
 	result := make([]binding, 0)
 	for _, elem := range *rq {
-		if elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) && !elem.cancelled {
+		if !elem.cancelled && elem.r.Actor == actor && (ID == "" || elem.r.ID == ID) {
 			result = append(result, elem.r)
 		}
 	}
@@ -92,7 +93,7 @@ func (rq *reminderQueue) nextReminderBefore(t time.Time) (Reminder, bool) {
 	for len(*rq) > 0 && (*rq)[0].r.TargetTime.Before(t) {
 		re := heap.Pop(rq).(*reminderEntry)
 		if re.cancelled {
-			cancelledRemindersGuage.Dec()
+			cancelledRemindersGauge.Dec()
 		} else {
 			activeRemindersGauge.Dec()
 			return re.r, true
