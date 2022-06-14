@@ -94,4 +94,4 @@ kctl create -f fluentd/collector-cm.yaml
 kctl create -f fluentd/collector.yaml
 kctl rollout status daemonset/fluentd-col 
 echo "EFK log stack deployed"
-echo "Use port-forward to access Kibana GUI: kubectl port-forward svc/kibana  5602:5601 --namespace=logging"
+echo "Use port-forward to access Kibana GUI: kubectl port-forward svc/kibana  5601:5601 --namespace=logging"
