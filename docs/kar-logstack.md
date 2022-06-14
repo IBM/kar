@@ -61,3 +61,7 @@ add a filter with `field=kubernetes.pod_name.keyword`, `operator=is one of`, sel
 ## Warning about storage
 
 By default Elastic Search will store all log data in its container and this storage will be in the root filesystem. Since it is unpleasant to fill root, if that much log data is expected look into configuring a volume mount for {{data-dir}} on a different filesystem.
+
+## Removing log stack
+
+`../scripts/logstack/stop-k3d-logstack.sh`
