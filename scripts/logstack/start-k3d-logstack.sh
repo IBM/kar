@@ -15,7 +15,19 @@
 #
 #!/bin/bash
 
+#start efk node if needed
+check=$(k3d node list | grep efk-master | awk '{print $1}')
+if [ -z $check ];
+then
+    echo "starting efk node"
+    k3d node create efk-master --wait
+    kubectl label nodes k3d-efk-master-0 efk-type=master
+fi
+
 NAMESPACE=logging
+
+# change to logging directory
+cd $(dirname "$0")
 
 nsStatus=$(kubectl get ns $NAMESPACE -o json 2>/dev/null | jq .status.phase -r)
 if [[ $nsStatus != "Active" ]]
@@ -38,11 +50,11 @@ fi
 # --------------------------------------------------------
 # deploy elasticsearch service
 #---------------------------------------------------------
-kctl create -f logging/elasticsearch/elasticsearch_svc.yaml
+kctl create -f elasticsearch/elasticsearch_svc.yaml
 #-----------------------------------------------------------------------------------------------------
 # use elasticsearch template to customize deployment properties like data dir, size of the ES data volume 
 #----------------------------------------------------------------------------------------------------
-sed < logging/elasticsearch/template/elasticsearch_statefulset.template.yaml -e "s|{{data-dir}}|$ES_DATA_DIR|g" -e "s|{{es-storage-size}}|$ES_STORAGE_SIZE|g" > /tmp/elasticsearch_statefulset.yaml
+sed < elasticsearch/template/elasticsearch_statefulset.template.yaml -e "s|{{data-dir}}|$ES_DATA_DIR|g" -e "s|{{es-storage-size}}|$ES_STORAGE_SIZE|g" > /tmp/elasticsearch_statefulset.yaml
 # -----------------------------------------------------------
 # ELASTICSEARCH
 # ----------------------------------------------------------
@@ -56,30 +68,30 @@ kctl rollout status sts/elasticsearch
 # ------------------------------
 # KIBANA
 # -----------------------------
-kctl create -f logging/kibana/kibana.yaml
+kctl create -f kibana/kibana.yaml
 kctl rollout status deployment/kibana 
 # ----------------------------------------------------------------------------------
 # Deploy fluentd aggregator config map. It contains fluentd aggregator configuration
 # ---------------------------------------------------------------------------------
-kctl create -f logging/fluentd/aggregator-cm.yaml
+kctl create -f fluentd/aggregator-cm.yaml
 # ----------------------------------------------
 # FLUENTD AGGREGATOR (deploys onlastic search master node)
 # ----------------------------------------------
-kctl create -f logging/fluentd/aggregator.yaml
+kctl create -f fluentd/aggregator.yaml
 kctl rollout status daemonset/fluentd-agg 
 # ----------------------------------------------
 # Deploy service in front of the aggregate so that
 # the collector can connect to it by name
 #----------------------------------------------
-kctl create -f logging/fluentd/fluentd-agg-svc.yaml
+kctl create -f fluentd/fluentd-agg-svc.yaml
 # --------------------------------------------------------------------------------
 # Deploy fluentd collector config map. It contains fluentd collector configuration
 # --------------------------------------------------------------------------------
-kctl create -f logging/fluentd/collector-cm.yaml
+kctl create -f fluentd/collector-cm.yaml
 # ---------------------------------------
 # FLUENTD COLLECTOR (one per worker node)
 # ---------------------------------------
-kctl create -f logging/fluentd/collector.yaml
+kctl create -f fluentd/collector.yaml
 kctl rollout status daemonset/fluentd-col 
 echo "EFK log stack deployed"
 echo "Use port-forward to access Kibana GUI: kubectl port-forward svc/kibana  5602:5601 --namespace=logging"

@@ -22,17 +22,20 @@ kctl() {
     kubectl --namespace "$NAMESPACE" "$@"
 }
 
+# change to logging directory
+cd $(dirname "$0")
+
 
 kctl delete -f /tmp/elasticsearch_statefulset.yaml
 
-kctl delete -f logging/kibana/kibana.yaml
+kctl delete -f kibana/kibana.yaml
 
-kctl delete -f logging/fluentd/aggregator-cm.yaml
+kctl delete -f fluentd/aggregator-cm.yaml
 
-kctl delete -f logging/fluentd/aggregator.yaml 2>/dev/null
+kctl delete -f fluentd/aggregator.yaml 2>/dev/null
 
-kctl delete -f logging/fluentd/collector-cm.yaml 
+kctl delete -f fluentd/collector-cm.yaml 
 
-kctl delete -f logging/fluentd/collector.yaml 2>/dev/null
+kctl delete -f fluentd/collector.yaml 2>/dev/null
 
 kubectl delete ns ${NAMESPACE}
