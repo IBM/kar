@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
@@ -106,12 +107,35 @@ func invokeServiceEndpoint(ctx context.Context, args []string) (exitCode int) {
 	return
 }
 
+
+
+type addrTuple_t struct {
+	Host string `json:"host"`
+	Port int `json:"port"`
+}
+
 func getInformation(ctx context.Context, args []string) (exitCode int) {
 	option := strings.ToLower(config.GetSystemComponent)
 	var str string
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
+		doCall := func(sidecar string) (addrTuple_t, error) {
+			bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", []byte("{\"command\": \"getRuntimeAddr\"}") )
+			if err != nil { return addrTuple_t{}, err }
+			var reply Reply
+			err = json.Unmarshal(bytes, &reply)
+			if err != nil { return addrTuple_t{}, err }
+			if reply.StatusCode != 200 {
+				err = fmt.Errorf("Status code of reply not OK: %v", reply.StatusCode)
+				return addrTuple_t{}, err
+			}
+			var addr = addrTuple_t {}
+			err = json.Unmarshal([]byte(reply.Payload), &addr)
+			if err != nil { return addrTuple_t{}, err }
+			return addr, err
+		}
+
 		karTopology := make(map[string]sidecarData)
 		topology, _ := rpc.GetTopology()
 		for node, services := range topology {
@@ -124,10 +148,21 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 			}
 		} else {
 			var sb strings.Builder
-			fmt.Fprint(&sb, "\nSidecar\n : Actors\n : Services")
+			fmt.Fprint(&sb, "\nSidecar : host : port \n : Actors\n : Services")
 			for sidecar, sidecarInfo := range karTopology {
-				fmt.Fprintf(&sb, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
-			}
+				fmt.Fprintf(&sb, "\n%v", sidecar)
+				addr, err := doCall(sidecar)
+				if err == nil {
+					fmt.Fprintf(&sb, " : %v : %v",
+						addr.Host, addr.Port)
+				} else {
+					fmt.Printf("error: %v", err)
+				}
+				if sidecar == rpc.GetNodeID() {
+					fmt.Fprintf(&sb, " (this sidecar)")
+				}
+				fmt.Fprintf(&sb, "\n : %v\n : %v", sidecarInfo.Actors, sidecarInfo.Services)
+							}
 			str, err = sb.String(), nil
 		}
 	case "actor", "actors":
