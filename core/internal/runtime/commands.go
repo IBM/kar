@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"os"
@@ -33,6 +32,7 @@ import (
 	"github.com/IBM/kar/core/pkg/rpc"
 	"github.com/IBM/kar/core/pkg/store"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 )
 
 type actorTuple_t struct {
@@ -81,8 +81,8 @@ var (
 	// (if so, then we're immune from breakpoints
 	isDebugger = false
 
-	debuggerAppHost = "127.0.0.1"
-	debuggerAppPort = config.AppPort
+	debugConns = map[string]*websocket.Conn {}
+	debugConnsLock = sync.Mutex{}
 
 	// list of debugger nodes
 	// (this way, when we pause/unpause, we can inform the debugger)
@@ -357,10 +357,10 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 		replyBytes, replyErr := unpause(info)
 		return replyBytes, replyErr
 	} else if msg["command"] == "registerDebugger" {
-		replyBytes, replyErr := registerDebugger(msg["debuggerId"])
+		replyBytes, replyErr := registerDebugger(msg["nodeId"])
 		return replyBytes, replyErr
 	} else if msg["command"] == "unregisterDebugger" {
-		replyBytes, replyErr:=unregisterDebugger(msg["debuggerId"])
+		replyBytes, replyErr:=unregisterDebugger(msg["nodeId"])
 		return replyBytes, replyErr
 	} else if msg["command"] == "notifyPause" {
 		notifyPause(msg) // starts a goroutine
@@ -1050,25 +1050,13 @@ func unregisterDebugger(node string) ([]byte, error) {
 
 func notifyPause(msg map[string]string) {
 	myBytes, _ := json.Marshal(msg)
-	debuggerUrl := fmt.Sprintf("http://%s:%d", debuggerAppHost,
-		debuggerAppPort)
-	go http.Post(debuggerUrl + "/notifyPause",
-		"application/json",
-		strings.NewReader(string(myBytes)),
-	)
-
+	sendAll(myBytes, "")
 }
 
 func notifyBreakpoint(msg map[string]string) {
 	fmt.Println("notifying breakpoint")
 	myBytes, _ := json.Marshal(msg)
-	debuggerUrl := fmt.Sprintf("http://%s:%d", debuggerAppHost,
-		debuggerAppPort)
-	go http.Post(debuggerUrl + "/notifyBreakpoint",
-		"application/json",
-		strings.NewReader(string(myBytes)),
-	)
-
+	sendAll(myBytes, "")
 }
 
 // activate an actor
