@@ -43,7 +43,13 @@ func tellHelper(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		}
 		err = TellService(ctx, ps.ByName("service"), ps.ByName("path"), ReadAll(r), string(m), r.Method)
 	} else {
-		err = TellActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r))
+		s := r.FormValue("session")
+		parts := strings.Split(s, ":")
+		parentID := ""
+		if len(parts) >= 2 {
+			parentID = parts[1]
+		}
+		err = TellActor(ctx, Actor{Type: ps.ByName("type"), ID: ps.ByName("id")}, ps.ByName("path"), ReadAll(r), parentID)
 	}
 	if err != nil {
 		if err == ctx.Err() {

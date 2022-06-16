@@ -272,12 +272,12 @@ func TellService(ctx context.Context, service, path, payload, header, method str
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Service{Name: service}, Method: serviceEndpoint}, defaultTimeout(), "", bytes)
 	}
 }
 
 // TellActor sends a message to an actor and does not wait for a reply
-func TellActor(ctx context.Context, actor Actor, path, payload string) error {
+func TellActor(ctx context.Context, actor Actor, path, payload string, parentID string) error {
 	msg := map[string]string{
 		"command": "tell", // post with no callback expected
 		"path":    path,
@@ -286,7 +286,7 @@ func TellActor(ctx context.Context, actor Actor, path, payload string) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: newFlowId()}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
 	}
 }
 
@@ -297,7 +297,7 @@ func DeleteActor(ctx context.Context, actor Actor) error {
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "deactivate"}, Method: actorEndpoint}, defaultTimeout(), bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "deactivate"}, Method: actorEndpoint}, defaultTimeout(), "", bytes)
 	}
 }
 
@@ -312,7 +312,7 @@ func LoadBinding(ctx context.Context, kind string, actor Actor, partition int32,
 	if err != nil {
 		return err
 	} else {
-		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, time.Time{}, bytes)
+		return rpc.Tell(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: "nonexclusive"}, Method: bindingEndpoint}, time.Time{}, "", bytes)
 	}
 }
 
@@ -892,7 +892,7 @@ func informPause(info actorTuple_t, bk breakpoint_t){
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we are paused
@@ -916,7 +916,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reply st
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we hit a breakpoint
@@ -1014,7 +1014,7 @@ func pauseAllSidecars(){
 	if err != nil { return }
 
 	doTell := func(sidecar string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	sidecars, _ := rpc.GetNodeIDs()
