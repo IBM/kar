@@ -510,9 +510,9 @@ func call(ctx context.Context, dest Destination, deadline time.Time, parentID st
 }
 
 // Call method and return immediately (result will be discarded)
-func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
+func tell(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
 	requestID := newRequestId()
-	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
+	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
 }
 
 // Call method and return a request id and a result channel
