@@ -145,7 +145,25 @@ function asyncCall (service, path, body) {
 
 function actorProxy (type, id) { return { kar: { type, id } } }
 
-const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'async' })
+//const actorTell = (actor, path, ...args) => post(`actor/${actor.kar.type}/${actor.kar.id}/call/${path}`, args, { 'Content-Type': 'application/kar+json', Pragma: 'async' })
+
+function actorTell (...args) {
+  const headers = { 'Content-Type': 'application/kar+json', Pragma: 'async' }
+  if (typeof args[1] === 'string') {
+    // tell (callee:Actor, path:string, ...args:any[]):Promise<any>;
+    const ta = args.shift()
+    const path = args.shift()
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}`, args, headers)
+  } else {
+    //  tell (from:Actor, callee:Actor, path:string, ...args:any[]):Promise<any>;
+    // this is used for visibility in debugging
+    const sa = args.shift()
+    const ta = args.shift()
+    const path = args.shift()
+    return postActor(`actor/${ta.kar.type}/${ta.kar.id}/call/${path}?session=${sa.kar.session}`, args, headers)
+  }
+}
+
 
 function actorCall (...args) {
   if (typeof args[1] === 'string') {

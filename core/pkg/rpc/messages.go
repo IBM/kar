@@ -74,6 +74,7 @@ type TellRequest struct {
 	Method    string    // target method
 	Sequence  int       // sequence number
 	ChildID   string
+	ParentID string //used for debugging
 }
 
 func (m TellRequest) requestID() string   { return m.RequestID }
@@ -125,7 +126,7 @@ func encode(topic string, partition int32, msg Message) *sarama.ProducerMessage 
 		}
 		encodeTarget(m.Target, meta)
 	case TellRequest:
-		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method, "Child": m.ChildID}
+		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method, "Child": m.ChildID, "Parent": m.ParentID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
