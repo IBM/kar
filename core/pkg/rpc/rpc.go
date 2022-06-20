@@ -32,6 +32,7 @@ type Config struct {
 	TLSSkipVerify      bool
 	TopicConfig        map[string]*string
 	SessionBusyTimeout time.Duration
+	Cancellation       bool
 }
 
 // Target of an invocation
