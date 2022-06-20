@@ -41,13 +41,13 @@ For developers that chose to work with kubernetes clusters in laptops or simple 
 KAR includes scripts to deploy an Elasticsearch/Fluentd/Kibana logging stack along with 
 any KAR application deployed in a K3D cluster.
 
-See XXXY
+See [KAR Logstack instruction](docs/kar-logstack.md)
 
 ## Local metrics stack
 
 Another possible development issue is dealing with performance problems. 
 The KAR application mesh transparently collects performance statistics on every actor method 
-(AND WEB SERVER ENDPOINT???) running in application microserices.
+and public webserver endpoint called from within the KAR application mesh.
 
 For developers that chose to work with kubernetes clusters in laptops or simple VM environments,
 KAR includes scripts to deploy a Prometheus/Grafana metrics stack to capture and
@@ -55,7 +55,7 @@ analyze these performance metrics for any KAR application deployed in a K3D clus
 Some customization of the metrics stack is required for new applications;
 the Reefer Container example application provides guidance in doing this.
 
-See XYYY
+See [KAR Metrics instruction](docs/kar-metrics.md)
 
 ## Fault tolerant design
 
