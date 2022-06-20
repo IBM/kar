@@ -131,6 +131,9 @@ var (
 	// RestBodyContentType specifies the content type of the request body
 	RestBodyContentType string
 
+	// Whether to cancel a pending call if the caller has failed
+	Cancellation bool
+
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
 	topicConfig                                                   = map[string]*string{"retention.ms": strptr("900000"), "segment.ms": strptr("300000")}
@@ -244,6 +247,7 @@ Available commands:
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 		flag.DurationVar(&ActorBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
 		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
+		flag.BoolVar(&Cancellation, "cancel", false, "Cancel a pending call if the caller has failed")
 
 	case GetCmd:
 		usage = "kar get [OPTIONS]"

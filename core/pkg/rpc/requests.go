@@ -24,6 +24,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
 	"github.com/google/uuid"
 )
@@ -421,6 +422,13 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 			logger.Warning(errMsg)
 			sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
 		}
+	} else if cr, ok := m.(CallRequest); ok && config.Cancellation && node2partition[cr.Caller] == 0 {
+		logger.Info("Cancelling call request %s from dead sidecar %s", m.requestID(), cr.Caller)
+		errMsg := fmt.Sprintf("caller node %v died before processing call request", cr.Caller)
+		if clearFlowOnRelease {
+			instance.ActiveFlow = releasedFlow
+		}
+		sendOrDie(ctx, Response{RequestID: m.requestID(), Deadline: m.deadline(), Node: cr.Caller, ErrMsg: errMsg, Value: nil})
 	} else {
 		dest, value, err := f(ctx, target, instance, m.requestID(), m.value()) // The call to the higher-level handler that does something useful....at last!!!
 		if instance.Activated && target.Flow != "nonexclusive" {
