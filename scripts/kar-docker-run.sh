@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Script to run a KAR component on Code Engine
+# Script to run a KAR component on docker
 
 set -e
 
@@ -26,11 +26,13 @@ ROOTDIR="$SCRIPTDIR/.."
 app=""
 image=""
 actors=""
+containerName=""
 scale=1
 service=""
 verbose="error"
 port="8080"
 runargs=""
+detach="true"
 
 help=""
 args=""
@@ -68,6 +70,10 @@ while [ -n "$1" ]; do
             shift;
             service="$1"
             ;;
+        -name)
+            shift;
+            containerName=$1
+            ;;
         -scale)
             shift;
             scale=$1
@@ -76,7 +82,10 @@ while [ -n "$1" ]; do
             shift;
             verbose="$1"
             ;;
-        --) parse=;;
+        --)
+            parse=
+            detach="false"
+            ;;
         *) args="$args '$1'";;
     esac
     shift
@@ -92,6 +101,7 @@ where [options] includes:
     -service <service>        invoke kar with -service <service>
     -port <port>              invoke kar with -app_port <port> (default 8080)
     -env KEY=VALUE            add the binding KEY=VALUE to the container's environment
+    -name <name>              give a specific name to the container
     -scale <N>                run N replicas of this component (default 1)
     -v <level>                invoke kar with -v <level>       (default error)
 EOF
@@ -117,14 +127,25 @@ if [ "$actors" != "" ]; then
     karargs="$karargs -actors $actors"
 fi
 
-runargs="$runargs --label kar.ibm.com/app=$app --network kar-bus --detach"
+runargs="$runargs --label kar.ibm.com/app=$app --network kar-bus"
+if [ "$detach" == "true" ]; then
+   runargs="$runargs --detach"
+fi
 runargs="$runargs --env KAFKA_BROKERS=kafka:9092 --env KAFKA_VERSION=2.8.1"
-runargs="$runargs --env REDIS_HOST=redis --env REDIS_PORT=6379 --env REDIS_USER=karmesh -env REDIS_PASSWORD=act0rstate"
+runargs="$runargs --env REDIS_HOST=redis --env REDIS_PORT=6379 --env REDIS_USER=karmesh --env REDIS_PASSWORD=act0rstate"
 runargs="$runargs --env KAR_APP=$app --env KAR_SIDECAR_IN_CONTAINER=true --env KAR_APP_PORT=$port"
 runargs="$runargs --env KAR_EXTRA_ARGS=\"$karargs\""
 
-echo docker run $runargs $image
+echo docker run $runargs $image $args
 
 for (( i = 0 ;  i < $scale ; i++)); do
-    eval docker run $runargs $image
+    if [ "$containerName" != "" ]; then
+        if [ $scale == 1 ]; then
+            eval docker run $runargs --name $containerName $image $args
+        else
+            eval docker run $runargs --name $containerName$i $image $args
+        fi
+    else
+        eval docker run $runargs $image $args
+    fi
 done
