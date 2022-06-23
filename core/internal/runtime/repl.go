@@ -139,7 +139,9 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 		karTopology := make(map[string]sidecarData)
 		topology, _ := rpc.GetTopology()
 		for node, services := range topology {
-			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+			addr, err := doCall(node)
+			if err != nil { addr = addrTuple_t {} }
+			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:], Host: addr.Host, Port: addr.Port}
 		}
 		if config.GetOutputStyle == "json" || config.GetOutputStyle == "application/json" {
 			m, err := json.Marshal(karTopology)
@@ -151,10 +153,10 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 			fmt.Fprint(&sb, "\nSidecar : host : port \n : Actors\n : Services")
 			for sidecar, sidecarInfo := range karTopology {
 				fmt.Fprintf(&sb, "\n%v", sidecar)
-				addr, err := doCall(sidecar)
+				//addr, err := doCall(sidecar)
 				if err == nil {
 					fmt.Fprintf(&sb, " : %v : %v",
-						addr.Host, addr.Port)
+						sidecarInfo.Host, sidecarInfo.Port)
 				} else {
 					fmt.Printf("error: %v", err)
 				}
@@ -162,7 +164,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 					fmt.Fprintf(&sb, " (this sidecar)")
 				}
 				fmt.Fprintf(&sb, "\n : %v\n : %v", sidecarInfo.Actors, sidecarInfo.Services)
-							}
+			}
 			str, err = sb.String(), nil
 		}
 	case "actor", "actors":
