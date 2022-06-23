@@ -49,6 +49,7 @@ type CallRequest struct {
 	Sequence  int       // sequence number
 	ChildID   string
 	ParentID  string
+	IsEdited bool // used for debugging
 }
 
 func (m CallRequest) requestID() string   { return m.RequestID }
@@ -75,6 +76,7 @@ type TellRequest struct {
 	Sequence  int       // sequence number
 	ChildID   string
 	ParentID string //used for debugging
+	IsEdited bool //used for debugging
 }
 
 func (m TellRequest) requestID() string   { return m.RequestID }
@@ -124,12 +126,14 @@ func encode(topic string, partition int32, msg Message) *sarama.ProducerMessage 
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
+		if m.IsEdited { meta["Edited"] = "1" }
 		encodeTarget(m.Target, meta)
 	case TellRequest:
 		meta = map[string]string{"Type": "Tell", "RequestID": m.RequestID, "Method": m.Method, "Child": m.ChildID, "Parent": m.ParentID}
 		if m.Sequence != 0 {
 			meta["Sequence"] = strconv.Itoa(m.Sequence)
 		}
+		if m.IsEdited { meta["Edited"] = "1" }
 		encodeTarget(m.Target, meta)
 	case Response:
 		meta = map[string]string{"Type": "Response", "RequestID": m.RequestID, "ErrMsg": m.ErrMsg}

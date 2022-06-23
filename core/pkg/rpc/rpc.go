@@ -126,6 +126,17 @@ func Tell(ctx context.Context, dest Destination, deadline time.Time, parentID st
 	return tell(ctx, dest, deadline, parentID, value)
 }
 
+// Call method, marking the request as edited (used in debugging)
+func CallEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	return callEdited(ctx, dest, deadline, parentID, value)
+}
+
+// Tell method, marking the request as edited (used in debugging)
+func TellEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
+	return tellEdited(ctx, dest, deadline, parentID, value)
+}
+
+
 // Call method and return a request id and a result channel
 func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	return async(ctx, dest, deadline, "", value)

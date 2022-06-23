@@ -138,4 +138,6 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 type sidecarData struct {
 	Actors   []string `json:"actors"`
 	Services []string `json:"services"`
+	Host string `json:"host"`
+	Port int `json:"port"`
 }
