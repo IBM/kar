@@ -473,6 +473,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	actor := Actor{Type: target.Name, ID: target.ID}
 	session := target.Flow + ":" + requestID
 	var reply []byte = nil
+	var debugReply []byte = nil
 	var err error = nil
 	var msg map[string]string
 
@@ -570,6 +571,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 					logger.Debug("%s failed to invoke %s: %v", command, msg["path"], err)
 				}
 			} else if replyStruct != nil {
+				debugReply, _ = json.Marshal(*replyStruct)
 				if command == "tell" {
 					// TELL: no waiting caller, so we have to inspect here and figure out if the method returned void, a result, a tail call, or an error
 					if replyStruct.StatusCode == http.StatusNoContent {
@@ -680,9 +682,14 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		isRequest: "response",
 	}) */
 
+	
+	if reply != nil {
+		debugReply = reply
+	}
+
 	if isBreak {
 		//fmt.Printf("Breakpoint %v hit!\n", bk)
-		informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(reply))
+		informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply))
 		switch bk.breakpointType {
 		case "actor":
 			pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
@@ -699,7 +706,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	}
 
 	// if we're paused, then wait
-	waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), string(reply), true)
+	waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), string(debugReply), true)
 
 	return dest, reply, err
 }
