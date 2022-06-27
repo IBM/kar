@@ -367,7 +367,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 					return
 				}
 				retMsg := map[string]interface{} {}
-				retMsg["id"] = msg["id"]
+				retMsg["commandId"] = msg["commandId"]
 				retMsg["command"] = "kar invoke"
 				retMsg["status"] = reply.StatusCode
 				if reply.StatusCode == http.StatusOK {
@@ -438,7 +438,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			}
 
 			retMsg := map[string]interface{} {}
-			retMsg["id"] = msg["id"]
+			retMsg["commandId"] = msg["commandId"]
 			retMsg["command"] = "kar rest"
 			retMsg["status"] = reply.StatusCode
 
@@ -464,7 +464,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			switch msg["subsystem"]{
 			case "sidecars", "sidecar":
 				retMsg := map[string]string {}
-				retMsg["id"] = msg["id"]
+				retMsg["commandId"] = msg["commandId"]
 				retMsg["command"] = "kar get"
 				retMsg["subsystem"] = "sidecars"
 				retMsg["sidecars"] = implGetSidecars()
@@ -482,7 +482,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 			case "actor", "actors":
 				retMsg := map[string]string {}
-				retMsg["id"] = msg["id"]
+				retMsg["commandId"] = msg["commandId"]
 				retMsg["command"] = "kar get"
 				retMsg["subsystem"] = "actors"
 
@@ -647,6 +647,7 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 	}
 	// assume no error at this point
 	msg["nodes"] = nodes
+	msg["commandId"] = bodyJson["commandId"]
 	msgBytes, err = json.Marshal(msg)
 	return msgBytes, err
 
