@@ -23,15 +23,20 @@ set -e
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 ROOTDIR="$SCRIPTDIR/.."
 
-version=$(kar version)
-case "$version" in
-  unofficial)
-    helmargs="$helmargs --set-string kar.injector.imageName=registry:5000/kar/kar-injector --set-string kar.injector.sidecarImageName=registry:5000/kar/kar-sidecar"
-    kartag="latest";;
-  *)
-    helmargs="$helmargs --set-string kar.injector.imageName=quay.io/ibm/kar-injector --set-string kar.injector.sidecarImageName=quay.io/ibm/kar-sidecar"
-    kartag="$version";;
-esac
+if command -v kar &> /dev/null; then
+    version=$(kar version)
+    case "$version" in
+        unofficial)
+            helmargs="$helmargs --set-string kar.injector.imageName=registry:5000/kar/kar-injector --set-string kar.injector.sidecarImageName=registry:5000/kar/kar-sidecar"
+            kartag="latest";;
+        *)
+            helmargs="$helmargs --set-string kar.injector.imageName=quay.io/ibm/kar-injector --set-string kar.injector.sidecarImageName=quay.io/ibm/kar-sidecar"
+            kartag="$version";;
+    esac
+else
+    echo "No kar cli in path. Unable to infer desired KAR version; must specify explicitly"
+    kartag=""
+fi
 
 help=""
 args=""
@@ -93,7 +98,9 @@ EOF
     exit 0
 fi
 
-helmargs="$helmargs --set-string kar.version=$kartag "
+if [ -n "$kartag" ]; then
+    helmargs="$helmargs --set-string kar.version=$kartag "
+fi
 
 cd $ROOTDIR
 
