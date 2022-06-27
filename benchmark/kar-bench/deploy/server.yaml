@@ -23,11 +23,9 @@ metadata:
     kar.ibm.com/actors: BenchActor
     kar.ibm.com/service: bench
 spec:
-  imagePullSecrets:
-  - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/kar/kar-bench-js-image
+    image: registry:5000/kar/kar-bench-js-image
     env:
     - name: KAR_EXTRA_ARGS
       value: -actors BenchActor

@@ -28,7 +28,7 @@ spec:
       - name: kar.ibm.com.image-pull
       containers:
       - name: client
-        image: localhost:5000/kar/kar-http-bench-js-image
+        image: registry:5000/kar/kar-http-bench-js-image
         env:
         - name: MAIN
           value: client.js
