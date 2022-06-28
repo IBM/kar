@@ -142,6 +142,12 @@ func Async(ctx context.Context, dest Destination, deadline time.Time, value []by
 	return async(ctx, dest, deadline, "", value)
 }
 
+// Call method with parent and return a request id and a result channel
+// (used in debugging)
+func AsyncParent(ctx context.Context, dest Destination, deadline time.Time, parentId string, value []byte) (string, <-chan Result, error) {
+	return async(ctx, dest, deadline, parentId, value)
+}
+
 // Reclaim resources associated with async request id
 func Reclaim(requestID string) {
 	reclaim(requestID)
