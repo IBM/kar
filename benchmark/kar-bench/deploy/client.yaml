@@ -25,13 +25,14 @@ spec:
     metadata:
       annotations:
         kar.ibm.com/app: kar-bench-js
+        kar.ibm.com/extraArgs: -placement_cache=true
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:
       - name: kar.ibm.com.image-pull
       containers:
       - name: client
-        image: localhost:5000/kar/kar-bench-js-image
+        image: registry:5000/kar/kar-bench-js-image
         env:
         - name: MAIN
           value: client.js

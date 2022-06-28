@@ -23,7 +23,7 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: producer
-    image: localhost:5000/kar/kar-kafka-bench
+    image: registry:5000/kar/kar-kafka-bench
     command: ["/kar/bin/producer"]
     env:
     - name: KAFKA_BROKERS
