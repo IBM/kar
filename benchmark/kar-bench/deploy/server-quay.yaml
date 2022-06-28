@@ -24,8 +24,6 @@ metadata:
     kar.ibm.com/service: bench
     kar.ibm.com/extraArgs: -kafka_topic_config=retention.ms=3600000
 spec:
-  imagePullSecrets:
-  - name: kar.ibm.com.image-pull
   containers:
   - name: server
     image: quay.io/ibm/kar-bench-js-image

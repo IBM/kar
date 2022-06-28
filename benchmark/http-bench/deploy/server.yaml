@@ -25,7 +25,7 @@ spec:
   - name: kar.ibm.com.image-pull
   containers:
   - name: server
-    image: localhost:5000/kar/kar-http-bench-js-image
+    image: registry:5000/kar/kar-http-bench-js-image
     ports:
     - containerPort: 9000
       protocol: TCP
