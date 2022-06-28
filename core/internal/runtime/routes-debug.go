@@ -89,6 +89,26 @@ type listPauseInfo_t struct {
 	NodeId string `json:"nodeId"`
 }
 
+type actor_t struct {
+	// stupid duplicated actor struct
+	// TODO: refactor
+	ActorType string `json:"actorType"`
+	ActorId string `json:"actorId"`
+}
+
+// begin indirect pause detection types
+type actorSentInfo_t struct {
+	Actor actor_t `json:"actor"`
+	ParentId string `json:"parentId"`
+}
+
+type listBusyInfo_t struct {
+	ActorHandling map[string]actor_t `json:"actorHandling"`
+	ActorSent map[string]actorSentInfo_t `json:"actorSent"`
+}
+
+// end indirect pause detection types
+
 func debugServe(debugConn *websocket.Conn, debuggerId string){
 	sendErrorBytes := func(err error, cmd string) error {
 		errorMap := map[string]string {
@@ -300,6 +320,73 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			retMsg := map[string]interface{} {}
 			retMsg["actorsList"] = actorsList
 			retMsg["command"] = "listPausedActors"
+
+			retBytes, err := json.Marshal(retMsg)
+
+			if err != nil {
+				err = sendErrorBytes(err, cmd)
+				if err != nil { return }
+				continue
+			}
+			err = sendAll(retBytes, debuggerId)
+			if err != nil {
+				return
+			}
+		case "listBusyActors":
+			doCallMsg := map[string]string {
+				"command": "listBusyActors",
+			}
+			var doCallMsgBytes []byte
+			doCallMsgBytes, _ = json.Marshal(doCallMsg)
+
+			var busyInfo = listBusyInfo_t {}
+			doCall := func(sidecar string) error {
+				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
+				if err != nil { return err }
+				var reply Reply
+				err = json.Unmarshal(bytes, &reply)
+				if err != nil { return err }
+				if reply.StatusCode != 200 {
+					err = fmt.Errorf("Status code of reply not OK: %v", reply.StatusCode)
+					return err
+				}
+				var payload = listBusyInfo_t {}
+				err = json.Unmarshal([]byte(reply.Payload), &payload)
+				if err != nil { return err }
+
+				for req, actor := range payload.ActorHandling {
+					busyInfo.ActorHandling[req]=actor
+				}
+
+				for req, sentInfo := range payload.ActorSent {
+					busyInfo.ActorSent[req]=sentInfo
+				}
+
+				return nil
+			}
+
+			var err error
+
+			sidecars, _ := rpc.GetNodeIDs()
+			successful := false
+			for _, sidecar := range sidecars {
+				if /*sidecar != rpc.GetNodeID()*/ true {
+					// TODO: parallelize rpcs
+
+					err = doCall(sidecar)
+					if err == nil { successful = true }
+				}
+			}
+
+			if !successful {
+				err = sendErrorBytes(err, cmd)
+				if err != nil { return }
+				continue
+			}
+
+			retMsg := map[string]interface{} {}
+			retMsg["busyInfo"] = busyInfo
+			retMsg["command"] = "listBusyActors"
 
 			retBytes, err := json.Marshal(retMsg)
 
