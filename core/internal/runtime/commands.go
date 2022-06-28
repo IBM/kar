@@ -108,9 +108,15 @@ var (
 	debuggersMap = map[string]bool{}
 	debuggersMapLock = sync.RWMutex{}
 
-	// debugging the debugger
 	waitingActors = map[actorTuple_t]waitInfo_t{}
 	waitingActorsLock = sync.RWMutex{}
+
+	// an actor is busy if it is in the middle of calling another
+	busyInfo = listBusyInfo_t {
+		ActorHandling: map[string]actor_t{},
+		ActorSent: map[string]actorSentInfo_t{},
+	}
+	busyInfoLock = sync.RWMutex{}
 )
 
 const (
@@ -206,11 +212,44 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 		"command": "call",
 		"path":    path,
 		"payload": payload}
+
 	bytes, err := json.Marshal(msg)
 	if err != nil {
 		return nil, err
 	} else {
-		bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
+		//bytes, err = rpc.Call(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
+
+		// very ugly! reimplement rpc.Call in order to get the request id
+		// this is necessary if we want to view indirect pauses in the debugger
+		requestID, ch, err := rpc.AsyncParent(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
+		if err != nil {
+			return nil, err
+		}
+		defer requests.Delete(requestID)
+
+		busyInfoLock.Lock()
+		busyInfo.ActorSent[requestID] = actorSentInfo_t {
+			Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
+			ParentId: parentID,
+		}
+		busyInfoLock.Unlock()
+
+		deleteSent := func() {
+			busyInfoLock.Lock()
+			delete(busyInfo.ActorSent, requestID)
+			busyInfoLock.Unlock()
+		}
+		defer deleteSent()
+
+		var bytes []byte
+		select {
+		case result := <-ch:
+			bytes = result.Value
+			err = result.Err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -410,6 +449,9 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 	} else if msg["command"] == "listPausedActors" {
 		replyBytes, replyErr = listPausedActors()
 		return replyBytes, replyErr
+	} else if msg["command"] == "listBusyActors" {
+		replyBytes, replyErr = listBusyActors()
+		return replyBytes, replyErr
 	} else {
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil
@@ -481,6 +523,17 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	if err != nil {
 		return nil, nil, err
 	}
+
+	busyInfoLock.Lock()
+	busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
+	busyInfoLock.Unlock()
+
+	deleteHandling := func() {
+		busyInfoLock.Lock()
+		delete(busyInfo.ActorHandling, requestID)
+		busyInfoLock.Unlock()
+	}
+	defer deleteHandling()
 
 	bkActorId := target.ID
 	bkActorType := target.Name
@@ -1196,6 +1249,16 @@ func listPausedActors() ([]byte, error) {
 	waitBytes, err := json.Marshal(actorsList)
 	if err != nil { return nil, err }
 	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json", Payload: string(waitBytes) }
+	return json.Marshal(reply)
+}
+
+func listBusyActors() ([]byte, error) {
+	busyInfoLock.RLock()
+	defer busyInfoLock.RUnlock()
+
+	busyBytes, err := json.Marshal(busyInfo)
+	if err != nil { return nil, err }
+	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json", Payload: string(busyBytes) }
 	return json.Marshal(reply)
 }
 
