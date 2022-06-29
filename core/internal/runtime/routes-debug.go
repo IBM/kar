@@ -339,7 +339,9 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			var doCallMsgBytes []byte
 			doCallMsgBytes, _ = json.Marshal(doCallMsg)
 
-			var busyInfo = listBusyInfo_t {}
+			var myBusyInfo = listBusyInfo_t {}
+			myBusyInfo.ActorHandling = map[string]actor_t {}
+			myBusyInfo.ActorSent = map[string]actorSentInfo_t {}
 			doCall := func(sidecar string) error {
 				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
 				if err != nil { return err }
@@ -355,11 +357,11 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				if err != nil { return err }
 
 				for req, actor := range payload.ActorHandling {
-					busyInfo.ActorHandling[req]=actor
+					myBusyInfo.ActorHandling[req]=actor
 				}
 
 				for req, sentInfo := range payload.ActorSent {
-					busyInfo.ActorSent[req]=sentInfo
+					myBusyInfo.ActorSent[req]=sentInfo
 				}
 
 				return nil
@@ -380,13 +382,16 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 			if !successful {
 				err = sendErrorBytes(err, cmd)
-				if err != nil { return }
+				if err != nil {
+					return
+				}
 				continue
 			}
 
 			retMsg := map[string]interface{} {}
-			retMsg["busyInfo"] = busyInfo
+			retMsg["busyInfo"] = myBusyInfo
 			retMsg["command"] = "listBusyActors"
+			retMsg["commandId"] = msg["commandId"]
 
 			retBytes, err := json.Marshal(retMsg)
 
