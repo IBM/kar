@@ -53,6 +53,7 @@ type breakpointAttrs_t struct {
 type breakpoint_t struct {
 	id string
 	breakpointType string //"actor", "node", "global"
+	deleteOnHit bool
 	attrs breakpointAttrs_t
 }
 
@@ -231,6 +232,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 		busyInfo.ActorSent[requestID] = actorSentInfo_t {
 			Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
 			ParentId: parentID,
+			RequestValue: string(bytes),
 		}
 		busyInfoLock.Unlock()
 
@@ -899,6 +901,9 @@ func setBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
 		breakpointType: msg["breakpointType"],
 		attrs: attrs,
 	}
+	if msg["deleteOnHit"] == "true" {
+		breakpoint.deleteOnHit = true
+	}
 
 	_, alreadyExists := breakpointsByAttrs[attrs]
 	if alreadyExists { goto doReply }
@@ -1320,12 +1325,41 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 func checkBreakpoint(attrs breakpointAttrs_t) (bool, breakpoint_t) {
 	//fmt.Printf("Checking breakpoint %v\n", attrs)
 	//fmt.Printf("\tCurrent breakpoints: %v\n", breakpointsByAttrs)
+	breakpointsLock.Lock()
+	defer breakpointsLock.Unlock()
+
 	bk, ok := breakpointsByAttrs[attrs]
-	if ok { return true, bk }
+	
+	if ok {
+		if bk.deleteOnHit {
+			go func() {
+				retBytes, _ := implUnsetBreakpoint(map[string]string {
+					"breakpointId": bk.id,
+				})
+				sendAll(retBytes, "")
+			}()
+			//delete(breakpointsByAttrs, attrs)
+			//delete(breakpoints, bk.id)
+		}
+		return true, bk
+	}
+
 	newAttrs := attrs
 	newAttrs.actorId = "" //check for wildcards on actorId
 	bk, ok = breakpointsByAttrs[newAttrs]
-	if ok { return true, bk }
+	if ok {
+		if bk.deleteOnHit {
+			go func() {
+				retBytes, _ := implUnsetBreakpoint(map[string]string {
+					"breakpointId": bk.id,
+				})
+				sendAll(retBytes, "")
+			}()
+			//delete(breakpointsByAttrs, attrs)
+			//delete(breakpoints, bk.id)
+		}
+		return true, bk
+	}
 	return false, breakpoint_t {}
 }
 
