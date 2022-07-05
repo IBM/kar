@@ -228,20 +228,22 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 		}
 		defer requests.Delete(requestID)
 
-		busyInfoLock.Lock()
-		busyInfo.ActorSent[requestID] = actorSentInfo_t {
-			Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
-			ParentId: parentID,
-			RequestValue: string(bytes),
-		}
-		busyInfoLock.Unlock()
-
-		deleteSent := func() {
+		if config.IsDebugMode {
 			busyInfoLock.Lock()
-			delete(busyInfo.ActorSent, requestID)
+			busyInfo.ActorSent[requestID] = actorSentInfo_t {
+				Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
+				ParentId: parentID,
+				RequestValue: string(bytes),
+			}
 			busyInfoLock.Unlock()
+
+			deleteSent := func() {
+				busyInfoLock.Lock()
+				delete(busyInfo.ActorSent, requestID)
+				busyInfoLock.Unlock()
+			}
+			defer deleteSent()
 		}
-		defer deleteSent()
 
 		var bytes []byte
 		select {
@@ -526,56 +528,60 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		return nil, nil, err
 	}
 
-	busyInfoLock.Lock()
-	busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
-	busyInfoLock.Unlock()
-
-	deleteHandling := func() {
+	var bkActorId, bkActorType, bkPath string
+	if config.IsDebugMode {
 		busyInfoLock.Lock()
-		delete(busyInfo.ActorHandling, requestID)
+		busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
 		busyInfoLock.Unlock()
-	}
-	defer deleteHandling()
 
-	bkActorId := target.ID
-	bkActorType := target.Name
-	bkPath := msg["path"]
-
-	isBreak, bk := checkBreakpoint(breakpointAttrs_t {
-		actorId: bkActorId,
-		actorType: bkActorType,
-		path: bkPath,
-		isRequest: "request",
-	})
-
-	myActor := actorTuple_t { actorId: target.ID, actorType: target.Name }
-
-	if isBreak {
-		//fmt.Printf("Breakpoint %v hit!\n", bk)
-		informBreakpoint(myActor, requestID, bk, string(value), "")
-		switch bk.breakpointType {
-		case "actor":
-			pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
-		case "node":
-			pauseNode(bk)
-		case "global":
-			pauseNode(bk)
-			pauseAllSidecars(bk)
-		case "suicide":
-			cancel9()
-			for true {}
+		deleteHandling := func() {
+			busyInfoLock.Lock()
+			delete(busyInfo.ActorHandling, requestID)
+			busyInfoLock.Unlock()
 		}
-	}
+		defer deleteHandling()
+	
 
-	isNodePausedLock.Lock()
-	_, ok := immuneFromNodePaused[myActor]
-	if isNodePaused && !ok {
-		pause(myActor, nodePausedBk)
-	}
-	isNodePausedLock.Unlock()
+		bkActorId = target.ID
+		bkActorType = target.Name
+		bkPath = msg["path"]
 
-	// if we're paused, then wait
-	waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), "", false)
+		isBreak, bk := checkBreakpoint(breakpointAttrs_t {
+			actorId: bkActorId,
+			actorType: bkActorType,
+			path: bkPath,
+			isRequest: "request",
+		})
+
+		myActor := actorTuple_t { actorId: target.ID, actorType: target.Name }
+
+		if isBreak {
+			//fmt.Printf("Breakpoint %v hit!\n", bk)
+			informBreakpoint(myActor, requestID, bk, string(value), "")
+			switch bk.breakpointType {
+			case "actor":
+				pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
+			case "node":
+				pauseNode(bk)
+			case "global":
+				pauseNode(bk)
+				pauseAllSidecars(bk)
+			case "suicide":
+				cancel9()
+				for true {}
+			}
+		}
+
+		isNodePausedLock.Lock()
+		_, ok := immuneFromNodePaused[myActor]
+		if isNodePaused && !ok {
+			pause(myActor, nodePausedBk)
+		}
+		isNodePausedLock.Unlock()
+
+		// if we're paused, then wait
+		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), "", false)
+	}
 
 	if target.Flow != instance.ActiveFlow {
 		logger.Error("Flow violation: mismatch between target %v and instance %v at entry", target, instance)
@@ -722,46 +728,48 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		logger.Error("Flow violation: mismatch between target %v and instance %v at exit", target, instance)
 	}
 
-	// break on response breakpoints
-	isBreak, bk = checkBreakpoint(breakpointAttrs_t {
-		actorId: bkActorId,
-		actorType: bkActorType,
-		path: bkPath,
-		isRequest: "response",
-	})
+	if config.IsDebugMode {
+		// break on response breakpoints
+		isBreak, bk := checkBreakpoint(breakpointAttrs_t {
+			actorId: bkActorId,
+			actorType: bkActorType,
+			path: bkPath,
+			isRequest: "response",
+		})
 
-	/* isBreak, bk = checkBreakpoint(breakpointAttrs_t {
-		actorId: target.ID,
-		actorType: target.Name,
-		path: msg["path"],
-		isRequest: "response",
-	}) */
+		/* isBreak, bk = checkBreakpoint(breakpointAttrs_t {
+			actorId: target.ID,
+			actorType: target.Name,
+			path: msg["path"],
+			isRequest: "response",
+		}) */
 
-	
-	if reply != nil {
-		debugReply = reply
-	}
-
-	if isBreak {
-		//fmt.Printf("Breakpoint %v hit!\n", bk)
-		informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply))
-		switch bk.breakpointType {
-		case "actor":
-			pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
-		case "node":
-			pause(actorTuple_t { actorId: "", actorType: ""}, bk)
-		case "global":
-			pause(actorTuple_t { actorId: "", actorType: ""}, bk)
-			pauseAllSidecars(bk)
-		case "suicide":
-			cancel9()
-			for true {}
-
+		
+		if reply != nil {
+			debugReply = reply
 		}
-	}
 
-	// if we're paused, then wait
-	waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), string(debugReply), true)
+		if isBreak {
+			//fmt.Printf("Breakpoint %v hit!\n", bk)
+			informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply))
+			switch bk.breakpointType {
+			case "actor":
+				pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
+			case "node":
+				pause(actorTuple_t { actorId: "", actorType: ""}, bk)
+			case "global":
+				pause(actorTuple_t { actorId: "", actorType: ""}, bk)
+				pauseAllSidecars(bk)
+			case "suicide":
+				cancel9()
+				for true {}
+
+			}
+		}
+
+		// if we're paused, then wait
+		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), string(debugReply), true)
+	}
 
 	return dest, reply, err
 }
