@@ -100,6 +100,7 @@ type actor_t struct {
 type actorSentInfo_t struct {
 	Actor actor_t `json:"actor"`
 	ParentId string `json:"parentId"`
+	RequestValue string `json:"requestValue"`
 }
 
 type listBusyInfo_t struct {
@@ -689,6 +690,7 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 		"isCaller": mapget(bodyJson, "isCaller", "caller"),
 		"isRequest": mapget(bodyJson, "isRequest", "request"),
 		"srcNodeId": rpc.GetNodeID(),
+		"deleteOnHit": bodyJson["deleteOnHit"],
 		//"nodes": []string{},
 	}
 	node, ok = bodyJson["node"]
@@ -748,6 +750,7 @@ errorEncountered:
 }
 
 func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
+	fmt.Println("About to impl unset breakpoint.")
 	var err error
 
 	breakpointId, ok := bodyJson["breakpointId"]
@@ -797,6 +800,8 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 			if err == nil {
 				successful = true
 				nodes = append(nodes, sidecar)
+			} else {
+				fmt.Printf("impl breakpoint error: %v\n", err)
 			}
 		}
 		if !successful { return nil, err }
@@ -805,6 +810,7 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 		if err != nil { return nil, err }
 		nodes = append(nodes, node)
 	}
+	fmt.Println("Successfully impled unset breakpoint.")
 	// assume no error at this point
 	msg["nodes"] = nodes
 	msgBytes, err = json.Marshal(msg)
