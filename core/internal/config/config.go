@@ -131,6 +131,9 @@ var (
 	// RestBodyContentType specifies the content type of the request body
 	RestBodyContentType string
 
+	// are we running in debug mode?
+	IsDebugMode bool
+
 	// temporary variables to parse command line options
 	kafkaBrokers, verbosity, configDir, actorTypes, redisCABase64 string
 	topicConfig                                                   = map[string]*string{"retention.ms": strptr("900000"), "segment.ms": strptr("300000")}
@@ -151,6 +154,7 @@ func globalOptions(f *flag.FlagSet) {
 	f.StringVar(&KafkaConfig.Password, "kafka_password", "", "The SASL password if any")
 	f.StringVar(&KafkaConfig.Version, "kafka_version", "", "Kafka cluster version")
 	f.BoolVar(&KafkaConfig.TLSSkipVerify, "kafka_tls_skip_verify", false, "Skip server name verification for Kafka when connecting over TLS")
+	f.BoolVar(&IsDebugMode, "debug", false, "Allow debugging (slower)")
 	f.Func("kafka_topic_config", "Kafka topic config: k1=v1,k2=v2,...", func(arg string) error {
 		for _, x := range strings.Split(arg, ",") {
 			kv := strings.Split(x, "=")
