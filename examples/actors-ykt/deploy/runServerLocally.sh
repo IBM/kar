@@ -23,4 +23,4 @@ KAR_VERBOSE=${KAR_VERBOSE:="info"}
 KAR_ACTOR_REMINDER_INTERVAL=${KAR_ACTOR_REMINDER_INTERVAL:="100ms"}
 KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
 
-kar run -v $KAR_VERBOSE -actor_reminder_interval $KAR_ACTOR_REMINDER_INTERVAL -app ykt -actors Company,Site,Office,Researcher $KAR_EXTRA_ARGS node $CODEDIR/ykt.js
+kar run -debug -v $KAR_VERBOSE -actor_reminder_interval $KAR_ACTOR_REMINDER_INTERVAL -app ykt -actors Company,Site,Office,Researcher $KAR_EXTRA_ARGS node $CODEDIR/ykt.js

@@ -1210,8 +1210,8 @@ func pauseAllSidecars(bk breakpoint_t){
 // register a node as a debugger
 
 func registerDebugger(node string) ([]byte, error) {
-	debuggersMapLock.RLock()
-	defer debuggersMapLock.RUnlock()
+	debuggersMapLock.Lock()
+	defer debuggersMapLock.Unlock()
 	debuggersMap[node] = true
 
 	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
@@ -1219,8 +1219,8 @@ func registerDebugger(node string) ([]byte, error) {
 }
 
 func unregisterDebugger(node string) ([]byte, error) {
-	debuggersMapLock.RLock()
-	defer debuggersMapLock.RUnlock()
+	debuggersMapLock.Lock()
+	defer debuggersMapLock.Unlock()
 	delete(debuggersMap, node)
 
 	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
