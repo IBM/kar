@@ -557,7 +557,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 
 		if isBreak {
 			//fmt.Printf("Breakpoint %v hit!\n", bk)
-			informBreakpoint(myActor, requestID, bk, string(value), "")
+			informBreakpoint(myActor, requestID, bk, string(value), "", "request")
 			switch bk.breakpointType {
 			case "actor":
 				pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
@@ -757,7 +757,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 
 		if isBreak {
 			//fmt.Printf("Breakpoint %v hit!\n", bk)
-			informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply))
+			informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply), "response")
 			switch bk.breakpointType {
 			case "actor":
 				pause(actorTuple_t { actorId: target.ID, actorType: target.Name }, bk)
@@ -1076,7 +1076,7 @@ func informPause(info actorTuple_t, bk breakpoint_t, reqId string, reqVal string
 	debuggersMapLock.RUnlock()
 }
 
-func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal string, respVal string){
+func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal string, respVal string, isResponse string){
 	var msg = map[string]string {
 		"command": "notifyBreakpoint",
 		"actorId": info.actorId,
@@ -1086,6 +1086,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 		"requestId": reqId,
 		"requestValue": reqVal,
 		"responseValue": respVal,
+		"isResponse": isResponse,
 	}
 	msgBytes, _ := json.Marshal(msg)
 
