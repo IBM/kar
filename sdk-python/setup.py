@@ -23,7 +23,7 @@ setup(
         'httpx[http2]', 'aiohttp>=3.8.0', 'asyncio>=3.4.3', 'pytest>=6.2.3',
         'pytest-asyncio', 'requests>=2.27.1'
     ],
-    version="1.2.1",
+    version="1.3.4",
     python_requires='>=3.6',
     description='KAR Python SDK.',
     license='Apache 2.0',
