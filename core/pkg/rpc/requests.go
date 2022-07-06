@@ -510,9 +510,9 @@ func call(ctx context.Context, dest Destination, deadline time.Time, parentID st
 }
 
 // Call method and return immediately (result will be discarded)
-func tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
+func tell(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
 	requestID := newRequestId()
-	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value})
+	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
 }
 
 // Call method and return a request id and a result channel
@@ -521,6 +521,37 @@ func async(ctx context.Context, dest Destination, deadline time.Time, parentID s
 	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
 	requests.Store(requestID, ch)
 	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID})
+	if err != nil {
+		requests.Delete(requestID)
+		return "", nil, err
+	}
+	return requestID, ch, nil
+}
+
+func callEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	requestID, ch, err := asyncEdited(ctx, dest, deadline, parentID, value)
+	if err != nil {
+		return nil, err
+	}
+	defer requests.Delete(requestID)
+	select {
+	case result := <-ch:
+		return result.Value, result.Err
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+func tellEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
+	requestID := newRequestId()
+	return Send(ctx, TellRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID, IsEdited: true})
+}
+
+func asyncEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) (string, <-chan Result, error) {
+	requestID := newRequestId()
+	ch := make(chan Result, 1) // capacity one to be able to store result before accepting it
+	requests.Store(requestID, ch)
+	err := Send(ctx, CallRequest{RequestID: requestID, Target: dest.Target, Method: dest.Method, Deadline: deadline, Value: value, ParentID: parentID, IsEdited: true})
 	if err != nil {
 		requests.Delete(requestID)
 		return "", nil, err

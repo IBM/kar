@@ -51,6 +51,8 @@ var (
 	ctx, cancel   = context.WithCancel(ctx9)                 // cooperative: wait for subprocess
 	wg            = &sync.WaitGroup{}                        // wait for kafka consumer and http server to stop processing requests
 	wg9           = &sync.WaitGroup{}                        // wait for signal handler
+
+	runtimePortInt int
 )
 
 // server implements the HTTP server
@@ -112,6 +114,16 @@ func server(listener net.Listener) http.Server {
 	router.DELETE(base+"/event/:topic", routeImplDeleteTopic)
 	router.PUT(base+"/event/:topic", routeImplCreateTopic)
 
+	// debugger
+	router.GET(base+"/debug/register", routeImplRegisterDebugger)
+	router.POST(base+"/debug/register", routeImplRegisterDebugger)
+	router.PUT(base+"/debug/register", routeImplRegisterDebugger)
+	/*router.POST(base+"/debug/breakpoint", routeImplSetBreakpoint)
+	router.DELETE(base+"/debug/breakpoint", routeImplUnsetBreakpoint)
+	router.DELETE(base+"/debug/unregister", routeImplUnregisterDebugger)
+	router.POST(base+"/debug/pause", routeImplPause)
+	router.DELETE(base+"/debug/pause", routeImplUnpause)*/
+
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
 
@@ -145,6 +157,7 @@ func Main() {
 
 	var listenHost string
 	if config.KubernetesMode {
+		fmt.Println("Kubernetes mode.")
 		listenHost = fmt.Sprintf(":%d", config.RuntimePort)
 	} else {
 		listenHost = fmt.Sprintf("127.0.0.1:%d", config.RuntimePort)
@@ -235,7 +248,8 @@ func Main() {
 			CloseIdleConnections()
 		}()
 
-		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
+		runtimePortInt = listener.Addr().(*net.TCPAddr).Port
+		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", runtimePortInt)
 		appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
 		requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestRetryLimit.Milliseconds())
 		logger.Info("%s %s", runtimePort, appPort)

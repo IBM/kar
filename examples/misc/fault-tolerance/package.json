@@ -6,7 +6,11 @@
   },
   "dependencies": {
     "express": "^4.17.2",
+<<<<<<< HEAD
     "kar-sdk": "^1.3.4",
+=======
+    "kar-sdk": "file:.yalc/kar-sdk",
+>>>>>>> af08442847ba35d36cb6faf9e44fee63a26af523
     "node-fetch": "^2.6.7"
   },
   "devDependencies": {
