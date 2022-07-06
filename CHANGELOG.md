@@ -16,6 +16,17 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+
+# KAR 1.3.4 - 2022-07-05
++ Upgrade kind from 0.12.0 to 0.14.0 (#333)
++ Reenable cancellation as an option (#331)
++ Improve documentation for logging and metrics
++ Add documentation for Python SDK. (#325)
++ Tolerate transient failures to connect to Kafka and Redis during startup
++ Add metrics for redis request time and active/canceled reminders (#326)
++ Customize Python version. (#324)
++ Fix activate method call in Python SDK (#323)
+
 # KAR 1.3.3 - 2022-05-05
 + Encode service result when invoked from actor tail call (#316, #317)
 + Bug fix in actor scheduling for recovery from a blocked self-call (#318)
