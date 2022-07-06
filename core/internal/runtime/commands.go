@@ -580,7 +580,13 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		isNodePausedLock.Unlock()
 
 		// if we're paused, then wait
-		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), "", false)
+		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
+			requestID,
+			string(value),
+			"",
+			false,
+			!isBreak, //only send a pause if we didn't hit the breakpoint
+		)
 	}
 
 	if target.Flow != instance.ActiveFlow {
@@ -768,7 +774,13 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		}
 
 		// if we're paused, then wait
-		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, string(value), string(debugReply), true)
+		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
+			requestID,
+			string(value),
+			string(debugReply),
+			true,
+			!isBreak, //only send a pause if we didn't hit the breakpoint.
+		)
 	}
 
 	return dest, reply, err
@@ -1093,7 +1105,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 // wait on a paused actor
 // note: condvar is pointer
 
-func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string, isResponse bool){
+func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string, isResponse bool, doInform bool){
 	isResponseStr := "request"
 	if isResponse { isResponseStr = "response" }
 	isActorPausedLock.RLock()
