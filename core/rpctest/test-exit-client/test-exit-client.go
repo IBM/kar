@@ -32,7 +32,7 @@ func main() {
 	nodes, _ := rpc.GetServiceNodeIDs("server")
 	for _, node := range nodes {
 		destination := rpc.Destination{Target: rpc.Node{ID: node}, Method: "exit"}
-		rpc.Tell(c.ClientCtx, destination, time.Time{}, []byte("goodbye"))
+		rpc.Tell(c.ClientCtx, destination, time.Time{}, "", []byte("goodbye"))
 	}
 
 	c.CloseClient()
