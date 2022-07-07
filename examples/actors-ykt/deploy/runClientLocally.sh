@@ -22,5 +22,6 @@ CODEDIR="$SCRIPTDIR/.."
 KAR_VERBOSE=${KAR_VERBOSE:="info"}
 KAR_RUNTIME_PORT=${KAR_RUNTIME_PORT:=30666}
 KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
+KAR_DEBUG=${KAR_DEBUG:=""}
 
-kar run -v $KAR_VERBOSE -runtime_port $KAR_RUNTIME_PORT -app ykt $KAR_EXTRA_ARGS node $CODEDIR/ykt-client.js
+kar run $KAR_DEBUG -v $KAR_VERBOSE -runtime_port $KAR_RUNTIME_PORT -app ykt $KAR_EXTRA_ARGS node $CODEDIR/ykt-client.js
