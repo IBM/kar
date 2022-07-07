@@ -750,7 +750,7 @@ errorEncountered:
 }
 
 func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
-	fmt.Println("About to impl unset breakpoint.")
+	//fmt.Println("About to impl unset breakpoint.")
 	var err error
 
 	breakpointId, ok := bodyJson["breakpointId"]
@@ -801,7 +801,7 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 				successful = true
 				nodes = append(nodes, sidecar)
 			} else {
-				fmt.Printf("impl breakpoint error: %v\n", err)
+				//fmt.Printf("impl breakpoint error: %v\n", err)
 			}
 		}
 		if !successful { return nil, err }
@@ -810,7 +810,6 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 		if err != nil { return nil, err }
 		nodes = append(nodes, node)
 	}
-	fmt.Println("Successfully impled unset breakpoint.")
 	// assume no error at this point
 	msg["nodes"] = nodes
 	msgBytes, err = json.Marshal(msg)
@@ -819,8 +818,6 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 }
 
 func routeImplRegisterDebugger(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	isDebugger = true
-
 	// register debugger with all sidecars
 	var msg = map[string]string {
 		"command": "registerDebugger",
@@ -855,15 +852,16 @@ func routeImplRegisterDebugger(w http.ResponseWriter, r *http.Request, ps httpro
 	debugConnsLock.Unlock()
 
 	debugServe(debugConn, debuggerId)
+	closeConn(debugConn, debuggerId)
 }
 
 func unregisterDebuggerSidecar() {
-	isDebugger = false
+	//isDebugger = false
 
-	// register debugger with all sidecars
+	// unregister debugger with all sidecars
 	var msg = map[string]string {
 		"command": "unregisterDebugger",
-		"debuggerId": rpc.GetNodeID(),
+		"nodeId": rpc.GetNodeID(),
 	}
 	msgBytes, err := json.Marshal(msg)
 	if err != nil { return }

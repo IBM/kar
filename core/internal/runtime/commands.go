@@ -95,9 +95,9 @@ var (
 	isChannelOpen = map[chan struct{}]bool{}
 	isChannelOpenLock = sync.RWMutex{}
 
-	// are we a debugger node?
-	// (if so, then we're immune from breakpoints
-	isDebugger = false
+	// are any debuggers present?
+	isDebuggerPresent = false
+	isDebuggerPresentLock = sync.RWMutex {}
 
 	debugConns = map[string]*websocket.Conn {}
 	debugConnsLock = sync.Mutex{}
@@ -228,7 +228,8 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 		}
 		defer requests.Delete(requestID)
 
-		if config.IsDebugMode {
+		/*accessing isDebuggerPresent without a lock -- risky! but fast*/
+		if config.IsDebugMode || isDebuggerPresent {
 			busyInfoLock.Lock()
 			busyInfo.ActorSent[requestID] = actorSentInfo_t {
 				Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
@@ -529,7 +530,8 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	}
 
 	var bkActorId, bkActorType, bkPath string
-	if config.IsDebugMode {
+	/*accessing isDebuggerPresent without a lock -- risky! but fast*/
+	if config.IsDebugMode || isDebuggerPresent {
 		busyInfoLock.Lock()
 		busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
 		busyInfoLock.Unlock()
@@ -734,7 +736,8 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		logger.Error("Flow violation: mismatch between target %v and instance %v at exit", target, instance)
 	}
 
-	if config.IsDebugMode {
+	/*accessing isDebuggerPresent without a lock -- risky! but fast*/
+	if config.IsDebugMode || isDebuggerPresent {
 		// break on response breakpoints
 		isBreak, bk := checkBreakpoint(breakpointAttrs_t {
 			actorId: bkActorId,
@@ -1227,6 +1230,11 @@ func registerDebugger(node string) ([]byte, error) {
 	defer debuggersMapLock.Unlock()
 	debuggersMap[node] = true
 
+	isDebuggerPresentLock.Lock()
+	isDebuggerPresent = true
+	//fmt.Println("Debuggers present " + node)
+	isDebuggerPresentLock.Unlock()
+
 	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
 	return json.Marshal(reply)
 }
@@ -1235,6 +1243,28 @@ func unregisterDebugger(node string) ([]byte, error) {
 	debuggersMapLock.Lock()
 	defer debuggersMapLock.Unlock()
 	delete(debuggersMap, node)
+	if len(debuggersMap) == 0 {
+		isDebuggerPresentLock.Lock()
+		isDebuggerPresent = false
+
+		if !config.IsDebugMode {
+			// no debuggers present anymore
+			// if we weren't started in debug mode, then unpause all actors, delete all breakpoints
+			unpauseNode(false)
+
+			breakpointsLock.Lock()
+			breakpoints = map[string]breakpoint_t{}
+			breakpointsByAttrs = map[breakpointAttrs_t]breakpoint_t{}
+			breakpointsLock.Unlock()
+		}
+
+		isDebuggerPresentLock.Unlock()
+
+		//fmt.Println("No debuggers present")
+	} else {
+		//fmt.Println(debuggersMap)
+		//fmt.Println(node)
+	}
 
 	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
 	return json.Marshal(reply)
