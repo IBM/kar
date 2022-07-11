@@ -113,7 +113,8 @@ type listBusyInfo_t struct {
 func debugServe(debugConn *websocket.Conn, debuggerId string){
 	sendErrorBytes := func(err error, cmd string) error {
 		errorMap := map[string]string {
-			"command": cmd,
+			"command": "error",
+			"commandId": cmd,
 			"error": fmt.Sprintf("%v", err),
 		}
 		errorBytes, _ := json.Marshal(errorMap)
@@ -137,6 +138,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			continue
 		}*/
 		cmd, ok := msg["command"]
+		cmdId := msg["commandId"]
 
 		// message must have a command
 		if !ok {
@@ -149,7 +151,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 		case "setBreakpoint":
 			retBytes, err := implSetBreakpoint(msg)
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -160,7 +162,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 		case "unsetBreakpoint":
 			retBytes, err := implUnsetBreakpoint(msg)
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -174,7 +176,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 		case "pause":
 			retBytes, err := implPause(msg)
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -185,7 +187,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 		case "unpause":
 			retBytes, err := implUnpause(msg)
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -249,7 +251,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			}
 
 			if !successful {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -261,7 +263,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			retBytes, err := json.Marshal(retMsg)
 
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -313,7 +315,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			}
 
 			if !successful {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -325,7 +327,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			retBytes, err := json.Marshal(retMsg)
 
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -382,7 +384,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			}
 
 			if !successful {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil {
 					return
 				}
@@ -397,7 +399,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			retBytes, err := json.Marshal(retMsg)
 
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -418,20 +420,20 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			/*err := */json.Unmarshal(msgBytes, &argsMap)
 			/*if err != nil {
 				fmt.Println("counldn't unmasrhak")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}*/
 			args, ok := argsMap["args"]
 			if !ok {
 				err = fmt.Errorf("Error: no arguments provided.")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
 			if len(args) < 3 {
 				err = fmt.Errorf("Error: too few arguments provided.")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -447,7 +449,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			payload, err := json.Marshal(params)
 			if err != nil {
 				//fmt.Printf("cound't marshal")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -456,7 +458,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				reply, err := CallActor(ctx, actor, path, string(payload), "", "") 
 				if err != nil {
 					//fmt.Printf("condlt call acor")
-					err = sendErrorBytes(err, cmd)
+					err = sendErrorBytes(err, cmdId)
 					return
 				}
 				retMsg := map[string]interface{} {}
@@ -483,7 +485,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				retBytes, err := json.Marshal(retMsg)
 
 				if err != nil {
-					err = sendErrorBytes(err, cmd)
+					err = sendErrorBytes(err, cmdId)
 					return
 				}
 				err = sendAll(retBytes, debuggerId)
@@ -499,13 +501,13 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			args, ok := argsMap["args"]
 			if !ok {
 				err = fmt.Errorf("Error: no arguments provided.")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
 			if len(args) < 3 {
 				err = fmt.Errorf("Error: too few arguments provided.")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -525,7 +527,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			reply, err := CallService(ctx, service, path, body, header, method)
 			if err != nil {
 				//fmt.Printf("service call acor")
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -543,7 +545,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 			retBytes, err := json.Marshal(retMsg)
 			if err != nil {
-				err = sendErrorBytes(err, cmd)
+				err = sendErrorBytes(err, cmdId)
 				if err != nil { return }
 				continue
 			}
@@ -552,8 +554,6 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				return
 			}
 		case "kar get":
-			//fmt.Println("get!")
-			//fmt.Println(msg)
 			switch msg["subsystem"]{
 			case "sidecars", "sidecar":
 				retMsg := map[string]string {}
@@ -564,7 +564,8 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 				retBytes, err := json.Marshal(retMsg)
 				if err != nil {
-					err = sendErrorBytes(err, cmd)
+					err = sendErrorBytes(err, cmdId)
+					fmt.Printf("error: %v\n", err)
 					if err != nil { return }
 					continue
 				}
@@ -607,7 +608,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 				retBytes, err := json.Marshal(retMsg)
 				if err != nil {
-					err = sendErrorBytes(err, cmd)
+					err = sendErrorBytes(err, cmdId)
 					if err != nil { return }
 					continue
 				}
@@ -615,7 +616,10 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				if err != nil {
 					return
 				}
-
+			default:
+				err = sendErrorBytes(fmt.Errorf("Invalid command: %v", msg["subsystem"]), cmdId)
+				if err != nil { return }
+				continue
 			}
 		}
 	}
