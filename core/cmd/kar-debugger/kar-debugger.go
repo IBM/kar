@@ -1826,7 +1826,7 @@ func main(){
 
 		// listen as a debugger server
 
-		serverPort := os.Getenv("KAR_DEBUG_SERVER_PORT")
+		serverPort := os.Getenv("KAR_APP_PORT")//os.Getenv("KAR_DEBUG_SERVER_PORT")
 		if serverPort == "" { serverPort = "5364" }
 		ln, err := net.Listen("tcp", ":"+serverPort)
 		if err != nil {
