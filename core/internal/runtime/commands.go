@@ -35,6 +35,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// TODO: remove this duplicate struct, use Actor instead
 type actorTuple_t struct {
 	actorId string
 	actorType string
@@ -222,6 +223,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 
 		// very ugly! reimplement rpc.Call in order to get the request id
 		// this is necessary if we want to view indirect pauses in the debugger
+		// TODO: potentially fix
 		requestID, ch, err := rpc.AsyncParent(ctx, rpc.Destination{Target: rpc.Session{Name: actor.Type, ID: actor.ID, Flow: flow}, Method: actorEndpoint}, defaultTimeout(), parentID, bytes)
 		if err != nil {
 			return nil, err
