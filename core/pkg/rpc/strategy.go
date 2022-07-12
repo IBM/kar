@@ -166,6 +166,7 @@ func updateRoutes() error {
 	// reset routing tables
 	service2nodes = map[string][]string{}
 	node2partition = map[string]int32{}
+	node2port = map[string]int32{}
 	session2NodeCache = new(sync.Map)
 
 	// rebuild tables
@@ -190,6 +191,9 @@ func updateRoutes() error {
 			return err1
 		}
 		node2partition[data.Node] = assignment.Topics[appTopic][0]
+
+		//build node2port map from assignments
+		node2port[data.Node] = data.Port
 	}
 
 	logger.Info("exit update routes")

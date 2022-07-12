@@ -113,8 +113,8 @@ func RegisterNode(method string, handler NodeHandler) {
 }
 
 // Connect to Kafka
-func Connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
-	return connect(ctx, topic, conf, services...)
+func Connect(ctx context.Context, topic string, runtimePort int32, conf *Config, services ...string) (<-chan struct{}, error) {
+	return connect(ctx, topic, runtimePort, conf, services...)
 }
 
 // Call method and wait for result
@@ -140,6 +140,10 @@ func Reclaim(requestID string) {
 // GetTopology returns a map from node ids to services
 func GetTopology() (map[string][]string, <-chan struct{}) {
 	return getTopology()
+}
+
+func GetPorts() (map[string]int32, <-chan struct{}) {
+	return getPorts()
 }
 
 // GetServices returns the sorted list of services currently available

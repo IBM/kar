@@ -547,8 +547,8 @@ func registerNode(method string, handler NodeHandler) {
 }
 
 // Connect to Kafka
-func connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
+func connect(ctx context.Context, topic string, runtimePort int32, conf *Config, services ...string) (<-chan struct{}, error) {
 	sessionBusyTimeout = conf.SessionBusyTimeout
 	cancellation = conf.Cancellation
-	return Dial(ctx, topic, conf, services, func(msg Message) { accept(ctx, msg) })
+	return Dial(ctx, topic, runtimePort, conf, services, func(msg Message) { accept(ctx, msg) })
 }

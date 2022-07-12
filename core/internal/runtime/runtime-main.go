@@ -153,6 +153,10 @@ func Main() {
 	if err != nil {
 		logger.Fatal("TCP listener failed: %v", err)
 	}
+	if config.RuntimePort == 0 {
+		// record our randonly assigned port for future reference
+		config.RuntimePort = listener.Addr().(*net.TCPAddr).Port
+	}
 
 	redisConfig := config.RedisConfig
 	redisConfig.MangleKey = func(key string) string { return "kar" + config.Separator + config.AppName + config.Separator + key }
@@ -191,7 +195,7 @@ func Main() {
 	var closed <-chan struct{} = nil
 	if requiresPubSub {
 		myServices := append([]string{config.ServiceName}, config.ActorTypes...)
-		closed, err = rpc.Connect(ctx, topic, &config.KafkaConfig, myServices...)
+		closed, err = rpc.Connect(ctx, topic, int32(config.RuntimePort), &config.KafkaConfig, myServices...)
 		if err != nil {
 			logger.Fatal("failed to connect to Kafka: %v", err)
 		}
@@ -235,7 +239,7 @@ func Main() {
 			CloseIdleConnections()
 		}()
 
-		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", listener.Addr().(*net.TCPAddr).Port)
+		runtimePort := fmt.Sprintf("KAR_RUNTIME_PORT=%d", config.RuntimePort)
 		appPort := fmt.Sprintf("KAR_APP_PORT=%d", config.AppPort)
 		requestTimeout := fmt.Sprintf("KAR_REQUEST_TIMEOUT=%d", config.RequestRetryLimit.Milliseconds())
 		logger.Info("%s %s", runtimePort, appPort)

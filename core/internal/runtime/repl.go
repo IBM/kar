@@ -114,8 +114,9 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	case "sidecar", "sidecars":
 		karTopology := make(map[string]sidecarData)
 		topology, _ := rpc.GetTopology()
+		ports, _ := rpc.GetPorts()
 		for node, services := range topology {
-			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+			karTopology[node] = sidecarData{Port: ports[node], Services: []string{services[0]}, Actors: services[1:]}
 		}
 		if config.GetOutputStyle == "json" || config.GetOutputStyle == "application/json" {
 			m, err := json.Marshal(karTopology)
@@ -126,7 +127,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 			var sb strings.Builder
 			fmt.Fprint(&sb, "\nSidecar\n : Actors\n : Services")
 			for sidecar, sidecarInfo := range karTopology {
-				fmt.Fprintf(&sb, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+				fmt.Fprintf(&sb, "\n%v:%v\n : %v\n : %v", sidecar, sidecarInfo.Port, sidecarInfo.Actors, sidecarInfo.Services)
 			}
 			str, err = sb.String(), nil
 		}
