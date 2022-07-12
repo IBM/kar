@@ -152,7 +152,6 @@ func Main() {
 
 	var listenHost string
 	if config.KubernetesMode {
-		fmt.Println("Kubernetes mode.")
 		listenHost = fmt.Sprintf(":%d", config.RuntimePort)
 	} else {
 		listenHost = fmt.Sprintf("127.0.0.1:%d", config.RuntimePort)
