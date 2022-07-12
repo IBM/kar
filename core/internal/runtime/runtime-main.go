@@ -118,11 +118,6 @@ func server(listener net.Listener) http.Server {
 	router.GET(base+"/debug/register", routeImplRegisterDebugger)
 	router.POST(base+"/debug/register", routeImplRegisterDebugger)
 	router.PUT(base+"/debug/register", routeImplRegisterDebugger)
-	/*router.POST(base+"/debug/breakpoint", routeImplSetBreakpoint)
-	router.DELETE(base+"/debug/breakpoint", routeImplUnsetBreakpoint)
-	router.DELETE(base+"/debug/unregister", routeImplUnregisterDebugger)
-	router.POST(base+"/debug/pause", routeImplPause)
-	router.DELETE(base+"/debug/pause", routeImplUnpause)*/
 
 	return http.Server{Handler: h2c.NewHandler(router, &http2.Server{MaxConcurrentStreams: 262144})}
 }
