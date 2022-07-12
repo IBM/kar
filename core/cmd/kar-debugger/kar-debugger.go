@@ -169,13 +169,19 @@ Args:
 "server":
 `Start the debugger server, which connects to the KAR cluster
 and enables debugging.
-Usage: server karHost karPort
+Usage: server [karHost karPort]
 
 Args:
 	karHost:
-		The hostname of the KAR node to which the debugger should connect. 
+		The hostname of the KAR node to which the debugger should connect.
+		If the server is launched as a KAR process, this argument is optional.
 	karPort:
 		The port of the KAR node to which the debugger should connect.
+		If the server is launched as a KAR process, this argument is optional.
+Options:
+	-serverPort port:
+		The port on which the debugger server should listen. By default,
+		5364.
 `,
 "step":
 `Sets a breakpoint that is triggered when a paused actor finishes
@@ -1293,6 +1299,13 @@ func processClient() {
 	debuggerPort := hostPortMap["port"]
 
 	if debuggerHost == "" {
+		debuggerHost = os.Getenv("KAR_DEBUGGER_HOST")
+	}
+	if debuggerPort == "" {
+		debuggerPort = os.Getenv("KAR_DEBUGGER_PORT")
+	}
+
+	if debuggerHost == "" {
 		debuggerHost = "localhost"
 	}
 	if debuggerPort == "" {
@@ -1766,7 +1779,8 @@ func main(){
 		// connect to the kar server
 		serverArgs := getArgs(os.Args,
 			[]string{"karHost", "karPort"},
-			map[string]string{}, map[string]string{}, 2)
+			map[string]string{"-serverPort": ""},
+			map[string]string{}, 2)
 
 		karHost, hostOk := serverArgs["karHost"]
 		karPort, portOk := serverArgs["karPort"]
@@ -1826,7 +1840,10 @@ func main(){
 
 		// listen as a debugger server
 
-		serverPort := os.Getenv("KAR_APP_PORT")//os.Getenv("KAR_DEBUG_SERVER_PORT")
+		serverPort := serverArgs["serverPort"]
+		/*if serverPort == "" {
+			serverPort = os.Getenv("KAR_APP_PORT")
+		}//os.Getenv("KAR_DEBUG_SERVER_PORT")*/
 		if serverPort == "" { serverPort = "5364" }
 		ln, err := net.Listen("tcp", ":"+serverPort)
 		if err != nil {
