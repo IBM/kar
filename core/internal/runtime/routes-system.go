@@ -101,8 +101,9 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 	case "sidecars", "Sidecars":
 		karTopology := make(map[string]sidecarData)
 		topology, _ := rpc.GetTopology()
+		ports, _ := rpc.GetPorts()
 		for node, services := range topology {
-			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:]}
+			karTopology[node] = sidecarData{Port: ports[node], Services: []string{services[0]}, Actors: services[1:]}
 		}
 
 		if format == "json" || format == "application/json" {
@@ -114,7 +115,7 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 			var str strings.Builder
 			fmt.Fprint(&str, "\nSidecar\n : Actors\n : Services")
 			for sidecar, sidecarInfo := range karTopology {
-				fmt.Fprintf(&str, "\n%v\n : %v\n : %v", sidecar, sidecarInfo.Actors, sidecarInfo.Services)
+				fmt.Fprintf(&str, "\n%v:%v\n : %v\n : %v", sidecar, sidecarInfo.Port, sidecarInfo.Actors, sidecarInfo.Services)
 			}
 			data, err = str.String(), nil
 		}
@@ -136,8 +137,8 @@ func routeImplGetInformation(w http.ResponseWriter, r *http.Request, ps httprout
 }
 
 type sidecarData struct {
+	Port     int32    `json:"port"`
 	Actors   []string `json:"actors"`
 	Services []string `json:"services"`
-	Host string `json:"host"`
-	Port int `json:"port"`
+	//Host string `json:"host"`
 }

@@ -626,7 +626,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 }
 
 func implGetSidecars() string {
-	doCall := func(sidecar string) (addrTuple_t, error) {
+	/*doCall := func(sidecar string) (addrTuple_t, error) {
 		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", []byte("{\"command\": \"getRuntimeAddr\"}") )
 		if err != nil { return addrTuple_t{}, err }
 		var reply Reply
@@ -640,14 +640,16 @@ func implGetSidecars() string {
 		err = json.Unmarshal([]byte(reply.Payload), &addr)
 		if err != nil { return addrTuple_t{}, err }
 		return addr, err
-	}
+	}*/
 
 	karTopology := make(map[string]sidecarData)
 	topology, _ := rpc.GetTopology()
+	ports, _ := rpc.GetPorts()
 	for node, services := range topology {
-		addr, err := doCall(node)
+		/*addr, err := doCall(node)
 		if err != nil { addr = addrTuple_t {} }
-		karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:], Host: addr.Host, Port: addr.Port}
+		karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:], Host: addr.Host, Port: addr.Port}*/
+		karTopology[node] = sidecarData{Port: ports[node], Services: []string{services[0]}, Actors: services[1:]}
 	}
 	m, _ := json.Marshal(karTopology)
 	return string(m)

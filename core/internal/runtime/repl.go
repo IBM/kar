@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"time"
+	//"time"
 
 	"github.com/IBM/kar/core/internal/config"
 	"github.com/IBM/kar/core/pkg/logger"
@@ -120,7 +120,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 	var err error
 	switch option {
 	case "sidecar", "sidecars":
-		doCall := func(sidecar string) (addrTuple_t, error) {
+		/*doCall := func(sidecar string) (addrTuple_t, error) {
 			bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", []byte("{\"command\": \"getRuntimeAddr\"}") )
 			if err != nil { return addrTuple_t{}, err }
 			var reply Reply
@@ -134,14 +134,16 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 			err = json.Unmarshal([]byte(reply.Payload), &addr)
 			if err != nil { return addrTuple_t{}, err }
 			return addr, err
-		}
+		}*/
 
 		karTopology := make(map[string]sidecarData)
 		topology, _ := rpc.GetTopology()
+		ports, _ := rpc.GetPorts()
 		for node, services := range topology {
-			addr, err := doCall(node)
+			/*addr, err := doCall(node)
 			if err != nil { addr = addrTuple_t {} }
-			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:], Host: addr.Host, Port: addr.Port}
+			karTopology[node] = sidecarData{Services: []string{services[0]}, Actors: services[1:], Host: addr.Host, Port: addr.Port}*/
+			karTopology[node] = sidecarData{Port: ports[node], Services: []string{services[0]}, Actors: services[1:]}
 		}
 		if config.GetOutputStyle == "json" || config.GetOutputStyle == "application/json" {
 			m, err := json.Marshal(karTopology)
@@ -152,7 +154,7 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 			var sb strings.Builder
 			fmt.Fprint(&sb, "\nSidecar : host : port \n : Actors\n : Services")
 			for sidecar, sidecarInfo := range karTopology {
-				fmt.Fprintf(&sb, "\n%v", sidecar)
+				/*fmt.Fprintf(&sb, "\n%v", sidecar)
 				//addr, err := doCall(sidecar)
 				if err == nil {
 					fmt.Fprintf(&sb, " : %v : %v",
@@ -163,7 +165,8 @@ func getInformation(ctx context.Context, args []string) (exitCode int) {
 				if sidecar == rpc.GetNodeID() {
 					fmt.Fprintf(&sb, " (this sidecar)")
 				}
-				fmt.Fprintf(&sb, "\n : %v\n : %v", sidecarInfo.Actors, sidecarInfo.Services)
+				fmt.Fprintf(&sb, "\n : %v\n : %v", sidecarInfo.Actors, sidecarInfo.Services)*/
+				fmt.Fprintf(&sb, "\n%v:%v\n : %v\n : %v", sidecar, sidecarInfo.Port, sidecarInfo.Actors, sidecarInfo.Services)
 			}
 			str, err = sb.String(), nil
 		}
