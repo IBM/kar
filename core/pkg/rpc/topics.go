@@ -117,7 +117,7 @@ func (s *subscriber) ConsumeClaim(session sarama.ConsumerGroupSession, claim sar
 		if err != nil {
 			logger.Error("failed to transform event from topic %s: %v", s.topic, err)
 		}
-		err = Tell(s.ctx, Destination{Target: s.target, Method: s.method}, time.Time{}, transformed)
+		err = Tell(s.ctx, Destination{Target: s.target, Method: s.method}, time.Time{}, "", transformed)
 		if err != nil {
 			logger.Error("failed to tell target %v of event from topic %s: %v", s.target, s.topic, err)
 		} else {

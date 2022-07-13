@@ -149,6 +149,7 @@ export namespace actor {
    * @param path The actor method to invoke.
    * @param args The arguments with which to invoke the actor method.
    */
+  export function tell (from: Actor, callee: Actor, path: string, ...args: any[]): Promise<any>;
   export function tell (callee: Actor, path: string, ...args: any[]): Promise<any>;
 
   /**

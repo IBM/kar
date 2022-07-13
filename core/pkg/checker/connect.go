@@ -90,7 +90,7 @@ func (c *Connection) ConnectClient(appName string) {
 	}
 
 	// start service providing the name of the service
-	clientClosed, err := rpc.Connect(c.ClientCtx, appName, conf, "client")
+	clientClosed, err := rpc.Connect(c.ClientCtx, appName, 0, conf, "client")
 	if err != nil {
 		log.Printf("failed to connect to Kafka: %v", err)
 		os.Exit(1)

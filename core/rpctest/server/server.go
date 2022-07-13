@@ -84,7 +84,7 @@ func main() {
 	rpc.RegisterNode("exit", exitNode)
 
 	// start service
-	closed, err := rpc.Connect(ctx, "test-rpc", conf, "server", "actor")
+	closed, err := rpc.Connect(ctx, "test-rpc", 0, conf, "server", "actor")
 	if err != nil {
 		log.Printf("failed to connect to Kafka: %v", err)
 		os.Exit(1)

@@ -39,6 +39,17 @@ func getTopology() (map[string][]string, <-chan struct{}) {
 	return node2services, tick
 }
 
+func getPorts() (map[string]int32, <-chan struct{}) {
+	mu.RLock()
+	defer mu.RUnlock()
+	result := map[string]int32{}
+	for node, port := range node2port {
+		result[node] = port
+	}
+	return result, tick
+}
+
+
 func getNodeIDs() ([]string, <-chan struct{}) {
 	mu.RLock()
 	defer mu.RUnlock()

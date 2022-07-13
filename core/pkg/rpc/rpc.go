@@ -113,8 +113,8 @@ func RegisterNode(method string, handler NodeHandler) {
 }
 
 // Connect to Kafka
-func Connect(ctx context.Context, topic string, conf *Config, services ...string) (<-chan struct{}, error) {
-	return connect(ctx, topic, conf, services...)
+func Connect(ctx context.Context, topic string, runtimePort int32, conf *Config, services ...string) (<-chan struct{}, error) {
+	return connect(ctx, topic, runtimePort, conf, services...)
 }
 
 // Call method and wait for result
@@ -123,13 +123,30 @@ func Call(ctx context.Context, dest Destination, deadline time.Time, parentID st
 }
 
 // Call method and return immediately (result will be discarded)
-func Tell(ctx context.Context, dest Destination, deadline time.Time, value []byte) error {
-	return tell(ctx, dest, deadline, value)
+func Tell(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
+	return tell(ctx, dest, deadline, parentID, value)
 }
+
+// Call method, marking the request as edited (used in debugging)
+func CallEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) ([]byte, error) {
+	return callEdited(ctx, dest, deadline, parentID, value)
+}
+
+// Tell method, marking the request as edited (used in debugging)
+func TellEdited(ctx context.Context, dest Destination, deadline time.Time, parentID string, value []byte) error {
+	return tellEdited(ctx, dest, deadline, parentID, value)
+}
+
 
 // Call method and return a request id and a result channel
 func Async(ctx context.Context, dest Destination, deadline time.Time, value []byte) (string, <-chan Result, error) {
 	return async(ctx, dest, deadline, "", value)
+}
+
+// Call method with parent and return a request id and a result channel
+// (used in debugging)
+func AsyncParent(ctx context.Context, dest Destination, deadline time.Time, parentId string, value []byte) (string, <-chan Result, error) {
+	return async(ctx, dest, deadline, parentId, value)
 }
 
 // Reclaim resources associated with async request id
@@ -140,6 +157,10 @@ func Reclaim(requestID string) {
 // GetTopology returns a map from node ids to services
 func GetTopology() (map[string][]string, <-chan struct{}) {
 	return getTopology()
+}
+
+func GetPorts() (map[string]int32, <-chan struct{}) {
+	return getPorts()
 }
 
 // GetServices returns the sorted list of services currently available

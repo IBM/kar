@@ -33,6 +33,7 @@ import (
 // The info provided by each live node when rebalancing
 type info struct {
 	Node      string   // the uuid of the node
+	Port      int32    // the port the node is listening on
 	Services  []string // the services provided by the node
 	Partition int32    // the partition > 0 assigned to the node if known or 0 if not yet decided
 }
@@ -57,6 +58,7 @@ var (
 	self              = info{Node: "node-" + uuid.New().String()} // service, node, partition (initially unknown == 0)
 	service2nodes     map[string][]string                         // the map from services to nodes providing these services
 	node2partition    = map[string]int32{}                        // the map from nodes to their assigned partitions
+	node2port         = map[string]int32{}                        // the map from nodes to their runtime ports
 	session2NodeCache = new(sync.Map)                             // a cache of the mapping from sessions to their assigned Node
 	mu                = new(sync.RWMutex)                         // a RW mutex held when rebalancing (W) and sending messages (R)
 	tick              = make(chan struct{})                       // a channel closed at replaced at the end of rebalance
@@ -133,9 +135,10 @@ func configureConsumer(config *Config) *sarama.Config {
 }
 
 // Connect to Kafka and return a channel closed after disconnecting from Kafka
-func Dial(ctx context.Context, topic string, conf *Config, services []string, f func(Message)) (<-chan struct{}, error) {
+func Dial(ctx context.Context, topic string, runtimePort int32, conf *Config, services []string, f func(Message)) (<-chan struct{}, error) {
 	appTopic = topic
 	self.Services = services
+	self.Port = runtimePort
 	processor = f
 
 	var err error
@@ -214,6 +217,7 @@ func Dial(ctx context.Context, topic string, conf *Config, services []string, f 
 		producerClient.Close()
 		service2nodes = nil
 		node2partition = nil
+		node2port = nil
 		session2NodeCache = nil
 		close(closed)
 		mu.Unlock()
