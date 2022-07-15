@@ -34,12 +34,12 @@ class ActorTypeA {
 	console.log("Sleeping for 500ms.")
 	await this.sleep()
 	console.log("Calling B.finish().")
-	await actor.call(this, actor.proxy('ActorTypeB', "B"), 'finish')
+	await actor.call(this, actor.proxy('ActorTypeB', "B"), 'finish', Math.random())
 	console.log("Finished.")
   }
 
-  async finish() {
-	console.log("ActorTypeA: finish has been called.")
+  async finish(testArg) {
+	console.log("ActorTypeA: finish has been called with arg " + testArg + ".")
   }
 }
 
@@ -53,16 +53,17 @@ class ActorTypeB {
   }
 
   async doIt(){
-	console.log("ActorTypeA has started.")
+	console.log("ActorTypeB has started.")
 	console.log("Sleeping for 200ms.")
 	await this.sleep()
 	console.log("Calling A.finish().")
-	await actor.call(this, actor.proxy('ActorTypeA', "A"), 'finish')
+	await actor.call(this, actor.proxy('ActorTypeA', "A"), 'finish', Math.random())
 	console.log("Finished.")
   }
 
   async finish() {
-	console.log("ActorTypeA: finish has been called.")
+	console.log("ActorTypeB: finish has been called with arg " + testArg + ".")
+
   }
 }
 

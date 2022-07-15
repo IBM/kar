@@ -342,7 +342,7 @@ type actorSentInfo_t struct {
 }
 
 type listBusyInfo_t struct {
-	ActorHandling map[string]actorJson_t `json:"actorHandling"`
+	ActorHandling map[string]actorSentInfo_t `json:"actorHandling"`
 	ActorSent map[string]actorSentInfo_t `json:"actorSent"`
 }
 
@@ -825,8 +825,8 @@ func listenSidecar(){
 							fmt.Printf("Parent request not found in ActorHandling?!\n")
 						}
 						curActor = actor_t {
-							actorId: handleInfo.ActorId,
-							actorType: handleInfo.ActorType,
+							actorId: handleInfo.Actor.ActorId,
+							actorType: handleInfo.Actor.ActorType,
 						}
 					}
 
@@ -949,8 +949,10 @@ type request_t struct {
 }
 
 type edge_t struct {
+	SrcActor actorJson_t
 	DstActor actorJson_t
 	Req      request_t
+	ParentValue string
 }
 
 type node_t struct {
@@ -977,21 +979,24 @@ func makeDeadlockGraph() graph_t {
 		_, ok := busyInfo.ActorSent[info.ParentId]
 		if !ok {
 			// parent is a root req
-			parentActor := busyInfo.ActorHandling[info.ParentId]
+			parentInfo := busyInfo.ActorHandling[info.ParentId]
 			myReq := request_t {
 				RequestId: info.ParentId,
 				CallStack: info.FlowId, //parent and child have same flow
+				RequestValue: parentInfo.RequestValue,
 			}
 			retgraph[empty].Edges[myReq] = edge_t {
-				Req: myReq, DstActor: parentActor,
+				Req: myReq, DstActor: parentInfo.Actor, SrcActor: empty,
 			}
 
 		}
 	}
 
 	for reqId, info := range busyInfo.ActorSent {
-		srcActor := busyInfo.ActorHandling[info.ParentId]
+		srcActor := busyInfo.ActorHandling[info.ParentId].Actor
 		dstActor := info.Actor
+
+		parentValue := busyInfo.ActorHandling[info.ParentId].RequestValue
 
 		node, ok := retgraph[srcActor]
 		if !ok {
@@ -1005,7 +1010,7 @@ func makeDeadlockGraph() graph_t {
 			CallStack: info.FlowId,
 			RequestValue: info.RequestValue,
 		}
-		edge := edge_t {DstActor: dstActor, Req: myReq}
+		edge := edge_t {DstActor: dstActor, Req: myReq, SrcActor: srcActor, ParentValue: parentValue}
 		node.Edges[myReq] = edge
 		retgraph[srcActor] = node
 	}
@@ -1015,7 +1020,7 @@ func makeDeadlockGraph() graph_t {
 
 func checkDeadlockCycles(g *graph_t, a actorJson_t, path []edge_t) (bool, []edge_t) {
 	if (*g)[a].IsVisited {
-		for _, edge := range path {
+		for i, edge := range path {
 			if edge.DstActor == a {
 				req := edge.Req
 				//pretty sure that only one of these edges
@@ -1026,7 +1031,7 @@ func checkDeadlockCycles(g *graph_t, a actorJson_t, path []edge_t) (bool, []edge
 					return false, nil
 				} else {
 					// no reentrancy, so deadlock
-					return true, path
+					return true, path[i:]
 				}
 			}
 		}
@@ -1589,15 +1594,32 @@ func processClient() {
 			return
 		}
 
-		var response []interface{}
+		var response []edge_t
 		json.Unmarshal(responseBytes, &response)
 		if len(response) == 0 {
 			fmt.Println("No deadlocks found.")
 		} else {
 			fmt.Println("Deadlock detected!")
+			fmt.Println("Cycle information:")
+
+			for i, edge := range response[1:] {
+				fmt.Printf("* ")
+				if i == len(response)-2 {
+					fmt.Printf("But ")
+				}
+				fmt.Printf("%v %v is waiting on %v %v", edge.SrcActor.ActorType, edge.SrcActor.ActorId, edge.DstActor.ActorType, edge.DstActor.ActorId)
+				if i == len(response)-2 {
+					fmt.Printf("!")
+				} else { fmt.Printf(".") }
+				fmt.Printf("\n")
+				rv, _ := unpackRequestValue(edge.Req.RequestValue)
+				fmt.Printf("\t* Waiting on method %v.%v()\n", edge.DstActor.ActorId, rv["path"].(string)[1:])
+				prv, _ := unpackRequestValue(edge.ParentValue)
+				fmt.Printf("\t* Method is being called from: %v.%v()\n", edge.SrcActor.ActorId, prv["path"].(string)[1:])
+			}
 		}
-		pretty, _ := json.MarshalIndent(response, "", " ")
-		fmt.Printf("%s\n", pretty)
+		//pretty, _ := json.MarshalIndent(response, "", " ")
+		//fmt.Printf("%s\n", pretty)
 	case "vb":
 		//view breakpoints
 		//vb [breakpointId]

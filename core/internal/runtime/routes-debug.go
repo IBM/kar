@@ -98,14 +98,14 @@ type actor_t struct {
 
 // begin indirect pause detection types
 type actorSentInfo_t struct {
-	Actor actor_t `json:"actor"`
+	Actor actor_t `json:"actor"` // target actor
 	ParentId string `json:"parentId"`
 	FlowId string `json:"flowId"`
 	RequestValue string `json:"requestValue"`
 }
 
 type listBusyInfo_t struct {
-	ActorHandling map[string]actor_t `json:"actorHandling"`
+	ActorHandling map[string]actorSentInfo_t `json:"actorHandling"`
 	ActorSent map[string]actorSentInfo_t `json:"actorSent"`
 }
 
@@ -344,7 +344,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			doCallMsgBytes, _ = json.Marshal(doCallMsg)
 
 			var myBusyInfo = listBusyInfo_t {}
-			myBusyInfo.ActorHandling = map[string]actor_t {}
+			myBusyInfo.ActorHandling = map[string]actorSentInfo_t {}
 			myBusyInfo.ActorSent = map[string]actorSentInfo_t {}
 			doCall := func(sidecar string) error {
 				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
@@ -360,8 +360,8 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 				err = json.Unmarshal([]byte(reply.Payload), &payload)
 				if err != nil { return err }
 
-				for req, actor := range payload.ActorHandling {
-					myBusyInfo.ActorHandling[req]=actor
+				for req, info := range payload.ActorHandling {
+					myBusyInfo.ActorHandling[req]=info
 				}
 
 				for req, sentInfo := range payload.ActorSent {

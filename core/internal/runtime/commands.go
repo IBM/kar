@@ -115,7 +115,7 @@ var (
 
 	// an actor is busy if it is in the middle of calling another
 	busyInfo = listBusyInfo_t {
-		ActorHandling: map[string]actor_t{},
+		ActorHandling: map[string]actorSentInfo_t{},
 		ActorSent: map[string]actorSentInfo_t{},
 	}
 	busyInfoLock = sync.RWMutex{}
@@ -536,7 +536,11 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	/*accessing isDebuggerPresent without a lock -- risky! but fast*/
 	if config.IsDebugMode || isDebuggerPresent {
 		busyInfoLock.Lock()
-		busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
+		busyInfo.ActorHandling[requestID] = actorSentInfo_t {
+			Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
+			FlowId: target.Flow,
+			RequestValue: string(value),
+		}
 		busyInfoLock.Unlock()
 
 		deleteHandling := func() {
