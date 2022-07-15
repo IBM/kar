@@ -337,6 +337,7 @@ type actorSentInfo_t struct {
 	Actor actorJson_t `json:"actor"`
 	ParentId string `json:"parentId"`
 	RequestValue string `json:"requestValue"`
+	FlowId string `json:"flowId"`
 	isVisited bool
 }
 
@@ -419,6 +420,10 @@ type breakpoint_t struct {
 var (
 	pausedActors = map[actor_t]listPauseInfo_t {}
 	pausedActorsLock = sync.Mutex {}
+
+	//TODO: refactor this to use respChans
+	busyInfo = listBusyInfo_t {}
+	busyInfoLock = sync.RWMutex {}
 	
 	breakpoints = map[string]breakpoint_t {}
 	breakpointsLock = sync.Mutex {}
@@ -771,6 +776,10 @@ func listenSidecar(){
 			json.Unmarshal(msgBytes, &listMsg)
 			info := listMsg["busyInfo"]
 
+			busyInfoLock.Lock()
+			busyInfo = info
+			busyInfoLock.Unlock()
+
 			var visitedMap = map[string]bool {}
 
 			for req, curInfo := range info.ActorSent {
@@ -931,6 +940,129 @@ func sendDebugger(conn net.Conn, msgBytes []byte) error {
 	return nil
 }
 
+// deadlock detection code
+
+type request_t struct {
+	RequestId string
+	CallStack string // flow ID of request; name is vestigial
+	RequestValue string
+}
+
+type edge_t struct {
+	DstActor actorJson_t
+	Req      request_t
+}
+
+type node_t struct {
+	Edges     map[request_t]edge_t
+	IsVisited bool
+}
+
+type graph_t = map[actorJson_t]node_t
+
+func makeDeadlockGraph() graph_t {
+	busyInfoLock.RLock()
+	retgraph := make(graph_t)
+	empty := actorJson_t{}
+
+	// TODO: add edges to empty node
+	retgraph[empty] = node_t {
+		Edges: make(map[request_t]edge_t),
+		IsVisited: false,
+	}
+
+	// really dumb way of getting flow IDs of root reqs
+	// TODO: refactor
+	for _, info := range busyInfo.ActorSent {
+		_, ok := busyInfo.ActorSent[info.ParentId]
+		if !ok {
+			// parent is a root req
+			parentActor := busyInfo.ActorHandling[info.ParentId]
+			myReq := request_t {
+				RequestId: info.ParentId,
+				CallStack: info.FlowId, //parent and child have same flow
+			}
+			retgraph[empty].Edges[myReq] = edge_t {
+				Req: myReq, DstActor: parentActor,
+			}
+
+		}
+	}
+
+	for reqId, info := range busyInfo.ActorSent {
+		srcActor := busyInfo.ActorHandling[info.ParentId]
+		dstActor := info.Actor
+
+		node, ok := retgraph[srcActor]
+		if !ok {
+			node = node_t {
+				Edges: make(map[request_t]edge_t),
+				IsVisited: false,
+			}
+		}
+		myReq := request_t {
+			RequestId: reqId,
+			CallStack: info.FlowId,
+			RequestValue: info.RequestValue,
+		}
+		edge := edge_t {DstActor: dstActor, Req: myReq}
+		node.Edges[myReq] = edge
+		retgraph[srcActor] = node
+	}
+	busyInfoLock.RUnlock()
+	return retgraph
+}
+
+func checkDeadlockCycles(g *graph_t, a actorJson_t, path []edge_t) (bool, []edge_t) {
+	if (*g)[a].IsVisited {
+		for _, edge := range path {
+			if edge.DstActor == a {
+				req := edge.Req
+				//pretty sure that only one of these edges
+				// can exist
+				if req.CallStack == path[len(path)-1].Req.CallStack {
+					//same callstack, so reentrancy, so
+					// no deadlock
+					return false, nil
+				} else {
+					// no reentrancy, so deadlock
+					return true, path
+				}
+			}
+		}
+		// technically don't need this
+		return true, path
+	}
+
+	newNode := (*g)[a]
+	newNode.IsVisited = true
+	(*g)[a] = newNode
+
+	defer func() {
+		newNode := (*g)[a]
+		newNode.IsVisited = false
+		(*g)[a] = newNode
+	}()
+
+	for _, edge := range (*g)[a].Edges {
+		c, npath := checkDeadlockCycles(g, edge.DstActor, append(path, edge))
+		if c {
+			return c, npath
+		}
+
+	}
+	return false, nil
+}
+
+func checkDeadlock() []edge_t {
+	graph := makeDeadlockGraph()
+	_, path := checkDeadlockCycles(&graph, actorJson_t{}, []edge_t{})
+	return path
+}
+
+
+// end deadlock detection code
+
 func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	bytes, err := connReader.ReadBytes(0)
 	if err != nil { return nil, err}
@@ -982,6 +1114,23 @@ readBytesAgain:
 		"kar invoke", "kar get", "kar rest":
 		// just forward it on
 		send(string(msgBytes))
+	case "viewDeadlocks":
+		lbamsg := map[string]string {
+			"command": "listBusyActors",
+			"commandId": uuid.New().String(),
+		}
+
+		respChansLock.Lock()
+		respChans[lbamsg["commandId"]] = make(chan []byte)
+		respChansLock.Unlock()
+
+		lbamsgBytes, _ := json.Marshal(lbamsg)
+		send(string(lbamsgBytes))
+		<-respChans[lbamsg["commandId"]]
+
+		path := checkDeadlock()
+		responseBytes, _ := json.Marshal(path)
+		sendDebugger(conn, responseBytes)
 	case "viewBreakpoint":
 		breakpointsLock.Lock()
 		if bkid, ok := msg["breakpointId"]; ok {
@@ -1417,6 +1566,38 @@ func processClient() {
 			return
 		}
 		// assume no need for response
+	case "vd":
+		// view deadlocks
+
+		// TODO: really refactor
+		msg := getArgs([]string{},
+			[]string {  },
+			map[string]string {}, map[string]string{},
+			0,
+		)
+		msg["command"] = "viewDeadlocks"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving response from debugger: %v\n", err)
+			return
+		}
+
+		var response []interface{}
+		json.Unmarshal(responseBytes, &response)
+		if len(response) == 0 {
+			fmt.Println("No deadlocks found.")
+		} else {
+			fmt.Println("Deadlock detected!")
+		}
+		pretty, _ := json.MarshalIndent(response, "", " ")
+		fmt.Printf("%s\n", pretty)
 	case "vb":
 		//view breakpoints
 		//vb [breakpointId]

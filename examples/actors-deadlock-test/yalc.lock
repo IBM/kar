@@ -1,0 +1,10 @@
+{
+  "version": "v1",
+  "packages": {
+    "kar-sdk": {
+      "signature": "2efac46a450fdfcb0cb2767591e026ac",
+      "file": true,
+      "replaced": "^1.3.4"
+    }
+  }
+}

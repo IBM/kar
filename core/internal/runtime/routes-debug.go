@@ -100,6 +100,7 @@ type actor_t struct {
 type actorSentInfo_t struct {
 	Actor actor_t `json:"actor"`
 	ParentId string `json:"parentId"`
+	FlowId string `json:"flowId"`
 	RequestValue string `json:"requestValue"`
 }
 

@@ -236,6 +236,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 			busyInfo.ActorSent[requestID] = actorSentInfo_t {
 				Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
 				ParentId: parentID,
+				FlowId: flow,
 				RequestValue: string(bytes),
 			}
 			busyInfoLock.Unlock()
