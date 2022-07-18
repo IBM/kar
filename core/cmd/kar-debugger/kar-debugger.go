@@ -350,6 +350,7 @@ type listPauseInfo_t struct {
 	ActorType string `json:"actorType"`
 	ActorId string `json:"actorId"`
 	RequestId string `json:"requestId"`
+	FlowId string `json:"flowId"`
 	RequestValue string `json:"requestValue"`
 	ResponseValue string `json:"responseValue"`
 	IsResponse string `json:"isResponse"`
@@ -363,6 +364,8 @@ type listPauseInfo_t struct {
 
 	ChildActorId string `json:"childActorId"`
 	ChildActorType string `json:"childActorType"`
+
+	CanStep bool `json:"canStep"`
 }
 
 func unpackRequestValue(s string) (map[string]interface{}, error) {
@@ -403,6 +406,7 @@ type breakpoint_t struct {
 	ActorType string `json:"actorType"`
 	ActorId string `json:"actorId"`
 	Path string `json:"path"`
+	FlowId string `json:"flowId"`
 
 	IsRequest string `json:"isRequest"`
 
@@ -632,7 +636,7 @@ func listenSidecar(){
 
 						debuggerConn, ok := idToConn[cmdId]
 						if !ok { return }
-						sendDebugger(debuggerConn, []byte("done"))
+						sendDebugger(debuggerConn, msgBytes)
 					}()
 				}
 
@@ -667,6 +671,7 @@ func listenSidecar(){
 				newBreakpoint := breakpoint_t {
 					ActorId: msg["actorId"],
 					ActorType: msg["actorType"],
+					FlowId: msg["flowId"],
 					Path: msg["path"],
 					BreakpointId: id,
 					BreakpointType: msg["breakpointType"],
@@ -804,6 +809,8 @@ func listenSidecar(){
 						tmp.PauseDepth = 0
 						tmp.EndActorId = curActor.actorId
 						tmp.EndActorType = curActor.actorType
+						tmp.FlowId = curInfo.FlowId
+						tmp.CanStep = (curInfo.ParentId != "")
 						pausedActors[curActor] = tmp
 					}
 				}
@@ -838,9 +845,17 @@ func listenSidecar(){
 						tmp.ActorId = curActor.actorId
 						tmp.ActorType = curActor.actorType
 						tmp.RequestId = childReq
+						// TODO: is it curInfo.flowId that we should be using? or sentInfo.flowId? all calls in the same call chain have the same flowId, so probably doesn't matter.
+						tmp.FlowId = curInfo.FlowId
 						tmp.RequestValue = info.ActorSent[childReq].RequestValue
 						tmp.ChildActorId = info.ActorSent[childReq].Actor.ActorId
 						tmp.ChildActorType = info.ActorSent[childReq].Actor.ActorType
+
+						// all indirectly-paused actors are necessarily paused on request
+						// thus, we can always step them
+						tmp.CanStep = true
+						tmp.IsResponse = "request"
+
 						pausedActors[curActor] = tmp
 						//fmt.Printf("tmp: %v %v\n",pausedActors[curActor], curActor) 
 					} else {
@@ -1841,22 +1856,49 @@ func processClient() {
 			return
 		}
 
-		pauseResponse := map[string]listPauseInfo_t {}
+		pauseResponse := map[string][]listPauseInfo_t {}
 		pauseResponseBytes, _ := recvDebugger(connReader)
-		// TODO: add error checking
+
 		err := json.Unmarshal(pauseResponseBytes, &pauseResponse)
 		if err != nil {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			fmt.Printf("Response: %v\n", string(pauseResponseBytes))
 			return
 		}
-		pauseInfo, ok := pauseResponse["actor"]
+		pauseList, ok := pauseResponse["actors"]
 
-		if !ok {
+		if len(pauseList) == 0 || !ok {
 			fmt.Println("Cannot step: actor is not paused.")
 			return
 		}
 
+		pauseInfo := pauseList[0]
+
+		// see if our actor is paused on a response and has no parent
+		// if so, then we cannot step (nothing to step to)
+		if pauseInfo.IsResponse == "response" && !pauseInfo.CanStep {
+			fmt.Println("Cannot step: actor is paused on a response and has no parent.")
+			return
+		}
+
+		// set a flow breakpoint
+		// TODO: keep old code, split into step and stepi commands
+
+		bkId := fmt.Sprintf("single-step of actor %v %v",
+			actorType, actorId)
+
+		bmsg := map[string]string {
+			"commandId": commandId,
+			"flowId": pauseInfo.FlowId,
+			"actorId": actorId,
+			"actorType": actorType,
+			"command": "setBreakpoint",
+			"keepAlive": "true",
+			"deleteOnHit": "true",
+			"breakpointId": bkId,
+		}
+
+		/*
 		// next, see if our actor is paused on a response
 		if pauseInfo.IsResponse == "response" {
 			fmt.Println("Cannot step: actor is paused on a response, not a request.")
@@ -1877,7 +1919,7 @@ func processClient() {
 			"keepAlive": "true",
 			"path": reqInfo["path"],
 			"deleteOnHit": "true",
-		}
+		}*/
 
 		bmsgBytes, _ := json.Marshal(bmsg)
 		err = sendDebugger(clientConn, bmsgBytes)
@@ -1898,6 +1940,7 @@ func processClient() {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			return
 		}
+		fmt.Println(response)
 		fmt.Printf("Single-step breakpoint %v set.\n", response["breakpointId"])
 		fmt.Printf("Unpausing all actors...\n")
 		upmsg := map[string]string {
@@ -1912,8 +1955,22 @@ func processClient() {
 			return
 		}
 		// wait for step to be hit
-		recvDebugger(connReader)
-		fmt.Println("Single-stepped actor is now paused on response.")
+		responseBytes, err = recvDebugger(connReader)
+		if err != nil { return }
+
+		var stepCompleteMsg map[string]string
+		err = json.Unmarshal(responseBytes, &stepCompleteMsg)
+
+		fmt.Println("Single-step complete.")
+		fmt.Println("Current location:")
+		fmt.Printf("* Actor: %v %v\n", stepCompleteMsg["actorType"], stepCompleteMsg["actorId"])
+		fmt.Printf("* Request vs response: %v\n", stepCompleteMsg["isResponse"])
+
+		// TODO: error handling
+		reqInfo, _ := unpackRequestValue(stepCompleteMsg["requestValue"])
+		fmt.Printf("\t\t* Request type: %s\n", reqInfo["command"].(string))
+		fmt.Printf("\t\t* Request method: %s\n", reqInfo["path"].(string))
+		fmt.Printf("\t\t* Request payload: %s\n", reqInfo["payload"])
 	case "help":
 		if len(os.Args) >= 3 {
 			cmd := os.Args[2]

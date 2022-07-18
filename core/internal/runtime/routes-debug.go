@@ -78,12 +78,14 @@ type listBreakpointInfo_t struct {
 	Nodes []string `json:"nodes"`
 }
 
+// TODO: refactor. merge this and waitInfo_t
 type listPauseInfo_t struct {
 	ActorType string `json:"actorType"`
 	ActorId string `json:"actorId"`
 	RequestId string `json:"requestId"`
 	RequestValue string `json:"requestValue"`
 	ResponseValue string `json:"responseValue"`
+	FlowId string `json:"flowId"`
 	IsResponse string `json:"isResponse"`
 	BreakpointId string `json:"breakpointId"`
 	NodeId string `json:"nodeId"`
@@ -666,25 +668,32 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 	var doCall func(string) error
 	var node string
 	var ok bool
-	var actorType string
-	var path string
+	//var actorType string
+	//var path string
 	var successful bool
 	nodes := []string{}
 
 	var err error
 
-	breakpointId = "bk-"+uuid.New().String()
-
-	path, ok = bodyJson["path"]
-	if !ok {
-		err = fmt.Errorf("Path is not an optional argument")
-		goto errorEncountered
+	breakpointId, ok = bodyJson["breakpointId"]
+	if !ok || breakpointId == "" {
+		breakpointId = "bk-"+uuid.New().String()
 	}
 
-	actorType, ok = bodyJson["actorType"]
-	if !ok {
-		err = fmt.Errorf("Actor type is not an optional argument")
-		goto errorEncountered
+	_, flowOk := bodyJson["flowId"]
+
+	if !flowOk {
+		_, ok = bodyJson["path"]
+		if !ok {
+			err = fmt.Errorf("Path is not an optional argument")
+			goto errorEncountered
+		}
+
+		_, ok = bodyJson["actorType"]
+		if !ok {
+			err = fmt.Errorf("Actor type is not an optional argument")
+			goto errorEncountered
+		}
 	}
 
 	msg = map[string]interface{} {
@@ -692,8 +701,9 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 		"breakpointId": breakpointId,
 		"breakpointType": mapget(bodyJson, "breakpointType", "global"),
 		"actorId": mapget(bodyJson, "actorId", ""),
-		"actorType": actorType,
-		"path": path,
+		"actorType": mapget(bodyJson, "actorType", ""), //actorType
+		"path": mapget(bodyJson, "path", ""),//path,
+		"flowId": mapget(bodyJson, "flowId", ""),
 		"isCaller": mapget(bodyJson, "isCaller", "caller"),
 		"isRequest": mapget(bodyJson, "isRequest", "request"),
 		"srcNodeId": rpc.GetNodeID(),
