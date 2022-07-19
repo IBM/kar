@@ -393,7 +393,7 @@ func unpackResponseValue(s string) (map[string]interface{}, error) {
 			//payloadMap := map[string]interface{} {}
 			var payloadMap interface{}
 			err = json.Unmarshal([]byte(payloadStr), &payloadMap)
-			retval["Payload"] = payloadMap
+			retval["payload"] = payloadMap
 		}
 	}
 	return retval, err
@@ -1540,6 +1540,7 @@ func processClient() {
 				"-actorId": "",
 				"-type": "breakpointType",
 				"-conds": "",
+				"-respConds": "",
 			}, map[string]string{},
 			2,
 		)
