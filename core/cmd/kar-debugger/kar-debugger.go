@@ -419,6 +419,8 @@ type breakpoint_t struct {
 	HitActorId string
 
 	NumPausedActors int
+
+	isPaused bool
 }
 
 var (
@@ -560,6 +562,8 @@ func listenSidecar(){
 				breakpointsLock.Lock()
 				bk, ok := breakpoints[actorInfo.BreakpointId]
 				if ok {
+					fmt.Println("unpausing")
+					bk.isPaused = false
 					bk.NumPausedActors--
 					if bk.NumPausedActors <= 0 {
 						bk.HitActorType = ""
@@ -580,6 +584,7 @@ func listenSidecar(){
 							breakpointsLock.Lock()
 							bk, ok := breakpoints[actorInfo.BreakpointId]
 							if ok {
+								bk.isPaused = false
 								bk.NumPausedActors--
 								if bk.NumPausedActors <= 0 {
 									bk.HitActorType = ""
@@ -602,13 +607,13 @@ func listenSidecar(){
 				}
 			}
 		case "notifyPause":
-			handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes)
+			handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes, false)
 		case "notifyBreakpoint":
 			deleteOnHit := false
 			
 			breakpointsLock.Lock()
 			bk, ok := breakpoints[msg["breakpointId"]]
-			breakpointsLock.Unlock()
+
 			if ok {
 				if bk.DeleteOnHit == "true" {
 					deleteOnHit = true
@@ -616,11 +621,12 @@ func listenSidecar(){
 
 				if deleteOnHit {
 					printInfo("Single-step of actor %s %s has paused on response %s\n", msg["actorType"], msg["actorId"], msg["requestId"])
-				} else if bk.NumPausedActors == 0 {
+				} else if bk.NumPausedActors == 0 || !bk.isPaused {
 					printInfo("Breakpoint %s hit by %s %s with request %s\n", msg["breakpointId"], msg["actorType"], msg["actorId"], msg["requestId"])
 
 					bk.HitActorType = msg["actorType"]
 					bk.HitActorId = msg["actorId"]
+					bk.isPaused = true
 					breakpoints[msg["breakpointId"]] = bk
 				}
 
@@ -645,8 +651,10 @@ func listenSidecar(){
 				//note: msgBytes is used in handleNotifyPaused to construct a listPauseInfo_t
 				//we can do this because it turns out that most of the fields of
 				//  listPauseInfo_t are the same fields as breakpoint_t
-				handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes)
+				handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes, true)
 			}
+
+			breakpointsLock.Unlock()
 
 		case "setBreakpoint":
 			breakpointsLock.Lock()
@@ -903,7 +911,7 @@ func listenSidecar(){
 	}
 }
 
-func handleNotifyPause(actorType string, actorId string, msgBytes []byte){
+func handleNotifyPause(actorType string, actorId string, msgBytes []byte, hasBkLock bool){
 	myActor := actor_t { actorId: actorId, actorType: actorType }
 	myInfo := listPauseInfo_t {}
 	json.Unmarshal(msgBytes, &myInfo)
@@ -912,13 +920,13 @@ func handleNotifyPause(actorType string, actorId string, msgBytes []byte){
 	_, ok := pausedActors[myActor]
 
 	if !ok {
-		breakpointsLock.Lock()
+		if !hasBkLock { breakpointsLock.Lock() }
 		bk, ok := breakpoints[myInfo.BreakpointId]
 		if ok && myInfo.PauseDepth == 0 {
 			bk.NumPausedActors++
 			breakpoints[myInfo.BreakpointId] = bk
 		}
-		breakpointsLock.Unlock()
+		if !hasBkLock { breakpointsLock.Unlock() }
 	}
 
 
