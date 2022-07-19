@@ -707,6 +707,7 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 		"isCaller": mapget(bodyJson, "isCaller", "caller"),
 		"isRequest": mapget(bodyJson, "isRequest", "request"),
 		"srcNodeId": rpc.GetNodeID(),
+		"conds": mapget(bodyJson, "conds", ""),
 		"deleteOnHit": bodyJson["deleteOnHit"],
 		//"nodes": []string{},
 	}

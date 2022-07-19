@@ -58,6 +58,7 @@ type breakpointAttrs_t struct {
 type breakpoint_t struct {
 	id string
 	breakpointType string //"actor", "node", "global"
+	conds string
 	deleteOnHit bool
 	attrs breakpointAttrs_t
 }
@@ -566,7 +567,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			path: bkPath,
 			isRequest: "request",
 			flowId: target.Flow,
-		})
+		}, string(value))
 
 		myActor := actorTuple_t { actorId: target.ID, actorType: target.Name }
 
@@ -759,7 +760,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			path: bkPath,
 			isRequest: "response",
 			flowId: target.Flow,
-		})
+		}, string(value))
 		
 		if reply != nil {
 			debugReply = reply
@@ -940,6 +941,7 @@ func setBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
 		id: msg["breakpointId"],
 		breakpointType: msg["breakpointType"],
 		attrs: fullAttrs,
+		conds: msg["conds"],
 	}
 	if msg["deleteOnHit"] == "true" {
 		breakpoint.deleteOnHit = true
@@ -1393,7 +1395,22 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 	return
 }
 
-func checkBreakpoint(attrs breakpointAttrs_t) (bool, breakpoint_t) {
+func unpackRequestValue(s string) (map[string]interface{}, error) {
+	retval := map[string]interface{} {}
+	err := json.Unmarshal([]byte(s), &retval)
+	payload, ok := retval["payload"]
+	if ok {
+		payloadStr, ok := payload.(string)
+		if ok {
+			var payloadMap []interface{}//:= map[string]interface{} {}
+			err = json.Unmarshal([]byte(payloadStr), &payloadMap)
+			retval["payload"] = payloadMap
+		}
+	} 
+	return retval, err
+}
+
+func checkBreakpoint(attrs breakpointAttrs_t, reqStr string) (bool, breakpoint_t) {
 	//fmt.Printf("Checking breakpoint %v\n", attrs)
 	//fmt.Printf("\tCurrent breakpoints: %v\n", breakpointsByAttrs)
 	breakpointsLock.Lock()
@@ -1403,54 +1420,55 @@ func checkBreakpoint(attrs breakpointAttrs_t) (bool, breakpoint_t) {
 		flowId: attrs.flowId,
 	}
 
+	reqVal, reqErr := unpackRequestValue(reqStr)
+
+	hit := false
 	bk, ok := breakpointsByAttrs[flowAttrs]
 	if ok {
-		if bk.deleteOnHit {
-			go func() {
-				retBytes, _ := implUnsetBreakpoint(map[string]string {
-					"breakpointId": bk.id,
-				})
-				sendAll(retBytes, "")
-			}()
-		}
-		return true, bk
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
+		} else { hit = true }
 	}
+	if hit { goto doHit }
 
 	attrs.flowId = ""
 	bk, ok = breakpointsByAttrs[attrs]
 	
 	if ok {
-		//fmt.Println(breakpointsByAttrs)
-		if bk.deleteOnHit {
-			go func() {
-				retBytes, _ := implUnsetBreakpoint(map[string]string {
-					"breakpointId": bk.id,
-				})
-				sendAll(retBytes, "")
-			}()
-			//delete(breakpointsByAttrs, attrs)
-			//delete(breakpoints, bk.id)
-		}
-		return true, bk
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
+		} else { hit = true }
 	}
+	if hit { goto doHit }
 
-	newAttrs := attrs
-	newAttrs.actorId = "" //check for wildcards on actorId
-	bk, ok = breakpointsByAttrs[newAttrs]
+	attrs.actorId = "" //check for wildcards on actorId
+	bk, ok = breakpointsByAttrs[attrs]
 	if ok {
-		if bk.deleteOnHit {
-			go func() {
-				retBytes, _ := implUnsetBreakpoint(map[string]string {
-					"breakpointId": bk.id,
-				})
-				sendAll(retBytes, "")
-			}()
-			//delete(breakpointsByAttrs, attrs)
-			//delete(breakpoints, bk.id)
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
+		} else {
+			hit = true
 		}
-		return true, bk
 	}
+	if hit { goto doHit }
 	return false, breakpoint_t {}
+
+doHit:
+	if bk.deleteOnHit {
+		go func() {
+			retBytes, _ := implUnsetBreakpoint(map[string]string {
+				"breakpointId": bk.id,
+			})
+			sendAll(retBytes, "")
+		}()
+	}
+	return true, bk	
 }
 
 ////////////////////
