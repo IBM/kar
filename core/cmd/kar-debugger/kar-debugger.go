@@ -338,6 +338,7 @@ type actorSentInfo_t struct {
 	ParentId string `json:"parentId"`
 	RequestValue string `json:"requestValue"`
 	FlowId string `json:"flowId"`
+	IsHandling bool `json:"isHandling"`
 	isVisited bool
 }
 
@@ -1091,6 +1092,30 @@ func checkDeadlock() []edge_t {
 
 // end deadlock detection code
 
+// request info code 
+
+func viewRequestDetails(info actorSentInfo_t, reqId string) {
+	fmt.Printf("* Request %s to actor %s %s\n",
+		reqId, info.Actor.ActorType, info.Actor.ActorId)
+	if info.IsHandling {
+		fmt.Printf("\t* Request is currently being handled.\n")
+	} else {
+		fmt.Printf("\t* Request is in flight, not yet being handled.\n")
+	}
+	if info.ParentId != "" {
+		fmt.Printf("\t* Parent request: %s\n", info.ParentId)
+	}
+	reqVal, err := unpackRequestValue(info.RequestValue)
+	if err != nil { return }
+	fmt.Printf("\t* Request type: %s\n", reqVal["command"])
+	fmt.Printf("\t* Method: %s()\n", reqVal["path"].(string)[1:])
+	pretty, _ := json.MarshalIndent(reqVal["payload"],
+		"\t\t", " ")
+	fmt.Printf("\t* Arguments:\n%s\n", pretty)
+}
+
+// end request info code
+
 func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	bytes, err := connReader.ReadBytes(0)
 	if err != nil { return nil, err}
@@ -1158,6 +1183,38 @@ readBytesAgain:
 
 		path := checkDeadlock()
 		responseBytes, _ := json.Marshal(path)
+		sendDebugger(conn, responseBytes)
+	case "viewRequest":
+		lbamsg := map[string]string {
+			"command": "listBusyActors",
+			"commandId": uuid.New().String(),
+		}
+
+		respChansLock.Lock()
+		respChans[lbamsg["commandId"]] = make(chan []byte)
+		respChansLock.Unlock()
+
+		lbamsgBytes, _ := json.Marshal(lbamsg)
+		send(string(lbamsgBytes))
+		<-respChans[lbamsg["commandId"]]
+
+		busyInfoLock.RLock()
+		defer busyInfoLock.RUnlock()
+		reqId := msg["requestId"]
+		req, ok := busyInfo.ActorHandling[reqId]
+		if ok {
+			req.IsHandling = true
+		} else {
+			req, ok = busyInfo.ActorSent[reqId]
+		}
+
+		response := map[string]actorSentInfo_t {}
+
+		if ok {
+			response["request"] = req
+		}
+
+		responseBytes, _ := json.Marshal(response)
 		sendDebugger(conn, responseBytes)
 	case "viewBreakpoint":
 		breakpointsLock.Lock()
@@ -1718,6 +1775,42 @@ func processClient() {
 				}
 			}
 		}
+	case "vrd":
+		// view request details
+		msg := getArgs(os.Args,
+			[]string {"requestId"},
+			map[string]string {"-format": "", "-ind": ""}, map[string]string{},
+			2,
+		)
+
+		msg["command"] = "viewRequest"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		// expecting list of actors
+		response := map[string]actorSentInfo_t {}
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving from debugger: %v\n", err)
+		}
+
+		// TODO: add error checking
+		err = json.Unmarshal(responseBytes, &response)
+		if err != nil {
+			fmt.Printf("Error unmarshalling response: %v\n", err)
+			fmt.Printf("Response: %v\n", string(responseBytes))
+			return
+		}
+
+		req, ok := response["request"]
+		if !ok {
+			fmt.Println("Request not found.")
+			return
+		}
+		viewRequestDetails(req, msg["requestId"])
 	case "vpa":
 		// view paused actors
 		msg := getArgs(os.Args,
