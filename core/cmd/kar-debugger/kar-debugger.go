@@ -59,7 +59,17 @@ Options:
 		the id of the actor that will trigger the breakpoint
 		(default: when the actor method is called on any instance of the specified actor type, the breakpoint is triggered)
 	-type breakpointType (default: global)
-		The type of breakpoint. There are four options. "global" causes all nodes to pause all actors. "node" causes the node that tripped the breakpoint to pause all actors. "actor" causes the actor that tripped the breakpoint to pause. "suicide" causes the node that tripped the breakpoint to die.`,
+		The type of breakpoint. There are four options. "global" causes all nodes to pause all actors. "node" causes the node that tripped the breakpoint to pause all actors. "actor" causes the actor that tripped the breakpoint to pause. "suicide" causes the node that tripped the breakpoint to die.
+	-conds listOfConditions
+		A comma-separated list of conditions on each request that
+		might trigger the breakpoint. If given, then the
+		breakpoint will only trigger if all of the conditions are
+		met. Type "help conditions" for more information.
+	-respConds listOfConditions
+		A comma-separated list of conditions on each response that
+		might trigger the breakpoint. If given, then the
+		breakpoint will only trigger if all of the conditions are
+		met. Type "help conditions" for more information.`,
 	"d":
 `Delete a breakpoint.
 Usage: d breakpointId [OPTIONS]
@@ -194,6 +204,60 @@ Args:
 		The type of the actor on which to step.
 	actorId:
 		The id of the actor on which to step.`,
+"conditions":
+`Information on breakpoint conditions:
+
+It is possible to set finer-grained conditions that must be met for
+breakpoints to trigger. For instance, you might only want a breakpoint
+to trigger if a method is invoked as a "call", or if the response from
+the method is greater than 7. Breakpoint conditions let you achieve this.
+
+All conditions are of the form "arg1 COND arg2", where COND is one of the
+following operators: ==, !=, <=, >=, <, >, LIKE, IN. The operators have
+the following semantics:
+	"==": True if arg1 equals arg2, false otherwise.
+
+	"!=": False if arg1 equals arg2, true otherwise.
+
+	"<=", ">=", "<", ">". False if either argument is not a number.
+	True if arg1 is less than or equal to, greater than or equal to,
+	less than, greater than arg2 respectively.
+
+	"LIKE": False if either argument is not a string. True if arg1
+	matches the regex pattern given in arg2.
+
+	"IN": If both arguments are strings, then returns true if arg1
+	is a substring of arg2 and false otherwise.
+	If arg2 is a map, then returns true if arg1 is a key in arg2 and
+	false otherwise.
+	If arg2 is a list, then returns true if arg1 is an element in arg1
+	and false otherwise.
+
+Conditions are evaluated on various properties of the request or response.
+To access these properties, the following syntax is used:
+	.property: accesses the key "property" of the parent map.
+	[i]: accesses the i-th array element of the parent.
+These selectors are then chained to form more complex expressions. For
+example, if we are evaluating a condition on the request, and the request
+has the following arguments:
+	[ {"hello": "world"}, {"foo": "bar"} ]
+then the selector
+	.payload[1].foo
+would select "bar".
+
+In the above example, where did "payload" come from? The answer: requests
+and responses have special "built-in" properties.
+Request properties:
+	"payload": an array of arguments.
+	"command": the type of method invocation. In most cases, either
+		"call" or "tell".
+	"path": the name of the method being called, with a forward slash
+		at the beginning.
+
+Response properties:
+	"payload": a map containing a single item, with key "value".
+		.payload.value yields the return value of the response.
+	"StatusCode": the HTTP status code returned by the request.`,
 }
 
 func getArgs(args []string, names []string, options map[string]string, boolOptions map[string]string, startIndex int) map[string]string {
