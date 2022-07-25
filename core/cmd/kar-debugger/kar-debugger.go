@@ -258,6 +258,13 @@ Response properties:
 	"payload": a map containing a single item, with key "value".
 		.payload.value yields the return value of the response.
 	"StatusCode": the HTTP status code returned by the request.`,
+
+`vd`:
+`View deadlocks.
+Checks for deadlocks in the running application. If any are present, prints
+out information about the deadlock. 
+
+Usage: vd`,
 }
 
 func getArgs(args []string, names []string, options map[string]string, boolOptions map[string]string, startIndex int) map[string]string {
