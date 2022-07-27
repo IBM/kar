@@ -10,10 +10,13 @@ import (
 	"sort"
 	"strconv"
 	"encoding/json"
+	"crypto/tls"
 	"net"
 	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"github.com/Shopify/sarama"
 	"time"
+	//"log"
 )
 
 type sidecarData_t struct {
@@ -495,8 +498,34 @@ type breakpoint_t struct {
 	isPaused bool
 }
 
+type reqMsg_t struct {
+	MsgType string // "request", "response"
+
+	RequestId string
+	ParentId string
+
+	ActorType string
+	ActorId string
+	Command string
+
+	Path string
+	Payload interface{}
+
+	Sequence int
+
+	Timestamp int64
+	Deadline int64
+}
+
 var (
+	kafkaClient sarama.Client
+	kafkaConsumer sarama.Consumer
+	kafkaTopic string
+	kafkaErr error = nil
+	kafkaLock = sync.RWMutex {}
+
 	pausedActors = map[actor_t]listPauseInfo_t {}
+	// TODO: refactor to use RWMutex
 	pausedActorsLock = sync.Mutex {}
 
 	//TODO: refactor this to use respChans
@@ -504,13 +533,16 @@ var (
 	busyInfoLock = sync.RWMutex {}
 	
 	breakpoints = map[string]breakpoint_t {}
+	// TODO: refactor to use RWMutex
 	breakpointsLock = sync.Mutex {}
 
 	respChans = map[string]chan []byte {}
+	// TODO: refactor to use RWMutex
 	respChansLock = sync.Mutex {}
 
 	// map id of a step breakpoint to the commandId that set it
 	stepBreakpoints = map[string]string {}
+	// TODO: refactor to use RWMutex
 	stepBreakpointsLock = sync.Mutex {}
 )
 
@@ -594,6 +626,98 @@ func printBreakpoint(b breakpoint_t) {
 	fmt.Printf("\t* Number of actors paused due to this breakpoint: %v\n", b.NumPausedActors)
 }
 
+// try and connect to Kafka
+func kafkaInit(appName string) {
+	kafkaLock.Lock()
+	defer kafkaLock.Unlock()
+
+	// get config arguments
+
+	brokersStr := os.Getenv("KAFKA_BROKERS")
+	if brokersStr == "" {
+		kafkaErr = fmt.Errorf("At least one Kafka broker is required. Make sure to set the environment variable KAFKA_BROKERS.")
+		return
+	}
+	brokers := strings.Split(brokersStr, ",")
+
+	user := os.Getenv("KAFKA_USERNAME")
+	if user == "" { user = "token" }
+
+	password := os.Getenv("KAFKA_PASSWORD")
+
+	version := os.Getenv("KAFKA_VERSION")
+	if version == "" { version = "2.8.1" }
+	
+	enableTLS := false
+	{
+		tmp := os.Getenv("KAFKA_ENABLE_TLS") 
+		if tmp != "" {
+			var err error
+			enableTLS, err = strconv.ParseBool(tmp)
+			if err != nil {
+				kafkaErr = fmt.Errorf("Error parsing KAFKA_ENABLE_TLS \"%v\" as bool", tmp)
+				return
+			}
+		}
+	}
+
+	TLSSkipVerify := false
+	{
+		tmp := os.Getenv("KAFKA_TLS_SKIP_VERIFY") 
+		if tmp != "" {
+			var err error
+			enableTLS, err = strconv.ParseBool(tmp)
+			if err != nil {
+				kafkaErr = fmt.Errorf("Error parsing KAFKA_TLS_SKIP_VERIFY \"%v\" as bool", tmp)
+				return
+			}
+		}
+	}
+
+	// make config
+
+	conf := sarama.NewConfig()
+	conf.Version, _ = sarama.ParseKafkaVersion(version)
+
+	if enableTLS {
+		conf.Net.TLS.Enable = true
+		// TODO support custom CA certificate
+		if TLSSkipVerify {
+			conf.Net.TLS.Config = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
+	}
+
+
+	if password != "" {
+		conf.Net.SASL.Enable = true
+		conf.Net.SASL.User = user
+		conf.Net.SASL.Password = password
+		conf.Net.SASL.Handshake = true
+		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+	}
+
+	// make client
+
+	var err error
+	kafkaClient, err = sarama.NewClient(brokers, conf)
+
+	if err != nil {
+		kafkaErr = fmt.Errorf("Error making client: %v", err)
+		return
+	}
+
+	// make consumer
+	kafkaConsumer, err = sarama.NewConsumerFromClient(kafkaClient)
+	if err != nil {
+		kafkaErr = fmt.Errorf("Error making consumer: %v", err)
+		return
+	}
+
+	kafkaTopic = "kar_" + appName
+}
+
 func listenSidecar(){
 	for true {
 		_, msgBytes, err := conn.ReadMessage()
@@ -611,6 +735,8 @@ func listenSidecar(){
 		}
 
 		switch cmd {
+		case "appName":
+			kafkaInit(msg["appName"])
 		case "error":
 			idToConnLock.Lock()
 			debugConn, ok := idToConn[msg["commandId"]]
@@ -1193,6 +1319,172 @@ func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	return bytes[:len(bytes)-1], nil
 }
 
+func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[string]reqMsg_t, error) {
+	kafkaLock.Lock()
+	defer kafkaLock.Unlock()
+
+	if kafkaErr != nil {
+		// TODO: send error to debugger
+		//fmt.Printf("KafkaErr: %v\n", kafkaErr)
+		return nil, kafkaErr
+	}
+
+	partitions, err := kafkaConsumer.Partitions(kafkaTopic)
+	if err != nil {
+		return nil, err
+	}
+
+
+	var partitionConsumers = make(map[int32]sarama.PartitionConsumer)
+	for _, partition := range partitions {
+		oldest, _ :=
+			kafkaClient.GetOffset(kafkaTopic, partition, sarama.OffsetOldest)
+
+		pc, _/*err*/ :=
+			kafkaConsumer.ConsumePartition(kafkaTopic,
+				partition,
+				oldest,
+			)
+		partitionConsumers[partition] = pc
+
+		// check if any messages to read
+		if pc != nil {
+			hwo := pc.HighWaterMarkOffset()
+			if hwo == oldest {
+				// no messages to read
+				partitionConsumers[partition] = nil
+				continue
+			}
+		}
+	}
+
+	defer func(){
+		for _, pc := range partitionConsumers {
+			if pc != nil {
+				pc.Close()
+			}
+		}
+	}()
+
+	//sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
+
+	handleMessage := func(msg sarama.ConsumerMessage) reqMsg_t {
+		retval := reqMsg_t {}
+		retval.Timestamp = msg.Timestamp.Unix()
+		//fmt.Printf("headers: %v\n", msg.Headers)
+		for _, header := range msg.Headers {
+			key := string(header.Key)
+			value := string(header.Value)
+			//fmt.Printf("key: %v\n", key)
+
+			// ignore all handlerSidecar methods
+			// TODO: right now, this is desired behavior, since
+			// handler sidecar methods are just debugging methods
+			// (e.g. getActorInformation, etc.)
+			// but this behavior might not be desired in the future
+			if key == "Method" && value == "handlerSidecar" {
+				break
+			}
+
+			if key == "RequestID" {
+				//fmt.Printf("reqId: %v\n", value)
+				retval.RequestId = value
+			}
+
+			if key == "Type" {
+				if value == "Call" || value == "Tell" {
+					retval.MsgType = "request"
+					retval.Command = strings.ToLower(value)
+				} else if value == "Response" {
+					retval.MsgType = "response"
+					// only calls can have responses
+					retval.Command = "call"
+				} else if value == "Done" {
+					retval.MsgType = "response"
+					// only calls can have responses
+					retval.Command = "tell"
+					// TODO: do something
+				}
+			}
+
+			if key == "Sequence" {
+				retval.Sequence, _ = strconv.Atoi(value)
+			}
+
+			if key == "Deadline" {
+				deadline, _ := strconv.Atoi(value)
+				retval.Deadline = int64(deadline)
+			}
+
+			if key == "Parent" {
+				retval.ParentId = value
+			}
+
+			if key == "Session" {
+				retval.ActorId = value
+			}
+
+			if key == "Service" {
+				retval.ActorType = value
+			}
+			
+		}
+
+		//var msgJson map[string]string
+		//json.Unmarshal([]byte(msg.Value), &msgJson)
+		//retval.PayloadStr = string(msg.Value)
+		//fmt.Printf("%s %s\n", retval.RequestId, string(msg.Value))
+
+		if retval.MsgType == "request" {
+			reqVal, err := unpackRequestValue(string(msg.Value))
+			if err == nil {
+				retval.Path, _ = reqVal["path"].(string)
+				retval.Payload = reqVal["payload"]
+			}
+		}
+		
+		return retval
+	}
+
+	//retmap := map[string]reqMsg_t {}
+	retlist := []reqMsg_t {}
+	retLock := sync.Mutex {}
+
+	var wg = sync.WaitGroup {}
+	loopMsgs := func(partition int32, partitionConsumer sarama.PartitionConsumer){
+		defer wg.Done()
+		msgs := partitionConsumer.Messages()
+		hwo := partitionConsumer.HighWaterMarkOffset()
+
+		for msg := range msgs {
+			req := handleMessage(*msg)
+			// for now, just return on RequestId
+			if req.RequestId == debugMsg["requestId"] {
+				retLock.Lock()
+				//retmap[req.RequestId] = req
+				retlist = append(retlist, req)
+				retLock.Unlock()
+			}
+			if msg.Offset == hwo-1 {
+				break
+			}
+		}
+	}
+
+	for partition, partitionConsumer := range partitionConsumers {
+		if partitionConsumer == nil { continue }
+		wg.Add(1)
+		go loopMsgs(partition, partitionConsumer)
+	}
+	//wg.Add(1)
+	//go loopMsgs(0, partitionConsumers[0])
+
+	wg.Wait()
+
+	//return retmap, nil
+	return retlist, nil
+}
+
 func serveDebugger(conn net.Conn) {
 	connReader := bufio.NewReader(conn)
 readBytesAgain:
@@ -1234,6 +1526,12 @@ readBytesAgain:
 	idToConnLock.Unlock()
 
 	switch cmd {
+	case "vkr":
+		// TODO: error handling
+		reqMap, _/*err*/ := processReadKafka(msg)
+		fmt.Println(reqMap)
+		reqMapBytes, _ := json.Marshal(reqMap)
+		sendDebugger(conn, reqMapBytes)
 	case "unpause", "setBreakpoint", "unsetBreakpoint",
 		"kar invoke", "kar get", "kar rest":
 		// just forward it on
@@ -1846,6 +2144,42 @@ func processClient() {
 				}
 			}
 		}
+	case "vkr":
+		// view Kafka request details
+		msg := getArgs(os.Args,
+			[]string {"requestId"},
+			map[string]string {"-format": "", "-ind": ""}, map[string]string{},
+			2,
+		)
+
+		msg["command"] = "vkr"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		// expecting map of reqMsg_t
+		//response := map[string]reqMsg_t {}
+		response := []reqMsg_t {}
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving from debugger: %v\n", err)
+		}
+
+		// TODO: add error checking
+		err = json.Unmarshal(responseBytes, &response)
+		if err != nil {
+			fmt.Printf("Error unmarshalling response: %v\n", err)
+			fmt.Printf("Response: %v\n", string(responseBytes))
+			return
+		}
+
+		for _, reqMsg := range response {
+			fmt.Printf("* %v\n", reqMsg)
+		}
+
+		//viewRequestDetails(req, msg["requestId"])
 	case "vrd":
 		// view request details
 		msg := getArgs(os.Args,

@@ -127,6 +127,18 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 		return nil
 	}
 
+	// send app name when we first connect
+	{
+		appNameMap := map[string]string {
+			"command": "appName",
+			"appName": config.AppName,
+		}
+		appNameBytes, _ := json.Marshal(appNameMap)
+		sendErr := debugConn.WriteMessage(websocket.TextMessage,
+				appNameBytes)
+		if sendErr != nil { closeConn(debugConn, debuggerId); return }
+	}
+
 	for true {
 		_, msgBytes, err := debugConn.ReadMessage()
 		if err != nil { closeConn(debugConn, debuggerId); return }
