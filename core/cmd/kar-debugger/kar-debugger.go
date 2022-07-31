@@ -498,15 +498,38 @@ type breakpoint_t struct {
 	isPaused bool
 }
 
-type reqMsg_t struct {
-	MsgType string // "request", "response"
-
+type kafkaReq_t struct {
 	RequestId string
 	ParentId string
 
+	RequestType string
+
+	MsgFound bool
+	EarliestTailCall reqMsg_t
+	LatestTailCall reqMsg_t
+
+	Response interface{}
+	ResponseTimestamp int64
+}
+
+type genMsg_t struct {
+	isResponse bool
+	requestId string
+	parentId string
+	requestType string
+	sequence int
+	timestamp int64
+	deadline int64
+	actorId string
+	actorType string
+	path string
+	payload interface{}
+	response interface{}
+}
+
+type reqMsg_t struct {
 	ActorType string
 	ActorId string
-	Command string
 
 	Path string
 	Payload interface{}
@@ -515,6 +538,56 @@ type reqMsg_t struct {
 
 	Timestamp int64
 	Deadline int64
+}
+
+func printKafkaReq(req kafkaReq_t) {
+	etc := req.EarliestTailCall
+	ltc := req.LatestTailCall
+	fmt.Printf("* Request %v ", req.RequestId)
+	if req.MsgFound {
+		fmt.Printf("of type %v to %v %v\n", req.RequestType, etc.ActorType, etc.ActorId)
+	} else {
+		fmt.Printf("\n")
+	}
+	if req.ParentId != "" {
+		fmt.Printf("\t* Parent: %v\n", req.ParentId)
+	}
+	if req.MsgFound {
+		if etc.Sequence == ltc.Sequence {
+			fmt.Printf("\t* Method: %v.%v()\n", etc.ActorType, etc.Path[1:])
+			pretty, _ := json.MarshalIndent(etc.Payload, "\t\t", " ")
+			fmt.Printf("\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t* Timestamp: %v\n", etc.Timestamp)
+			fmt.Printf("\t* Deadline: %v\n", etc.Deadline)
+		} else {
+			fmt.Printf("\t* Earliest tail call:\n")
+			fmt.Printf("\t\t* Target actor: %v %v\n", etc.ActorType, etc.ActorId)
+			fmt.Printf("\t\t* Method: %v.%v\n", etc.ActorType, etc.Path[1:])
+			pretty, _ := json.MarshalIndent(etc.Payload, "\t\t\t", " ")
+			fmt.Printf("\t\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t\t* Timestamp: %v\n", etc.Timestamp)
+			fmt.Printf("\t\t* Deadline: %v\n", etc.Deadline)
+			fmt.Printf("\t\t* Sequence number: %v\n", etc.Sequence)
+
+			fmt.Printf("\t* Latest tail call:\n")
+			fmt.Printf("\t\t* Target actor: %v %v\n", ltc.ActorType, ltc.ActorId)
+			fmt.Printf("\t\t* Method: %v.%v\n", ltc.ActorType, ltc.Path[1:])
+			pretty, _ = json.MarshalIndent(ltc.Payload, "\t\t\t", " ")
+			fmt.Printf("\t\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t\t* Timestamp: %v\n", ltc.Timestamp)
+			fmt.Printf("\t\t* Deadline: %v\n", ltc.Deadline)
+			fmt.Printf("\t\t* Sequence number: %v\n", ltc.Sequence)
+		}
+	}
+	if req.Response != nil {
+		fmt.Printf("\n")
+		fmt.Printf("\t* Response: \n")
+		pretty, _ := json.MarshalIndent(req.Response, "\t\t", " ")
+		fmt.Printf("\t\t%s\n", pretty)
+	}
 }
 
 var (
@@ -1319,7 +1392,7 @@ func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	return bytes[:len(bytes)-1], nil
 }
 
-func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[string]reqMsg_t, error) {
+func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(map[string]kafkaReq_t, error) {
 	kafkaLock.Lock()
 	defer kafkaLock.Unlock()
 
@@ -1368,10 +1441,10 @@ func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[s
 
 	//sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
 
-	handleMessage := func(msg sarama.ConsumerMessage) reqMsg_t {
-		retval := reqMsg_t {}
-		retval.Timestamp = msg.Timestamp.Unix()
-		//fmt.Printf("headers: %v\n", msg.Headers)
+	handleMessage := func(msg sarama.ConsumerMessage) genMsg_t {
+		timestamp := msg.Timestamp.Unix()
+		var retval = genMsg_t {timestamp: timestamp}
+
 		for _, header := range msg.Headers {
 			key := string(header.Key)
 			value := string(header.Value)
@@ -1388,66 +1461,62 @@ func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[s
 
 			if key == "RequestID" {
 				//fmt.Printf("reqId: %v\n", value)
-				retval.RequestId = value
+				retval.requestId = value
 			}
 
 			if key == "Type" {
 				if value == "Call" || value == "Tell" {
-					retval.MsgType = "request"
-					retval.Command = strings.ToLower(value)
+					retval.isResponse = false
+					retval.requestType = strings.ToLower(value)
 				} else if value == "Response" {
-					retval.MsgType = "response"
-					// only calls can have responses
-					retval.Command = "call"
+					retval.isResponse = true
+					retval.requestType = "call"
 				} else if value == "Done" {
-					retval.MsgType = "response"
-					// only calls can have responses
-					retval.Command = "tell"
-					// TODO: do something
+					retval.isResponse = true
+					retval.requestType = "tell"
 				}
 			}
 
 			if key == "Sequence" {
-				retval.Sequence, _ = strconv.Atoi(value)
+				retval.sequence, _ = strconv.Atoi(value)
 			}
 
 			if key == "Deadline" {
 				deadline, _ := strconv.Atoi(value)
-				retval.Deadline = int64(deadline)
+				retval.deadline = int64(deadline)
 			}
 
 			if key == "Parent" {
-				retval.ParentId = value
+				retval.parentId = value
 			}
 
 			if key == "Session" {
-				retval.ActorId = value
+				retval.actorId = value
 			}
 
 			if key == "Service" {
-				retval.ActorType = value
+				retval.actorType = value
 			}
 			
 		}
 
-		//var msgJson map[string]string
-		//json.Unmarshal([]byte(msg.Value), &msgJson)
-		//retval.PayloadStr = string(msg.Value)
-		//fmt.Printf("%s %s\n", retval.RequestId, string(msg.Value))
-
-		if retval.MsgType == "request" {
+		if !retval.isResponse {
 			reqVal, err := unpackRequestValue(string(msg.Value))
 			if err == nil {
-				retval.Path, _ = reqVal["path"].(string)
-				retval.Payload = reqVal["payload"]
+				retval.path, _ = reqVal["path"].(string)
+				retval.payload = reqVal["payload"]
+			}
+		} else {
+			respVal, err := unpackResponseValue(string(msg.Value))
+			if err == nil {
+				retval.response = respVal
 			}
 		}
 		
 		return retval
 	}
 
-	//retmap := map[string]reqMsg_t {}
-	retlist := []reqMsg_t {}
+	retmap := map[string]kafkaReq_t {}
 	retLock := sync.Mutex {}
 
 	var wg = sync.WaitGroup {}
@@ -1457,12 +1526,64 @@ func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[s
 		hwo := partitionConsumer.HighWaterMarkOffset()
 
 		for msg := range msgs {
-			req := handleMessage(*msg)
+			genMsg := handleMessage(*msg)
 			// for now, just return on RequestId
-			if req.RequestId == debugMsg["requestId"] {
+			if genMsg.requestId == debugMsg["requestId"] {
 				retLock.Lock()
-				//retmap[req.RequestId] = req
-				retlist = append(retlist, req)
+				curReq, ok := retmap[genMsg.requestId]
+				if ok {
+					curReq.RequestType = genMsg.requestType
+					if genMsg.isResponse {
+						curReq.Response = genMsg.response
+						curReq.ResponseTimestamp = genMsg.timestamp
+					} else {
+						reqMsg := reqMsg_t {
+							ActorType: genMsg.actorType,
+							ActorId: genMsg.actorId,
+							Path: genMsg.path,
+							Payload: genMsg.payload,
+							Sequence: genMsg.sequence,
+							Timestamp: genMsg.timestamp,
+							Deadline: genMsg.deadline,
+						}
+						if curReq.EarliestTailCall.Sequence > reqMsg.Sequence || !curReq.MsgFound {
+							curReq.MsgFound = true
+							curReq.EarliestTailCall = reqMsg
+						} else if curReq.LatestTailCall.Sequence < reqMsg.Sequence || !curReq.MsgFound{
+							curReq.MsgFound = true
+							curReq.LatestTailCall = reqMsg
+						}
+					}
+					retmap[genMsg.requestId] = curReq
+				} else {
+					req := kafkaReq_t {
+						RequestId: genMsg.requestId,
+					}
+					if genMsg.isResponse {
+						req.Response = genMsg.response
+						req.ResponseTimestamp = genMsg.timestamp
+					} else {
+						req.RequestType = genMsg.requestType
+						req.ParentId = genMsg.parentId
+						req.MsgFound = true
+						fmt.Printf("found message!")
+
+						reqMsg := reqMsg_t {
+							ActorType: genMsg.actorType,
+							ActorId: genMsg.actorId,
+							Path: genMsg.path,
+							Payload: genMsg.payload,
+							Sequence: genMsg.sequence,
+							Timestamp: genMsg.timestamp,
+							Deadline: genMsg.deadline,
+						}
+
+						req.EarliestTailCall = reqMsg
+						req.LatestTailCall = reqMsg
+
+					}
+					retmap[genMsg.requestId] = req
+				}
 				retLock.Unlock()
 			}
 			if msg.Offset == hwo-1 {
@@ -1481,8 +1602,8 @@ func processReadKafka(debugMsg map[string]string) ([]reqMsg_t, error) { //(map[s
 
 	wg.Wait()
 
-	//return retmap, nil
-	return retlist, nil
+	return retmap, nil
+	//return retlist, nil
 }
 
 func serveDebugger(conn net.Conn) {
@@ -2160,8 +2281,8 @@ func processClient() {
 			return
 		}
 		// expecting map of reqMsg_t
-		//response := map[string]reqMsg_t {}
-		response := []reqMsg_t {}
+		response := map[string]kafkaReq_t {}
+		//response := []reqMsg_t {}
 		responseBytes, err := recvDebugger(connReader)
 		if err != nil {
 			fmt.Printf("Error receiving from debugger: %v\n", err)
@@ -2176,7 +2297,8 @@ func processClient() {
 		}
 
 		for _, reqMsg := range response {
-			fmt.Printf("* %v\n", reqMsg)
+			//fmt.Printf("* %v\n", reqMsg)
+			printKafkaReq(reqMsg)
 		}
 
 		//viewRequestDetails(req, msg["requestId"])
