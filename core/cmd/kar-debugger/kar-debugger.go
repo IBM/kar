@@ -1538,7 +1538,7 @@ func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(m
 			genMsgBytes, _ := json.Marshal(genMsg)
 			err := json.Unmarshal(genMsgBytes, &genMap)
 			if err != nil {
-				fmt.Printf("genmsgbytes unmarshall error: %v\n", err)
+				continue
 			}
 			if runConds(genMap, debugMsg["conds"]){
 				retLock.Lock()
@@ -2708,7 +2708,12 @@ func main(){
 
 		if err != nil {
 			fmt.Printf("Error connecting to KAR sidecar: %v\n", err)
-			fmt.Printf("\tError response: %v\n", *resp)
+			if resp != nil {
+				fmt.Printf("\tError response: %v\n", *resp)
+			} else {
+				fmt.Println("Make sure that you entered the correct hostname and port.")
+				fmt.Println("Additionally, make sure that the KAR sidecar is running, with its port exposed.")
+			}
 			return
 		}
 
