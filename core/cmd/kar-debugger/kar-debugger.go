@@ -654,7 +654,7 @@ func printPausedActorFull(pauseInfo listPauseInfo_t){
 		}
 		fmt.Printf("\t\t* Request type: %s\n", reqInfo["command"])
 		fmt.Printf("\t\t* Request path: %s\n", reqInfo["path"])
-		fmt.Printf("\t\t* Request payload: %s\n", reqInfo["payload"])
+		fmt.Printf("\t\t* Request payload: %v\n", reqInfo["payload"])
 		if pauseInfo.IsResponse != "response" { goto endHandleRequest }
 
 		responseMap := map[string]interface{} {}
@@ -2657,9 +2657,9 @@ func processClient() {
 
 		// TODO: error handling
 		reqInfo, _ := unpackRequestValue(stepCompleteMsg["requestValue"])
-		fmt.Printf("\t\t* Request type: %s\n", reqInfo["command"].(string))
-		fmt.Printf("\t\t* Request method: %s\n", reqInfo["path"].(string))
-		fmt.Printf("\t\t* Request payload: %s\n", reqInfo["payload"])
+		fmt.Printf("\t* Request type: %s\n", reqInfo["command"].(string))
+		fmt.Printf("\t* Request method: %s\n", reqInfo["path"].(string))
+		fmt.Printf("\t* Request payload: %v\n", reqInfo["payload"])
 	case "help":
 		if len(os.Args) >= 3 {
 			cmd := os.Args[2]
