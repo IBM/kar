@@ -1398,7 +1398,8 @@ func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	return bytes[:len(bytes)-1], nil
 }
 
-func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(map[string]kafkaReq_t, error) {
+// TODO: return using pointer union pattern, rather than interface{}
+func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafkaReq_t*/, error) {
 	kafkaLock.Lock()
 	defer kafkaLock.Unlock()
 
@@ -1523,7 +1524,12 @@ func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(m
 	}
 
 	retmap := map[string]kafkaReq_t {}
+	//retmap := map[string]interface{} {}
 	retLock := sync.Mutex {}
+	selections := strings.Split(debugMsg["select"], ",")
+	for i, _ := range selections {
+		selections[i] = strings.TrimSpace(selections[i])
+	}
 
 	var wg = sync.WaitGroup {}
 	loopMsgs := func(partition int32, partitionConsumer sarama.PartitionConsumer){
@@ -1540,7 +1546,7 @@ func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(m
 			if err != nil {
 				continue
 			}
-			if runConds(genMap, debugMsg["conds"]){
+			if debugMsg["conds"] == "" || runConds(genMap, debugMsg["conds"]){
 				retLock.Lock()
 				curReq, ok := retmap[genMsg.RequestId]
 				if ok {
@@ -1613,8 +1619,36 @@ func processReadKafka(debugMsg map[string]string) /*([]reqMsg_t, error) { //*/(m
 
 	wg.Wait()
 
-	return retmap, nil
-	//return retlist, nil
+	countmap := map[string]int {}
+	if len(selections) > 0 {
+		for _, req := range retmap {
+			myId := map[string]interface{} {}
+			var objMap interface{}
+			objBytes, _ := json.Marshal(req)
+			json.Unmarshal(objBytes, &objMap)
+			for _, sel := range selections {
+				// TODO: error checking
+				q := strings.Split(sel, ".")
+				q = q[1:]
+				curItem, err := access(objMap, q)
+				if err != nil { continue }
+				myId[sel] = curItem
+			}
+			idJsonBytes, _ := json.Marshal(myId)
+			idJson := string(idJsonBytes)
+			count, ok := countmap[idJson]
+			if ok {
+				countmap[idJson] = count+1
+			} else {
+				countmap[idJson] = 1
+			}
+		}
+	}
+	if len(selections) > 0 {
+		return countmap, nil
+	} else {
+		return retmap, nil
+	}
 }
 
 func serveDebugger(conn net.Conn) {
@@ -2279,7 +2313,7 @@ func processClient() {
 		// view Kafka request details
 		msg := getArgs(os.Args,
 			[]string {"requestId"},
-			map[string]string {"-format": "", "-ind": "", "-conds": ""}, map[string]string{},
+			map[string]string {"-select": "", "-conds": ""}, map[string]string{},
 			2,
 		)
 
@@ -2291,26 +2325,41 @@ func processClient() {
 			return
 		}
 		// expecting map of reqMsg_t
-		response := map[string]kafkaReq_t {}
-		//response := []reqMsg_t {}
+		//response := map[string]kafkaReq_t {}
+		//var response interface{}
 		responseBytes, err := recvDebugger(connReader)
 		if err != nil {
 			fmt.Printf("Error receiving from debugger: %v\n", err)
 		}
 
 		// TODO: add error checking
-		err = json.Unmarshal(responseBytes, &response)
+		/*err = json.Unmarshal(responseBytes, &response)
 		if err != nil {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			fmt.Printf("Response: %v\n", string(responseBytes))
 			return
-		}
+		}*/
 
-		for _, reqMsg := range response {
-			//fmt.Printf("* %v\n", reqMsg)
-			printKafkaReq(reqMsg)
+		sel, ok := msg["select"]
+		//fmt.Println(response)
+		if !ok || sel == "" {
+			var response map[string]kafkaReq_t
+			err := json.Unmarshal(responseBytes, &response)
+			if err == nil {
+				for _, reqMsg := range response {
+					//fmt.Printf("* %v\n", reqMsg)
+					printKafkaReq(reqMsg)
+				}
+			}
+		} else {
+			var response map[string]interface{}
+			err := json.Unmarshal(responseBytes, &response)
+			if err == nil {
+				for key, val := range response {
+					fmt.Printf("* %v: %v requests found\n", key, val)
+				}
+			}
 		}
-
 		//viewRequestDetails(req, msg["requestId"])
 	case "vrd":
 		// view request details

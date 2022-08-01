@@ -219,7 +219,7 @@ func runConds(obj interface{}, conds string) bool {
 	//fmt.Printf("running conds: %v, %v\n", obj, conds)
 	condListStruct := CondList_p {}
 	err := parser.ParseString("", conds, &condListStruct)
-	if err != nil { fmt.Printf("Parse error: %v\nConds: %v\n", err, conds); return false }
+	if err != nil { /*fmt.Printf("Parse error: %v\nConds: %v\n", err, conds);*/ return false }
 	condList := []Cond_p{}
 
 	if condListStruct.Head != nil {
