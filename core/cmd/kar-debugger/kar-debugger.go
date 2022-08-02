@@ -960,7 +960,15 @@ func listenSidecar(){
 				}
 
 				if deleteOnHit {
-					printInfo("Single-step of actor %s %s has paused on response %s\n", msg["actorType"], msg["actorId"], msg["requestId"])
+					// Bad hack!
+					// takes advantage of another hack
+					// that makes the id of step breakpoints
+					// "single-step of actor %v %v".
+					// TODO: FIX ALL OF THIS!!!
+					hackStr := "S"
+					hackStr += msg["breakpointId"][1:]
+					//printInfo("Single-step of actor %s %s has paused on response %s\n", msg["actorType"], msg["actorId"], msg["requestId"])
+					printInfo(hackStr + " has paused on %s %s with actor %s %s\n", msg["isResponse"], msg["requestId"], msg["actorType"], msg["actorId"])
 				} else if bk.NumPausedActors == 0 || !bk.isPaused {
 					printInfo("Breakpoint %s hit by %s %s with request %s\n", msg["breakpointId"], msg["actorType"], msg["actorId"], msg["requestId"])
 
