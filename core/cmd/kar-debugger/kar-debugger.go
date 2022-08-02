@@ -42,6 +42,69 @@ Options:
 	-node nodeId
 		the node whose actors should be unpaused
 		(default: all nodes)`,
+	"vkr":
+`View a historical Kafka request.
+Usage: vkr [requestId] [OPTIONS]
+
+vkr returns information about requests or responses, similar to vrd. However,
+unlike vrd, vkr does not only limit itself to active requests; it also includes
+information about requests that have already returned. It does this by searching
+through the Kafka backend with which KAR interfaces behind the scenes.
+
+Important notes:
+* Kafka only stores messages for a limited amount of time. As such, the request
+that you are looking for might not be available.
+* vkr searches through all messages currently stored in Kafka. As such, it might
+take a while to return. If you do not care about requests that aren't active,
+then you are recommended to use vrd instead of vkr.
+
+Args:
+	requestId
+		The ID of the request whose details you want to view.
+
+Options:
+	-conds 'conditions'
+		Filter requests based on conditions. This uses the same syntax as
+		breakpoint conditions (see "help conditions"). The built-in
+		properties are different for vkr, however. vkr supports the
+		following built-in properties:
+
+		* RequestId: the ID of the request
+		* ParentId: the ID of the request's parent.
+		* RequestType: the type of request (e.g. "call", "tell").
+		* EarliestTailCall: a structure representing the earliest request
+		in the sequence of tail calls associated with this request.
+		* LatestTailCall: a structure representing the latest request
+		in the sequence of tail calls associated with this request.
+		* Response: a generic structure representing a response to this
+		request.
+		* ResponseTimestamp: when the response was created, as a Unix
+		timestamp.
+
+		In addition, EarliestTailCall and LatestTailCall have the following
+		properties:
+		* ActorType: the type of actor targeted by this invocation.
+		* ActorId: the ID of the actor targeted by this invocation.
+		* Path: the name of the method invoked.
+		* Payload: the arguments passed to this invocation.
+		* Sequence: the position of the invocation in the chain of tail
+		calls associated with this request.
+		* Timestamp: when this invocation was created, as a Unix timestamp.
+		* Deadline: the deadline associated with this invocation, as a
+		Unix timestamp.
+		
+		An example condition would look like
+		-conds '.EarliestTailCall.ActorId=="ActorA", .RequestType=="tell"'
+	-select 'accessors'
+		Select information about various properties of each returned
+		request, aggregating them by the number of times that this tuple
+		of properties appears. The properties are as given above. Multiple
+		properties are separated by commas.
+
+		For example:
+		-select '.EarliestTailCall.ActorId, .RequestType' would return a
+		list of (ActorId, RequestType) tuples, along with the number of
+		times that each tuple occurred.`,
 	"b":
 `Set a breakpoint.
 Usage: b actorType method [OPTIONS]
@@ -1620,7 +1683,7 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 	wg.Wait()
 
 	countmap := map[string]int {}
-	if len(selections) > 0 {
+	if debugMsg["select"] != "" {
 		for _, req := range retmap {
 			myId := map[string]interface{} {}
 			var objMap interface{}
@@ -1644,7 +1707,7 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 			}
 		}
 	}
-	if len(selections) > 0 {
+	if debugMsg["select"] != "" {
 		return countmap, nil
 	} else {
 		return retmap, nil
@@ -2355,12 +2418,25 @@ func processClient() {
 			var response map[string]interface{}
 			err := json.Unmarshal(responseBytes, &response)
 			if err == nil {
-				for key, val := range response {
-					fmt.Printf("* %v: %v requests found\n", key, val)
+				for key, count := range response {
+					var keyMap map[string]interface{}
+					err = json.Unmarshal([]byte(key), &keyMap)
+					fmt.Printf("* ")
+					if err == nil {
+						i := 0
+						for _, valPart := range keyMap {
+							fmt.Printf("\"%s\"", valPart)
+							if i != len(keyMap) {
+								fmt.Printf(", ")
+							}
+						}
+					} else {
+						fmt.Printf("%v", key)
+					}
+					fmt.Printf(": %v requests found\n", count)
 				}
 			}
 		}
-		//viewRequestDetails(req, msg["requestId"])
 	case "vrd":
 		// view request details
 		msg := getArgs(os.Args,
