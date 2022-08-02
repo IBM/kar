@@ -157,7 +157,11 @@ func resend(ctx context.Context, msg Request, drop bool) error {
 			_, _, err := producer.SendMessage(encode(appTopic, node2partition[v.Caller], m))
 			return err
 		case TellRequest:
-			logger.Warning("node died before processing tell request with id %s", v.requestID())
+			// TODO: don't hardcode debugger endpoint
+			if msg.method() != "handlerDebugger" {
+				logger.Warning("node died before processing tell request with id %s", v.requestID())
+			}
+			//logger.Warning("\tmessage: %v %v\n", msg.target(), string(msg.value()))
 			return nil
 		}
 	case Service:

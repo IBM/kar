@@ -1511,6 +1511,8 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 
 	//sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
 
+	//sidecar := debugMsg["sidecar"]
+
 	handleMessage := func(msg sarama.ConsumerMessage) genMsg_t {
 		timestamp := msg.Timestamp.Unix()
 		var retval = genMsg_t {Timestamp: timestamp}
@@ -1520,12 +1522,10 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 			value := string(header.Value)
 			//fmt.Printf("key: %v\n", key)
 
-			// ignore all handlerSidecar methods
-			// TODO: right now, this is desired behavior, since
-			// handler sidecar methods are just debugging methods
-			// (e.g. getActorInformation, etc.)
+			// ignore all handlerDebugger methods
+			// TODO: right now, this is desired behavior
 			// but this behavior might not be desired in the future
-			if key == "Method" && value == "handlerSidecar" {
+			if key == "Method" && value == "handlerDebugger" {
 				break
 			}
 
@@ -2376,7 +2376,7 @@ func processClient() {
 		// view Kafka request details
 		msg := getArgs(os.Args,
 			[]string {"requestId"},
-			map[string]string {"-select": "", "-conds": ""}, map[string]string{},
+			map[string]string {"-select": "", "-conds": ""}, map[string]string{"-sidecar": ""},
 			2,
 		)
 

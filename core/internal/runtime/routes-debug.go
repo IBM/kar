@@ -220,7 +220,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			var listBreakpointsMap = map[string]listBreakpointInfo_t {}
 			doCall := func(sidecar string) error {
 				//fmt.Println("doing call to "+sidecar)
-				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
+				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", doCallMsgBytes)
 				if err != nil { return err }
 				var reply Reply
 				err = json.Unmarshal(bytes, &reply)
@@ -295,7 +295,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 			var actorsList = []listPauseInfo_t {}
 			doCall := func(sidecar string) error {
-				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
+				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", doCallMsgBytes)
 				if err != nil { return err }
 				var reply Reply
 				err = json.Unmarshal(bytes, &reply)
@@ -361,7 +361,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			myBusyInfo.ActorHandling = map[string]actorSentInfo_t {}
 			myBusyInfo.ActorSent = map[string]actorSentInfo_t {}
 			doCall := func(sidecar string) error {
-				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", doCallMsgBytes)
+				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", doCallMsgBytes)
 				if err != nil { return err }
 				var reply Reply
 				err = json.Unmarshal(bytes, &reply)
@@ -642,7 +642,7 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 
 func implGetSidecars() string {
 	/*doCall := func(sidecar string) (addrTuple_t, error) {
-		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", []byte("{\"command\": \"getRuntimeAddr\"}") )
+		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", []byte("{\"command\": \"getRuntimeAddr\"}") )
 		if err != nil { return addrTuple_t{}, err }
 		var reply Reply
 		err = json.Unmarshal(bytes, &reply)
@@ -732,7 +732,7 @@ func implSetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 
 	doCall = func(sidecar string) error {
 		//fmt.Println("doing call to "+sidecar)
-		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 		if err != nil { return err }
 		var reply Reply
 		err = json.Unmarshal(bytes, &reply)
@@ -802,7 +802,7 @@ func implUnsetBreakpoint(bodyJson map[string]string) ([]byte, error) {
 	if err != nil { return nil, err }
 
 	doCall := func(sidecar string) error {
-		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 		if err != nil { return err }
 		var reply Reply
 		err = json.Unmarshal(bytes, &reply)
@@ -858,7 +858,7 @@ func routeImplRegisterDebugger(w http.ResponseWriter, r *http.Request, ps httpro
 	if err != nil { return }
 
 	doTell := func(sidecar string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	sidecars, _ := rpc.GetNodeIDs()
@@ -898,7 +898,7 @@ func unregisterDebuggerSidecar() {
 	if err != nil { return }
 
 	doTell := func(sidecar string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	sidecars, _ := rpc.GetNodeIDs()
@@ -933,7 +933,7 @@ func implPause(bodyJson map[string]string) ([]byte, error){
 	if err != nil { return nil, err }
 
 	doCall := func(sidecar string) error {
-		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 		if err != nil { return err }
 		var reply Reply
 		err = json.Unmarshal(bytes, &reply)
@@ -990,7 +990,7 @@ func implUnpause(bodyJson map[string]string) ([]byte, error){
 	if err != nil { return nil, err }
 
 	doCall := func(sidecar string) error {
-		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 		if err != nil { return err }
 		var reply Reply
 		err = json.Unmarshal(bytes, &reply)

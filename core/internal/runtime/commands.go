@@ -135,6 +135,7 @@ const (
 	bindingEndpoint = "handlerBinding"
 	serviceEndpoint = "handlerService"
 	sidecarEndpoint = "handlerSidecar"
+	debuggerEndpoint = "handlerDebugger"
 )
 
 func init() {
@@ -142,6 +143,7 @@ func init() {
 	rpc.RegisterSession(bindingEndpoint, handlerBinding)
 	rpc.RegisterService(serviceEndpoint, handlerService)
 	rpc.RegisterNode(sidecarEndpoint, handlerSidecar)
+	rpc.RegisterNode(debuggerEndpoint, handlerDebugger)
 }
 
 // Reply contains the subset of an http.Response that are relevant to higher levels of the runtime
@@ -408,7 +410,22 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 	} else if msg["command"] == "getRuntimeAddr" {
 		replyBytes, replyErr = getRuntimeAddr(ctx, msg)
 		return replyBytes, replyErr
-	} else if msg["command"] == "setBreakpoint" {
+	} else {
+		logger.Error("unexpected command %s", msg["command"]) // dropping message
+		return nil, nil
+	}
+}
+
+func handlerDebugger(ctx context.Context, target rpc.Node, value []byte) ([]byte, error) {
+	var msg map[string]string
+	err := json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, err
+	}
+
+	var replyBytes []byte
+	var replyErr error
+	if msg["command"] == "setBreakpoint" {
 		//logger.Info("setting breakpoint")
 		registerDebugger(msg["srcNodeId"])
 		replyBytes, replyErr = setBreakpoint(ctx, msg)
@@ -472,6 +489,7 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 		return nil, nil
 	}
 }
+
 
 func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]byte, error) {
 	var msg map[string]string
@@ -1099,7 +1117,7 @@ func informPause(info actorTuple_t, bk breakpoint_t, reqId string, flowId string
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we are paused
@@ -1125,7 +1143,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we hit a breakpoint
@@ -1245,7 +1263,7 @@ func pauseAllSidecars(bk breakpoint_t){
 	if err != nil { return }
 
 	doTell := func(sidecar string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	sidecars, _ := rpc.GetNodeIDs()
