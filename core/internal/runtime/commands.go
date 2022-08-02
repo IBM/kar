@@ -928,6 +928,10 @@ func setBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
 		path: msg["path"],
 		//isCaller: msg["isCaller"],
 		isRequest: msg["isRequest"],
+		// below line probably doesn't break things, because
+		// for non-flow breakpoints, we set flowId=="" in
+		// checkBreakpoint
+		flowId: flowId, //TODO: breaks things?
 	}
 
 	if flowOk && flowId != "" {
@@ -968,8 +972,13 @@ doReply:
 func unsetBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
 	breakpointsLock.Lock()
 	breakpoint := breakpoints[msg["breakpointId"]]
+
 	delete(breakpoints, msg["breakpointId"])
 	delete(breakpointsByAttrs, breakpoint.attrs)
+	flowAttrs := breakpointAttrs_t {
+		flowId: breakpoint.attrs.flowId,
+	}
+	delete(breakpointsByAttrs, flowAttrs)
 
 	//fmt.Printf("Breakpoints after unset: %v\n", breakpoints)
 

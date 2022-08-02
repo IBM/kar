@@ -1720,7 +1720,7 @@ readBytesAgain:
 	msgBytes, err := recvDebugger(connReader)
 	if err != nil {
 		if verbose >= 2 {
-			fmt.Println("Error receiving from new debugger connection.")
+			fmt.Printf("Error receiving from new debugger connection. %v\n", err)
 		}
 		return
 	}
@@ -2705,7 +2705,7 @@ func processClient() {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			return
 		}
-		fmt.Println(response)
+		//fmt.Println(response)
 		fmt.Printf("Single-step breakpoint %v set.\n", response["breakpointId"])
 		fmt.Printf("Unpausing all actors...\n")
 		upmsg := map[string]string {
