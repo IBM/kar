@@ -96,7 +96,7 @@ class Company {
     for (let i = 0; i < workers; i++) {
       const name = sn + i
       this.bluepages[name] = site
-      await actor.tell(actor.proxy('Site', site), 'newHire', name, days, steps, thinkms)
+      await actor.tell(this,actor.proxy('Site', site), 'newHire', name, days, steps, thinkms)
     }
     await actor.state.set(this, 'bluepages', this.bluepages)
   }
@@ -160,7 +160,7 @@ class Site {
   async newHire (who, days, steps, thinkms) {
     this.workers[who] = States.ONBOARDING
     await actor.state.set(this, 'workers', this.workers)
-    await actor.tell(actor.proxy('Researcher', who), 'newHire', this.name, days, steps, thinkms)
+    await actor.tell(this,actor.proxy('Researcher', who), 'newHire', this.name, days, steps, thinkms)
   }
 
   async retire (who, delays = []) {
@@ -329,10 +329,10 @@ class Researcher {
     // TODO: atomic checkpoint & doNext
     await this.checkpointState()
     if (this.currentStep === this.career) {
-      await actor.tell(actor.proxy('Site', this.site), 'retire', this.name, this.delays)
+      await actor.tell(this, actor.proxy('Site', this.site), 'retire', this.name, this.delays)
       await actor.remove(this)
     } else {
-      await actor.tell(this, 'determineNextStep')
+      await actor.tell(this, this, 'determineNextStep')
     }
   }
 
@@ -390,7 +390,7 @@ class Researcher {
       await actor.call(this, actor.proxy('Office', this.location), 'enter', this.name)
     }
     if (this.activity !== priorActivity) {
-      await actor.tell(actor.proxy('Site', this.site), 'workerUpdate', this.name, this.activity, Date.now())
+      await actor.tell(this,actor.proxy('Site', this.site), 'workerUpdate', this.name, this.activity, Date.now())
     }
     const when = new Date(Date.now() + thinkTime)
     await actor.reminders.schedule(this, 'move', { id: 'step', targetTime: when }, when.getTime())
