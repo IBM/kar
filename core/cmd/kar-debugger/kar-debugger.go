@@ -1617,66 +1617,64 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 			if err != nil {
 				continue
 			}
-			if debugMsg["conds"] == "" || runConds(genMap, debugMsg["conds"]){
-				retLock.Lock()
-				curReq, ok := retmap[genMsg.RequestId]
-				if ok {
-					curReq.RequestType = genMsg.RequestType
-					if genMsg.IsResponse {
-						curReq.Response = genMsg.Response
-						curReq.ResponseTimestamp = genMsg.Timestamp
-					} else {
-						reqMsg := reqMsg_t {
-							ActorType: genMsg.ActorType,
-							ActorId: genMsg.ActorId,
-							Path: genMsg.Path,
-							Payload: genMsg.Payload,
-							Sequence: genMsg.Sequence,
-							Timestamp: genMsg.Timestamp,
-							Deadline: genMsg.Deadline,
-						}
-						if curReq.EarliestTailCall.Sequence > reqMsg.Sequence || !curReq.MsgFound {
-							curReq.MsgFound = true
-							curReq.EarliestTailCall = reqMsg
-						} else if curReq.LatestTailCall.Sequence < reqMsg.Sequence || !curReq.MsgFound{
-							curReq.MsgFound = true
-							curReq.LatestTailCall = reqMsg
-						}
-					}
-					retmap[genMsg.RequestId] = curReq
+			retLock.Lock()
+			curReq, ok := retmap[genMsg.RequestId]
+			if ok {
+				curReq.RequestType = genMsg.RequestType
+				if genMsg.IsResponse {
+					curReq.Response = genMsg.Response
+					curReq.ResponseTimestamp = genMsg.Timestamp
 				} else {
-					req := kafkaReq_t {
-						RequestId: genMsg.RequestId,
+					reqMsg := reqMsg_t {
+						ActorType: genMsg.ActorType,
+						ActorId: genMsg.ActorId,
+						Path: genMsg.Path,
+						Payload: genMsg.Payload,
+						Sequence: genMsg.Sequence,
+						Timestamp: genMsg.Timestamp,
+						Deadline: genMsg.Deadline,
 					}
-					if genMsg.IsResponse {
-						req.Response = genMsg.Response
-						req.ResponseTimestamp = genMsg.Timestamp
-					} else {
-						req.RequestType = genMsg.RequestType
-						req.ParentId = genMsg.ParentId
-						req.MsgFound = true
-
-						reqMsg := reqMsg_t {
-							ActorType: genMsg.ActorType,
-							ActorId: genMsg.ActorId,
-							Path: genMsg.Path,
-							Payload: genMsg.Payload,
-							Sequence: genMsg.Sequence,
-							Timestamp: genMsg.Timestamp,
-							Deadline: genMsg.Deadline,
-						}
-
-						req.EarliestTailCall = reqMsg
-						req.LatestTailCall = reqMsg
-
+					if curReq.EarliestTailCall.Sequence > reqMsg.Sequence || !curReq.MsgFound {
+						curReq.MsgFound = true
+						curReq.EarliestTailCall = reqMsg
+					} else if curReq.LatestTailCall.Sequence < reqMsg.Sequence || !curReq.MsgFound{
+						curReq.MsgFound = true
+						curReq.LatestTailCall = reqMsg
 					}
-					retmap[genMsg.RequestId] = req
 				}
-				retLock.Unlock()
+				retmap[genMsg.RequestId] = curReq
+			} else {
+				req := kafkaReq_t {
+					RequestId: genMsg.RequestId,
+				}
+				if genMsg.IsResponse {
+					req.Response = genMsg.Response
+					req.ResponseTimestamp = genMsg.Timestamp
+				} else {
+					req.RequestType = genMsg.RequestType
+					req.ParentId = genMsg.ParentId
+					req.MsgFound = true
+
+					reqMsg := reqMsg_t {
+						ActorType: genMsg.ActorType,
+						ActorId: genMsg.ActorId,
+						Path: genMsg.Path,
+						Payload: genMsg.Payload,
+						Sequence: genMsg.Sequence,
+						Timestamp: genMsg.Timestamp,
+						Deadline: genMsg.Deadline,
+					}
+
+					req.EarliestTailCall = reqMsg
+					req.LatestTailCall = reqMsg
+
+				}
+				retmap[genMsg.RequestId] = req
 			}
-			if msg.Offset == hwo-1 {
-				break
-			}
+			retLock.Unlock()
+		}
+		if msg.Offset == hwo-1 {
+			break
 		}
 	}
 
@@ -1689,6 +1687,19 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 	//go loopMsgs(0, partitionConsumers[0])
 
 	wg.Wait()
+
+	// isn't this a bit wasteful, going through all kafka messages twice?
+	// problem is, it's a bit tricky to check conditions inline.
+	// e.g. we don't know what LatestTailCall of any given request will
+	// be before reading through all messages; there could always be a
+	// later one.
+	// TODO: think about this more and fix.
+	for reqId, req := range retmap {
+		if !((debugMsg["conds"] == "" && reqId == debugMsg["reqId"]) ||
+			runConds(genMap, debugMsg["conds"])){
+			delete(retmap, reqId)
+		}
+	}
 
 	countmap := map[string]int {}
 	if debugMsg["select"] != "" {
