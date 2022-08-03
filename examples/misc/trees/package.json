@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "express": "^4.17.2",
-    "kar-sdk": "^0.1.0"
+    "kar-sdk": "^3.4.6"
   },
   "devDependencies": {
     "standard": "^16.0.4"
