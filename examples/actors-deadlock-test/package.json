@@ -1,5 +1,5 @@
 {
-  "name": "kar-dining-philosophers",
+  "name": "kar-deadlock-test",
   "version": "0.0.1",
   "scripts": {
     "test": "standard"

@@ -14,27 +14,26 @@
 # limitations under the License.
 -->
 
-This example uses KAR's Actor Programming Model to implement
-Dijkstra's solution to the Dining Philosophers problem
-(https://en.wikipedia.org/wiki/Dining_philosophers_problem).
-
-The Philosophers and their Forks are all actors and interact via actor
-method invocations to implement the distributed protocol that ensures
-no Philosopher starves.
-
-Philosophers use a tail call pattern to move from one
-state to the next and achieve fault tolerance.
-
-A Cafe may contain an arbitrary number of tables of Philosophers. Each
-Cafe tracks its occupancy and generates messages when it seats new
-tables or when a sated Philosopher leaves.
+This example generates a deadlock, which can be inspected using
+`kar-debugger`.
 
 To run the example locally, first do an `npm install`.
 Then in one window start up the server code:
 ```shell
 kar run -app dp -actors ActorTypeA,ActorTypeB,Tester node philosophers.js
 ```
-In a second window, use the `kar` cli to invite some Philosopers to dinner:
+
+In a second window, start the debugger server (see core/cmd/kar-debugger/README.md).
+
+Then, in a third window, use the `kar` cli to start the deadlock testing client:
 ```shell
 kar invoke -app dp Tester TesterX startTest
 ```
+
+And in a fourth window, once the deadlock occurs, view it using the
+debugger command:
+```shell
+kar-debugger vd
+```
+
+
