@@ -42,13 +42,13 @@ kar run -h2c -actor_collector_interval 120s -v info -app tree -actors Sync,Async
 ```
 Run synchronous tree example with:
 ```shell
-kar run -v info -app tree -- node test-sync.js 10
+kar invoke -app tree Sync 1 test 10
 ```
 Run asynchronous tree example with:
 ```shell
-kar run -v info -app tree -- node test-async.js 10
+kar invoke -app tree Async 1 test 10
 ```
 Run parallel tree example with:
 ```shell
-kar run -v info -app tree -- node test-par.js 10
+kar invoke -app tree Par 1 test 10
 ```

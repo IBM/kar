@@ -25,6 +25,7 @@ class Sync {
     this.startTime = Date.now()
     await actor.call(this, this, 'fork', depth)
     console.log('sync test duration:', Date.now() - this.startTime)
+    return Date.now() - this.startTime
   }
 
   async fork (depth) {
@@ -46,6 +47,7 @@ class Async {
     actor.call(this, this, 'fork', depth, this.kar.session)
     await promise
     console.log('async test duration:', Date.now() - this.startTime)
+    return Date.now() - this.startTime
   }
 
   decr () {
@@ -76,6 +78,7 @@ class Par {
     this.startTime = Date.now()
     await actor.call(this, this, 'fork', depth)
     console.log('parallel test duration:', Date.now() - this.startTime)
+    return Date.now() - this.startTime
   }
 
   async fork (depth) {
