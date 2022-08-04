@@ -329,10 +329,10 @@ class Researcher {
     // TODO: atomic checkpoint & doNext
     await this.checkpointState()
     if (this.currentStep === this.career) {
-      await actor.tell( actor.proxy('Site', this.site), 'retire', this.name, this.delays)
+      await actor.tell(actor.proxy('Site', this.site), 'retire', this.name, this.delays)
       await actor.remove(this)
     } else {
-      await actor.tell( this, 'determineNextStep')
+      await actor.tell(this, 'determineNextStep')
     }
   }
 
@@ -378,7 +378,7 @@ class Researcher {
 
     // TODO: atomic checkpoint & doNext
     await this.checkpointState()
-    await actor.tell( 'reportDecision', thinkTime, priorActivity)
+    await actor.tell(this, 'reportDecision', thinkTime, priorActivity)
   }
 
   // Update derived simulation state by informing other actors of our next action.
@@ -414,3 +414,4 @@ app.post('/shutdown', async (_reg, res) => {
 app.use(sys.actorRuntime({ Company, Site, Office, Researcher }))
 
 const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+
