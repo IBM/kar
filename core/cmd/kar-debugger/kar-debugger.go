@@ -1672,9 +1672,10 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 				retmap[genMsg.RequestId] = req
 			}
 			retLock.Unlock()
-		}
-		if msg.Offset == hwo-1 {
-			break
+			if msg.Offset == hwo-1 {
+				break
+			}
+
 		}
 	}
 
@@ -1696,7 +1697,7 @@ func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafk
 	// TODO: think about this more and fix.
 	for reqId, req := range retmap {
 		if !((debugMsg["conds"] == "" && reqId == debugMsg["reqId"]) ||
-			runConds(genMap, debugMsg["conds"])){
+			runConds(req, debugMsg["conds"])){
 			delete(retmap, reqId)
 		}
 	}
