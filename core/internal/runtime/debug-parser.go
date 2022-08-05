@@ -39,6 +39,71 @@ func access(obj interface{}, query []string) (interface{}, error) {
 	return obj, nil
 }
 
+
+func replace(obj interface{}, query []string, newVal interface{}) (interface{}, error) {
+	objList := []interface{} {obj}
+	for _, curQuery := range query {
+		switch t := obj.(type) {
+		case []interface{}:
+			// we have an array
+			// only valid accessor is an integer index
+			idx, err := strconv.Atoi(curQuery)
+			if err != nil { return nil, fmt.Errorf("Array accessor must be an int literal")
+			}
+			if idx >= len(t) {
+				return nil, fmt.Errorf("Array accessor %v out of bounds for array of length %v", idx, len(t))
+			}
+			objList = append(objList, t[idx])
+			obj = t[idx]
+			
+		case map[string]interface{}:
+			// interface{} string is a valid identifier now
+			// -- as long as the index exists
+			newObj, ok := t[curQuery]
+			if !ok {
+				fmt.Printf("t:%v\n", t)
+				return nil, fmt.Errorf("Key %v not found in map", curQuery)
+			}
+			objList = append(objList, newObj)
+			obj = newObj
+		default:
+			return nil, fmt.Errorf("Attempted to access property %v of a non-map/non-array %v", curQuery, obj)
+		}
+	}
+	objList[len(objList)-1] = newVal
+	for i := len(query)-1; i >= 0; i-- {
+		curQuery := query[i]
+		obj := objList[i]
+		switch t := obj.(type) {
+		case []interface{}:
+			// we have an array
+			// only valid accessor is an integer index
+			idx, err := strconv.Atoi(curQuery)
+			if err != nil { return nil, fmt.Errorf("Array accessor must be an int literal")
+			}
+			if idx >= len(t) {
+				return nil, fmt.Errorf("Array accessor %v out of bounds for array of length %v", idx, len(t))
+			}
+			t[idx] = objList[i+1]
+			objList[i] = t
+			
+		case map[string]interface{}:
+			// interface{} string is a valid identifier now
+			// -- as long as the index exists
+			_, ok := t[curQuery]
+			if !ok {
+				fmt.Printf("t:%v\n", t)
+				return nil, fmt.Errorf("Key %v not found in map", curQuery)
+			}
+			t[curQuery] = objList[i+1]
+			objList[i] = t
+		default:
+			return nil, fmt.Errorf("Attempted to access property %v of a non-map/non-array %v", curQuery, obj)
+		}
+	}
+	return objList[0], nil
+}
+
 // parsing stuff
 
 type CondList_p struct {
@@ -50,6 +115,16 @@ type Cond_p struct {
 	LHS Expr_p `@@ `
 	Op string `Whitespace? @CondOp Whitespace?`
 	RHS Expr_p `@@`
+}
+
+type Edit_p struct {
+	Accessor Accessor_p `@@ Whitespace `
+	Value Expr_p `@@`
+}
+
+type EditList_p struct {
+	Head *[]*Edit_p `(@@ "," Whitespace?)*`
+	Tail Edit_p `@@`
 }
 
 type Accessor_p struct {
@@ -77,6 +152,12 @@ var (
 	})
 	parser = participle.MustBuild(
 		&CondList_p{},
+		participle.Lexer(myLexer),
+		participle.Unquote("String"),
+		participle.UseLookahead(1024),
+	)
+	editParser = participle.MustBuild(
+		&EditList_p{},
 		participle.Lexer(myLexer),
 		participle.Unquote("String"),
 		participle.UseLookahead(1024),
@@ -231,4 +312,33 @@ func runConds(obj interface{}, conds string) bool {
 		}
 	}
 	return true
+}
+
+func doEdits(obj interface{}, edit string) (interface{}, error) {
+	originalObj := obj
+	editListStruct := EditList_p {}
+	err := editParser.ParseString("", edit, &editListStruct)
+	if err != nil { return originalObj, err }
+	editList := []Edit_p{}
+
+	if editListStruct.Head != nil {
+		for _, c := range *(editListStruct.Head) {
+			editList = append(editList, *c)
+		}
+	}
+	editList = append(editList, editListStruct.Tail)
+
+
+	for _, editStruct := range editList {
+		exprStruct := editStruct.Value
+
+		var val interface{}
+		if exprStruct.Int != nil { val = *exprStruct.Int }
+		if exprStruct.Float != nil { val = *exprStruct.Float }
+		if exprStruct.String != nil { val = *exprStruct.String }
+		if val == nil { return originalObj, err }
+		obj, err = replace(obj, editStruct.Accessor.List, val)
+		if err != nil { return originalObj, err }
+	}
+	return obj, nil
 }

@@ -422,6 +422,46 @@ func debugServe(debugConn *websocket.Conn, debuggerId string){
 			if err != nil {
 				return
 			}
+		case "editResponse":
+			doCallMsg := map[string]string {
+				"command": "editResponse",
+				"requestId": msg["requestId"],
+				"edit": msg["edit"],
+			}
+			var doCallMsgBytes []byte
+			doCallMsgBytes, _ = json.Marshal(doCallMsg)
+
+			doCall := func(sidecar string) error {
+				bytes, err := rpc.Call(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", doCallMsgBytes)
+				if err != nil { return err }
+				var reply Reply
+				err = json.Unmarshal(bytes, &reply)
+				if err != nil { return err }
+				if reply.StatusCode != 200 {
+					err = fmt.Errorf("Status code of reply not OK: %v", reply.StatusCode)
+					return err
+				}
+				return nil
+			}
+
+			var err error
+
+			sidecars, _ := rpc.GetNodeIDs()
+			//successful := false
+			for _, sidecar := range sidecars {
+				if /*sidecar != rpc.GetNodeID()*/ true {
+					// TODO: parallelize rpcs
+
+					err = doCall(sidecar)
+					if err == nil {
+						//successful = true 
+					} else {
+						fmt.Printf("edit response error: %v\n", err)
+					}
+				}
+			}
+			// TODO: error checking, etc
+
 		// below here are KAR commands that you'd normally run from the command line
 		// why is this better? because no need to start up a new sidecar and do reconciliation
 		case "kar purge":

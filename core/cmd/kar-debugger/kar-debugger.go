@@ -105,6 +105,42 @@ Options:
 		-select '.EarliestTailCall.ActorId, .RequestType' would return a
 		list of (ActorId, RequestType) tuples, along with the number of
 		times that each tuple occurred.`,
+	"edit":
+`Edit a response.
+Usage: edit requestId 'edits'
+
+edit allows you to edit the response of an actor currently paused on a response.
+For example, if Actor A is paused on a response, then by using the edit command,
+you can make Actor A return "foo" instead of "bar".
+
+Args:
+	requestId
+		The ID of the request whose response is to be edited.
+	edits
+		A list of comma-separated edits to be made. Each edit is of the form
+		"accessor value", where accessor uses the same syntax as
+		breakpoint conditions (see "help conditions"), and value is an
+		integer, float, or string literal. The only built-in property
+		that can be selected by the accessor is ".value". Further
+		sub-properties can be selected depending on the return value
+		of the response. (To inspect this value, you can use "vpa" with
+		the "-format json" option.)
+
+		For example, if the value of a response would normally be
+			{"value": 42}
+		then the edit
+			.value "foo"
+		would change the response to
+			{"value": "foo"}.
+		Similarly, if the original response was
+			{"value": {"foo": "bar", "baz": 42}}
+		then the edits
+			.value.foo "Hello", .value.baz "World"
+		would change the response to
+			{"value": {"foo": "Hello", "baz": "World"}}
+
+		Note that you cannot currently add keys to a response if they
+		do not exist in the original.`,
 	"b":
 `Set a breakpoint.
 Usage: b actorType method [OPTIONS]
@@ -1780,7 +1816,7 @@ readBytesAgain:
 		reqMap, _/*err*/ := processReadKafka(msg)
 		reqMapBytes, _ := json.Marshal(reqMap)
 		sendDebugger(conn, reqMapBytes)
-	case "unpause", "setBreakpoint", "unsetBreakpoint",
+	case "unpause", "setBreakpoint", "unsetBreakpoint", "editResponse",
 		"kar invoke", "kar get", "kar rest":
 		// just forward it on
 		send(string(msgBytes))
@@ -2756,6 +2792,21 @@ func processClient() {
 		fmt.Printf("\t* Request type: %s\n", reqInfo["command"].(string))
 		fmt.Printf("\t* Request method: %s\n", reqInfo["path"].(string))
 		fmt.Printf("\t* Request payload: %v\n", reqInfo["payload"])
+	case "edit":
+		// TODO: argument checking/error handling
+		msg := getArgs(os.Args,
+			[]string { "requestId", "edit" },
+			map[string]string{}, map[string]string{},
+			2,
+		)
+		msg["command"] = "editResponse"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		fmt.Printf("Response edited.\n")
 	case "help":
 		if len(os.Args) >= 3 {
 			cmd := os.Args[2]

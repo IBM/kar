@@ -126,6 +126,9 @@ var (
 		ActorSent: map[string]actorSentInfo_t{},
 	}
 	busyInfoLock = sync.RWMutex{}
+
+	editResponsesMap = map[string]string {}
+	editResponsesLock = sync.RWMutex {}
 )
 
 const (
@@ -484,6 +487,9 @@ func handlerDebugger(ctx context.Context, target rpc.Node, value []byte) ([]byte
 	} else if msg["command"] == "listBusyActors" {
 		replyBytes, replyErr = listBusyActors()
 		return replyBytes, replyErr
+	} else if msg["command"] == "editResponse" {
+		replyBytes, replyErr = editResponse(msg)
+		return replyBytes, replyErr
 	} else {
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil
@@ -803,7 +809,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		}
 
 		// if we're paused, then wait
-		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
+		newReply, editErr := waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
 			requestID,
 			target.Flow,
 			string(value),
@@ -811,6 +817,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			true,
 			!isBreak, //only send a pause if we didn't hit the breakpoint.
 		)
+		if editErr == nil && newReply != nil { reply = newReply }
 	}
 
 	return dest, reply, err
@@ -932,6 +939,14 @@ func getRuntimeAddr(ctx context.Context, msg map[string]string) ([]byte, error) 
 	} else {
 		reply = Reply{StatusCode: http.StatusOK, Payload: string(m), ContentType: "application/json"}
 	}
+	return json.Marshal(reply)
+}
+
+func editResponse(msg map[string]string) ([]byte, error) {
+	editResponsesLock.Lock()
+	editResponsesMap[msg["requestId"]] = msg["edit"]
+	editResponsesLock.Unlock()
+	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
 	return json.Marshal(reply)
 }
 
@@ -1158,7 +1173,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 // wait on a paused actor
 // note: condvar is pointer
 
-func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, respVal string, isResponse bool, doInform bool){
+func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, respVal string, isResponse bool, doInform bool) ([]byte /* edited response */, error /* error in processing edited response */) {
 	isResponseStr := "request"
 	if isResponse { isResponseStr = "response" }
 	isActorPausedLock.RLock()
@@ -1167,7 +1182,10 @@ func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, 
 	bk, _ := pausedBreaks[info]
 	isActorPausedLock.RUnlock()
 
-	if ok {
+	var newResponse []byte = nil
+	var editErr error
+
+	if ok {	
 		//fmt.Printf("actor %v is rn waiting on pause\n", info)
 		//fmt.Printf("\nImmune actors: %v\n", immuneFromNodePaused)
 		informPause(info, bk, reqId, flowId, reqVal, respVal, isResponse)
@@ -1190,6 +1208,43 @@ func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, 
 
 		//fmt.Printf("actor %v rn woke up!\n", info)
 		// woke up from wait — now unpaused
+		
+		if isResponse {
+			// check to see if we should edit our response
+			editResponsesLock.RLock()
+			edit, ok := editResponsesMap[reqId]
+			editResponsesLock.RUnlock()
+
+			if ok {
+				// we should edit our response
+				//var myResponse interface{}
+				//err := json.Unmarshal([]byte(respVal), &myResponse)
+				respInterface, err := unpackResponseValue(respVal)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payload, ok := respInterface["payload"]
+				if !ok {
+					editErr = fmt.Errorf("payload not found")
+					goto endEditResponse1
+				}
+				newPayload, err := doEdits(payload, edit)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payloadBytes, err := json.Marshal(newPayload)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payloadString := string(payloadBytes)
+				respInterface["Payload"] = payloadString
+				delete(respInterface, "payload")
+				newResponse, err = json.Marshal(respInterface)
+				if err != nil { editErr = err; goto endEditResponse1 }
+			}
+		}
+		endEditResponse1:
+		/*if editErr != nil {
+			fmt.Printf("editErr: %v\n", editErr)
+		}*/
+
+		editResponsesLock.Lock()
+		delete(editResponsesMap, reqId)
+		editResponsesLock.Unlock()
 
 		waitingActorsLock.Lock()
 		delete(waitingActors, info)
@@ -1232,8 +1287,42 @@ func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, 
 
 		<-condvar
 		// woke up from wait — now unpaused
+		if isResponse && (newResponse == nil && editErr == nil) {
+			// check to see if we should edit our response
+			editResponsesLock.RLock()
+			edit, ok := editResponsesMap[reqId]
+			editResponsesLock.RUnlock()
 
-		//fmt.Printf("actor %v woke up!\n", info)
+			if ok {
+				// we should edit our response
+				//var myResponse interface{}
+				//err := json.Unmarshal([]byte(respVal), &myResponse)
+				respInterface, err := unpackResponseValue(respVal)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payload, ok := respInterface["payload"]
+				if !ok {
+					editErr = fmt.Errorf("payload not found")
+					goto endEditResponse2
+				}
+				newPayload, err := doEdits(payload, edit)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payloadBytes, err := json.Marshal(newPayload)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payloadString := string(payloadBytes)
+				respInterface["Payload"] = payloadString
+				delete(respInterface, "payload")
+				newResponse, err = json.Marshal(respInterface)
+				if err != nil { editErr = err; goto endEditResponse2 }
+			}
+		}
+		endEditResponse2:
+		/*if editErr != nil {
+			fmt.Printf("editErr: %v\n", editErr)
+		}*/
+
+		editResponsesLock.Lock()
+		delete(editResponsesMap, reqId)
+		editResponsesLock.Unlock()
 
 		waitingActorsLock.Lock()
 		delete(waitingActors, info)
@@ -1249,6 +1338,8 @@ func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, 
 		//fmt.Printf("waiting actors: %v", waitingActors)
 		waitingActorsLock.RUnlock()
 	}
+	return newResponse, editErr
+	//return nil, nil
 }
 
 // pause all sidecars
