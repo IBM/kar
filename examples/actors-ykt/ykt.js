@@ -414,3 +414,4 @@ app.post('/shutdown', async (_reg, res) => {
 app.use(sys.actorRuntime({ Company, Site, Office, Researcher }))
 
 const server = sys.h2c(app).listen(process.env.KAR_APP_PORT, process.env.KAR_APP_HOST || '127.0.0.1')
+

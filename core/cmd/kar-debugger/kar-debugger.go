@@ -10,10 +10,13 @@ import (
 	"sort"
 	"strconv"
 	"encoding/json"
+	"crypto/tls"
 	"net"
 	"github.com/gorilla/websocket"
 	"github.com/google/uuid"
+	"github.com/Shopify/sarama"
 	"time"
+	//"log"
 )
 
 type sidecarData_t struct {
@@ -39,6 +42,105 @@ Options:
 	-node nodeId
 		the node whose actors should be unpaused
 		(default: all nodes)`,
+	"vkr":
+`View a historical Kafka request.
+Usage: vkr [requestId] [OPTIONS]
+
+vkr returns information about requests or responses, similar to vrd. However,
+unlike vrd, vkr does not only limit itself to active requests; it also includes
+information about requests that have already returned. It does this by searching
+through the Kafka backend with which KAR interfaces behind the scenes.
+
+Important notes:
+* Kafka only stores messages for a limited amount of time. As such, the request
+that you are looking for might not be available.
+* vkr searches through all messages currently stored in Kafka. As such, it might
+take a while to return. If you do not care about requests that aren't active,
+then you are recommended to use vrd instead of vkr.
+
+Args:
+	requestId
+		The ID of the request whose details you want to view.
+
+Options:
+	-conds 'conditions'
+		Filter requests based on conditions. This uses the same syntax as
+		breakpoint conditions (see "help conditions"). The built-in
+		properties are different for vkr, however. vkr supports the
+		following built-in properties:
+
+		* RequestId: the ID of the request
+		* ParentId: the ID of the request's parent.
+		* RequestType: the type of request (e.g. "call", "tell").
+		* EarliestTailCall: a structure representing the earliest request
+		in the sequence of tail calls associated with this request.
+		* LatestTailCall: a structure representing the latest request
+		in the sequence of tail calls associated with this request.
+		* Response: a generic structure representing a response to this
+		request.
+		* ResponseTimestamp: when the response was created, as a Unix
+		timestamp.
+
+		In addition, EarliestTailCall and LatestTailCall have the following
+		properties:
+		* ActorType: the type of actor targeted by this invocation.
+		* ActorId: the ID of the actor targeted by this invocation.
+		* Path: the name of the method invoked.
+		* Payload: the arguments passed to this invocation.
+		* Sequence: the position of the invocation in the chain of tail
+		calls associated with this request.
+		* Timestamp: when this invocation was created, as a Unix timestamp.
+		* Deadline: the deadline associated with this invocation, as a
+		Unix timestamp.
+		
+		An example condition would look like
+		-conds '.EarliestTailCall.ActorId=="ActorA", .RequestType=="tell"'
+	-select 'accessors'
+		Select information about various properties of each returned
+		request, aggregating them by the number of times that this tuple
+		of properties appears. The properties are as given above. Multiple
+		properties are separated by commas.
+
+		For example:
+		-select '.EarliestTailCall.ActorId, .RequestType' would return a
+		list of (ActorId, RequestType) tuples, along with the number of
+		times that each tuple occurred.`,
+	"edit":
+`Edit a response.
+Usage: edit requestId 'edits'
+
+edit allows you to edit the response of an actor currently paused on a response.
+For example, if Actor A is paused on a response, then by using the edit command,
+you can make Actor A return "foo" instead of "bar".
+
+Args:
+	requestId
+		The ID of the request whose response is to be edited.
+	edits
+		A list of comma-separated edits to be made. Each edit is of the form
+		"accessor value", where accessor uses the same syntax as
+		breakpoint conditions (see "help conditions"), and value is an
+		integer, float, or string literal. The only built-in property
+		that can be selected by the accessor is ".value". Further
+		sub-properties can be selected depending on the return value
+		of the response. (To inspect this value, you can use "vpa" with
+		the "-format json" option.)
+
+		For example, if the value of a response would normally be
+			{"value": 42}
+		then the edit
+			.value "foo"
+		would change the response to
+			{"value": "foo"}.
+		Similarly, if the original response was
+			{"value": {"foo": "bar", "baz": 42}}
+		then the edits
+			.value.foo "Hello", .value.baz "World"
+		would change the response to
+			{"value": {"foo": "Hello", "baz": "World"}}
+
+		Note that you cannot currently add keys to a response if they
+		do not exist in the original.`,
 	"b":
 `Set a breakpoint.
 Usage: b actorType method [OPTIONS]
@@ -59,7 +161,17 @@ Options:
 		the id of the actor that will trigger the breakpoint
 		(default: when the actor method is called on any instance of the specified actor type, the breakpoint is triggered)
 	-type breakpointType (default: global)
-		The type of breakpoint. There are four options. "global" causes all nodes to pause all actors. "node" causes the node that tripped the breakpoint to pause all actors. "actor" causes the actor that tripped the breakpoint to pause. "suicide" causes the node that tripped the breakpoint to die.`,
+		The type of breakpoint. There are four options. "global" causes all nodes to pause all actors. "node" causes the node that tripped the breakpoint to pause all actors. "actor" causes the actor that tripped the breakpoint to pause. "suicide" causes the node that tripped the breakpoint to die.
+	-conds listOfConditions
+		A comma-separated list of conditions on each request that
+		might trigger the breakpoint. If given, then the
+		breakpoint will only trigger if all of the conditions are
+		met. Type "help conditions" for more information.
+	-respConds listOfConditions
+		A comma-separated list of conditions on each response that
+		might trigger the breakpoint. If given, then the
+		breakpoint will only trigger if all of the conditions are
+		met. Type "help conditions" for more information.`,
 	"d":
 `Delete a breakpoint.
 Usage: d breakpointId [OPTIONS]
@@ -194,6 +306,67 @@ Args:
 		The type of the actor on which to step.
 	actorId:
 		The id of the actor on which to step.`,
+"conditions":
+`Information on breakpoint conditions:
+
+It is possible to set finer-grained conditions that must be met for
+breakpoints to trigger. For instance, you might only want a breakpoint
+to trigger if a method is invoked as a "call", or if the response from
+the method is greater than 7. Breakpoint conditions let you achieve this.
+
+All conditions are of the form "arg1 COND arg2", where COND is one of the
+following operators: ==, !=, <=, >=, <, >, LIKE, IN. The operators have
+the following semantics:
+	"==": True if arg1 equals arg2, false otherwise.
+
+	"!=": False if arg1 equals arg2, true otherwise.
+
+	"<=", ">=", "<", ">". False if either argument is not a number.
+	True if arg1 is less than or equal to, greater than or equal to,
+	less than, greater than arg2 respectively.
+
+	"LIKE": False if either argument is not a string. True if arg1
+	matches the regex pattern given in arg2.
+
+	"IN": If both arguments are strings, then returns true if arg1
+	is a substring of arg2 and false otherwise.
+	If arg2 is a map, then returns true if arg1 is a key in arg2 and
+	false otherwise.
+	If arg2 is a list, then returns true if arg1 is an element in arg1
+	and false otherwise.
+
+Conditions are evaluated on various properties of the request or response.
+To access these properties, the following syntax is used:
+	.property: accesses the key "property" of the parent map.
+	[i]: accesses the i-th array element of the parent.
+These selectors are then chained to form more complex expressions. For
+example, if we are evaluating a condition on the request, and the request
+has the following arguments:
+	[ {"hello": "world"}, {"foo": "bar"} ]
+then the selector
+	.payload[1].foo
+would select "bar".
+
+In the above example, where did "payload" come from? The answer: requests
+and responses have special "built-in" properties.
+Request properties:
+	"payload": an array of arguments.
+	"command": the type of method invocation. In most cases, either
+		"call" or "tell".
+	"path": the name of the method being called, with a forward slash
+		at the beginning.
+
+Response properties:
+	"payload": a map containing a single item, with key "value".
+		.payload.value yields the return value of the response.
+	"StatusCode": the HTTP status code returned by the request.`,
+
+`vd`:
+`View deadlocks.
+Checks for deadlocks in the running application. If any are present, prints
+out information about the deadlock. 
+
+Usage: vd`,
 }
 
 func getArgs(args []string, names []string, options map[string]string, boolOptions map[string]string, startIndex int) map[string]string {
@@ -337,11 +510,13 @@ type actorSentInfo_t struct {
 	Actor actorJson_t `json:"actor"`
 	ParentId string `json:"parentId"`
 	RequestValue string `json:"requestValue"`
+	FlowId string `json:"flowId"`
+	IsHandling bool `json:"isHandling"`
 	isVisited bool
 }
 
 type listBusyInfo_t struct {
-	ActorHandling map[string]actorJson_t `json:"actorHandling"`
+	ActorHandling map[string]actorSentInfo_t `json:"actorHandling"`
 	ActorSent map[string]actorSentInfo_t `json:"actorSent"`
 }
 
@@ -349,6 +524,7 @@ type listPauseInfo_t struct {
 	ActorType string `json:"actorType"`
 	ActorId string `json:"actorId"`
 	RequestId string `json:"requestId"`
+	FlowId string `json:"flowId"`
 	RequestValue string `json:"requestValue"`
 	ResponseValue string `json:"responseValue"`
 	IsResponse string `json:"isResponse"`
@@ -362,6 +538,8 @@ type listPauseInfo_t struct {
 
 	ChildActorId string `json:"childActorId"`
 	ChildActorType string `json:"childActorType"`
+
+	CanStep bool `json:"canStep"`
 }
 
 func unpackRequestValue(s string) (map[string]interface{}, error) {
@@ -389,7 +567,7 @@ func unpackResponseValue(s string) (map[string]interface{}, error) {
 			//payloadMap := map[string]interface{} {}
 			var payloadMap interface{}
 			err = json.Unmarshal([]byte(payloadStr), &payloadMap)
-			retval["Payload"] = payloadMap
+			retval["payload"] = payloadMap
 		}
 	}
 	return retval, err
@@ -402,6 +580,7 @@ type breakpoint_t struct {
 	ActorType string `json:"actorType"`
 	ActorId string `json:"actorId"`
 	Path string `json:"path"`
+	FlowId string `json:"flowId"`
 
 	IsRequest string `json:"isRequest"`
 
@@ -414,20 +593,134 @@ type breakpoint_t struct {
 	HitActorId string
 
 	NumPausedActors int
+
+	isPaused bool
+}
+
+type kafkaReq_t struct {
+	RequestId string
+	ParentId string
+
+	RequestType string
+
+	MsgFound bool
+	EarliestTailCall reqMsg_t
+	LatestTailCall reqMsg_t
+
+	Response interface{}
+	ResponseTimestamp int64
+}
+
+type genMsg_t struct {
+	IsResponse bool
+	RequestId string
+	ParentId string
+	RequestType string
+	Sequence int
+	Timestamp int64
+	Deadline int64
+	ActorId string
+	ActorType string
+	Path string
+	Payload interface{}
+	Response interface{}
+}
+
+type reqMsg_t struct {
+	ActorType string
+	ActorId string
+
+	Path string
+	Payload interface{}
+
+	Sequence int
+
+	Timestamp int64
+	Deadline int64
+}
+
+func printKafkaReq(req kafkaReq_t) {
+	etc := req.EarliestTailCall
+	ltc := req.LatestTailCall
+	fmt.Printf("* Request %v ", req.RequestId)
+	if req.MsgFound {
+		fmt.Printf("of type %v to %v %v\n", req.RequestType, etc.ActorType, etc.ActorId)
+	} else {
+		fmt.Printf("\n")
+	}
+	if req.ParentId != "" {
+		fmt.Printf("\t* Parent: %v\n", req.ParentId)
+	}
+	if req.MsgFound {
+		if etc.Sequence == ltc.Sequence {
+			if len(etc.Path) > 0 {
+				fmt.Printf("\t* Method: %v.%v()\n", etc.ActorType, etc.Path[1:])
+			}
+			pretty, _ := json.MarshalIndent(etc.Payload, "\t\t", " ")
+			fmt.Printf("\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t* Timestamp: %v\n", etc.Timestamp)
+			fmt.Printf("\t* Deadline: %v\n", etc.Deadline)
+		} else {
+			fmt.Printf("\t* Earliest tail call:\n")
+			fmt.Printf("\t\t* Target actor: %v %v\n", etc.ActorType, etc.ActorId)
+			if len(etc.Path) > 0 {
+				fmt.Printf("\t\t* Method: %v.%v\n", etc.ActorType, etc.Path[1:])
+			}
+			pretty, _ := json.MarshalIndent(etc.Payload, "\t\t\t", " ")
+			fmt.Printf("\t\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t\t* Timestamp: %v\n", etc.Timestamp)
+			fmt.Printf("\t\t* Deadline: %v\n", etc.Deadline)
+			fmt.Printf("\t\t* Sequence number: %v\n", etc.Sequence)
+
+			fmt.Printf("\t* Latest tail call:\n")
+			fmt.Printf("\t\t* Target actor: %v %v\n", ltc.ActorType, ltc.ActorId)
+			if len(ltc.Path) > 0 {
+				fmt.Printf("\t\t* Method: %v.%v\n", ltc.ActorType, ltc.Path[1:])
+			}
+			pretty, _ = json.MarshalIndent(ltc.Payload, "\t\t\t", " ")
+			fmt.Printf("\t\t* Arguments:\n")
+			fmt.Printf("\t\t%s\n", pretty)
+			fmt.Printf("\t\t* Timestamp: %v\n", ltc.Timestamp)
+			fmt.Printf("\t\t* Deadline: %v\n", ltc.Deadline)
+			fmt.Printf("\t\t* Sequence number: %v\n", ltc.Sequence)
+		}
+	}
+	if req.Response != nil {
+		fmt.Printf("\n")
+		fmt.Printf("\t* Response: \n")
+		pretty, _ := json.MarshalIndent(req.Response, "\t\t", " ")
+		fmt.Printf("\t\t%s\n", pretty)
+	}
 }
 
 var (
+	kafkaClient sarama.Client
+	kafkaConsumer sarama.Consumer
+	kafkaTopic string
+	kafkaErr error = nil
+	kafkaLock = sync.RWMutex {}
+
 	pausedActors = map[actor_t]listPauseInfo_t {}
+	// TODO: refactor to use RWMutex
 	pausedActorsLock = sync.Mutex {}
+
+	//TODO: refactor this to use respChans
+	busyInfo = listBusyInfo_t {}
+	busyInfoLock = sync.RWMutex {}
 	
 	breakpoints = map[string]breakpoint_t {}
+	// TODO: refactor to use RWMutex
 	breakpointsLock = sync.Mutex {}
 
 	respChans = map[string]chan []byte {}
+	// TODO: refactor to use RWMutex
 	respChansLock = sync.Mutex {}
 
 	// map id of a step breakpoint to the commandId that set it
 	stepBreakpoints = map[string]string {}
+	// TODO: refactor to use RWMutex
 	stepBreakpointsLock = sync.Mutex {}
 )
 
@@ -460,7 +753,7 @@ func printPausedActorFull(pauseInfo listPauseInfo_t){
 		}
 		fmt.Printf("\t\t* Request type: %s\n", reqInfo["command"])
 		fmt.Printf("\t\t* Request path: %s\n", reqInfo["path"])
-		fmt.Printf("\t\t* Request payload: %s\n", reqInfo["payload"])
+		fmt.Printf("\t\t* Request payload: %v\n", reqInfo["payload"])
 		if pauseInfo.IsResponse != "response" { goto endHandleRequest }
 
 		responseMap := map[string]interface{} {}
@@ -511,6 +804,98 @@ func printBreakpoint(b breakpoint_t) {
 	fmt.Printf("\t* Number of actors paused due to this breakpoint: %v\n", b.NumPausedActors)
 }
 
+// try and connect to Kafka
+func kafkaInit(appName string) {
+	kafkaLock.Lock()
+	defer kafkaLock.Unlock()
+
+	// get config arguments
+
+	brokersStr := os.Getenv("KAFKA_BROKERS")
+	if brokersStr == "" {
+		kafkaErr = fmt.Errorf("At least one Kafka broker is required. Make sure to set the environment variable KAFKA_BROKERS.")
+		return
+	}
+	brokers := strings.Split(brokersStr, ",")
+
+	user := os.Getenv("KAFKA_USERNAME")
+	if user == "" { user = "token" }
+
+	password := os.Getenv("KAFKA_PASSWORD")
+
+	version := os.Getenv("KAFKA_VERSION")
+	if version == "" { version = "2.8.1" }
+	
+	enableTLS := false
+	{
+		tmp := os.Getenv("KAFKA_ENABLE_TLS") 
+		if tmp != "" {
+			var err error
+			enableTLS, err = strconv.ParseBool(tmp)
+			if err != nil {
+				kafkaErr = fmt.Errorf("Error parsing KAFKA_ENABLE_TLS \"%v\" as bool", tmp)
+				return
+			}
+		}
+	}
+
+	TLSSkipVerify := false
+	{
+		tmp := os.Getenv("KAFKA_TLS_SKIP_VERIFY") 
+		if tmp != "" {
+			var err error
+			enableTLS, err = strconv.ParseBool(tmp)
+			if err != nil {
+				kafkaErr = fmt.Errorf("Error parsing KAFKA_TLS_SKIP_VERIFY \"%v\" as bool", tmp)
+				return
+			}
+		}
+	}
+
+	// make config
+
+	conf := sarama.NewConfig()
+	conf.Version, _ = sarama.ParseKafkaVersion(version)
+
+	if enableTLS {
+		conf.Net.TLS.Enable = true
+		// TODO support custom CA certificate
+		if TLSSkipVerify {
+			conf.Net.TLS.Config = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		}
+	}
+
+
+	if password != "" {
+		conf.Net.SASL.Enable = true
+		conf.Net.SASL.User = user
+		conf.Net.SASL.Password = password
+		conf.Net.SASL.Handshake = true
+		conf.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+	}
+
+	// make client
+
+	var err error
+	kafkaClient, err = sarama.NewClient(brokers, conf)
+
+	if err != nil {
+		kafkaErr = fmt.Errorf("Error making client: %v", err)
+		return
+	}
+
+	// make consumer
+	kafkaConsumer, err = sarama.NewConsumerFromClient(kafkaClient)
+	if err != nil {
+		kafkaErr = fmt.Errorf("Error making consumer: %v", err)
+		return
+	}
+
+	kafkaTopic = "kar_" + appName
+}
+
 func listenSidecar(){
 	for true {
 		_, msgBytes, err := conn.ReadMessage()
@@ -528,6 +913,8 @@ func listenSidecar(){
 		}
 
 		switch cmd {
+		case "appName":
+			kafkaInit(msg["appName"])
 		case "error":
 			idToConnLock.Lock()
 			debugConn, ok := idToConn[msg["commandId"]]
@@ -551,6 +938,8 @@ func listenSidecar(){
 				breakpointsLock.Lock()
 				bk, ok := breakpoints[actorInfo.BreakpointId]
 				if ok {
+					fmt.Println("unpausing")
+					bk.isPaused = false
 					bk.NumPausedActors--
 					if bk.NumPausedActors <= 0 {
 						bk.HitActorType = ""
@@ -571,6 +960,7 @@ func listenSidecar(){
 							breakpointsLock.Lock()
 							bk, ok := breakpoints[actorInfo.BreakpointId]
 							if ok {
+								bk.isPaused = false
 								bk.NumPausedActors--
 								if bk.NumPausedActors <= 0 {
 									bk.HitActorType = ""
@@ -593,25 +983,34 @@ func listenSidecar(){
 				}
 			}
 		case "notifyPause":
-			handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes)
+			handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes, false)
 		case "notifyBreakpoint":
 			deleteOnHit := false
 			
 			breakpointsLock.Lock()
 			bk, ok := breakpoints[msg["breakpointId"]]
-			breakpointsLock.Unlock()
+
 			if ok {
 				if bk.DeleteOnHit == "true" {
 					deleteOnHit = true
 				}
 
 				if deleteOnHit {
-					printInfo("Single-step of actor %s %s has paused on response %s\n", msg["actorType"], msg["actorId"], msg["requestId"])
-				} else if bk.NumPausedActors == 0 {
+					// Bad hack!
+					// takes advantage of another hack
+					// that makes the id of step breakpoints
+					// "single-step of actor %v %v".
+					// TODO: FIX ALL OF THIS!!!
+					hackStr := "S"
+					hackStr += msg["breakpointId"][1:]
+					//printInfo("Single-step of actor %s %s has paused on response %s\n", msg["actorType"], msg["actorId"], msg["requestId"])
+					printInfo(hackStr + " has paused on %s %s with actor %s %s\n", msg["isResponse"], msg["requestId"], msg["actorType"], msg["actorId"])
+				} else if bk.NumPausedActors == 0 || !bk.isPaused {
 					printInfo("Breakpoint %s hit by %s %s with request %s\n", msg["breakpointId"], msg["actorType"], msg["actorId"], msg["requestId"])
 
 					bk.HitActorType = msg["actorType"]
 					bk.HitActorId = msg["actorId"]
+					bk.isPaused = true
 					breakpoints[msg["breakpointId"]] = bk
 				}
 
@@ -627,7 +1026,7 @@ func listenSidecar(){
 
 						debuggerConn, ok := idToConn[cmdId]
 						if !ok { return }
-						sendDebugger(debuggerConn, []byte("done"))
+						sendDebugger(debuggerConn, msgBytes)
 					}()
 				}
 
@@ -636,8 +1035,10 @@ func listenSidecar(){
 				//note: msgBytes is used in handleNotifyPaused to construct a listPauseInfo_t
 				//we can do this because it turns out that most of the fields of
 				//  listPauseInfo_t are the same fields as breakpoint_t
-				handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes)
+				handleNotifyPause(msg["actorType"], msg["actorId"], msgBytes, true)
 			}
+
+			breakpointsLock.Unlock()
 
 		case "setBreakpoint":
 			breakpointsLock.Lock()
@@ -662,6 +1063,7 @@ func listenSidecar(){
 				newBreakpoint := breakpoint_t {
 					ActorId: msg["actorId"],
 					ActorType: msg["actorType"],
+					FlowId: msg["flowId"],
 					Path: msg["path"],
 					BreakpointId: id,
 					BreakpointType: msg["breakpointType"],
@@ -771,6 +1173,10 @@ func listenSidecar(){
 			json.Unmarshal(msgBytes, &listMsg)
 			info := listMsg["busyInfo"]
 
+			busyInfoLock.Lock()
+			busyInfo = info
+			busyInfoLock.Unlock()
+
 			var visitedMap = map[string]bool {}
 
 			for req, curInfo := range info.ActorSent {
@@ -795,6 +1201,8 @@ func listenSidecar(){
 						tmp.PauseDepth = 0
 						tmp.EndActorId = curActor.actorId
 						tmp.EndActorType = curActor.actorType
+						tmp.FlowId = curInfo.FlowId
+						tmp.CanStep = (curInfo.ParentId != "")
 						pausedActors[curActor] = tmp
 					}
 				}
@@ -816,8 +1224,8 @@ func listenSidecar(){
 							fmt.Printf("Parent request not found in ActorHandling?!\n")
 						}
 						curActor = actor_t {
-							actorId: handleInfo.ActorId,
-							actorType: handleInfo.ActorType,
+							actorId: handleInfo.Actor.ActorId,
+							actorType: handleInfo.Actor.ActorType,
 						}
 					}
 
@@ -829,9 +1237,17 @@ func listenSidecar(){
 						tmp.ActorId = curActor.actorId
 						tmp.ActorType = curActor.actorType
 						tmp.RequestId = childReq
+						// TODO: is it curInfo.flowId that we should be using? or sentInfo.flowId? all calls in the same call chain have the same flowId, so probably doesn't matter.
+						tmp.FlowId = curInfo.FlowId
 						tmp.RequestValue = info.ActorSent[childReq].RequestValue
 						tmp.ChildActorId = info.ActorSent[childReq].Actor.ActorId
 						tmp.ChildActorType = info.ActorSent[childReq].Actor.ActorType
+
+						// all indirectly-paused actors are necessarily paused on request
+						// thus, we can always step them
+						tmp.CanStep = true
+						tmp.IsResponse = "request"
+
 						pausedActors[curActor] = tmp
 						//fmt.Printf("tmp: %v %v\n",pausedActors[curActor], curActor) 
 					} else {
@@ -879,7 +1295,7 @@ func listenSidecar(){
 	}
 }
 
-func handleNotifyPause(actorType string, actorId string, msgBytes []byte){
+func handleNotifyPause(actorType string, actorId string, msgBytes []byte, hasBkLock bool){
 	myActor := actor_t { actorId: actorId, actorType: actorType }
 	myInfo := listPauseInfo_t {}
 	json.Unmarshal(msgBytes, &myInfo)
@@ -888,13 +1304,13 @@ func handleNotifyPause(actorType string, actorId string, msgBytes []byte){
 	_, ok := pausedActors[myActor]
 
 	if !ok {
-		breakpointsLock.Lock()
+		if !hasBkLock { breakpointsLock.Lock() }
 		bk, ok := breakpoints[myInfo.BreakpointId]
 		if ok && myInfo.PauseDepth == 0 {
 			bk.NumPausedActors++
 			breakpoints[myInfo.BreakpointId] = bk
 		}
-		breakpointsLock.Unlock()
+		if !hasBkLock { breakpointsLock.Unlock() }
 	}
 
 
@@ -931,10 +1347,427 @@ func sendDebugger(conn net.Conn, msgBytes []byte) error {
 	return nil
 }
 
+// deadlock detection code
+
+type request_t struct {
+	RequestId string
+	CallStack string // flow ID of request; name is vestigial
+	RequestValue string
+}
+
+type edge_t struct {
+	SrcActor actorJson_t
+	DstActor actorJson_t
+	Req      request_t
+	ParentValue string
+}
+
+type node_t struct {
+	Edges     map[request_t]edge_t
+	IsVisited bool
+}
+
+type graph_t = map[actorJson_t]node_t
+
+func makeDeadlockGraph() graph_t {
+	busyInfoLock.RLock()
+	retgraph := make(graph_t)
+	empty := actorJson_t{}
+
+	// TODO: add edges to empty node
+	retgraph[empty] = node_t {
+		Edges: make(map[request_t]edge_t),
+		IsVisited: false,
+	}
+
+	// really dumb way of getting flow IDs of root reqs
+	// TODO: refactor
+	for _, info := range busyInfo.ActorSent {
+		_, ok := busyInfo.ActorSent[info.ParentId]
+		if !ok {
+			// parent is a root req
+			parentInfo := busyInfo.ActorHandling[info.ParentId]
+			myReq := request_t {
+				RequestId: info.ParentId,
+				CallStack: info.FlowId, //parent and child have same flow
+				RequestValue: parentInfo.RequestValue,
+			}
+			retgraph[empty].Edges[myReq] = edge_t {
+				Req: myReq, DstActor: parentInfo.Actor, SrcActor: empty,
+			}
+
+		}
+	}
+
+	for reqId, info := range busyInfo.ActorSent {
+		srcActor := busyInfo.ActorHandling[info.ParentId].Actor
+		dstActor := info.Actor
+
+		parentValue := busyInfo.ActorHandling[info.ParentId].RequestValue
+
+		node, ok := retgraph[srcActor]
+		if !ok {
+			node = node_t {
+				Edges: make(map[request_t]edge_t),
+				IsVisited: false,
+			}
+		}
+		myReq := request_t {
+			RequestId: reqId,
+			CallStack: info.FlowId,
+			RequestValue: info.RequestValue,
+		}
+		edge := edge_t {DstActor: dstActor, Req: myReq, SrcActor: srcActor, ParentValue: parentValue}
+		node.Edges[myReq] = edge
+		retgraph[srcActor] = node
+	}
+	busyInfoLock.RUnlock()
+	return retgraph
+}
+
+func checkDeadlockCycles(g *graph_t, a actorJson_t, path []edge_t) (bool, []edge_t) {
+	if (*g)[a].IsVisited {
+		for i, edge := range path {
+			if edge.DstActor == a {
+				req := edge.Req
+				//pretty sure that only one of these edges
+				// can exist
+				if req.CallStack == path[len(path)-1].Req.CallStack {
+					//same callstack, so reentrancy, so
+					// no deadlock
+					return false, nil
+				} else {
+					// no reentrancy, so deadlock
+					return true, path[i:]
+				}
+			}
+		}
+		// technically don't need this
+		return true, path
+	}
+
+	newNode := (*g)[a]
+	newNode.IsVisited = true
+	(*g)[a] = newNode
+
+	defer func() {
+		newNode := (*g)[a]
+		newNode.IsVisited = false
+		(*g)[a] = newNode
+	}()
+
+	for _, edge := range (*g)[a].Edges {
+		c, npath := checkDeadlockCycles(g, edge.DstActor, append(path, edge))
+		if c {
+			return c, npath
+		}
+
+	}
+	return false, nil
+}
+
+func checkDeadlock() []edge_t {
+	graph := makeDeadlockGraph()
+	_, path := checkDeadlockCycles(&graph, actorJson_t{}, []edge_t{})
+	return path
+}
+
+
+// end deadlock detection code
+
+// request info code 
+
+func viewRequestDetails(info actorSentInfo_t, reqId string) {
+	fmt.Printf("* Request %s to actor %s %s\n",
+		reqId, info.Actor.ActorType, info.Actor.ActorId)
+	if info.IsHandling {
+		fmt.Printf("\t* Request is currently being handled.\n")
+	} else {
+		fmt.Printf("\t* Request is in flight, not yet being handled.\n")
+	}
+	if info.ParentId != "" {
+		fmt.Printf("\t* Parent request: %s\n", info.ParentId)
+	}
+	reqVal, err := unpackRequestValue(info.RequestValue)
+	if err != nil { return }
+	fmt.Printf("\t* Request type: %s\n", reqVal["command"])
+	fmt.Printf("\t* Method: %s()\n", reqVal["path"].(string)[1:])
+	pretty, _ := json.MarshalIndent(reqVal["payload"],
+		"\t\t", " ")
+	fmt.Printf("\t* Arguments:\n%s\n", pretty)
+}
+
+// end request info code
+
 func recvDebugger(connReader *bufio.Reader) ([]byte, error) {
 	bytes, err := connReader.ReadBytes(0)
 	if err != nil { return nil, err}
 	return bytes[:len(bytes)-1], nil
+}
+
+// TODO: return using pointer union pattern, rather than interface{}
+func processReadKafka(debugMsg map[string]string) (interface{} /*map[string]kafkaReq_t*/, error) {
+	kafkaLock.Lock()
+	defer kafkaLock.Unlock()
+
+	if kafkaErr != nil {
+		// TODO: send error to debugger
+		//fmt.Printf("KafkaErr: %v\n", kafkaErr)
+		return nil, kafkaErr
+	}
+
+	partitions, err := kafkaConsumer.Partitions(kafkaTopic)
+	if err != nil {
+		return nil, err
+	}
+
+
+	var partitionConsumers = make(map[int32]sarama.PartitionConsumer)
+	for _, partition := range partitions {
+		oldest, _ :=
+			kafkaClient.GetOffset(kafkaTopic, partition, sarama.OffsetOldest)
+
+		pc, _/*err*/ :=
+			kafkaConsumer.ConsumePartition(kafkaTopic,
+				partition,
+				oldest,
+			)
+		partitionConsumers[partition] = pc
+
+		// check if any messages to read
+		if pc != nil {
+			hwo := pc.HighWaterMarkOffset()
+			if hwo == oldest {
+				// no messages to read
+				partitionConsumers[partition] = nil
+				continue
+			}
+		}
+	}
+
+	defer func(){
+		for _, pc := range partitionConsumers {
+			if pc != nil {
+				pc.Close()
+			}
+		}
+	}()
+
+	//sarama.Logger = log.New(os.Stderr, "[Sarama] ", log.LstdFlags)
+
+	//sidecar := debugMsg["sidecar"]
+
+	handleMessage := func(msg sarama.ConsumerMessage) genMsg_t {
+		timestamp := msg.Timestamp.Unix()
+		var retval = genMsg_t {Timestamp: timestamp}
+
+		for _, header := range msg.Headers {
+			key := string(header.Key)
+			value := string(header.Value)
+			//fmt.Printf("key: %v\n", key)
+
+			// ignore all handlerDebugger methods
+			// TODO: right now, this is desired behavior
+			// but this behavior might not be desired in the future
+			if key == "Method" && value == "handlerDebugger" {
+				break
+			}
+
+			if key == "RequestID" {
+				//fmt.Printf("reqId: %v\n", value)
+				retval.RequestId = value
+			}
+
+			if key == "Type" {
+				if value == "Call" || value == "Tell" {
+					retval.IsResponse = false
+					retval.RequestType = strings.ToLower(value)
+				} else if value == "Response" {
+					retval.IsResponse = true
+					retval.RequestType = "call"
+				} else if value == "Done" {
+					retval.IsResponse = true
+					retval.RequestType = "tell"
+				}
+			}
+
+			if key == "Sequence" {
+				retval.Sequence, _ = strconv.Atoi(value)
+			}
+
+			if key == "Deadline" {
+				deadline, _ := strconv.Atoi(value)
+				retval.Deadline = int64(deadline)
+			}
+
+			if key == "Parent" {
+				retval.ParentId = value
+			}
+
+			if key == "Session" {
+				retval.ActorId = value
+			}
+
+			if key == "Service" {
+				retval.ActorType = value
+			}
+			
+		}
+
+		if !retval.IsResponse {
+			reqVal, err := unpackRequestValue(string(msg.Value))
+			if err == nil {
+				retval.Path, _ = reqVal["path"].(string)
+				retval.Payload = reqVal["payload"]
+			}
+		} else {
+			respVal, err := unpackResponseValue(string(msg.Value))
+			if err == nil {
+				retval.Response = respVal
+			}
+		}
+		
+		return retval
+	}
+
+	retmap := map[string]kafkaReq_t {}
+	//retmap := map[string]interface{} {}
+	retLock := sync.Mutex {}
+	selections := strings.Split(debugMsg["select"], ",")
+	for i, _ := range selections {
+		selections[i] = strings.TrimSpace(selections[i])
+	}
+
+	var wg = sync.WaitGroup {}
+	loopMsgs := func(partition int32, partitionConsumer sarama.PartitionConsumer){
+		defer wg.Done()
+		msgs := partitionConsumer.Messages()
+		hwo := partitionConsumer.HighWaterMarkOffset()
+
+		for msg := range msgs {
+			genMsg := handleMessage(*msg)
+			//if genMsg.requestId == debugMsg["requestId"] {
+			var genMap = map[string]interface{} {}
+			genMsgBytes, _ := json.Marshal(genMsg)
+			err := json.Unmarshal(genMsgBytes, &genMap)
+			if err != nil {
+				continue
+			}
+			retLock.Lock()
+			curReq, ok := retmap[genMsg.RequestId]
+			if ok {
+				curReq.RequestType = genMsg.RequestType
+				if genMsg.IsResponse {
+					curReq.Response = genMsg.Response
+					curReq.ResponseTimestamp = genMsg.Timestamp
+				} else {
+					reqMsg := reqMsg_t {
+						ActorType: genMsg.ActorType,
+						ActorId: genMsg.ActorId,
+						Path: genMsg.Path,
+						Payload: genMsg.Payload,
+						Sequence: genMsg.Sequence,
+						Timestamp: genMsg.Timestamp,
+						Deadline: genMsg.Deadline,
+					}
+					if curReq.EarliestTailCall.Sequence > reqMsg.Sequence || !curReq.MsgFound {
+						curReq.MsgFound = true
+						curReq.EarliestTailCall = reqMsg
+					} else if curReq.LatestTailCall.Sequence < reqMsg.Sequence || !curReq.MsgFound{
+						curReq.MsgFound = true
+						curReq.LatestTailCall = reqMsg
+					}
+				}
+				retmap[genMsg.RequestId] = curReq
+			} else {
+				req := kafkaReq_t {
+					RequestId: genMsg.RequestId,
+				}
+				if genMsg.IsResponse {
+					req.Response = genMsg.Response
+					req.ResponseTimestamp = genMsg.Timestamp
+				} else {
+					req.RequestType = genMsg.RequestType
+					req.ParentId = genMsg.ParentId
+					req.MsgFound = true
+
+					reqMsg := reqMsg_t {
+						ActorType: genMsg.ActorType,
+						ActorId: genMsg.ActorId,
+						Path: genMsg.Path,
+						Payload: genMsg.Payload,
+						Sequence: genMsg.Sequence,
+						Timestamp: genMsg.Timestamp,
+						Deadline: genMsg.Deadline,
+					}
+
+					req.EarliestTailCall = reqMsg
+					req.LatestTailCall = reqMsg
+
+				}
+				retmap[genMsg.RequestId] = req
+			}
+			retLock.Unlock()
+			if msg.Offset == hwo-1 {
+				break
+			}
+
+		}
+	}
+
+	for partition, partitionConsumer := range partitionConsumers {
+		if partitionConsumer == nil { continue }
+		wg.Add(1)
+		go loopMsgs(partition, partitionConsumer)
+	}
+	//wg.Add(1)
+	//go loopMsgs(0, partitionConsumers[0])
+
+	wg.Wait()
+
+	// isn't this a bit wasteful, going through all kafka messages twice?
+	// problem is, it's a bit tricky to check conditions inline.
+	// e.g. we don't know what LatestTailCall of any given request will
+	// be before reading through all messages; there could always be a
+	// later one.
+	// TODO: think about this more and fix.
+	for reqId, req := range retmap {
+		if !((debugMsg["conds"] == "" && reqId == debugMsg["reqId"]) ||
+			runConds(req, debugMsg["conds"])){
+			delete(retmap, reqId)
+		}
+	}
+
+	countmap := map[string]int {}
+	if debugMsg["select"] != "" {
+		for _, req := range retmap {
+			myId := map[string]interface{} {}
+			var objMap interface{}
+			objBytes, _ := json.Marshal(req)
+			json.Unmarshal(objBytes, &objMap)
+			for _, sel := range selections {
+				// TODO: error checking
+				q := strings.Split(sel, ".")
+				q = q[1:]
+				curItem, err := access(objMap, q)
+				if err != nil { continue }
+				myId[sel] = curItem
+			}
+			idJsonBytes, _ := json.Marshal(myId)
+			idJson := string(idJsonBytes)
+			count, ok := countmap[idJson]
+			if ok {
+				countmap[idJson] = count+1
+			} else {
+				countmap[idJson] = 1
+			}
+		}
+	}
+	if debugMsg["select"] != "" {
+		return countmap, nil
+	} else {
+		return retmap, nil
+	}
 }
 
 func serveDebugger(conn net.Conn) {
@@ -943,7 +1776,7 @@ readBytesAgain:
 	msgBytes, err := recvDebugger(connReader)
 	if err != nil {
 		if verbose >= 2 {
-			fmt.Println("Error receiving from new debugger connection.")
+			fmt.Printf("Error receiving from new debugger connection. %v\n", err)
 		}
 		return
 	}
@@ -978,10 +1811,64 @@ readBytesAgain:
 	idToConnLock.Unlock()
 
 	switch cmd {
-	case "unpause", "setBreakpoint", "unsetBreakpoint",
+	case "vkr":
+		// TODO: error handling
+		reqMap, _/*err*/ := processReadKafka(msg)
+		reqMapBytes, _ := json.Marshal(reqMap)
+		sendDebugger(conn, reqMapBytes)
+	case "unpause", "setBreakpoint", "unsetBreakpoint", "editResponse",
 		"kar invoke", "kar get", "kar rest":
 		// just forward it on
 		send(string(msgBytes))
+	case "viewDeadlocks":
+		lbamsg := map[string]string {
+			"command": "listBusyActors",
+			"commandId": uuid.New().String(),
+		}
+
+		respChansLock.Lock()
+		respChans[lbamsg["commandId"]] = make(chan []byte)
+		respChansLock.Unlock()
+
+		lbamsgBytes, _ := json.Marshal(lbamsg)
+		send(string(lbamsgBytes))
+		<-respChans[lbamsg["commandId"]]
+
+		path := checkDeadlock()
+		responseBytes, _ := json.Marshal(path)
+		sendDebugger(conn, responseBytes)
+	case "viewRequest":
+		lbamsg := map[string]string {
+			"command": "listBusyActors",
+			"commandId": uuid.New().String(),
+		}
+
+		respChansLock.Lock()
+		respChans[lbamsg["commandId"]] = make(chan []byte)
+		respChansLock.Unlock()
+
+		lbamsgBytes, _ := json.Marshal(lbamsg)
+		send(string(lbamsgBytes))
+		<-respChans[lbamsg["commandId"]]
+
+		busyInfoLock.RLock()
+		defer busyInfoLock.RUnlock()
+		reqId := msg["requestId"]
+		req, ok := busyInfo.ActorHandling[reqId]
+		if ok {
+			req.IsHandling = true
+		} else {
+			req, ok = busyInfo.ActorSent[reqId]
+		}
+
+		response := map[string]actorSentInfo_t {}
+
+		if ok {
+			response["request"] = req
+		}
+
+		responseBytes, _ := json.Marshal(response)
+		sendDebugger(conn, responseBytes)
 	case "viewBreakpoint":
 		breakpointsLock.Lock()
 		if bkid, ok := msg["breakpointId"]; ok {
@@ -1362,6 +2249,8 @@ func processClient() {
 				"-location": "isRequest",
 				"-actorId": "",
 				"-type": "breakpointType",
+				"-conds": "",
+				"-respConds": "",
 			}, map[string]string{},
 			2,
 		)
@@ -1417,6 +2306,55 @@ func processClient() {
 			return
 		}
 		// assume no need for response
+	case "vd":
+		// view deadlocks
+
+		// TODO: really refactor
+		msg := getArgs([]string{},
+			[]string {  },
+			map[string]string {}, map[string]string{},
+			0,
+		)
+		msg["command"] = "viewDeadlocks"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving response from debugger: %v\n", err)
+			return
+		}
+
+		var response []edge_t
+		json.Unmarshal(responseBytes, &response)
+		if len(response) == 0 {
+			fmt.Println("No deadlocks found.")
+		} else {
+			fmt.Println("Deadlock detected!")
+			fmt.Println("Cycle information:")
+
+			for i, edge := range response[1:] {
+				fmt.Printf("* ")
+				if i == len(response)-2 {
+					fmt.Printf("But ")
+				}
+				fmt.Printf("%v %v is waiting on %v %v", edge.SrcActor.ActorType, edge.SrcActor.ActorId, edge.DstActor.ActorType, edge.DstActor.ActorId)
+				if i == len(response)-2 {
+					fmt.Printf("!")
+				} else { fmt.Printf(".") }
+				fmt.Printf("\n")
+				rv, _ := unpackRequestValue(edge.Req.RequestValue)
+				fmt.Printf("\t* Waiting on method %v.%v()\n", edge.DstActor.ActorId, rv["path"].(string)[1:])
+				prv, _ := unpackRequestValue(edge.ParentValue)
+				fmt.Printf("\t* Method is being called from: %v.%v()\n", edge.SrcActor.ActorId, prv["path"].(string)[1:])
+			}
+		}
+		//pretty, _ := json.MarshalIndent(response, "", " ")
+		//fmt.Printf("%s\n", pretty)
 	case "vb":
 		//view breakpoints
 		//vb [breakpointId]
@@ -1490,6 +2428,107 @@ func processClient() {
 				}
 			}
 		}
+	case "vkr":
+		// view Kafka request details
+		msg := getArgs(os.Args,
+			[]string {"requestId"},
+			map[string]string {"-select": "", "-conds": ""}, map[string]string{"-sidecar": ""},
+			2,
+		)
+
+		msg["command"] = "vkr"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		// expecting map of reqMsg_t
+		//response := map[string]kafkaReq_t {}
+		//var response interface{}
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving from debugger: %v\n", err)
+		}
+
+		// TODO: add error checking
+		/*err = json.Unmarshal(responseBytes, &response)
+		if err != nil {
+			fmt.Printf("Error unmarshalling response: %v\n", err)
+			fmt.Printf("Response: %v\n", string(responseBytes))
+			return
+		}*/
+
+		sel, ok := msg["select"]
+		//fmt.Println(response)
+		if !ok || sel == "" {
+			var response map[string]kafkaReq_t
+			err := json.Unmarshal(responseBytes, &response)
+			if err == nil {
+				for _, reqMsg := range response {
+					//fmt.Printf("* %v\n", reqMsg)
+					printKafkaReq(reqMsg)
+				}
+			}
+		} else {
+			var response map[string]interface{}
+			err := json.Unmarshal(responseBytes, &response)
+			if err == nil {
+				for key, count := range response {
+					var keyMap map[string]interface{}
+					err = json.Unmarshal([]byte(key), &keyMap)
+					fmt.Printf("* ")
+					if err == nil {
+						i := 0
+						for _, valPart := range keyMap {
+							fmt.Printf("\"%s\"", valPart)
+							if i != len(keyMap) {
+								fmt.Printf(", ")
+							}
+						}
+					} else {
+						fmt.Printf("%v", key)
+					}
+					fmt.Printf(": %v requests found\n", count)
+				}
+			}
+		}
+	case "vrd":
+		// view request details
+		msg := getArgs(os.Args,
+			[]string {"requestId"},
+			map[string]string {"-format": "", "-ind": ""}, map[string]string{},
+			2,
+		)
+
+		msg["command"] = "viewRequest"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		// expecting list of actors
+		response := map[string]actorSentInfo_t {}
+		responseBytes, err := recvDebugger(connReader)
+		if err != nil {
+			fmt.Printf("Error receiving from debugger: %v\n", err)
+		}
+
+		// TODO: add error checking
+		err = json.Unmarshal(responseBytes, &response)
+		if err != nil {
+			fmt.Printf("Error unmarshalling response: %v\n", err)
+			fmt.Printf("Response: %v\n", string(responseBytes))
+			return
+		}
+
+		req, ok := response["request"]
+		if !ok {
+			fmt.Println("Request not found.")
+			return
+		}
+		viewRequestDetails(req, msg["requestId"])
 	case "vpa":
 		// view paused actors
 		msg := getArgs(os.Args,
@@ -1638,22 +2677,49 @@ func processClient() {
 			return
 		}
 
-		pauseResponse := map[string]listPauseInfo_t {}
+		pauseResponse := map[string][]listPauseInfo_t {}
 		pauseResponseBytes, _ := recvDebugger(connReader)
-		// TODO: add error checking
+
 		err := json.Unmarshal(pauseResponseBytes, &pauseResponse)
 		if err != nil {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			fmt.Printf("Response: %v\n", string(pauseResponseBytes))
 			return
 		}
-		pauseInfo, ok := pauseResponse["actor"]
+		pauseList, ok := pauseResponse["actors"]
 
-		if !ok {
+		if len(pauseList) == 0 || !ok {
 			fmt.Println("Cannot step: actor is not paused.")
 			return
 		}
 
+		pauseInfo := pauseList[0]
+
+		// see if our actor is paused on a response and has no parent
+		// if so, then we cannot step (nothing to step to)
+		if pauseInfo.IsResponse == "response" && !pauseInfo.CanStep {
+			fmt.Println("Cannot step: actor is paused on a response and has no parent.")
+			return
+		}
+
+		// set a flow breakpoint
+		// TODO: keep old code, split into step and stepi commands
+
+		bkId := fmt.Sprintf("single-step of actor %v %v",
+			actorType, actorId)
+
+		bmsg := map[string]string {
+			"commandId": commandId,
+			"flowId": pauseInfo.FlowId,
+			"actorId": actorId,
+			"actorType": actorType,
+			"command": "setBreakpoint",
+			"keepAlive": "true",
+			"deleteOnHit": "true",
+			"breakpointId": bkId,
+		}
+
+		/*
 		// next, see if our actor is paused on a response
 		if pauseInfo.IsResponse == "response" {
 			fmt.Println("Cannot step: actor is paused on a response, not a request.")
@@ -1674,7 +2740,7 @@ func processClient() {
 			"keepAlive": "true",
 			"path": reqInfo["path"],
 			"deleteOnHit": "true",
-		}
+		}*/
 
 		bmsgBytes, _ := json.Marshal(bmsg)
 		err = sendDebugger(clientConn, bmsgBytes)
@@ -1695,6 +2761,7 @@ func processClient() {
 			fmt.Printf("Error unmarshalling response: %v\n", err)
 			return
 		}
+		//fmt.Println(response)
 		fmt.Printf("Single-step breakpoint %v set.\n", response["breakpointId"])
 		fmt.Printf("Unpausing all actors...\n")
 		upmsg := map[string]string {
@@ -1709,8 +2776,37 @@ func processClient() {
 			return
 		}
 		// wait for step to be hit
-		recvDebugger(connReader)
-		fmt.Println("Single-stepped actor is now paused on response.")
+		responseBytes, err = recvDebugger(connReader)
+		if err != nil { return }
+
+		var stepCompleteMsg map[string]string
+		err = json.Unmarshal(responseBytes, &stepCompleteMsg)
+
+		fmt.Println("Single-step complete.")
+		fmt.Println("Current location:")
+		fmt.Printf("* Actor: %v %v\n", stepCompleteMsg["actorType"], stepCompleteMsg["actorId"])
+		fmt.Printf("* Request vs response: %v\n", stepCompleteMsg["isResponse"])
+
+		// TODO: error handling
+		reqInfo, _ := unpackRequestValue(stepCompleteMsg["requestValue"])
+		fmt.Printf("\t* Request type: %s\n", reqInfo["command"].(string))
+		fmt.Printf("\t* Request method: %s\n", reqInfo["path"].(string))
+		fmt.Printf("\t* Request payload: %v\n", reqInfo["payload"])
+	case "edit":
+		// TODO: argument checking/error handling
+		msg := getArgs(os.Args,
+			[]string { "requestId", "edit" },
+			map[string]string{}, map[string]string{},
+			2,
+		)
+		msg["command"] = "editResponse"
+		msgBytes, _ := json.Marshal(msg)
+		err = sendDebugger(clientConn, msgBytes)
+		if err != nil {
+			fmt.Printf("Error sending message to debugger: %v\n", err)
+			return
+		}
+		fmt.Printf("Response edited.\n")
 	case "help":
 		if len(os.Args) >= 3 {
 			cmd := os.Args[2]
@@ -1808,7 +2904,12 @@ func main(){
 
 		if err != nil {
 			fmt.Printf("Error connecting to KAR sidecar: %v\n", err)
-			fmt.Printf("\tError response: %v\n", *resp)
+			if resp != nil {
+				fmt.Printf("\tError response: %v\n", *resp)
+			} else {
+				fmt.Println("Make sure that you entered the correct hostname and port.")
+				fmt.Println("Additionally, make sure that the KAR sidecar is running, with its port exposed.")
+			}
 			return
 		}
 

@@ -49,11 +49,17 @@ type breakpointAttrs_t struct {
 	// "request": trigger breakpoint upon method request
 	// "response": trigger breakpoint upon method response
 	isRequest string
+
+	// flowId -- the id of the flow to break on
+	// (used in single-step debugging)
+	flowId string
 }
 
 type breakpoint_t struct {
 	id string
 	breakpointType string //"actor", "node", "global"
+	conds string
+	respConds string
 	deleteOnHit bool
 	attrs breakpointAttrs_t
 }
@@ -63,10 +69,11 @@ type waitInfo_t struct {
 	ActorType string `json:"actorType"`
 	BreakpointId string `json:"breakpointId"`
 	RequestId string `json:"requestId"`
+	FlowId string `json:"flowId"`
 	RequestValue string `json:"requestValue"`
 	ResponseValue string `json:"responseValue"`
 	IsResponse string `json:"isResponse"`
-	//NodeId string `json:"nodeId"`
+	NodeId string `json:"nodeId"`
 }
 
 var (
@@ -115,10 +122,13 @@ var (
 
 	// an actor is busy if it is in the middle of calling another
 	busyInfo = listBusyInfo_t {
-		ActorHandling: map[string]actor_t{},
+		ActorHandling: map[string]actorSentInfo_t{},
 		ActorSent: map[string]actorSentInfo_t{},
 	}
 	busyInfoLock = sync.RWMutex{}
+
+	editResponsesMap = map[string]string {}
+	editResponsesLock = sync.RWMutex {}
 )
 
 const (
@@ -128,6 +138,7 @@ const (
 	bindingEndpoint = "handlerBinding"
 	serviceEndpoint = "handlerService"
 	sidecarEndpoint = "handlerSidecar"
+	debuggerEndpoint = "handlerDebugger"
 )
 
 func init() {
@@ -135,6 +146,7 @@ func init() {
 	rpc.RegisterSession(bindingEndpoint, handlerBinding)
 	rpc.RegisterService(serviceEndpoint, handlerService)
 	rpc.RegisterNode(sidecarEndpoint, handlerSidecar)
+	rpc.RegisterNode(debuggerEndpoint, handlerDebugger)
 }
 
 // Reply contains the subset of an http.Response that are relevant to higher levels of the runtime
@@ -236,6 +248,7 @@ func CallActor(ctx context.Context, actor Actor, path, payload, flow string, par
 			busyInfo.ActorSent[requestID] = actorSentInfo_t {
 				Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
 				ParentId: parentID,
+				FlowId: flow,
 				RequestValue: string(bytes),
 			}
 			busyInfoLock.Unlock()
@@ -400,7 +413,22 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 	} else if msg["command"] == "getRuntimeAddr" {
 		replyBytes, replyErr = getRuntimeAddr(ctx, msg)
 		return replyBytes, replyErr
-	} else if msg["command"] == "setBreakpoint" {
+	} else {
+		logger.Error("unexpected command %s", msg["command"]) // dropping message
+		return nil, nil
+	}
+}
+
+func handlerDebugger(ctx context.Context, target rpc.Node, value []byte) ([]byte, error) {
+	var msg map[string]string
+	err := json.Unmarshal(value, &msg)
+	if err != nil {
+		return nil, err
+	}
+
+	var replyBytes []byte
+	var replyErr error
+	if msg["command"] == "setBreakpoint" {
 		//logger.Info("setting breakpoint")
 		registerDebugger(msg["srcNodeId"])
 		replyBytes, replyErr = setBreakpoint(ctx, msg)
@@ -459,11 +487,15 @@ func handlerSidecar(ctx context.Context, target rpc.Node, value []byte) ([]byte,
 	} else if msg["command"] == "listBusyActors" {
 		replyBytes, replyErr = listBusyActors()
 		return replyBytes, replyErr
+	} else if msg["command"] == "editResponse" {
+		replyBytes, replyErr = editResponse(msg)
+		return replyBytes, replyErr
 	} else {
 		logger.Error("unexpected command %s", msg["command"]) // dropping message
 		return nil, nil
 	}
 }
+
 
 func handlerService(ctx context.Context, target rpc.Service, value []byte) ([]byte, error) {
 	var msg map[string]string
@@ -535,7 +567,11 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 	/*accessing isDebuggerPresent without a lock -- risky! but fast*/
 	if config.IsDebugMode || isDebuggerPresent {
 		busyInfoLock.Lock()
-		busyInfo.ActorHandling[requestID] = actor_t {ActorType: actor.Type, ActorId: actor.ID }
+		busyInfo.ActorHandling[requestID] = actorSentInfo_t {
+			Actor: actor_t {ActorType: actor.Type, ActorId: actor.ID },
+			FlowId: target.Flow,
+			RequestValue: string(value),
+		}
 		busyInfoLock.Unlock()
 
 		deleteHandling := func() {
@@ -555,7 +591,8 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			actorType: bkActorType,
 			path: bkPath,
 			isRequest: "request",
-		})
+			flowId: target.Flow,
+		}, string(value), "")
 
 		myActor := actorTuple_t { actorId: target.ID, actorType: target.Name }
 
@@ -586,6 +623,7 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		// if we're paused, then wait
 		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
 			requestID,
+			target.Flow,
 			string(value),
 			"",
 			false,
@@ -746,22 +784,14 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 			actorType: bkActorType,
 			path: bkPath,
 			isRequest: "response",
-		})
-
-		/* isBreak, bk = checkBreakpoint(breakpointAttrs_t {
-			actorId: target.ID,
-			actorType: target.Name,
-			path: msg["path"],
-			isRequest: "response",
-		}) */
-
+			flowId: target.Flow,
+		}, string(value), string(debugReply))
 		
 		if reply != nil {
 			debugReply = reply
 		}
 
 		if isBreak {
-			//fmt.Printf("Breakpoint %v hit!\n", bk)
 			informBreakpoint(actorTuple_t { actorId: target.ID, actorType: target.Name }, requestID, bk, string(value), string(debugReply), "response")
 			switch bk.breakpointType {
 			case "actor":
@@ -779,13 +809,15 @@ func handlerActor(ctx context.Context, target rpc.Session, instance *rpc.Session
 		}
 
 		// if we're paused, then wait
-		waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
+		newReply, editErr := waitOnPause(actorTuple_t { actorId: target.ID, actorType: target.Name },
 			requestID,
+			target.Flow,
 			string(value),
 			string(debugReply),
 			true,
 			!isBreak, //only send a pause if we didn't hit the breakpoint.
 		)
+		if editErr == nil && newReply != nil { reply = newReply }
 	}
 
 	return dest, reply, err
@@ -910,21 +942,45 @@ func getRuntimeAddr(ctx context.Context, msg map[string]string) ([]byte, error) 
 	return json.Marshal(reply)
 }
 
+func editResponse(msg map[string]string) ([]byte, error) {
+	editResponsesLock.Lock()
+	editResponsesMap[msg["requestId"]] = msg["edit"]
+	editResponsesLock.Unlock()
+	reply := Reply{StatusCode: http.StatusOK, ContentType: "application/json"}
+	return json.Marshal(reply)
+}
+
 
 // sets a breakpoint
 func setBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
-	attrs := breakpointAttrs_t {
+	flowId, flowOk := msg["flowId"]
+	var attrs breakpointAttrs_t
+	var fullAttrs = breakpointAttrs_t {
 		actorId: msg["actorId"],
 		actorType: msg["actorType"],
 		path: msg["path"],
 		//isCaller: msg["isCaller"],
 		isRequest: msg["isRequest"],
+		// below line probably doesn't break things, because
+		// for non-flow breakpoints, we set flowId=="" in
+		// checkBreakpoint
+		flowId: flowId, //TODO: breaks things?
+	}
+
+	if flowOk && flowId != "" {
+		attrs = breakpointAttrs_t {
+			flowId: flowId,
+		}
+	} else {
+		attrs = fullAttrs
 	}
 
 	breakpoint := breakpoint_t {
 		id: msg["breakpointId"],
 		breakpointType: msg["breakpointType"],
-		attrs: attrs,
+		attrs: fullAttrs,
+		conds: msg["conds"],
+		respConds: msg["respConds"],
 	}
 	if msg["deleteOnHit"] == "true" {
 		breakpoint.deleteOnHit = true
@@ -949,8 +1005,13 @@ doReply:
 func unsetBreakpoint(ctx context.Context, msg map[string]string) ([]byte, error) {
 	breakpointsLock.Lock()
 	breakpoint := breakpoints[msg["breakpointId"]]
+
 	delete(breakpoints, msg["breakpointId"])
 	delete(breakpointsByAttrs, breakpoint.attrs)
+	flowAttrs := breakpointAttrs_t {
+		flowId: breakpoint.attrs.flowId,
+	}
+	delete(breakpointsByAttrs, flowAttrs)
 
 	//fmt.Printf("Breakpoints after unset: %v\n", breakpoints)
 
@@ -1053,7 +1114,7 @@ func unpauseNode(onlyUnpauseCurrent bool) ([]byte, error) {
 }
 
 
-func informPause(info actorTuple_t, bk breakpoint_t, reqId string, reqVal string, respVal string, isResponse bool){
+func informPause(info actorTuple_t, bk breakpoint_t, reqId string, flowId string, reqVal string, respVal string, isResponse bool){
 	isResponseStr := "request"
 	if isResponse { isResponseStr = "response" }
 	var msg = map[string]string {
@@ -1063,6 +1124,7 @@ func informPause(info actorTuple_t, bk breakpoint_t, reqId string, reqVal string
 		"nodeId": rpc.GetNodeID(),
 		"breakpointId": bk.id,
 		"requestId": reqId,
+		"flowId": flowId,
 		"requestValue": reqVal,
 		"responseValue": respVal,
 		"isResponse": isResponseStr,
@@ -1070,7 +1132,7 @@ func informPause(info actorTuple_t, bk breakpoint_t, reqId string, reqVal string
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we are paused
@@ -1096,7 +1158,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 	msgBytes, _ := json.Marshal(msg)
 
 	informDebugger := func(debugger string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: debugger}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	//inform all debuggers that we hit a breakpoint
@@ -1111,7 +1173,7 @@ func informBreakpoint(info actorTuple_t, reqId string, bk breakpoint_t, reqVal s
 // wait on a paused actor
 // note: condvar is pointer
 
-func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string, isResponse bool, doInform bool){
+func waitOnPause(info actorTuple_t, reqId string, flowId string, reqVal string, respVal string, isResponse bool, doInform bool) ([]byte /* edited response */, error /* error in processing edited response */) {
 	isResponseStr := "request"
 	if isResponse { isResponseStr = "response" }
 	isActorPausedLock.RLock()
@@ -1120,16 +1182,20 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 	bk, _ := pausedBreaks[info]
 	isActorPausedLock.RUnlock()
 
-	if ok {
+	var newResponse []byte = nil
+	var editErr error
+
+	if ok {	
 		//fmt.Printf("actor %v is rn waiting on pause\n", info)
 		//fmt.Printf("\nImmune actors: %v\n", immuneFromNodePaused)
-		informPause(info, bk, reqId, reqVal, respVal, isResponse)
+		informPause(info, bk, reqId, flowId, reqVal, respVal, isResponse)
 		// wait on actor becoming unpaused
 
 		waitingActorsLock.Lock()
 		waitingActors[info] = waitInfo_t {
 			ActorId: info.actorId,
 			ActorType: info.actorType,
+			FlowId: flowId,
 			BreakpointId: bk.id,
 			RequestId: reqId,
 			RequestValue: reqVal,
@@ -1142,6 +1208,43 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 
 		//fmt.Printf("actor %v rn woke up!\n", info)
 		// woke up from wait — now unpaused
+		
+		if isResponse {
+			// check to see if we should edit our response
+			editResponsesLock.RLock()
+			edit, ok := editResponsesMap[reqId]
+			editResponsesLock.RUnlock()
+
+			if ok {
+				// we should edit our response
+				//var myResponse interface{}
+				//err := json.Unmarshal([]byte(respVal), &myResponse)
+				respInterface, err := unpackResponseValue(respVal)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payload, ok := respInterface["payload"]
+				if !ok {
+					editErr = fmt.Errorf("payload not found")
+					goto endEditResponse1
+				}
+				newPayload, err := doEdits(payload, edit)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payloadBytes, err := json.Marshal(newPayload)
+				if err != nil { editErr = err; goto endEditResponse1 }
+				payloadString := string(payloadBytes)
+				respInterface["Payload"] = payloadString
+				delete(respInterface, "payload")
+				newResponse, err = json.Marshal(respInterface)
+				if err != nil { editErr = err; goto endEditResponse1 }
+			}
+		}
+		endEditResponse1:
+		/*if editErr != nil {
+			fmt.Printf("editErr: %v\n", editErr)
+		}*/
+
+		editResponsesLock.Lock()
+		delete(editResponsesMap, reqId)
+		editResponsesLock.Unlock()
 
 		waitingActorsLock.Lock()
 		delete(waitingActors, info)
@@ -1167,7 +1270,7 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 
 	if ok {
 		//fmt.Printf("actor %v node-pause\n", info)
-		informPause(info, bk, reqId, reqVal, respVal, isResponse)
+		informPause(info, bk, reqId, flowId, reqVal, respVal, isResponse)
 
 		waitingActorsLock.Lock()
 		waitingActors[info] = waitInfo_t {
@@ -1175,6 +1278,7 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 			ActorType: info.actorType,
 			BreakpointId: bk.id,
 			RequestId: reqId,
+			FlowId: flowId,
 			RequestValue: reqVal,
 			ResponseValue: respVal,
 			IsResponse: isResponseStr,
@@ -1183,8 +1287,42 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 
 		<-condvar
 		// woke up from wait — now unpaused
+		if isResponse && (newResponse == nil && editErr == nil) {
+			// check to see if we should edit our response
+			editResponsesLock.RLock()
+			edit, ok := editResponsesMap[reqId]
+			editResponsesLock.RUnlock()
 
-		//fmt.Printf("actor %v woke up!\n", info)
+			if ok {
+				// we should edit our response
+				//var myResponse interface{}
+				//err := json.Unmarshal([]byte(respVal), &myResponse)
+				respInterface, err := unpackResponseValue(respVal)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payload, ok := respInterface["payload"]
+				if !ok {
+					editErr = fmt.Errorf("payload not found")
+					goto endEditResponse2
+				}
+				newPayload, err := doEdits(payload, edit)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payloadBytes, err := json.Marshal(newPayload)
+				if err != nil { editErr = err; goto endEditResponse2 }
+				payloadString := string(payloadBytes)
+				respInterface["Payload"] = payloadString
+				delete(respInterface, "payload")
+				newResponse, err = json.Marshal(respInterface)
+				if err != nil { editErr = err; goto endEditResponse2 }
+			}
+		}
+		endEditResponse2:
+		/*if editErr != nil {
+			fmt.Printf("editErr: %v\n", editErr)
+		}*/
+
+		editResponsesLock.Lock()
+		delete(editResponsesMap, reqId)
+		editResponsesLock.Unlock()
 
 		waitingActorsLock.Lock()
 		delete(waitingActors, info)
@@ -1200,6 +1338,8 @@ func waitOnPause(info actorTuple_t, reqId string, reqVal string, respVal string,
 		//fmt.Printf("waiting actors: %v", waitingActors)
 		waitingActorsLock.RUnlock()
 	}
+	return newResponse, editErr
+	//return nil, nil
 }
 
 // pause all sidecars
@@ -1214,7 +1354,7 @@ func pauseAllSidecars(bk breakpoint_t){
 	if err != nil { return }
 
 	doTell := func(sidecar string){
-		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: sidecarEndpoint}, time.Time{}, "", msgBytes)
+		rpc.Tell(ctx, rpc.Destination{Target: rpc.Node{ID: sidecar}, Method: debuggerEndpoint}, time.Time{}, "", msgBytes)
 	}
 
 	sidecars, _ := rpc.GetNodeIDs()
@@ -1375,45 +1515,114 @@ func deactivate(ctx context.Context, actor *rpc.SessionInstance) {
 	return
 }
 
-func checkBreakpoint(attrs breakpointAttrs_t) (bool, breakpoint_t) {
+func unpackRequestValue(s string) (map[string]interface{}, error) {
+	retval := map[string]interface{} {}
+	err := json.Unmarshal([]byte(s), &retval)
+	payload, ok := retval["payload"]
+	if ok {
+		payloadStr, ok := payload.(string)
+		if ok {
+			var payloadMap []interface{}//:= map[string]interface{} {}
+			err = json.Unmarshal([]byte(payloadStr), &payloadMap)
+			retval["payload"] = payloadMap
+		}
+	} 
+	return retval, err
+}
+
+func unpackResponseValue(s string) (map[string]interface{}, error) {
+	retval := map[string]interface{} {}
+	err := json.Unmarshal([]byte(s), &retval)
+	payload, ok := retval["Payload"]
+	if ok {
+		payloadStr, ok := payload.(string)
+		if ok {
+			//payloadMap := map[string]interface{} {}
+			var payloadMap interface{}
+			err = json.Unmarshal([]byte(payloadStr), &payloadMap)
+			retval["payload"] = payloadMap
+		}
+	}
+	return retval, err
+}
+
+
+func checkBreakpoint(attrs breakpointAttrs_t, reqStr string, respStr string) (bool, breakpoint_t) {
 	//fmt.Printf("Checking breakpoint %v\n", attrs)
 	//fmt.Printf("\tCurrent breakpoints: %v\n", breakpointsByAttrs)
 	breakpointsLock.Lock()
 	defer breakpointsLock.Unlock()
 
-	bk, ok := breakpointsByAttrs[attrs]
-	
-	if ok {
-		if bk.deleteOnHit {
-			go func() {
-				retBytes, _ := implUnsetBreakpoint(map[string]string {
-					"breakpointId": bk.id,
-				})
-				sendAll(retBytes, "")
-			}()
-			//delete(breakpointsByAttrs, attrs)
-			//delete(breakpoints, bk.id)
-		}
-		return true, bk
+	flowAttrs := breakpointAttrs_t {
+		flowId: attrs.flowId,
 	}
 
-	newAttrs := attrs
-	newAttrs.actorId = "" //check for wildcards on actorId
-	bk, ok = breakpointsByAttrs[newAttrs]
+	reqVal, reqErr := unpackRequestValue(reqStr)
+	respVal, respErr := unpackResponseValue(respStr)
+
+	hit := false
+	bk, ok := breakpointsByAttrs[flowAttrs]
 	if ok {
-		if bk.deleteOnHit {
-			go func() {
-				retBytes, _ := implUnsetBreakpoint(map[string]string {
-					"breakpointId": bk.id,
-				})
-				sendAll(retBytes, "")
-			}()
-			//delete(breakpointsByAttrs, attrs)
-			//delete(breakpoints, bk.id)
+		hit = true
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
 		}
-		return true, bk
+		if bk.respConds != "" {
+			if respErr == nil {
+				hit = runConds(respVal, bk.respConds)
+			} else { return false, breakpoint_t {} }
+		}
 	}
+	if hit { goto doHit }
+
+	attrs.flowId = ""
+	bk, ok = breakpointsByAttrs[attrs]
+	
+	if ok {
+		hit = true
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
+		}
+		if bk.respConds != "" {
+			if respErr == nil {
+				hit = runConds(respVal, bk.respConds)
+			} else { return false, breakpoint_t {} }
+		}
+	}
+	if hit { goto doHit }
+
+	attrs.actorId = "" //check for wildcards on actorId
+	bk, ok = breakpointsByAttrs[attrs]
+	if ok {
+		hit = true
+		if bk.conds != "" {
+			if reqErr == nil {
+				hit = runConds(reqVal, bk.conds)
+			} else { return false, breakpoint_t {} }
+		}
+		if bk.respConds != "" {
+			if respErr == nil {
+				hit = runConds(respVal, bk.respConds)
+			} else { return false, breakpoint_t {} }
+		}
+	}
+	if hit { goto doHit }
 	return false, breakpoint_t {}
+
+doHit:
+	if bk.deleteOnHit {
+		go func() {
+			retBytes, _ := implUnsetBreakpoint(map[string]string {
+				"breakpointId": bk.id,
+			})
+			sendAll(retBytes, "")
+		}()
+	}
+	return true, bk	
 }
 
 ////////////////////
