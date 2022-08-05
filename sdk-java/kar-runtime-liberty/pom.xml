@@ -6,7 +6,7 @@
   <parent>
     <groupId>com.ibm.research.kar</groupId>
     <artifactId>kar-java</artifactId>
-    <version>1.3.5</version>
+    <version>1.3.6-SNAPSHOT</version>
   </parent>
 
   <artifactId>kar-runtime-liberty</artifactId>
