@@ -16,6 +16,8 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.5 - 2022-08-05
++ New distributed debugger for KAR (#338, #340)
 
 # KAR 1.3.4 - 2022-07-05
 + Upgrade kind from 0.12.0 to 0.14.0 (#333)

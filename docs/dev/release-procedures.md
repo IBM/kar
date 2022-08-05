@@ -75,7 +75,7 @@ python3 -m build
 ```
 5. Publish the contents of the dist subdirectory to PyPi:
 ```
-python3 -m twine upload --repository pypi dist/*
+python3 -m twine upload --repository kar dist/*
 ```
 
 ### Publish Helm Chart
