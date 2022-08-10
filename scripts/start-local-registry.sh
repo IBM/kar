@@ -22,5 +22,5 @@
 reg_name='registry'
 running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
 if [ "${running}" != 'true' ]; then
-  docker run -d --restart=always -p 5000:5000 --name registry registry:2
+  docker run -d --restart=always -p 127.0.0.1:5000:5000 --name registry registry:2
 fi
