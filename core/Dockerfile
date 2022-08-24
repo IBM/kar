@@ -36,3 +36,4 @@ FROM alpine:3.14
 ARG KAR_BINARY
 
 COPY --from=builder /go/bin/$KAR_BINARY /kar/bin/$KAR_BINARY
+COPY --from=builder /go/bin/kar-debugger /kar/bin/kar-debugger
