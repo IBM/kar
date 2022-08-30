@@ -44,7 +44,7 @@ KIND_EXPECTED_VERSION=v0.14.0
 # v1.15.12@sha256:9dfc13db6d3fd5e5b275f8c4657ee6a62ef9cb405546664f2de2eabcfd6db778
 # v1.14.10@sha256:b693339da2a927949025869425e20daf80111ccabf020d4021a23c00bae29d82
 
-KIND_NODE_TAG=${KIND_NODE_TAG:="v1.20.15@sha256:6f2d011dffe182bad80b85f6c00e8ca9d86b5b8922cdf433d53575c4c5212248"}
+KIND_NODE_TAG=${KIND_NODE_TAG:="v1.24.0@sha256:0866296e693efe1fed79d5e6c7af8df71fc73ae45e3679af05342239cdc5bc8e"}
 
 set -eu
 
@@ -60,9 +60,10 @@ fi
 
 # create registry container unless it already exists
 reg_name='registry'
+reg_port='5000'
 running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
 if [ "${running}" != 'true' ]; then
-  docker run -d --restart=always -p 5000:5000 --name registry registry:2
+  docker run -d --restart=always -p "127.0.0.1:${reg_port}:5000" --net=kind --name registry registry:2
 fi
 
 # Boot cluster
@@ -72,12 +73,24 @@ kind create cluster --config ${SCRIPTDIR}/kind/kind-cluster.yaml --name kind --i
 # Begin script from https://kind.sigs.k8s.io/docs/user/local-registry/
 ########
 
-# Connect the registry to the cluster network
-docker network connect kind "${reg_name}" || true
+# connect the registry to the cluster network if not already connected
+if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.kind}}' "${reg_name}")" = 'null' ]; then
+  docker network connect "kind" "${reg_name}"
+fi
 
-for node in $(kind get nodes --name kind); do
-  kubectl annotate node "${node}" "kind.x-k8s.io/registry=localhost:5000";
-done
+# Document the local registry
+# https://github.com/kubernetes/enhancements/tree/master/keps/sig-cluster-lifecycle/generic/1755-communicating-a-local-registry
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-registry-hosting
+  namespace: kube-public
+data:
+  localRegistryHosting.v1: |
+    host: "localhost:${reg_port}"
+    help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+EOF
 
 ########
 # End of script from https://kind.sigs.k8s.io/docs/user/local-registry/
