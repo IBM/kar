@@ -58,6 +58,9 @@ if [ "$KIND_ACTUAL_VERSION" != "$KIND_EXPECTED_VERSION" ]; then
     exit 1
 fi
 
+# create docker network "kind" so that rootless podman can connect registry
+docker network create kind >/dev/null || true 
+
 # create registry container unless it already exists
 reg_name='registry'
 reg_port='5000'

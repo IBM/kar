@@ -18,6 +18,9 @@
 
 # This script starts a docker registry and makes it available on localhost:5000
 
+# create docker network "kind" so that rootless podman can connect registry
+docker network create kind >/dev/null || true 
+
 # create registry container unless it already exists
 reg_name='registry'
 running="$(docker inspect -f '{{.State.Running}}' "${reg_name}" 2>/dev/null || true)"
