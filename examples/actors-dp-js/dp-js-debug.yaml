@@ -1,0 +1,54 @@
+#
+# Copyright IBM Corporation 2020,2022
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dp-js
+  labels:
+    name: dp-js
+  annotations:
+    kar.ibm.com/app: dp
+    kar.ibm.com/actors: Cafe,Table,Fork,Philosopher
+    kar.ibm.com/extraArgs: '-actor_busy_timeout=0'
+    kar.ibm.com/verbose: info
+spec:
+  restartPolicy: Never
+  containers:
+  - name: app
+    image: localhost:5000/kar/kar-examples-js-actors-dp
+    env:
+    - name: MAIN
+      value: philosophers.js
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debugger
+  labels:
+    name: debugger
+  annotations:
+    kar.ibm.com/app: dp
+spec:
+  containers:
+  - name: app
+    image: localhost:5000/kar/kar-debugger
+    command: [ "/kar/bin/kar-debugger" ]
+    args: ["server","localhost","3500"]
+    ports:
+      - containerPort: 5364
+

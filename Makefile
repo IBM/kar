@@ -25,6 +25,7 @@ PYTHON_VERSION=3.8
 
 KAR_BASE=$(DOCKER_IMAGE_PREFIX)kar-sidecar:$(DOCKER_IMAGE_TAG)
 KAR_INJECTOR=$(DOCKER_IMAGE_PREFIX)kar-injector:$(DOCKER_IMAGE_TAG)
+KAR_DEBUGGER=$(DOCKER_IMAGE_PREFIX)kar-debugger:$(DOCKER_IMAGE_TAG)
 KAR_JS_SDK=$(DOCKER_IMAGE_PREFIX)kar-sdk-nodejs-v12:$(DOCKER_IMAGE_TAG)
 KAR_JAVA_SDK=$(DOCKER_IMAGE_PREFIX)kar-sdk-java-builder-11:$(DOCKER_IMAGE_TAG)
 KAR_JAVA_RUNTIME=$(DOCKER_IMAGE_PREFIX)kar-sdk-java-runtime-11:$(DOCKER_IMAGE_TAG)
@@ -62,6 +63,7 @@ python-sdk:
 docker-kar-base:
 	cd core && docker build --build-arg KAR_BINARY=kar --build-arg KAR_VERSION=$(KAR_VERSION) -t $(KAR_BASE) .
 	cd core && docker build --build-arg KAR_BINARY=kar-injector -t $(KAR_INJECTOR) .
+	cd core && docker build -f Dockerfile.debugger -t $(KAR_DEBUGGER) .
 
 
 # BUILD SDK images
@@ -115,6 +117,7 @@ dockerBuildBenchmarks: docker-js-sdk
 docker-push-base: docker-kar-base
 	docker push $(KAR_BASE)
 	docker push $(KAR_INJECTOR)
+	docker push $(KAR_DEBUGGER)
 
 docker-push-python-sdk: docker-push-base docker-python-sdk
 	docker push $(KAR_PYTHON_SDK)
