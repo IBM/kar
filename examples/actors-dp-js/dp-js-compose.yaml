@@ -38,14 +38,14 @@ services:
       REDIS_PASSWORD: act0rstate
       REDIS_USER:     karmesh
       MAIN:           philosophers.js
-      KAR_EXTRA_ARGS: ${KAR_EXTRA_ARGS} -app dp -v info -actor_busy_timeout 0 -actors Cafe,Table,Fork,Philosopher 
+      KAR_EXTRA_ARGS: ${KAR_EXTRA_ARGS} -v info -actor_busy_timeout=0 -actors Cafe,Table,Fork,Philosopher 
     hostname: dp-js
     container_name: dp-js
     restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
   dp-debugger:
-    image: localhost:5000/kar/kar-sidecar
+    image: localhost:5000/kar/kar-debugger
     hostname: debugger
     container_name: debugger
     command: ["/kar/bin/kar","run","-app","dp","-runtime_port","36363","/kar/bin/kar-debugger","server","localhost","36363"]
