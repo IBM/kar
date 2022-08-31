@@ -106,9 +106,6 @@ var (
 	// A negative time will apply default durations
 	RequestRetryLimit time.Duration
 
-	// ActorBusyTimeout is how long to wait on a busy actor instance before timing out and returning an error.
-	ActorBusyTimeout time.Duration
-
 	// MissingComponentTimeout is how long to wait on a missing service or actor type before timing out and returning an error.
 	MissingComponentTimeout time.Duration
 
@@ -246,7 +243,7 @@ Available commands:
 		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
-		flag.DurationVar(&ActorBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
+		flag.DurationVar(&KafkaConfig.SessionBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
 		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
 		flag.BoolVar(&KafkaConfig.Cancellation, "cancel", false, "Cancel a pending call if the caller has failed")
 
@@ -260,7 +257,7 @@ Available commands:
 		flag.StringVar(&GetOutputStyle, "o", "", "Output style of information calls. 'json' for JSON formatting")
 
 	case InvokeCmd:
-		flag.DurationVar(&ActorBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
+		flag.DurationVar(&KafkaConfig.SessionBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")
 		flag.DurationVar(&MissingComponentTimeout, "missing_component_timeout", 2*time.Minute, "Time to wait on request to unknown service or actor type before timing out (0 is infinite)")
 		usage = "kar invoke [OPTIONS] ACTOR_TYPE ACTOR_ID METHOD [ARGS]"
 		description = "Invoke actor instance"

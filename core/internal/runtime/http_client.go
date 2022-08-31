@@ -118,11 +118,11 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 		if metricLabel != "" {
 			userCodeDurationHistogram.WithLabelValues(metricLabel).Observe(elapsed.Seconds())
 		}
-		if config.ActorBusyTimeout > 0 && elapsed > config.ActorBusyTimeout/2 {
+		if config.KafkaConfig.SessionBusyTimeout > 0 && elapsed > config.KafkaConfig.SessionBusyTimeout/2 {
 			if err != nil {
-				logger.Info("%v with path %v completed with an error in %v seconds", method, msg["path"], elapsed.Seconds())
+				logger.Info("Slow request %v with path %v completed with an error %v in %v seconds", method, msg["path"], err, elapsed.Seconds())
 			} else {
-				logger.Info("%v with path %v completed normally in %v seconds", method, msg["path"], elapsed.Seconds())
+				logger.Info("Slow request %v with path %v completed normally in %v seconds", method, msg["path"], elapsed.Seconds())
 			}
 		}
 		if err != nil {
