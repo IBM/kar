@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v12
+ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v16
 
 FROM $JS_RUNTIME
 
@@ -25,7 +25,7 @@ ENV MAIN=ykt.js
 
 # Copy dependencies first; they change rarely
 COPY package.json package-lock.json ./
-RUN npm install --prod
+RUN npm ci --omit=dev
 
 # Copy in application source
 COPY *.js ./

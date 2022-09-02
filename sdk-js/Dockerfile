@@ -18,7 +18,7 @@ ARG KAR_BASE=localhost:5000/kar/kar-sidecar
 
 FROM $KAR_BASE as kar
 
-FROM node:12-alpine
+FROM node:16-alpine
 
 # Use non-root user "node" defined by node base image
 RUN mkdir /kar && chown node /kar && chgrp node /kar && chmod g+s /kar
