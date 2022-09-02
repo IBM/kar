@@ -54,10 +54,11 @@ jobs:
         - make python-sdk || travis_terminate 1
         - . ./scripts/kar-env-local.sh
         - sh ./ci/testPythonLocal.sh
-    - name: containerized-python
-      script:
-        - ./scripts/docker-compose-start.sh || travis_terminate 1
-        - make docker-run-containerized-python-examples
+    # Disabled -- too unreliable for CI
+    # - name: containerized-python
+    #   script:
+    #     - ./scripts/docker-compose-start.sh || travis_terminate 1
+    #     - make docker-run-containerized-python-examples
     - name: local-released
       script:
         - ./scripts/docker-compose-start.sh || travis_terminate 1
