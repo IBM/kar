@@ -459,6 +459,7 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 					sendOrDie(ctx, Done{RequestID: m.requestID(), Deadline: m.deadline()})
 				}
 			} else {
+				deadline := m.deadline()
 				if next, ok := dest.Target.(Session); ok && after != nil && next.DeferredLockID != "" {
 					// Defer my obligation to release after to the next invocation of this flow on this instance
 					logger.Debug("%v is deferring lock to %v", m.logString(), next.DeferredLockID)
@@ -468,16 +469,17 @@ func handleSessionRequest(ctx context.Context, before chan struct{}, waitForChil
 					deferredLocks.Store(next.DeferredLockID, after)
 					after = nil
 					clearFlowOnRelease = false
+					deadline = time.Time{} // we're holding the lock so the request is considered to be already executing and thus timeout for starting the request must be disabled.
 				} else {
 					if clearFlowOnRelease {
 						instance.ActiveFlow = releasedFlow
 					}
 				}
 				if cr, ok := m.(CallRequest); ok {
-					sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: m.deadline(), Caller: cr.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: cr.Sequence + 1})
+					sendOrDie(ctx, CallRequest{RequestID: m.requestID(), Deadline: deadline, Caller: cr.Caller, Value: value, Target: dest.Target, Method: dest.Method, Sequence: cr.Sequence + 1})
 				} else {
 					tr := m.(TellRequest)
-					sendOrDie(ctx, TellRequest{RequestID: m.requestID(), Deadline: m.deadline(), Value: value, Target: dest.Target, Method: dest.Method, Sequence: tr.Sequence + 1})
+					sendOrDie(ctx, TellRequest{RequestID: m.requestID(), Deadline: deadline, Value: value, Target: dest.Target, Method: dest.Method, Sequence: tr.Sequence + 1})
 				}
 			}
 		}
