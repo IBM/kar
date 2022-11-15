@@ -17,7 +17,7 @@
 zk:
   imageRegistry: 'docker.io'
   imageName: 'zookeeper'
-  imageTag: '3.6'
+  imageTag: '3.8'
   port: 2181
   serverPort: 2888
   leaderElectionPort: 3888
