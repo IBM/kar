@@ -75,14 +75,13 @@ func nestedEntryKeyPrefix(key string) string {
 // Check to see if the state of the actor instance indicated by `actorType` and `actorId`
 // contains an entry for `key`/`subkey`.
 //
-//     Consumes:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200StateExistsResult
-//       404: response404
-//       500: response500
-//
+//	Consumes:
+//	- application/json
+//	Schemes: http
+//	Responses:
+//	  200: response200StateExistsResult
+//	  404: response404
+//	  500: response500
 func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
@@ -134,16 +133,15 @@ func routeImplContainsKey(w http.ResponseWriter, r *http.Request, ps httprouter.
 // The operation will not return until the state has been updated.
 // The result of the operation is `1` if a new entry was created and `0` if an existing entry was updated.
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - text/plain
-//     Schemes: http
-//     Responses:
-//       201: response201
-//       204: response204
-//       500: response500
-//
+//	Consumes:
+//	- application/json
+//	Produces:
+//	- text/plain
+//	Schemes: http
+//	Responses:
+//	  201: response201
+//	  204: response204
+//	  500: response500
 func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
@@ -200,14 +198,13 @@ func routeImplSet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 // unless the boolean query parameter `nilOnAbsent` is set to `true`,
 // in which case a `200` reponse with a `nil` response body will be returned.
 //
-//     Produces:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200StateGetResult
-//       404: response404
-//       500: response500
-//
+//	Produces:
+//	- application/json
+//	Schemes: http
+//	Responses:
+//	  200: response200StateGetResult
+//	  404: response404
+//	  500: response500
 func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
@@ -250,16 +247,15 @@ func routeImplGet(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 // <li>size: return the number of entries the key actor map</li>
 // </ul>
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200StateSubmapOps
-//       404: response404
-//       500: response500
-//
+//	Consumes:
+//	- application/json
+//	Produces:
+//	- application/json
+//	Schemes: http
+//	Responses:
+//	  200: response200StateSubmapOps
+//	  404: response404
+//	  500: response500
 func routeImplSubmapOps(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var op submapOp
 	if err := json.Unmarshal([]byte(ReadAll(r)), &op); err != nil {
@@ -403,13 +399,12 @@ func subMapScan(stateKey string, mapName string, op func(key string, value strin
 // The result of the operation is `1` if an entry was actually removed and
 // `0` if there was no entry for `key`.
 //
-//     Schemes: http
-//     Produces:
-//     - text/plain
-//     Responses:
-//       200: response200StateDeleteResult
-//       500: response500
-//
+//	Schemes: http
+//	Produces:
+//	- text/plain
+//	Responses:
+//	  200: response200StateDeleteResult
+//	  500: response500
 func routeImplDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var mangledEntryKey string
 	if subkey := ps.ByName("subkey"); subkey != "" {
@@ -433,13 +428,12 @@ func routeImplDel(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 // The state of the actor instance indicated by `actorType` and `actorId`
 // will be returned as the response body.
 //
-//     Produces:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200StateGetAllResult
-//       500: response500
-//
+//	Produces:
+//	- application/json
+//	Schemes: http
+//	Responses:
+//	  200: response200StateGetAllResult
+//	  500: response500
 func routeImplGetAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	state, err := actorGetAllState(ps.ByName("type"), ps.ByName("id"))
 	if err != nil {
@@ -459,6 +453,7 @@ func actorGetAllState(actorType string, actorID string) (map[string]interface{},
 	// reply has type map[string]string
 	// we unmarshal the values then marshal the map
 	m := map[string]interface{}{}
+	submaps := map[string]map[string]interface{}{}
 	for i, s := range reply {
 		var v interface{}
 		json.Unmarshal([]byte(s), &v)
@@ -468,11 +463,14 @@ func actorGetAllState(actorType string, actorID string) (map[string]interface{},
 		if subkey == config.Separator {
 			m[key] = v
 		} else {
-			if m[key] == nil {
-				m[key] = map[string]interface{}{}
+			if submaps[key] == nil {
+				submaps[key] = map[string]interface{}{}
 			}
-			(m[key].(map[string]interface{}))[subkey] = v
+			submaps[key][subkey] = v
 		}
+	}
+	if len(submaps) > 0 {
+		m["submaps"] = submaps
 	}
 	return m, nil
 }
@@ -490,16 +488,15 @@ func actorGetAllState(actorType string, actorID string) (map[string]interface{},
 // The result of the operation will contain the number of state elements
 // removed and updated.
 //
-//     Consumes:
-//     - application/json
-//     Produces:
-//     - application/json
-//     Schemes: http
-//     Responses:
-//       200: response200StateUpdate
-//       404: response404
-//       500: response500
-//
+//	Consumes:
+//	- application/json
+//	Produces:
+//	- application/json
+//	Schemes: http
+//	Responses:
+//	  200: response200StateUpdate
+//	  404: response404
+//	  500: response500
 func routeImplStateUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var op stateUpdateOp
 	var err error
@@ -581,12 +578,11 @@ func routeImplStateUpdate(w http.ResponseWriter, r *http.Request, ps httprouter.
 // The state of the actor instance indicated by `actorType` and `actorId`
 // will be deleted.
 //
-//     Schemes: http
-//     Responses:
-//       200: response200StateDeleteResult
-//       404: response404
-//       500: response500
-//
+//	Schemes: http
+//	Responses:
+//	  200: response200StateDeleteResult
+//	  404: response404
+//	  500: response500
 func routeImplDelAll(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	if reply, err := store.Del(ctx, stateKey(ps.ByName("type"), ps.ByName("id"))); err == store.ErrNil {
 		http.Error(w, "Not Found", http.StatusNotFound)
