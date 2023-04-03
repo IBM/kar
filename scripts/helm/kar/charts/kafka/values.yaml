@@ -24,9 +24,9 @@ zk:
 
 kafka:
   imageRegistry: 'docker.io'
-  imageName: 'wurstmeister/kafka'
-  imageTag: '2.13-2.8.1'
-  version: '2.8.1'
+  imageName: 'bitnami/kafka'
+  imageTag: '3.3'
+  version: '3.3'
   portInternal: 9092
   portExternal: 9093
   username: ''
