@@ -34,7 +34,7 @@ unset KAFKA_BROKERS
 unset KAFKA_PASSWORD
 
 export KAFKA_BROKERS=${KAFKA_DEPLOY_HOST:-localhost}:31093
-export KAFKA_VERSION=2.8.1
+export KAFKA_VERSION=3.4
 export REDIS_HOST=localhost
 export REDIS_PORT=31379
 export REDIS_PASSWORD=act0rstate
