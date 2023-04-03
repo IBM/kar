@@ -41,7 +41,7 @@ KAR_EXTRA_ARGS=${KAR_EXTRA_ARGS:=""}
 echo "*** Testing examples/unit-tests ***"
 
 cd $ROOTDIR/examples/unit-tests
-npm install --prod
+npm install --omit=dev
 
 kar run -app myApp -service myService -actors Foo $KAR_EXTRA_ARGS node server.js &
 run $! kar run -app myApp $KAR_EXTRA_ARGS node test-harness.js
@@ -50,7 +50,7 @@ run $! kar run -app myApp $KAR_EXTRA_ARGS node test-harness.js
 echo "*** Testing examples/actors-dp-js ***"
 
 cd $ROOTDIR/examples/actors-dp-js
-npm install --prod
+npm install --omit=dev
 
 kar run -app dp -actors Cafe,Table,Fork,Philosopher $KAR_EXTRA_ARGS node philosophers.js &
 run $! kar run -app dp $KAR_EXTRA_ARGS node tester.js
@@ -59,7 +59,7 @@ run $! kar run -app dp $KAR_EXTRA_ARGS node tester.js
 echo "*** Testing examples/actors-ykt ***"
 
 cd $ROOTDIR/examples/actors-ykt
-npm install --prod
+npm install --omit=dev
 
 ./deploy/runServerLocally.sh &
 run $! ./deploy/runClientLocally.sh
