@@ -16,9 +16,9 @@
 
 set -eu
 
-HELM_VERSION=v3.3.4
-KIND_VERSION=v0.14.0
-KUBECTL_VERSION=v1.18.8
+HELM_VERSION=v3.11.2
+KIND_VERSION=v0.17.0
+KUBECTL_VERSION=v1.24.7
 
 # Download and install command line tools
 pushd /tmp
