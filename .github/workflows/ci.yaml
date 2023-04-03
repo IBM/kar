@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-name: CI - local
+name: Continuous Integration
 
 on:
   push:
@@ -29,14 +29,16 @@ on:
 permissions: read-all
 
 jobs:
-  ci:
+  ci-local:
     runs-on: ubuntu-22.04
     env:
       KAR_JAVA_SDK_OVERRIDE: -Dversion.kar-java-sdk=99.99.99-SNAPSHOT
     steps:
-      # Checkout repo and download pre-regs
+      # Checkout repo 
       - name: Checkout repo
         uses: actions/checkout@v3
+
+      # Download pre-reqs
       - name: Install k8s clis
         run: ./ci/setup.sh
 
@@ -79,6 +81,50 @@ jobs:
           . ./scripts/kar-env-local.sh
           make check-rpc
         shell: bash
+      - name: Run JavaScript tests
+        run: ./ci/testJSLocal.sh
+      - name: Run Java tests
+        run: ./ci/testJavaLocal.sh
+
+
+  ci-local-released:
+    runs-on: ubuntu-22.04
+    steps:
+      # Checkout repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Download pre-reqs
+      - name: Install k8s clis
+        run: ./ci/setup.sh
+
+      # Configure language versions
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'core/go.mod'
+          cache-dependency-path: 'core/go.sum'
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Setup JavaScript
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      # Deploy Kafka and Redis (add a sleep because `make cli` is fast)
+      - name: Start Kafka and Redis
+        run: |
+          ./scripts/docker-compose-start.sh
+          sleep 5
+
+      # Build KAR locally
+      - name: Make KAR cli
+        run: make cli
+
+      # Run tests
       - name: Run JavaScript tests
         run: ./ci/testJSLocal.sh
       - name: Run Java tests
