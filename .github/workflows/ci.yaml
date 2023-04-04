@@ -129,3 +129,51 @@ jobs:
         run: ./ci/testJSLocal.sh
       - name: Run Java tests
         run: ./ci/testJavaLocal.sh
+
+
+  ci-in-cluster:
+    runs-on: ubuntu-22.04
+    steps:
+      # Checkout repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # Download pre-reqs
+      - name: Install k8s clis
+        run: ./ci/setup.sh
+
+      # Configure language versions
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version-file: 'core/go.mod'
+          cache-dependency-path: 'core/go.sum'
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+      - name: Setup JavaScript
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      # Start kind (need registry running to push images)
+      - name: Start kind
+        run: ./scripts/kind-start.sh
+
+      # Build KAR locally
+      - name: Make KAR cli
+        run: make cli
+      - name: Make JavaScript images
+        run: make docker-js
+      - name: Make Python images
+        run: make docker-python
+
+      # Delopy KAR on kind
+      - name: Deploy KAR
+        run: ./scripts/kar-k8s-deploy.sh
+
+      # Run in cluster tests
+      - name: Run Tests
+        run: ./ci/testInCluster.sh
