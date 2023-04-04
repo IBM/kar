@@ -176,24 +176,26 @@ func updateRoutes() error {
 		if err1 != nil {
 			return err1
 		}
-		var data info
-		if err1 = json.Unmarshal(meta.UserData, &data); err1 != nil {
-			return err1
-		}
-		for _, s := range data.Services {
-			service2nodes[s] = append(service2nodes[s], data.Node)
-		}
+		if meta != nil {
+			var data info
+			if err1 = json.Unmarshal(meta.UserData, &data); err1 != nil {
+				return err1
+			}
+			for _, s := range data.Services {
+				service2nodes[s] = append(service2nodes[s], data.Node)
+			}
 
-		// build node2partition map from assignments
-		// the partition info in the metadata cannot be used as it reflects the previous generation
-		assignment, err1 := member.GetMemberAssignment()
-		if err1 != nil {
-			return err1
-		}
-		node2partition[data.Node] = assignment.Topics[appTopic][0]
+			// build node2partition map from assignments
+			// the partition info in the metadata cannot be used as it reflects the previous generation
+			assignment, err1 := member.GetMemberAssignment()
+			if err1 != nil {
+				return err1
+			}
+			node2partition[data.Node] = assignment.Topics[appTopic][0]
 
-		//build node2port map from assignments
-		node2port[data.Node] = data.Port
+			//build node2port map from assignments
+			node2port[data.Node] = data.Port
+		}
 	}
 
 	logger.Info("exit update routes")
