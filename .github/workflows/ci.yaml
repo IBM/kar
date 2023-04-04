@@ -34,7 +34,7 @@ jobs:
     env:
       KAR_JAVA_SDK_OVERRIDE: -Dversion.kar-java-sdk=99.99.99-SNAPSHOT
     steps:
-      # Checkout repo 
+      # Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
@@ -58,9 +58,11 @@ jobs:
         with:
           node-version: 16.x
 
-      # Deploy Kafka and Redis (do early, to increase odds of them being ready before the tests start)
+      # Deploy Kafka and Redis (add a sleep to because docker-compose doesn't have readiness probes)
       - name: Start Kafka and Redis
-        run: ./scripts/docker-compose-start.sh
+        run: |
+          ./scripts/docker-compose-start.sh
+          sleep 5
 
       # Build KAR locally
       - name: Make KAR cli
@@ -114,7 +116,7 @@ jobs:
         with:
           node-version: 16.x
 
-      # Deploy Kafka and Redis (add a sleep because `make cli` is fast)
+      # Deploy Kafka and Redis (add a sleep to because docker-compose doesn't have readiness probes)
       - name: Start Kafka and Redis
         run: |
           ./scripts/docker-compose-start.sh
@@ -177,3 +179,30 @@ jobs:
       # Run in cluster tests
       - name: Run Tests
         run: ./ci/testInCluster.sh
+
+
+  push-images:
+    needs: [ci-local, ci-local-released, ci-in-cluster]
+    runs-on: ubuntu-22.04
+    if: github.repository == 'IBM/kar'
+    env:
+      PUSH_LATEST: ${{ (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/main' }}
+      PUSH_RELEASE: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      # Checkout repo
+      - name: Checkout repo
+        if: ${{ env.PUSH_LATEST  == 'true' || env.PUSH_RELEASE == 'true' }}
+        uses: actions/checkout@v3
+      - name: Docker Login
+        if: ${{ env.PUSH_LATEST  == 'true' || env.PUSH_RELEASE == 'true' }}
+        uses: docker/login-action@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_ROBOT_TOKEN }}
+      - name: Push Latest Images
+        if: ${{ env.PUSH_LATEST  == 'true' }}
+        run: KAR_VERSION=$(git rev-parse --short "$GITHUB_SHA") DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
+      - name: Push Release Images
+        if: ${{ env.PUSH_RELEASE  == 'true' }}
+        run: KAR_VERSION=${GITHUB_REF_NAME} DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=${GITHUB_REF_NAME} make docker
