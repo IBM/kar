@@ -112,7 +112,7 @@ python3 -m twine upload --repository kar dist/*
    `git tag -s core/vx.y.z`
 2. `git push --tags upstream`
 3. Tags starting with `v` trigger build processes that:
-    * push tagged images to quay.io (via travis-ci)
+    * push tagged images to quay.io (via github actions)
     * make a github release with source and cli tarballs (via github actions)
    Monitor to make sure all of these builds are successful.
 4. Update the git release with the CHANGELOG
