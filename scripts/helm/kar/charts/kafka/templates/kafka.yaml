@@ -212,7 +212,6 @@ spec:
       resources:
         requests:
           storage: 100Gi
-      storageClassName: ibmc-file-gold
 {{- end }}
 
 {{- if and (not .Values.global.replicatedServices) .Values.global.persistence }}
