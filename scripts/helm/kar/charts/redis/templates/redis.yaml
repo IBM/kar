@@ -120,7 +120,6 @@ spec:
 {{- if .Values.global.replicatedServices }}
     requests:
       storage: 100Gi
-  storageClassName: ibmc-file-gold
 {{ else }}
     requests:
       storage: 1Gi
