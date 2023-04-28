@@ -18,7 +18,7 @@ ARG KAR_BASE=localhost:5000/kar/kar-sidecar
 
 FROM $KAR_BASE as kar
 
-FROM adoptopenjdk/openjdk11:alpine
+FROM eclipse-temurin:11
 
 # Copy in kar cli to enable local mode for IBM Code Engine
 COPY --from=kar /kar/bin/kar /kar/bin/kar
