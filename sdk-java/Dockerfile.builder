@@ -14,13 +14,15 @@
 # limitations under the License.
 #
 
-FROM adoptopenjdk/openjdk11:alpine
+FROM eclipse-temurin:11
 
 ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-RUN apk add --update maven && apk update && apk upgrade
+
+RUN apt-get update && apt-get install -y maven \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /kar/sdk-java
 
