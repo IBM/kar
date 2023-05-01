@@ -16,13 +16,13 @@
 # limitations under the License.
 #
 
-# Script to teardown the KAR runtime launched using docker-compose
+# Script to teardown the KAR runtime launched using docker compose
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 cd $SCRIPTDIR
 
 export RESTART_POLICY=${RESTART_POLICY:-no}
 
-docker-compose down
+docker compose down
 
 docker network rm kar-bus

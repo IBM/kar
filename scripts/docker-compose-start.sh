@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-# Script to launch the KAR runtime using docker-compose
+# Script to launch the KAR runtime using docker compose
 
 SCRIPTDIR=$(cd $(dirname "$0") && pwd)
 cd $SCRIPTDIR
@@ -27,4 +27,4 @@ if [ -z $(docker network ls --filter name=kar-bus --format '{{.Name}}') ]; then
 fi
 
 export RESTART_POLICY=${RESTART_POLICY:-no}
-docker-compose up -d
+docker compose up -d
