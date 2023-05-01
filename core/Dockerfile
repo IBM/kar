@@ -15,7 +15,7 @@
 #
 
 # Build KAR
-FROM golang:1.16 as builder
+FROM golang:1.19 as builder
 
 WORKDIR /kar/core
 
@@ -32,7 +32,7 @@ ARG KAR_VERSION=unofficial
 RUN CGO_ENABLED=0 go install -ldflags "-X github.com/IBM/kar/core/internal/config.Version=$KAR_VERSION" ./...
 
 # Create image containing the sidecar
-FROM alpine:3.14
+FROM alpine:3.17
 ARG KAR_BINARY
 
 COPY --from=builder /go/bin/$KAR_BINARY /kar/bin/$KAR_BINARY

@@ -15,7 +15,7 @@
 #
 
 # Resolve dependencies
-FROM golang:1.16 AS builder
+FROM golang:1.19 AS builder
 
 WORKDIR /kar/benchmark/kafka-bench
 COPY go.mod go.mod
@@ -28,6 +28,6 @@ COPY consumer consumer
 # Build executables
 RUN CGO_ENABLED=0 go install  ./...
 
-FROM alpine:3.14
+FROM alpine:3.17
 COPY --from=builder /go/bin/consumer /kar/bin/consumer
 COPY --from=builder /go/bin/producer /kar/bin/producer
