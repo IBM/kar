@@ -167,6 +167,8 @@ jobs:
       # Build KAR locally
       - name: Make KAR cli
         run: make cli
+      - name: Make Java images
+        run: make docker-java
       - name: Make JavaScript images
         run: make docker-js
       - name: Make Python images
