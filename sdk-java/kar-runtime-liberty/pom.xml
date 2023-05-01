@@ -17,6 +17,8 @@
 
   <properties>
     <version.microprofile>4.0.1</version.microprofile>
+    <version.jakarta.ws.rs-api>2.1.6</version.jakarta.ws.rs-api>
+    <version.javaee-api>8.0</version.javaee-api>
   </properties>
 
   <dependencies>
