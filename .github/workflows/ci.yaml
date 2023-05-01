@@ -58,7 +58,7 @@ jobs:
         with:
           node-version: 16.x
 
-      # Deploy Kafka and Redis (add a sleep to because docker-compose doesn't have readiness probes)
+      # Deploy Kafka and Redis (add a sleep to because docker compose doesn't have readiness probes)
       - name: Start Kafka and Redis
         run: |
           ./scripts/docker-compose-start.sh
@@ -116,7 +116,7 @@ jobs:
         with:
           node-version: 16.x
 
-      # Deploy Kafka and Redis (add a sleep to because docker-compose doesn't have readiness probes)
+      # Deploy Kafka and Redis (add a sleep to because docker compose doesn't have readiness probes)
       - name: Start Kafka and Redis
         run: |
           ./scripts/docker-compose-start.sh

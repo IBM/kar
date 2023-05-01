@@ -73,7 +73,7 @@ the online version which tracks the tip of the KAR `main` branch.
 The KAR runtime system internally uses Redis as a persistent store and
 Kafka as a reliable message transport (Kafka internally uses ZooKeeper
 for distributed consensus).  You can deploy these
-dependencies as docker containers using docker-compose by running:
+dependencies as docker containers using docker compose by running:
 ```shell
 RESTART_POLICY=always ./scripts/docker-compose-start.sh
 ```
@@ -165,7 +165,7 @@ For more details on the Java example, see its [README](../examples/service-hello
 Undeploying your local instance of the KAR runtime system entails stopping
 and removing the docker containers for Redis, Kafka, and ZooKeeper. Note that
 this will also remove all saved state for any KAR-based applications you have run. 
-Undeploy these containers using docker-compose by running:
+Undeploy these containers using docker compose by running:
 ```shell
 ./scripts/docker-compose-stop.sh
 ```

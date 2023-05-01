@@ -16,7 +16,7 @@
 
 # Source this script to setup your shell environment to
 # connect to a KAR runtime deployed locally in one of two ways:
-#  1. on docker-compose using docker-compose-start.sh
+#  1. on docker compose using docker-compose-start.sh
 #  2. on kind using kind-start.sh
 #
 # Usage . kar-env-local.sh
