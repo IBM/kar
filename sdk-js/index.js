@@ -18,7 +18,6 @@ const { triggerAsyncId } = require('async_hooks')
 const express = require('express')
 const http2 = require('http2')
 const morgan = require('morgan') // for logging http requests and responses
-const spdy = require('spdy')
 
 if (!process.env.KAR_RUNTIME_PORT) {
   console.error('KAR_RUNTIME_PORT must be set. Aborting.')
@@ -302,7 +301,7 @@ const errorHandler = [
     .catch(next)] // forward errors to next middleware (but there should not be any...)
 
 // h2c protocol wrapper
-const h2c = app => spdy.createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
+const h2c = app => require('spdy').createServer({ spdy: { plain: true, ssl: false, connection: { maxStreams: 262144 } } }, app).setTimeout(0)
 /***************************************************
  * Start of Actor runtime implementation
  ***************************************************/
