@@ -25,7 +25,7 @@ if (!process.env.KAR_RUNTIME_PORT) {
   process.exit(1)
 }
 
-const session = http2.connect(`http://localhost:${process.env.KAR_RUNTIME_PORT}`)
+const session = http2.connect(`http://127.0.0.1:${process.env.KAR_RUNTIME_PORT}`)
 
 // assumes utf8
 function rawFetch (path, { method, headers, body } = {}) {
