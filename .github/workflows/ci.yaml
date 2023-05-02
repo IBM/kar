@@ -18,13 +18,13 @@ name: Continuous Integration
 
 on:
   push:
-    branches: [ main ]
-    tags: [ '*' ]
+    branches: [main]
+    tags: ["*"]
   pull_request:
-    branches: [ main ]
-    types: [ opened, synchronize, reopened ]
+    branches: [main]
+    types: [opened, synchronize, reopened]
   schedule:
-    - cron: '30 11 * * 1,3,5'
+    - cron: "30 11 * * 1,3,5"
 
 permissions: read-all
 
@@ -46,17 +46,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version-file: 'core/go.mod'
-          cache-dependency-path: 'core/go.sum'
+          go-version-file: "core/go.mod"
+          cache-dependency-path: "core/go.sum"
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          java-version: "11"
+          distribution: "temurin"
       - name: Setup JavaScript
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
 
       # Deploy Kafka and Redis (add a sleep to because docker compose doesn't have readiness probes)
       - name: Start Kafka and Redis
@@ -88,7 +88,6 @@ jobs:
       - name: Run Java tests
         run: ./ci/testJavaLocal.sh
 
-
   ci-local-released:
     runs-on: ubuntu-22.04
     steps:
@@ -104,17 +103,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version-file: 'core/go.mod'
-          cache-dependency-path: 'core/go.sum'
+          go-version-file: "core/go.mod"
+          cache-dependency-path: "core/go.sum"
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          java-version: "11"
+          distribution: "temurin"
       - name: Setup JavaScript
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
 
       # Deploy Kafka and Redis (add a sleep to because docker compose doesn't have readiness probes)
       - name: Start Kafka and Redis
@@ -132,7 +131,6 @@ jobs:
       - name: Run Java tests
         run: ./ci/testJavaLocal.sh
 
-
   ci-in-cluster:
     runs-on: ubuntu-22.04
     steps:
@@ -148,17 +146,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
-          go-version-file: 'core/go.mod'
-          cache-dependency-path: 'core/go.sum'
+          go-version-file: "core/go.mod"
+          cache-dependency-path: "core/go.sum"
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          java-version: '11'
-          distribution: 'temurin'
+          java-version: "11"
+          distribution: "temurin"
       - name: Setup JavaScript
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
 
       # Start kind (need registry running to push images)
       - name: Start kind
@@ -181,7 +179,6 @@ jobs:
       # Run in cluster tests
       - name: Run Tests
         run: ./ci/testInCluster.sh
-
 
   push-images:
     needs: [ci-local, ci-local-released, ci-in-cluster]
