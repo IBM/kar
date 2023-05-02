@@ -45,7 +45,7 @@ function reportMetrics (data, tag) {
   const squareDiffs = data.map(x => (x - mean) * (x - mean))
   const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length
   const stdDev = Math.sqrt(avgSquareDiff)
-  const median = data[data.length/2]
+  const median = data[data.length / 2]
   const nine = data[data.length * 9 / 10]
   const nineNine = data[data.length * 99 / 100]
   console.log(`${tag}: samples = ${data.length}; mean = ${mean.toFixed(3)}; median = ${median}; 90th = ${nine}; 99th= ${nineNine}; stddev = ${stdDev.toFixed(3)}`)
@@ -105,7 +105,7 @@ async function measureOneWayCall (numCalls, serverIP) {
 
 // main method
 async function main () {
-  const serverIP = process.env.SERVER_IP || 'localhost'
+  const serverIP = process.env.SERVER_IP || '127.0.0.1'
 
   console.log(`Executing ${numDiscardedCalls} warmup operations`)
   await measureCall(numDiscardedCalls, serverIP)
