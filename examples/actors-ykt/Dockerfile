@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v16
+ARG JS_RUNTIME=localhost:5000/kar/kar-sdk-nodejs-v18
 
 FROM $JS_RUNTIME
 
