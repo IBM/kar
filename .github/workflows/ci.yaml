@@ -207,4 +207,4 @@ jobs:
         run: KAR_VERSION=$(git rev-parse --short "$GITHUB_SHA") DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=latest make docker
       - name: Push Release Images
         if: ${{ env.PUSH_RELEASE  == 'true' }}
-        run: KAR_VERSION=${GITHUB_REF_NAME} DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=${GITHUB_REF_NAME} make docker
+        run: KAR_VERSION=${GITHUB_REF_NAME#v} DOCKER_REGISTRY=quay.io DOCKER_NAMESPACE=ibm DOCKER_IMAGE_TAG=${GITHUB_REF_NAME#v} make docker

@@ -22,6 +22,9 @@ on:
 
 name: Make CLI Release
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Make CLI Release
@@ -29,57 +32,25 @@ jobs:
     if: github.repository == 'IBM/kar'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
         uses: actions/setup-go@v4
         with:
           go-version-file: 'core/go.mod'
           cache-dependency-path: 'core/go.sum'
-      - name: Get Version
-        id: get_version
-        run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v}
+      - name: Compute version
+        run: echo "KAR_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: Build CLI
         run: |
-          KAR_VERSION=${{ steps.get_version.outputs.VERSION }} ./ci/build-cli-release.sh
+          echo $KAR_VERSION
+          ./ci/build-cli-release.sh
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.get_version.outputs.VERSION }}
-          draft: false
-          prerelease: false
-      - name: Upload MacOS amd64
-        id: upload-mac-amd64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./core/build/kar-mac-amd64.zip
-          asset_name: kar-mac-amd64.zip
-          asset_content_type: application/zip
-      - name: Upload Windows amd64
-        id: upload-windows-amd64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./core/build/kar-windows-amd64.zip
-          asset_name: kar-windows-amd64.zip
-          asset_content_type: application/zip
-      - name: Upload Linux amd64
-        id: upload-linux-amd64
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} 
-          asset_path: ./core/build/kar-linux-amd64.tgz
-          asset_name: kar-linux-amd64.tgz
-          asset_content_type: application/gzip
-
-
+          name: ${{ env.KAR_VERSION }}
+          fail_on_unmatched_files: true
+          files: |
+            ./core/build/kar-linux-amd64.tgz
+            ./core/build/kar-mac-amd64.zip
+            ./core/build/kar-mac-arm64.zip
+            ./core/build/kar-windows-amd64.zip
