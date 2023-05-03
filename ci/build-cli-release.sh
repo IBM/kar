@@ -41,5 +41,6 @@ buildOne() {
 }    
 
 buildOne "darwin" "amd64"
+buildOne "darwin" "arm64"
 buildOne "linux" "amd64"
 buildOne "windows" "amd64"
