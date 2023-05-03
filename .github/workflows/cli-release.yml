@@ -42,12 +42,11 @@ jobs:
         run: echo "KAR_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
       - name: Build CLI
         run: |
-          echo $KAR_VERSION
           ./ci/build-cli-release.sh
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: ${{ env.KAR_VERSION }}
+          name: Release ${{ env.KAR_VERSION }}
           fail_on_unmatched_files: true
           files: |
             ./core/build/kar-linux-amd64.tgz
