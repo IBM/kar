@@ -16,6 +16,20 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.6 - 2023-05-03
++ General refresh of dependencies
+  + Update Kafka version to 3.3 and ZooKeeper to 3.8
+  + Update JavaScript SDK, examples, and Dockerfiles to use Node.js 18
+  + Update Java SDKs to OpenLiberty 23.0.0.3 and Quarkus 2.16.Final
+  + Switch from adoptopenjdk to eclipse-temurin as base Java Dockerfiles
+  + Update core docker image to alpine 3.17
+  + Update core to go 1.19
+  + Update scripts to use kind 0.18 with Kubernetes 1.24
++ Bug fixes
+  + TailCalls should have an infinite request deadline (#350)
+  + Segregate primary and submap state in getall (#351)
++ Changed project CI from TravisCI to GitHub Actions
+
 # KAR 1.3.5 - 2022-08-05
 + New distributed debugger for KAR (#338, #340)
 

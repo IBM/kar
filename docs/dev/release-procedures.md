@@ -4,8 +4,8 @@
 
 A release of the core KAR system generates a number of artifacts:
 
-+ A source release (github release page)
-+ Prebuilt `kar` cli (github release page)
++ A source release (GitHub release page)
++ Prebuilt `kar` cli (GitHub release page)
 + Tagged container images (quay.io)
 + Java SDK: com.ibm.research.kar pom/jars (central repository)
 + JavaScript SDK: kar-sdk (npmjs)
@@ -112,10 +112,10 @@ python3 -m twine upload --repository kar dist/*
    `git tag -s core/vx.y.z`
 2. `git push --tags upstream`
 3. Tags starting with `v` trigger build processes that:
-    * push tagged images to quay.io (via github actions)
-    * make a github release with source and cli tarballs (via github actions)
+    * push tagged images to quay.io (via GitHub actions)
+    * make a GitHub release with source and cli tarballs (via GitHub actions)
    Monitor to make sure all of these builds are successful.
-4. Update the git release with the CHANGELOG
+4. Update the GitHub release with the CHANGELOG
 
 ### Cleanup
 

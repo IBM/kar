@@ -56,7 +56,7 @@ jobs:
       - name: Setup JavaScript
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
 
       # Deploy Kafka and Redis (add a sleep to because docker compose doesn't have readiness probes)
       - name: Start Kafka and Redis
@@ -158,7 +158,7 @@ jobs:
       - name: Setup JavaScript
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
 
       # Start kind (need registry running to push images)
       - name: Start kind
