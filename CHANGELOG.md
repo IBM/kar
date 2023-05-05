@@ -16,6 +16,9 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.7 - 2023-05-05
++ Revert #351 - Container Shipping application assumes co-mingled primary/submap state in getAll
+
 # KAR 1.3.6 - 2023-05-03
 + General refresh of dependencies
   + Update Kafka version to 3.3 and ZooKeeper to 3.8
