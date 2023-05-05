@@ -104,7 +104,7 @@ python3 -m twine upload --repository kar dist/*
 
 ### PR & Merge the release-prep branch
 
-1. PR the release-prep branch. Travis should pass. Merge PR.
+1. PR the release-prep branch. CI should pass. Merge PR.
 
 ### Tag repository
 
