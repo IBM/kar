@@ -18,8 +18,6 @@
 env:
   - name: REDIS_USER
     value: karmesh
-  - name: REDIS_PASSWORD
-    value: act0rstate
 service:
   name: redis-exporter-svc
   type: ClusterIP

@@ -18,5 +18,4 @@ export KAFKA_BROKERS=kafka:9092
 export KAFKA_VERSION=2.7.1
 export REDIS_HOST=host.docker.internal
 export REDIS_PORT=31379
-export REDIS_PASSWORD=act0rstate
 export REDIS_USER=karmesh

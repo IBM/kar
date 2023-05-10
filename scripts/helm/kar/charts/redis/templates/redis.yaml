@@ -89,7 +89,11 @@ spec:
       containers:
       - name: redis
         image: {{ .Values.redis.imageRegistry }}/{{ .Values.redis.imageName }}:{{ .Values.redis.imageTag }}
+{{ if .Values.redis.password }}
         command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user $REDIS_USER allcommands allkeys on \\>$REDIS_PASSWORD"]
+{{ else }}
+        command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user $REDIS_USER allcommands allkeys on nopass"]
+{{ end }}
 {{- if .Values.global.persistence }}
         volumeMounts:
         - mountPath: /data
