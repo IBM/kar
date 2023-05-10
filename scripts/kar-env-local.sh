@@ -37,5 +37,4 @@ export KAFKA_BROKERS=${KAFKA_DEPLOY_HOST:-localhost}:31093
 export KAFKA_VERSION=3.3
 export REDIS_HOST=localhost
 export REDIS_PORT=31379
-export REDIS_PASSWORD=act0rstate
 export REDIS_USER=karmesh

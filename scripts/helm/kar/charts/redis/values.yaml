@@ -19,11 +19,10 @@ redis:
   imageName: 'redis'
   imageTag: '6.2'
   port: 6379
-  password: act0rstate
   user: karmesh
+  password:
 
 exports:
   redisHostName: 'kar-redis'
   redisPort: 6379
-  redisPassword: act0rstate
   redisUser: karmesh

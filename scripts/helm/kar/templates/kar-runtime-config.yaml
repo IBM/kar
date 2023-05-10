@@ -37,7 +37,9 @@ data:
 {{- if .Values.redis.internal }}
   redis_host: {{ include "kar.redis_host" . | b64enc }}
   redis_port: {{ print (int64 .Values.redis.port) | b64enc }}
+{{- if .Values.redis.password }}
   redis_password: {{ .Values.redis.password | b64enc }}
+{{ end }}
   redis_user: {{ .Values.redis.user | b64enc }}
 {{ else }}
   redis_ca: {{ .Values.redis.externalConfig.ca | b64enc }}

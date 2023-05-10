@@ -35,7 +35,6 @@ services:
       KAFKA_VERSION:  2.7.1
       REDIS_HOST:     kar_redis
       REDIS_PORT:     6379
-      REDIS_PASSWORD: act0rstate
       REDIS_USER:     karmesh
       MAIN:           philosophers.js
       KAR_EXTRA_ARGS: ${KAR_EXTRA_ARGS} -v info -actor_busy_timeout=0 -actors Cafe,Table,Fork,Philosopher 
@@ -61,7 +60,6 @@ services:
       KAFKA_VERSION:  2.7.1
       REDIS_HOST:     kar_redis
       REDIS_PORT:     6379
-      REDIS_PASSWORD: act0rstate
       REDIS_USER:     karmesh
       KAR_RUNTIME_PORT: 36363
     restart: "${RESTART_POLICY}"

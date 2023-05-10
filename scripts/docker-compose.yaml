@@ -52,7 +52,7 @@ services:
     restart: "${RESTART_POLICY}"
     networks:
       - kar-bus
-    command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user karmesh allcommands allkeys on \\>act0rstate --port 6379"]
+    command: ["/bin/sh", "-c", "/usr/local/bin/docker-entrypoint.sh --user karmesh allcommands allkeys on nopass --port 6379"]
     ports:
       - "31379:6379"
 
