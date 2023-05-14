@@ -62,7 +62,7 @@ if [ "${running}" != 'true' ]; then
 fi
 
 # Boot cluster
-k3d cluster create -p "31080:80@loadbalancer" --registry-config $(pwd)/k3d/registries.yaml --k3s-arg "--disable=traefik@server:0" --volume "$(pwd)/k3d/helm-ingress-nginx.yaml:/var/lib/rancher/k3s/server/manifests/helm-ingress-nginx.yaml"
+k3d cluster create -p "31080:80@loadbalancer" --registry-config $(pwd)/k3d/registries.yaml --k3s-arg "--disable=traefik@server:*"
 
 # make sure registry is connected to k3d network
 connected="not"$({ docker network inspect k3d-k3s-default | grep -e '"Name": "registry"' || true; })
@@ -70,13 +70,21 @@ if [ "not" == "$connected" ]; then
     docker network connect k3d-k3s-default registry
 fi
 
-# TODO check if affinity is required; For now, assume yes
-# TODO check if worker nodes are needed; For now, assume yes
+# wait for metrics-server to be running
+kubectl get po -l k8s-app=metrics-server -n kube-system
+printf "waiting for metrics server to be ready: "
+while [[ $(kubectl get po -l k8s-app=metrics-server -n kube-system -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}' 2>/dev/null) != "True" ]]; do printf "." && sleep 5; done
+echo ""
+
+# install nginx ingress
+helm install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --version 4.6.1 --namespace ingress-nginx --create-namespace
 
 # wait for ingres to be ready before creating worker nodes
 printf "waiting for ingress-controller-nginx to be ready: "
-while [[ $(kubectl get po -l app.kubernetes.io/name=ingress-nginx -n kube-system -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do printf "." && sleep 5; done
-echo 
+while [[ $(kubectl get po -l app.kubernetes.io/name=ingress-nginx -n ingress-nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do printf "." && sleep 5; done
+echo ""
+
+# Assume affinity is required => create 3 labeled worker nodes for the application
 
 # create and label kar system node
 k3d node create karsystemnode --wait
