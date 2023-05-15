@@ -16,6 +16,10 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.8 - 2023-05-15
++ Update k3d ingress setup (#380)
++ Remove placeholder value for redis password (#379)
+
 # KAR 1.3.7 - 2023-05-05
 + Revert #351 - Container Shipping application assumes co-mingled primary/submap state in getAll
 
