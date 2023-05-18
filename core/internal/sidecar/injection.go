@@ -183,6 +183,13 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
+		// If a container exits, we want to consider the pod to be failed.
+		restartPolicyPatch := patchOperation{
+			Op:    "replace",
+			Path:  "/spec/restartPolicy",
+			Value: corev1.RestartPolicyNever,
+		}
+
 		// Label the pod with appName and serviceName (if present) to enable kubectl -l filters
 		labels := pod.GetObjectMeta().GetLabels()
 		if labels == nil {
@@ -204,7 +211,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			Value: labels,
 		}
 
-		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch, patchPodLabels}
+		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch, patchPodLabels, restartPolicyPatch}
 
 		patchBytes, err := json.Marshal(patches)
 		if err != nil {
