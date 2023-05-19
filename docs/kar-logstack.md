@@ -57,6 +57,12 @@ Useful fields to add are `log` and `kubernetes.pod_name`
 A filter can be added to select only entries from specific pods. For example, to show log entries only from selected application pods, 
 add a filter with `field=kubernetes.pod_name.keyword`, `operator=is one of`, select one or more pods, and then click `Save`.
 
+## Warning about logstack and fs.inotify.max_user_instances
+The fluentd colletor in logstack will be monitoring a large number of log files, and may exceed the default limit for max_user_instances of 128. At that point a local kubernetes cluster will stop working correctly with error messages indicating too many open files. The limit can be dynamically changed, for example:
+```shell
+sudo sysctl fs.inotify.max_user_instances=1024
+```
+To make the change persistent, set fs.inotify.max_user_instances=1024 in the appropriate sysctl.conf for your distro.
 
 ## Warning about storage
 
