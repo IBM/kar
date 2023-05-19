@@ -26,6 +26,7 @@ metadata:
     kar.ibm.com/actors: Cafe,Table,Fork,Philosopher
     kar.ibm.com/extraArgs: '-actor_busy_timeout=0'
     kar.ibm.com/verbose: info
+    kar.ibm.com/sidecarContainer: "false"
 spec:
   restartPolicy: Never
   containers:

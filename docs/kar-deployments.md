@@ -50,7 +50,7 @@ configurations to support high availability and increased scalability.
 
 When deployed on a Kubernetes of OpenShift cluster, the KAR runtime
 system also includes a mutating web hook that supports
-injecting a "sidecar" container into Pods that are annotated as
+injecting KAR runtime configuration data into Pods that are annotated as
 containing KAR application components.  This significantly simplifies
 the configuration of these components by automating the injection of
 the credentials needed to connect to the Redis and Kafka instances
@@ -139,11 +139,19 @@ any in-cluster deployment of KAR.
 
 For its in-cluster configurations, the KAR runtime system is deployed
 in the `kar-system` namespace and includes a mutating webhook whose
-job is to inject a "sidecar" container containing the `kar` executable
-into every Pod that is annotated with `kar.ibm.com/app`. This
-machinery enables existing Helm charts and Kubernetes YAML to be
-adapted for KAR with minimal changes.  The mutating webhook process
-the following annotations:
+job is to inject additional configuration information to enable
+application Pods to be joined to the KAR application mesh. Application
+Pods that should be mutated are indicated by annotating them with
+`kar.ibm.com/app`.  We support two modes of operation.  In the
+recommended mode, the application container already contains the `kar`
+executable and the webhook only needs to inject volume mounts and
+environment variables to configure it. If the container does not
+contain the `kar` executable then the webhook can inject and configure
+an additional "sidecar" container containing the `kar` executable.
+This sidecar mode enables unmodified containers to be joined to a KAR
+application mesh, but is less resilient to failures due to incomplete
+support by Kubernetes for sidecar container lifecycle operations.
+The mutating webhook process the following annotations:
    + kar.ibm.com/app - sets the `-app` argument of `kar run`
    + kar.ibm.com/actors: sets the `-actors` argument of `kar run`
    + kar.ibm.com/service: sets the `-service` argument of `kar run`
@@ -151,6 +159,7 @@ the following annotations:
    + kar.ibm.com/appPort: sets the `-app_port` argument of `kar run`
    + kar.ibm.com/runtimePort: sets the `-runtime_port` argument of `kar run`
    + kar.ibm.com/extraArgs: additional command line arguments for `kar run`
+   + kar.ibm.com/sidecarContainer - "true" to enable injection of a sidecar container
 
 If you are using a release version of the `kar` cli then, by default,
 the matching KAR runtime images will be pulled from our public quay.io

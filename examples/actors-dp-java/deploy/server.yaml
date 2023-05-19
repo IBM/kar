@@ -32,6 +32,7 @@ spec:
         kar.ibm.com/app: dp
         kar.ibm.com/actors: Cafe,Fork,Philosopher,Table
         kar.ibm.com/appPort: "8080"
+        kar.ibm.com/sidecarContainer: "false"
     spec:
       containers:
       - name: actors

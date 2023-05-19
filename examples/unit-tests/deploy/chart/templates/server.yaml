@@ -34,6 +34,7 @@ spec:
         kar.ibm.com/service: myService
         kar.ibm.com/actors: Foo
         kar.ibm.com/verbose: info
+        kar.ibm.com/sidecarContainer: "false"
     spec:
       containers:
       - name: server

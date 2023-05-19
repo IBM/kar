@@ -25,6 +25,7 @@ metadata:
     helm.sh/hook-delete-policy: hook-succeeded
     kar.ibm.com/app: myApp
     kar.ibm.com/verbose: info
+    kar.ibm.com/sidecarContainer: "false"
 spec:
   restartPolicy: Never
   containers:

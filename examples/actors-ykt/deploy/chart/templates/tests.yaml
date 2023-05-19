@@ -23,17 +23,10 @@ metadata:
   annotations:
     helm.sh/hook: test-success
     helm.sh/hook-delete-policy: hook-succeeded
-{{ if not .Values.noSidecar }}
     kar.ibm.com/app: ykt
+    kar.ibm.com/sidecarContainer: "{{ .Values.enableSidecar }}"
     kar.ibm.com/verbose: {{ .Values.verbose }}
-{{ end }}
 spec:
-{{ if .Values.noSidecar }}
-  volumes:
-  - name: kar-ibm-com-config
-    secret:
-      secretName: kar.ibm.com.runtime-config
-{{ end }}
   restartPolicy: Never
   containers:
   - name: client
@@ -41,15 +34,3 @@ spec:
     env:
     - name: MAIN
       value: ykt-client.js
-{{ if .Values.noSidecar }}
-    - name: KAR_SIDECAR_IN_CONTAINER
-      value: "true"
-    - name: KAR_APP
-      value: ykt
-    - name: KAR_EXTRA_ARGS
-      value: -config_dir /var/run/secrets/kar.ibm.com -v {{ .Values.verbose }}
-    volumeMounts:
-    - mountPath: /var/run/secrets/kar.ibm.com
-      name: kar-ibm-com-config
-      readOnly: true
-{{ end }}

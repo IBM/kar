@@ -25,6 +25,7 @@ spec:
     metadata:
       annotations:
         kar.ibm.com/app: hello-js
+        kar.ibm.com/sidecarContainer: "false"
     spec:
       restartPolicy: OnFailure
       imagePullSecrets:

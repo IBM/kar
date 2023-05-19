@@ -53,15 +53,15 @@ else
 fi
 
 
-echo "*** Running in-cluster no-sidecar actors-ykt ***"
+echo "*** Running in-cluster sidecar actors-ykt ***"
 
-helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/kar-examples-js-actors-ykt --set noSidecar=true
+helm install ykt-sc $ROOTDIR/examples/actors-ykt/deploy/chart --set image=localhost:5000/kar/kar-examples-js-actors-ykt --set enableSidecar=true
 
 if helm test ykt-sc; then
-    echo "PASSED! In cluster no-sidecar actors-ykt passed."
+    echo "PASSED! In cluster sidecar actors-ykt passed."
     helm delete ykt-sc
 else
-    echo "FAILED: In cluster no-sidecar actors-ykt failed."
+    echo "FAILED: In cluster sidecar actors-ykt failed."
     kubectl logs ykt-client -c client
     kubectl logs ykt-client -c kar
     kubectl delete pod ykt-client

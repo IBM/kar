@@ -17,4 +17,4 @@
 image: localhost:5000/kar/kar-examples-js-actors-ykt
 verbose: info
 replicas: 4
-noSidecar: false
+enableSidecar: false
