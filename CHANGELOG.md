@@ -16,6 +16,11 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.9 - 2023-05-22
++ Prioritize non-sidecar mode on Kubernetes (#386)
++ Update kar-logstack.md (#385)
++ Support multiple kind versions; add kind 0.19.0 (#383)
+
 # KAR 1.3.8 - 2023-05-15
 + Update k3d ingress setup (#380)
 + Remove placeholder value for redis password (#379)
