@@ -87,8 +87,8 @@ var (
 	// RuntimePort is the HTTP port the runtime will be listening on
 	RuntimePort int
 
-	// KubernetesMode is true when this process is running in a sidecar container in a Kubernetes Pod
-	KubernetesMode bool
+	// SidecarMode is true when this process is running in a sidecar container in a Kubernetes Pod
+	SidecarMode bool
 
 	// KafkaConfig contains the configuration information to connect with Kafka
 	KafkaConfig rpc.Config
@@ -240,7 +240,7 @@ Available commands:
 		flag.DurationVar(&ActorReminderAcceptableDelay, "actor_reminder_acceptable_delay", 3*time.Second, "Threshold at which reminders are logged as being late")
 		flag.IntVar(&AppPort, "app_port", 8080, "The port used by KAR to connect to the application")
 		flag.IntVar(&RuntimePort, "runtime_port", 0, "The port used by the application to connect to KAR")
-		flag.BoolVar(&KubernetesMode, "kubernetes_mode", false, "Running as a sidecar container in a Kubernetes Pod")
+		flag.BoolVar(&SidecarMode, "sidecar_mode", false, "Running as a sidecar container in a Kubernetes Pod")
 		flag.BoolVar(&H2C, "h2c", false, "Use h2c to communicate with service")
 		flag.StringVar(&Hostname, "hostname", "localhost", "Hostname")
 		flag.DurationVar(&KafkaConfig.SessionBusyTimeout, "actor_busy_timeout", 2*time.Minute, "Time to wait on a busy actor before timing out (0 is infinite)")

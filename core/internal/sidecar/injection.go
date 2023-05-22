@@ -40,6 +40,7 @@ var (
 const (
 	actorAnnotation       = "kar.ibm.com/actors"
 	appNameAnnotation     = "kar.ibm.com/app"
+	sidecarAnnotation     = "kar.ibm.com/sidecarContainer"
 	serviceNameAnnotation = "kar.ibm.com/service"
 	appPortAnnotation     = "kar.ibm.com/appPort"
 	runtimePortAnnotation = "kar.ibm.com/runtimePort"
@@ -48,8 +49,9 @@ const (
 
 	extraArgsSeparator = ","
 
-	defaultAppPort     = "8080"
-	defaultRuntimePort = "3500"
+	defaultAppPort          = "8080"
+	defaultRuntimePort      = "3500"
+	defaultSidecarContainer = "true"
 
 	sidecarName        = "kar"
 	karImagePullSecret = "kar.ibm.com.image-pull"
@@ -112,6 +114,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	if appName, ok := annotations[appNameAnnotation]; ok {
 		logger.Info("Pod %v has appName %v", pod.Name, appName)
+		patches := []patchOperation{}
 		containers := pod.Spec.Containers
 
 		for _, container := range containers {
@@ -121,7 +124,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
-		cmdLine, appEnv, runtimePortStr := processAnnotations(pod)
+		extraArgs, appEnv, runtimePortStr, enableSidecar := processAnnotations(pod)
 		runtimePort, err := strconv.Atoi(runtimePortStr)
 
 		if len(appEnv) > 0 {
@@ -130,56 +133,63 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 			}
 		}
 
-		sidecar := []corev1.Container{{
-			Name:          sidecarName,
-			Image:         fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
-			Command:       []string{"/kar/bin/kar"},
-			Args:          cmdLine,
-			Env:           []corev1.EnvVar{{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
-			Ports:         []corev1.ContainerPort{{ContainerPort: int32(runtimePort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
-			LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/health", Port: intstr.FromInt(runtimePort)}}},
-			Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/shutdown", Port: intstr.FromInt(runtimePort)}}},
-			VolumeMounts:  []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
-		}}
-		containers = append(sidecar, containers...)
-		updateContainersPatch := patchOperation{
+		if enableSidecar {
+			sidecar := []corev1.Container{{
+				Name:          sidecarName,
+				Image:         fmt.Sprintf("%s:%s", sidecarImage, sidecarImageTag),
+				Command:       []string{"/kar/bin/kar"},
+				Args:          append([]string{"run", "-app", appName}, extraArgs...),
+				Env:           []corev1.EnvVar{{Name: "KAR_POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "status.podIP"}}}},
+				Ports:         []corev1.ContainerPort{{ContainerPort: int32(runtimePort), Protocol: corev1.ProtocolTCP, Name: "kar"}},
+				LivenessProbe: &corev1.Probe{Handler: corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/health", Port: intstr.FromInt(runtimePort)}}},
+				Lifecycle:     &corev1.Lifecycle{PreStop: &corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "kar/v1/system/shutdown", Port: intstr.FromInt(runtimePort)}}},
+				VolumeMounts:  []corev1.VolumeMount{{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true}},
+			}}
+			containers = append(sidecar, containers...)
+		} else {
+			for index, container := range containers {
+				containers[index].VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{Name: "kar-ibm-com-config", MountPath: karRTConfigMount, ReadOnly: true})
+				containers[index].Env = append(container.Env, corev1.EnvVar{Name: "KAR_EXTRA_ARGS", Value: strings.Join(extraArgs, " ")})
+			}
+		}
+		patches = append(patches, patchOperation{
 			Op:    "replace",
 			Path:  "/spec/containers",
 			Value: containers,
-		}
+		})
 
 		configVolume := corev1.Volume{
 			Name:         "kar-ibm-com-config",
 			VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: karRTConfigSecret}},
 		}
-		var addVolumePatch patchOperation
 		if pod.Spec.Volumes == nil {
-			addVolumePatch = patchOperation{
+			patches = append(patches, patchOperation{
 				Op:    "replace",
 				Path:  "/spec/volumes",
 				Value: []corev1.Volume{configVolume},
-			}
+			})
 		} else {
-			addVolumePatch = patchOperation{
+			patches = append(patches, patchOperation{
 				Op:    "add",
 				Path:  "/spec/volumes/-",
 				Value: configVolume,
-			}
+			})
 		}
 
-		imagePull := corev1.LocalObjectReference{Name: karImagePullSecret}
-		var pullSecretPatch patchOperation
-		if pod.Spec.ImagePullSecrets == nil {
-			pullSecretPatch = patchOperation{
-				Op:    "add",
-				Path:  "/spec/imagePullSecrets",
-				Value: []corev1.LocalObjectReference{imagePull},
-			}
-		} else {
-			pullSecretPatch = patchOperation{
-				Op:    "add",
-				Path:  "/spec/imagePullSecrets/-",
-				Value: imagePull,
+		if enableSidecar {
+			imagePull := corev1.LocalObjectReference{Name: karImagePullSecret}
+			if pod.Spec.ImagePullSecrets == nil {
+				patches = append(patches, patchOperation{
+					Op:    "add",
+					Path:  "/spec/imagePullSecrets",
+					Value: []corev1.LocalObjectReference{imagePull},
+				})
+			} else {
+				patches = append(patches, patchOperation{
+					Op:    "add",
+					Path:  "/spec/imagePullSecrets/-",
+					Value: imagePull,
+				})
 			}
 		}
 
@@ -198,13 +208,11 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		if serviceName, ok := annotations[serviceNameAnnotation]; ok {
 			labels[serviceNameAnnotation] = serviceName
 		}
-		patchPodLabels := patchOperation{
+		patches = append(patches, patchOperation{
 			Op:    op,
 			Path:  "/metadata/labels",
 			Value: labels,
-		}
-
-		patches := []patchOperation{updateContainersPatch, addVolumePatch, pullSecretPatch, patchPodLabels}
+		})
 
 		patchBytes, err := json.Marshal(patches)
 		if err != nil {
@@ -216,50 +224,60 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 		pt := v1.PatchTypeJSONPatch
 		reviewResponse.PatchType = &pt
 	} else {
-		logger.Info("Pod %v lacks 'kar.ibm.com/app' annotation; no sidecar injected", pod.Name)
+		logger.Info("Pod %v lacks 'kar.ibm.com/app' annotation; no sidecar injected/enabled", pod.Name)
 	}
 
 	return &reviewResponse
 }
 
-func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string) {
+func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string, bool) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
-	cmd := []string{"run", "-kubernetes_mode", "-config_dir", karRTConfigMount, "-app", appName}
-	appEnv := []corev1.EnvVar{}
+	extraArgs := []string{"-config_dir", karRTConfigMount}
+	appEnv := []corev1.EnvVar{{Name: "KAR_APP", Value: appName}}
+
+	var sidecarContainer = defaultSidecarContainer
+	if sc, ok := annotations[sidecarAnnotation]; ok {
+		sidecarContainer = sc
+	}
+	if sidecarContainer == "true" {
+		extraArgs = append(extraArgs, "-sidecar_mode")
+	} else {
+		appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_SIDECAR_IN_CONTAINER", Value: "true"})
+	}
 
 	if serviceName, ok := annotations[serviceNameAnnotation]; ok {
-		cmd = append(cmd, "-service", serviceName)
+		extraArgs = append(extraArgs, "-service", serviceName)
 	}
 
 	if actors, ok := annotations[actorAnnotation]; ok {
-		cmd = append(cmd, "-actors", actors)
+		extraArgs = append(extraArgs, "-actors", actors)
 	}
 
 	var appPort = defaultAppPort
 	if p, ok := annotations[appPortAnnotation]; ok {
 		appPort = p
 	}
-	cmd = append(cmd, "-app_port", appPort)
+	extraArgs = append(extraArgs, "-app_port", appPort)
 	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_APP_PORT", Value: appPort})
 
 	var runtimePort = defaultRuntimePort
 	if p, ok := annotations[runtimePortAnnotation]; ok {
 		runtimePort = p
 	}
-	cmd = append(cmd, "-runtime_port", runtimePort)
+	extraArgs = append(extraArgs, "-runtime_port", runtimePort)
 	appEnv = append(appEnv, corev1.EnvVar{Name: "KAR_RUNTIME_PORT", Value: runtimePort})
 
 	if verbose, ok := annotations[verboseAnnotation]; ok {
-		cmd = append(cmd, "-v", verbose)
+		extraArgs = append(extraArgs, "-v", verbose)
 	}
 
 	if moreArgs, ok := annotations[extraArgsAnnotation]; ok {
 		theArgs := strings.Split(moreArgs, extraArgsSeparator)
-		cmd = append(cmd, theArgs...)
+		extraArgs = append(extraArgs, theArgs...)
 	}
 
-	return cmd, appEnv, runtimePort
+	return extraArgs, appEnv, runtimePort, sidecarContainer == "true"
 }
 
 func toV1AdmissionResponse(err error) *v1.AdmissionResponse {

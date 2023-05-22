@@ -22,6 +22,7 @@ metadata:
     kar.ibm.com/app: stock-processor
     kar.ibm.com/actors: StockManager
     kar.ibm.com/appPort: "8080"
+    kar.ibm.com/sidecarContainer: "false"
 spec:
   containers:
   - name: stock-processor

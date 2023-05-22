@@ -21,6 +21,7 @@ metadata:
   annotations:
     kar.ibm.com/app: hello-js
     kar.ibm.com/service: greeter
+    kar.ibm.com/sidecarContainer: "false"
 spec:
   imagePullSecrets:
   - name: kar.ibm.com.image-pull
