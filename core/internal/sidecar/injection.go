@@ -233,7 +233,7 @@ func possiblyInjectSidecar(ar v1.AdmissionReview) *v1.AdmissionResponse {
 func processAnnotations(pod corev1.Pod) ([]string, []corev1.EnvVar, string, bool) {
 	annotations := pod.GetObjectMeta().GetAnnotations()
 	appName := annotations[appNameAnnotation]
-	extraArgs := []string{"-config_dir", karRTConfigMount}
+	extraArgs := []string{"-kubernetes_mode", "-config_dir", karRTConfigMount}
 	appEnv := []corev1.EnvVar{{Name: "KAR_APP", Value: appName}}
 
 	var sidecarContainer = defaultSidecarContainer
