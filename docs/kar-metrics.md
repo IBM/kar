@@ -43,7 +43,22 @@ application itself is deployed. See
 for details on the reefer application.
 
 
-## Accessing raw KAR sidecar metrics
+## Viewing metrics with Grafana
+
+Grafana dashboards are viewed by first exposing the Grafana web server on the cluster, attaching a browser to the web server, logging into Grafana, and finally selecting the dashboard of interest.
+
+1. kubectl port-forward -n prometheus svc/prometheus-grafana  3000:80"
+2. Point your browser to localhost:3000"
+3. Login with default user/password: admin/prom-operator"
+4. Click on "Dashboards" in the Grafana menu at top left, and select "General" to see available dashboards.
+
+By default KAR metrics monitor only generic Kubernetes, Kafka and Redis data.
+To view application specific data requires a custom Grafana configuration.
+The Reefer Metrics configuration referenced above can easily be modified to
+support other applications.
+
+
+## Accessing raw KAR sidecar metrics for a single KAR application server
 
 A KAR sidecar accumulates metrics for all actor and service methods called
 in the application container it is managing. Raw metrics are accessed via
