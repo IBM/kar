@@ -46,9 +46,9 @@ helm repo update 2>/dev/null
 echo "... Wait, installing Prometheus, Grafana, and other goodies ..."
 
 # Prometheus Server, Prometheus Operator, Grafana, Node Exporter, K8s Dashboards
-helm install prometheus prometheus-community/kube-prometheus-stack -f prom-overrides.yaml --wait -n $NAMESPACE  2>/dev/null || true
+helm install prometheus prometheus-community/kube-prometheus-stack -f prom-overrides.yaml --wait -n $NAMESPACE  2>/dev/null
 
-# Redis
+# Redis - currently broken
 
 # Redis dashboard
 kubectl create -f redis-dashboard-cm.yaml -n $NAMESPACE
