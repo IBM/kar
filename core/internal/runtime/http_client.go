@@ -114,7 +114,7 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 		var res *http.Response
 		start := time.Now()
 		res, err = client.Do(req)
-		elapsed := time.Now().Sub(start)
+		elapsed := time.Since(start)
 		if metricLabel != "" {
 			userCodeDurationHistogram.WithLabelValues(metricLabel).Observe(elapsed.Seconds())
 		}
@@ -130,7 +130,6 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
 			}
-			logger.Warning("failed to invoke %s: %v", msg["path"], err)
 			if err == ctx.Err() {
 				return backoff.Permanent(err)
 			}
@@ -142,7 +141,6 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 				reply = &Reply{StatusCode: http.StatusRequestTimeout, Payload: err.Error(), ContentType: "text/plain"}
 				return nil
 			}
-			logger.Warning("failed to invoke %s: %v", msg["path"], err)
 			if err == ctx.Err() {
 				return backoff.Permanent(err)
 			}
@@ -158,6 +156,9 @@ func invoke(ctx context.Context, method string, msg map[string]string, metricLab
 	}, backoff.WithContext(b, ctx))
 	if ctx.Err() != nil {
 		CloseIdleConnections() // don't keep connection alive once ctx is cancelled
+	}
+	if err != nil && err != ctx.Err() {
+		logger.Warning("failed to invoke %s: %v", msg["path"], err)
 	}
 	return reply, err
 }
