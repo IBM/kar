@@ -16,6 +16,11 @@
 
 # KAR: A Runtime for the Hybrid Cloud
 
+# KAR 1.3.10 - 2023-06-07
++ Don't log errors from within backoff loop (#391)
++ Update metrics documentation and scripts (#390)
++ Fix debugger and metrics for Kubernetes single-container mode (#389)
+
 # KAR 1.3.9 - 2023-05-22
 + Prioritize non-sidecar mode on Kubernetes (#386)
 + Update kar-logstack.md (#385)
