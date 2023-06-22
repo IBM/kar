@@ -17,7 +17,7 @@
 set -eu
 
 HELM_VERSION=v3.11.2
-KIND_VERSION=v0.19.0
+KIND_VERSION=v0.20.0
 KUBECTL_VERSION=v1.24.13
 
 # Download and install command line tools
