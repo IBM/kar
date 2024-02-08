@@ -36,7 +36,7 @@ jobs:
     steps:
       # Checkout repo
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Download pre-reqs
       - name: Install k8s clis
@@ -44,17 +44,17 @@ jobs:
 
       # Configure language versions
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'core/go.mod'
           cache-dependency-path: 'core/go.sum'
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
       - name: Setup JavaScript
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18.x
 
@@ -94,7 +94,7 @@ jobs:
     steps:
       # Checkout repo
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Download pre-reqs
       - name: Install k8s clis
@@ -102,17 +102,17 @@ jobs:
 
       # Configure language versions
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'core/go.mod'
           cache-dependency-path: 'core/go.sum'
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
       - name: Setup JavaScript
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 16.x
 
@@ -138,7 +138,7 @@ jobs:
     steps:
       # Checkout repo
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Download pre-reqs
       - name: Install k8s clis
@@ -146,17 +146,17 @@ jobs:
 
       # Configure language versions
       - name: Setup Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version-file: 'core/go.mod'
           cache-dependency-path: 'core/go.sum'
       - name: Setup Java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
       - name: Setup JavaScript
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18.x
 
@@ -194,10 +194,10 @@ jobs:
       # Checkout repo
       - name: Checkout repo
         if: ${{ env.PUSH_LATEST  == 'true' || env.PUSH_RELEASE == 'true' }}
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Docker Login
         if: ${{ env.PUSH_LATEST  == 'true' || env.PUSH_RELEASE == 'true' }}
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USERNAME }}
